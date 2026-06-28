@@ -1,5 +1,6 @@
 import { motion } from "motion/react";
 import { Check } from "lucide-react";
+import { Link } from 'react-router';
 
 export function Pricing() {
     return (
@@ -64,9 +65,12 @@ export function Pricing() {
                             </div>
                         </div>
 
-                        <button className="w-full py-3 rounded-lg border border-[#006b5f] text-[#006b5f] font-medium text-sm hover:bg-[#006b5f]/5 transition-colors">
+                        <Link
+                            to="/register"
+                            className="w-full py-3 rounded-lg border border-[#006b5f] text-[#006b5f] font-medium text-sm hover:bg-[#006b5f]/5 transition-colors text-center"
+                        >
                             Start Free Trial
-                        </button>
+                        </Link>
                     </motion.div>
 
                     {/* Card 2 - Recommended */}
@@ -118,9 +122,12 @@ export function Pricing() {
                             </div>
                         </div>
 
-                        <button className="w-full py-3 rounded-lg bg-black text-white font-medium text-sm hover:bg-gray-800 transition-colors">
+                        <Link
+                            to="/register"
+                            className="w-full py-3 rounded-lg bg-black text-white font-medium text-sm hover:bg-gray-800 transition-colors text-center"
+                        >
                             Get Started
-                        </button>
+                        </Link>
                     </motion.div>
 
                     {/* Card 3 */}
@@ -158,9 +165,12 @@ export function Pricing() {
                             </div>
                         </div>
 
-                        <button className="w-full py-3 rounded-lg border border-[#006b5f] text-[#006b5f] font-medium text-sm hover:bg-[#006b5f]/5 transition-colors">
+                        <Link
+                            to="/register"
+                            className="w-full py-3 rounded-lg border border-[#006b5f] text-[#006b5f] font-medium text-sm hover:bg-[#006b5f]/5 transition-colors text-center"
+                        >
                             Contact Sales
-                        </button>
+                        </Link>
                     </motion.div>
                 </div>
             </section>

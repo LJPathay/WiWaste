@@ -179,3 +179,67 @@
         line-height: 1.5;
     }
 }
+
+.dark .theme-content [class~="bg-white"] {
+    background-color: rgb(15 23 42);
+}
+
+.dark .theme-content [class~="bg-[#fcf8fa]"],
+.dark .theme-content [class~="bg-[#f6f3f5]"],
+.dark .theme-content [class~="bg-[#f8f9ff]"],
+.dark .theme-content [class~="bg-gray-50"],
+.dark .theme-content [class~="bg-slate-50"] {
+    background-color: rgb(30 41 59 / 0.55);
+}
+
+.dark .theme-content [class~="bg-[#eae7e9]"],
+.dark .theme-content [class~="bg-slate-100"],
+.dark .theme-content [class~="bg-gray-100"] {
+    background-color: rgb(51 65 85 / 0.7);
+}
+
+.dark .theme-content [class~="bg-gradient-to-r"] {
+    background-image: linear-gradient(to right, rgb(2 6 23), rgb(15 23 42));
+}
+
+.dark .theme-content [class~="border-slate-200"],
+.dark .theme-content [class~="border-gray-200"],
+.dark .theme-content [class~="border-gray-100"],
+.dark .theme-content [class~="border-[#c6c6cd]/50"],
+.dark .theme-content [class~="border-[#c6c6cd]"] {
+    border-color: rgb(255 255 255 / 0.1);
+}
+
+.dark .theme-content [class~="text-[#0b1c30]"],
+.dark .theme-content [class~="text-[#1b1b1d]"],
+.dark .theme-content [class~="text-black"],
+.dark .theme-content [class~="text-gray-900"],
+.dark .theme-content [class~="text-gray-800"] {
+    color: rgb(241 245 249);
+}
+
+.dark .theme-content [class~="text-[#45464d]"],
+.dark .theme-content [class~="text-[#76777d]"],
+.dark .theme-content [class~="text-gray-700"],
+.dark .theme-content [class~="text-gray-600"],
+.dark .theme-content [class~="text-gray-500"],
+.dark .theme-content [class~="text-slate-500"],
+.dark .theme-content [class~="text-slate-600"],
+.dark .theme-content [class~="text-slate-700"] {
+    color: rgb(148 163 184);
+}
+
+.dark .theme-content [class~="hover:bg-gray-50"]:hover {
+    background-color: rgb(51 65 85 / 0.65);
+}
+
+.dark .theme-content [class~="bg-black"] {
+    background-color: rgb(2 6 23);
+}
+
+.dark .theme-content [class~="shadow-sm"],
+.dark .theme-content [class~="shadow-xl"],
+.dark .theme-content [class~="shadow-2xl"] {
+    --tw-shadow-color: rgb(0 0 0 / 0.35);
+    --tw-shadow: var(--tw-shadow-colored);
+}

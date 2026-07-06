@@ -1,6 +1,8 @@
 import { Outlet, Link, useLocation } from "react-router";
 import { ThemeToggle } from "../ThemeToggle";
 
+const BRAND_WORDMARK = '/images/Logo_full.PNG';
+
 
 export function MainLayout() {
     const location = useLocation();
@@ -10,7 +12,7 @@ export function MainLayout() {
             <header className="sticky top-0 z-50 backdrop-blur-md bg-white/85 border-b border-[#c6c6cd] transition-colors dark:border-white/10 dark:bg-slate-950/85">
                 <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
                     <Link to="/" className="flex items-center gap-2">
-                        <img src="/images/Logo_fullwobg.png" alt="LossLogic Pro" className="h-12 w-auto object-contain" />
+                        <img src={BRAND_WORDMARK} alt="WiWaste" className="h-12 w-auto object-contain" />
                     </Link>
 
                     <nav className="hidden md:flex items-center gap-8">
@@ -55,7 +57,7 @@ export function MainLayout() {
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
                         <div className="col-span-1 md:col-span-1">
                             <Link to="/" className="flex items-center gap-2 mb-4">
-                                <img src="/images/Logo_fullwobg.png" alt="WiWaste" className="h-10 w-auto object-contain" />
+                                <img src={BRAND_WORDMARK} alt="WiWaste" className="h-10 w-auto object-contain" />
                             </Link>
                             <p className="text-sm text-[#45464d] max-w-xs dark:text-slate-400">
                                 Inventory intelligence for all retail operations.

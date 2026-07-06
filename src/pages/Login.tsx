@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { initializeDashboard } from '../utils/mockAuthAndFeatures';
-
-const AUTH_KEY = 'wiwaste-auth';
+import { inferRoleFromEmail, initializeDashboard, setStoredSession } from '../utils/mockAuthAndFeatures';
 
 export function Login() {
   const navigate = useNavigate();
@@ -16,9 +14,14 @@ export function Login() {
     setLoading(true);
     setError(null);
     try {
-      // Call the mock initializeDashboard which performs mockLogin internally
-      await initializeDashboard(email, password);
-      localStorage.setItem(AUTH_KEY, 'true');
+      const role = inferRoleFromEmail(email);
+      await initializeDashboard(email, password, role);
+      setStoredSession({
+        email,
+        name: role === 'admin' ? 'Lia Cruz' : role === 'inventory' ? 'Mia Stockwell' : 'John Store Ops',
+        company: role === 'admin' ? 'WiWaste Central Administration' : role === 'inventory' ? 'WiWaste Inventory Floor' : 'WiWaste MiniMart + Pharma',
+        role,
+      });
       // On success navigate to dashboard
       navigate('/dashboard');
     } catch (err: any) {

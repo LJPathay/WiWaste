@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
+  getStoredSession,
+  inferRoleFromEmail,
   initializeDashboard,
   getPredictiveAnalytics,
 } from '../utils/mockAuthAndFeatures';
@@ -14,7 +16,10 @@ export function useDashboardData() {
 
     async function load() {
       try {
-        const d = await initializeDashboard('user@example.com', 'password');
+        const session = getStoredSession();
+        const email = session?.email ?? 'user@example.com';
+        const role = session?.role ?? inferRoleFromEmail(email);
+        const d = await initializeDashboard(email, 'password', role);
         if (mounted) setData(d);
       } catch {
         const analytics = getPredictiveAnalytics();
@@ -25,7 +30,7 @@ export function useDashboardData() {
               email: 'guest@example.com',
               name: 'Guest User',
               company: 'Demo Co',
-              role: 'analyst',
+              role: 'inventory',
               loginTime: new Date(),
             },
             predictiveAnalytics: analytics,

@@ -136,7 +136,7 @@ if (!session) {
   const sidebarWidth = collapsed ? 'w-[76px]' : 'w-[248px]';
 
   const NavItems = ({ compact = false, onClose }: { compact?: boolean; onClose?: () => void }) => (
-    <nav className={`flex-1 overflow-y-auto ${compact ? 'px-2 py-3' : 'px-3 py-4'}`}>
+    <nav className={`flex-1 overflow-y-auto scrollbar-modern ${compact ? 'px-2 py-3' : 'px-3 py-4'}`}>
       {sidebarGroups.map((group) => (
         <div key={group.group} className="mb-2">
           {/* Group label — hidden when collapsed */}

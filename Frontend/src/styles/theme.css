@@ -260,3 +260,32 @@
     border-color: rgba(255, 255, 255, 0.08);
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
 }
+/* Modern scrollbar styling */
+.scrollbar-modern::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+.scrollbar-modern::-webkit-scrollbar-track {
+    background: transparent;
+}
+.scrollbar-modern::-webkit-scrollbar-thumb {
+    background: rgba(113, 113, 130, 0.2);
+    border-radius: 10px;
+}
+.scrollbar-modern::-webkit-scrollbar-thumb:hover {
+    background: rgba(113, 113, 130, 0.4);
+}
+.dark .scrollbar-modern::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.2);
+}
+.dark .scrollbar-modern::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 163, 184, 0.4);
+}
+/* For Firefox */
+.scrollbar-modern {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(113, 113, 130, 0.2) transparent;
+}
+.dark .scrollbar-modern {
+    scrollbar-color: rgba(148, 163, 184, 0.2) transparent;
+}

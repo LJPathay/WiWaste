@@ -65,7 +65,8 @@ export function getStoredSession(): AuthSession | null {
 
   try {
     const session = JSON.parse(rawSession) as Partial<AuthSession>;
-    if (!session.email || !session.name || !session.company) return null;
+    // Only name and role are required; email and company are optional in mock auth
+    if (!session.name || !session.role) return null;
 
     return {
       email: session.email,

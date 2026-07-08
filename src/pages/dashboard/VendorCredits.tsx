@@ -1,10 +1,10 @@
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { CircleDollarSign, TimerReset } from 'lucide-react';
+import { AlertTriangle, CircleDollarSign, FileCheck, TimerReset, XCircle } from 'lucide-react';
 import { useDashboardData } from '../../hooks/useDashboardData';
 
-const currencyFormatter = new Intl.NumberFormat('en-US', {
+const currencyFormatter = new Intl.NumberFormat('en-PH', {
   style: 'currency',
-  currency: 'USD',
+  currency: 'PHP',
   maximumFractionDigits: 0,
 });
 
@@ -13,15 +13,27 @@ function getDaysUntil(date: Date) {
 }
 
 function getDeadlineRisk(daysUntilDeadline: number) {
-  if (daysUntilDeadline < 0) return { label: 'Missed', color: '#ef4444', tone: 'bg-rose-50 text-rose-700' };
-  if (daysUntilDeadline <= 10) return { label: 'Urgent', color: '#f59e0b', tone: 'bg-amber-50 text-amber-700' };
-  return { label: 'Open', color: '#14b8a6', tone: 'bg-emerald-50 text-emerald-700' };
+  if (daysUntilDeadline < 0) return { label: 'Missed', color: '#ef4444', tone: 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300', border: 'border-l-rose-500' };
+  if (daysUntilDeadline <= 10) return { label: 'Urgent', color: '#f59e0b', tone: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300', border: 'border-l-amber-500' };
+  return { label: 'Open', color: '#14b8a6', tone: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300', border: 'border-l-teal-400' };
 }
 
 export function VendorCreditsPage() {
   const { data, loading } = useDashboardData();
 
-  if (loading) return <div className="p-8">Loading vendor credits...</div>;
+  if (loading) {
+    return (
+      <div className="space-y-6 animate-pulse">
+        <div className="h-28 rounded-2xl bg-slate-200 dark:bg-slate-800" />
+        <div className="grid gap-4 sm:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-28 rounded-3xl bg-slate-200 dark:bg-slate-800" />
+          ))}
+        </div>
+        <div className="h-80 rounded-3xl bg-slate-200 dark:bg-slate-800" />
+      </div>
+    );
+  }
   if (!data) return <div className="p-8">No data</div>;
 
   const vendorChart = data.vendorReturns.map((item) => {
@@ -39,25 +51,67 @@ export function VendorCreditsPage() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-3xl bg-white border border-slate-200 shadow-sm p-6">
+      {/* Page Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Vendor Credit Recovery</h1>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Track supplier return opportunities and recoverable credits. Act before return windows close permanently.</p>
+      </div>
+
+
+      {/* Stat Cards */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="rounded-3xl border border-emerald-100 bg-emerald-50 p-5 dark:border-emerald-500/20 dark:bg-emerald-500/5">
+          <div className="flex items-center justify-between">
+            <div className="text-xs font-semibold uppercase tracking-widest text-emerald-500 dark:text-emerald-400">Total Recoverable</div>
+            <CircleDollarSign className="h-4 w-4 text-emerald-500" />
+          </div>
+          <div className="mt-2 text-2xl font-bold text-emerald-700 dark:text-emerald-300">{currencyFormatter.format(totalCredits)}</div>
+          <div className="mt-1 text-xs text-emerald-600/70">eligible across {data.vendorReturns.length} suppliers</div>
+        </div>
+        <div className="rounded-3xl border border-rose-100 bg-rose-50 p-5 dark:border-rose-500/20 dark:bg-rose-500/5">
+          <div className="flex items-center justify-between">
+            <div className="text-xs font-semibold uppercase tracking-widest text-rose-500">Missed Windows</div>
+            <XCircle className="h-4 w-4 text-rose-500" />
+          </div>
+          <div className="mt-2 text-3xl font-bold text-rose-700 dark:text-rose-300">{missedWindows.length}</div>
+          <div className="mt-1 text-xs text-rose-600/70">return deadlines already passed</div>
+        </div>
+        <div className="rounded-3xl border border-amber-100 bg-amber-50 p-5 dark:border-amber-500/20 dark:bg-amber-500/5">
+          <div className="flex items-center justify-between">
+            <div className="text-xs font-semibold uppercase tracking-widest text-amber-500">Urgent Windows</div>
+            <AlertTriangle className="h-4 w-4 text-amber-500" />
+          </div>
+          <div className="mt-2 text-3xl font-bold text-amber-700 dark:text-amber-300">{urgentWindows.length}</div>
+          <div className="mt-1 text-xs text-amber-600/70">closing within 10 days</div>
+        </div>
+      </div>
+
+      {/* Chart */}
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-slate-900">
         <div className="flex items-center justify-between gap-4 flex-wrap mb-5">
           <div>
-            <h2 className="text-xl font-semibold text-[#0b1c30]">Vendor Credit Recovery</h2>
-            <p className="text-sm text-slate-500">Recoverable credit ranked by supplier and return-window risk.</p>
+            <h2 className="text-lg font-bold text-[#0b1c30] dark:text-slate-100">Credit by Vendor</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Color-coded by deadline risk — red=missed, amber=urgent, teal=open</p>
           </div>
-          <span className="inline-flex items-center gap-2 text-xs rounded-full bg-emerald-50 text-emerald-700 px-3 py-1 font-semibold">
+          <span className="inline-flex items-center gap-2 text-xs rounded-full bg-emerald-50 text-emerald-700 px-3 py-1 font-semibold dark:bg-emerald-500/10 dark:text-emerald-400">
             <CircleDollarSign className="h-3.5 w-3.5" />
             {currencyFormatter.format(totalCredits)} recoverable
           </span>
         </div>
-
         <div className="h-96 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={vendorChart} layout="vertical" margin={{ left: 48, right: 24 }}>
               <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e8edf5" />
               <XAxis type="number" tick={{ fontSize: 12 }} stroke="#94a3b8" />
               <YAxis type="category" dataKey="name" width={190} tick={{ fontSize: 12 }} stroke="#94a3b8" />
-              <Tooltip formatter={(value) => currencyFormatter.format(Number(value))} />
+              <Tooltip
+                formatter={(value) => currencyFormatter.format(Number(value))}
+                contentStyle={{
+                  borderRadius: '12px',
+                  border: '1px solid #e2e8f0',
+                  boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
+                }}
+              />
               <Bar dataKey="credit" radius={[0, 12, 12, 0]} name="Eligible credit">
                 {vendorChart.map((item) => (
                   <Cell key={item.name} fill={item.risk.color} />
@@ -68,58 +122,74 @@ export function VendorCreditsPage() {
         </div>
       </section>
 
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="rounded-3xl bg-white border border-slate-200 shadow-sm p-5">
-          <div className="text-sm text-slate-500">Missed windows</div>
-          <div className="mt-2 text-3xl font-semibold text-[#0b1c30]">{missedWindows.length}</div>
-          <p className="mt-3 text-sm text-slate-600">These credits are vulnerable because supplier return deadlines already passed.</p>
-        </div>
-        <div className="rounded-3xl bg-white border border-slate-200 shadow-sm p-5">
-          <div className="text-sm text-slate-500">Urgent windows</div>
-          <div className="mt-2 text-3xl font-semibold text-[#0b1c30]">{urgentWindows.length}</div>
-          <p className="mt-3 text-sm text-slate-600">Process these before credits convert into unrecoverable loss.</p>
-        </div>
-        <div className="rounded-3xl bg-white border border-slate-200 shadow-sm p-5">
-          <div className="text-sm text-slate-500">Pending returns</div>
-          <div className="mt-2 text-3xl font-semibold text-[#0b1c30]">
-            {data.vendorReturns.filter((item) => item.status === 'pending').length}
+      {/* Note Banner */}
+      <section className="rounded-3xl border border-slate-200 bg-slate-50 p-5 dark:border-white/10 dark:bg-slate-800/40">
+        <div className="flex items-start gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-200 dark:bg-slate-700">
+            <TimerReset className="h-4 w-4 text-slate-600 dark:text-slate-300" />
           </div>
-          <p className="mt-3 text-sm text-slate-600">Pending items need proof of return, photos, and vendor claim submission.</p>
+          <div>
+            <h4 className="font-bold text-slate-800 dark:text-slate-200">What does a missed window mean?</h4>
+            <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-400">
+              A missed window means the vendor's return deadline has passed. Credits may be permanently lost unless the supplier grants a special exception. Always prepare return documentation and photos before deadlines close.
+            </p>
+          </div>
         </div>
       </section>
 
-      <section className="rounded-3xl bg-white border border-slate-200 shadow-sm overflow-hidden">
-        <div className="p-5 border-b border-slate-200 flex items-center gap-2">
-          <TimerReset className="h-5 w-5 text-emerald-600" />
-          <h3 className="text-lg font-semibold text-[#0b1c30]">Return-window detections</h3>
+      {/* Vendor Table */}
+      <section className="rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-slate-900 overflow-hidden">
+        <div className="p-5 border-b border-slate-200 dark:border-white/10 flex items-center gap-2">
+          <FileCheck className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+          <h3 className="text-lg font-bold text-[#0b1c30] dark:text-slate-100">Return-Window Detections</h3>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] text-sm">
-            <thead className="bg-slate-50 text-slate-500">
+          <table className="w-full min-w-[800px] text-sm">
+            <thead className="bg-slate-50 dark:bg-slate-800/50">
               <tr>
-                <th className="px-5 py-3 text-left font-semibold">Vendor</th>
-                <th className="px-5 py-3 text-left font-semibold">Risk</th>
-                <th className="px-5 py-3 text-left font-semibold">Credit</th>
-                <th className="px-5 py-3 text-left font-semibold">Deadline</th>
-                <th className="px-5 py-3 text-left font-semibold">Problem</th>
+                <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Vendor</th>
+                <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Status</th>
+                <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Credit</th>
+                <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Deadline</th>
+                <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Return Items</th>
+                <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Action</th>
               </tr>
             </thead>
             <tbody>
               {data.vendorReturns.map((vendor) => {
                 const daysUntilDeadline = getDaysUntil(vendor.returnDeadline);
                 const risk = getDeadlineRisk(daysUntilDeadline);
+                const actionLabel = daysUntilDeadline < 0
+                  ? 'Request Exception'
+                  : daysUntilDeadline <= 10
+                  ? 'File Claim Now'
+                  : 'Prepare Docs';
+                const actionColor = daysUntilDeadline < 0
+                  ? 'text-rose-700 bg-rose-50 dark:bg-rose-500/10 dark:text-rose-300'
+                  : daysUntilDeadline <= 10
+                  ? 'text-amber-700 bg-amber-50 dark:bg-amber-500/10 dark:text-amber-300'
+                  : 'text-teal-700 bg-teal-50 dark:bg-teal-500/10 dark:text-teal-300';
                 return (
-                  <tr key={vendor.vendorId} className="border-t border-slate-200">
-                    <td className="px-5 py-4 font-semibold text-[#0b1c30]">{vendor.vendorName}</td>
+                  <tr key={vendor.vendorId} className="border-t border-slate-100 dark:border-white/5 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                    <td className="px-5 py-4 font-bold text-[#0b1c30] dark:text-slate-100">{vendor.vendorName}</td>
                     <td className="px-5 py-4">
-                      <span className={`rounded-full px-3 py-1 text-xs font-semibold ${risk.tone}`}>{risk.label}</span>
+                      <span className={`rounded-full px-3 py-0.5 text-xs font-bold ${risk.tone}`}>{risk.label}</span>
                     </td>
-                    <td className="px-5 py-4 text-slate-600">{currencyFormatter.format(vendor.eligibleCredit)}</td>
-                    <td className="px-5 py-4 text-slate-600">
-                      {daysUntilDeadline < 0 ? `${Math.abs(daysUntilDeadline)} days late` : `${daysUntilDeadline} days left`}
+                    <td className="px-5 py-4 font-semibold text-emerald-700 dark:text-emerald-400">{currencyFormatter.format(vendor.eligibleCredit)}</td>
+                    <td className="px-5 py-4">
+                      <span className={`font-semibold ${
+                        daysUntilDeadline < 0 ? 'text-rose-600 dark:text-rose-400' :
+                        daysUntilDeadline <= 10 ? 'text-amber-600 dark:text-amber-400' :
+                        'text-teal-600 dark:text-teal-400'
+                      }`}>
+                        {daysUntilDeadline < 0 ? `${Math.abs(daysUntilDeadline)}d overdue` : `${daysUntilDeadline}d left`}
+                      </span>
                     </td>
-                    <td className="px-5 py-4 text-slate-600">
-                      {daysUntilDeadline < 0 ? 'Return credit may be lost unless vendor grants exception.' : 'Claim should be prepared before the deadline closes.'}
+                    <td className="px-5 py-4 text-slate-600 dark:text-slate-400 max-w-[160px] truncate" title={(vendor as { returnItems?: string[] }).returnItems?.join(', ')}>
+                      {(vendor as { returnItems?: string[] }).returnItems?.slice(0, 2).join(', ') ?? '—'}{(vendor as { returnItems?: string[] }).returnItems && (vendor as { returnItems?: string[] }).returnItems!.length > 2 ? ` +${(vendor as { returnItems?: string[] }).returnItems!.length - 2}` : ''}
+                    </td>
+                    <td className="px-5 py-4">
+                      <span className={`rounded-full px-3 py-0.5 text-xs font-bold ${actionColor}`}>{actionLabel}</span>
                     </td>
                   </tr>
                 );

@@ -8,14 +8,26 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { AlertTriangle, TrendingUp } from 'lucide-react';
+import { AlertTriangle, Brain, TrendingUp, Zap } from 'lucide-react';
 import { useDashboardData } from '../../hooks/useDashboardData';
 import { retailExamples } from '../../utils/mockAuthAndFeatures';
 
 export function PredictiveAnalyticsPage() {
   const { data, loading } = useDashboardData();
 
-  if (loading) return <div className="p-8">Loading predictive analytics...</div>;
+  if (loading) {
+    return (
+      <div className="space-y-6 animate-pulse">
+        <div className="h-28 rounded-2xl bg-slate-200 dark:bg-slate-800" />
+        <div className="h-96 rounded-3xl bg-slate-200 dark:bg-slate-800" />
+        <div className="grid gap-4 lg:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-48 rounded-3xl bg-slate-200 dark:bg-slate-800" />
+          ))}
+        </div>
+      </div>
+    );
+  }
   if (!data) return <div className="p-8">No data</div>;
 
   const forecastChart = data.predictiveAnalytics.wasteVolumeForecast.map((item) => ({
@@ -56,18 +68,35 @@ export function PredictiveAnalyticsPage() {
     },
   ];
 
+  function getSeverityStyle(severity: string) {
+    const s = severity.toLowerCase();
+    if (s === 'critical') return { badge: 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300', border: 'border-l-rose-500', bg: 'bg-rose-50/60 dark:bg-rose-500/5' };
+    if (s === 'high') return { badge: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300', border: 'border-l-amber-500', bg: 'bg-amber-50/60 dark:bg-amber-500/5' };
+    return { badge: 'bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300', border: 'border-l-sky-500', bg: 'bg-sky-50/60 dark:bg-sky-500/5' };
+  }
+
+  const anomalyIsHigh = detections[2].severity.toLowerCase() === 'high' || detections[2].severity.toLowerCase() === 'critical';
+
   return (
     <div className="space-y-6">
-      <section className="rounded-3xl bg-white border border-slate-200 shadow-sm p-6">
+      {/* Page Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Predictive Analytics</h1>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">AI-powered demand forecasts, projected wastage trends, and anomaly detection for smarter replenishment decisions.</p>
+      </div>
+
+
+      {/* Main Chart */}
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-slate-900">
         <div className="flex items-center justify-between gap-4 flex-wrap mb-5">
           <div>
-            <h2 className="text-xl font-semibold text-[#0b1c30]">Predictive Analytics</h2>
-            <p className="text-sm text-slate-500">Forecasted waste volume and model confidence in one view.</p>
+            <h2 className="text-lg font-bold text-[#0b1c30] dark:text-slate-100">Forecast vs Confidence</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Forecasted waste volume and model confidence in one view.</p>
           </div>
-          <span className="inline-flex items-center gap-2 text-xs rounded-full bg-sky-50 text-sky-700 px-3 py-1 font-semibold">
-            <TrendingUp className="h-3.5 w-3.5" />
-            {averageConfidence}% average confidence
-          </span>
+          <div className="flex gap-4 text-xs font-medium">
+            <span className="flex items-center gap-1.5 text-sky-600 dark:text-sky-400"><span className="inline-block h-3 w-3 rounded-sm bg-sky-400" /> Forecasted waste</span>
+            <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400"><span className="inline-block h-0.5 w-6 bg-emerald-500" /> Confidence %</span>
+          </div>
         </div>
 
         <div className="h-80 w-full">
@@ -83,7 +112,13 @@ export function PredictiveAnalyticsPage() {
               <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#94a3b8" />
               <YAxis yAxisId="forecast" tick={{ fontSize: 12 }} stroke="#94a3b8" />
               <YAxis yAxisId="confidence" orientation="right" domain={[70, 100]} tick={{ fontSize: 12 }} stroke="#94a3b8" />
-              <Tooltip />
+              <Tooltip
+                contentStyle={{
+                  borderRadius: '12px',
+                  border: '1px solid #e2e8f0',
+                  boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
+                }}
+              />
               <Area yAxisId="forecast" type="monotone" dataKey="forecast" stroke="#0ea5e9" fill="url(#forecastFill)" strokeWidth={3} name="Forecasted waste" />
               <Line yAxisId="confidence" type="monotone" dataKey="confidence" stroke="#22c55e" strokeWidth={3} dot={{ r: 4 }} name="Confidence %" />
             </AreaChart>
@@ -91,31 +126,61 @@ export function PredictiveAnalyticsPage() {
         </div>
       </section>
 
+      {/* Detection Cards */}
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {detections.map((detection) => (
-          <div key={detection.title} className="rounded-3xl bg-white border border-slate-200 shadow-sm p-5">
-            <div className="flex items-center justify-between gap-3">
-              <div className="text-sm font-semibold text-[#0b1c30]">{detection.title}</div>
-              <span className="rounded-full bg-rose-50 text-rose-700 px-3 py-1 text-xs font-semibold capitalize">
-                {detection.severity}
-              </span>
+        {detections.map((detection) => {
+          const style = getSeverityStyle(detection.severity);
+          const isAnomaly = detection.title === 'Detected anomaly';
+          return (
+            <div
+              key={detection.title}
+              className={`rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-slate-900 border-l-4 ${style.border} transition-all hover:-translate-y-0.5 hover:shadow-md`}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  {isAnomaly && (
+                    <span className="relative flex h-2.5 w-2.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500" />
+                    </span>
+                  )}
+                  <div className="text-sm font-bold text-[#0b1c30] dark:text-slate-100">{detection.title}</div>
+                </div>
+                <span className={`shrink-0 rounded-full px-3 py-0.5 text-xs font-bold capitalize ${style.badge}`}>
+                  {detection.severity}
+                </span>
+              </div>
+              <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-400">{detection.detail}</p>
+              <div className={`mt-4 rounded-2xl border border-slate-100 dark:border-white/5 ${style.bg} p-3 text-sm text-slate-700 dark:text-slate-300`}>
+                <span className="font-semibold text-slate-900 dark:text-slate-100">Recommended fix: </span>{detection.action}
+              </div>
             </div>
-            <p className="mt-3 text-sm leading-6 text-slate-600">{detection.detail}</p>
-            <div className="mt-4 rounded-2xl bg-slate-50 border border-slate-200 p-3 text-sm text-slate-700">
-              <span className="font-semibold">Fix: </span>{detection.action}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </section>
 
-      <section className="rounded-3xl bg-white border border-slate-200 shadow-sm p-6">
-        <div className="flex items-center gap-2 text-amber-700 font-semibold">
-          <AlertTriangle className="h-5 w-5" />
-          Read this before ordering
+      {/* Seasonal Advisory */}
+      <section className="rounded-3xl border border-amber-200 bg-amber-50 p-6 dark:border-amber-500/20 dark:bg-amber-500/5">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-amber-100 dark:bg-amber-500/20">
+            <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-bold text-amber-900 dark:text-amber-200">Read this before ordering</h3>
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-700 dark:bg-amber-500/20 dark:text-amber-300">SEASONAL ALERT</span>
+            </div>
+            <p className="mt-2 text-sm leading-6 text-amber-800/80 dark:text-amber-200/70">
+              {data.predictiveAnalytics.seasonalTrends}. Watch high-turn minimart brands like{' '}
+              <span className="font-semibold">{retailExamples.minimart.topBrands.slice(0, 4).join(', ')}</span> and pharmacy items like{' '}
+              <span className="font-semibold">{retailExamples.pharma.topBrands.slice(0, 4).join(', ')}</span> because these are most exposed to over-ordering and expiry waste.
+            </p>
+            <div className="mt-4 flex items-center gap-2">
+              <Zap className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              <span className="text-xs font-semibold text-amber-700 dark:text-amber-300">Action: Adjust purchase orders downward for flagged SKUs this season.</span>
+            </div>
+          </div>
         </div>
-        <p className="mt-3 text-sm leading-6 text-slate-600">
-          {data.predictiveAnalytics.seasonalTrends}. Watch high-turn minimart brands like {retailExamples.minimart.topBrands.slice(0, 4).join(', ')} and pharmacy items like {retailExamples.pharma.topBrands.slice(0, 4).join(', ')} because these are most exposed to over-ordering and expiry waste.
-        </p>
       </section>
     </div>
   );

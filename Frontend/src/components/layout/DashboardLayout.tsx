@@ -22,7 +22,7 @@ import {
   X,
   Brain,
   Layers,
-  CircleDollarSign,
+  PhilippinePeso,
   FlaskConical,
 } from 'lucide-react';
 import { ThemeToggle } from '../ThemeToggle';
@@ -46,7 +46,7 @@ const sidebarGroupsByRole: Record<UserRole, SidebarGroup[]> = {
       group: 'Analytics Modules',
       items: [
         { to: '/dashboard/leakage', label: 'Leakage Detection', icon: AlertTriangle },
-        { to: '/dashboard/vendors', label: 'Vendor Credits', icon: CircleDollarSign },
+        { to: '/dashboard/vendors', label: 'Vendor Credits', icon: PhilippinePeso },
         { to: '/dashboard/prescriptive', label: 'Decision Sandbox', icon: FlaskConical },
       ],
     },
@@ -94,7 +94,7 @@ const sidebarGroupsByRole: Record<UserRole, SidebarGroup[]> = {
         { to: '/dashboard/predictive', label: 'Predictive Analytics', icon: TrendingUp },
         { to: '/dashboard/leakage', label: 'Leakage Detection', icon: AlertTriangle },
         { to: '/dashboard/fefo', label: 'FEFO Tracking', icon: Layers },
-        { to: '/dashboard/vendors', label: 'Vendor Credits', icon: CircleDollarSign },
+        { to: '/dashboard/vendors', label: 'Vendor Credits', icon: PhilippinePeso },
         { to: '/dashboard/behavior', label: 'Behavioral Intelligence', icon: Brain },
         { to: '/dashboard/prescriptive', label: 'Decision Sandbox', icon: FlaskConical },
       ],
@@ -182,7 +182,7 @@ if (!session) {
         <div className="flex items-center justify-between gap-2">
           {/* Logo — always visible; white bg ensures icon shows in dark mode */}
           <div className={`flex min-w-0 items-center flex-1 ${compact ? 'justify-center' : 'justify-start'}`}>
-            <div className={`rounded-lg bg-white dark:bg-white p-1.5 flex items-center justify-center shadow-sm ${compact ? 'h-10 w-10' : 'h-10 px-2'}`}>
+            <div className={`flex items-center justify-center ${compact ? 'h-10 w-10' : 'h-10 px-2'}`}>
               <img
                 src={compact ? BRAND_ICON : BRAND_WORDMARK}
                 alt="WiWaste"
@@ -282,11 +282,11 @@ if (!session) {
         {/* ── Main Content ── */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* Top bar for mobile */}
-          <header className="md:hidden sticky top-0 z-30 flex h-14 items-center justify-between border-b border-gray-200 bg-white px-4">
+          <header className="md:hidden sticky top-0 z-30 flex h-14 items-center justify-between border-b border-gray-200/50 dark:border-white/10 bg-white/60 dark:bg-slate-950/60 backdrop-blur-md px-4">
             <button
               type="button"
               onClick={() => setMobileOpen(true)}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 dark:border-white/10 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-white/10"
               aria-label="Open sidebar"
             >
               <Menu className="h-5 w-5" />
@@ -296,9 +296,9 @@ if (!session) {
           </header>
 
           {/* Top bar for desktop — clean, no duplicate sign out */}
-          <header className="hidden md:flex sticky top-0 z-30 h-14 items-center border-b border-gray-200 bg-white px-6">
-            <span className="text-sm text-gray-500">
-              Welcome back, <span className="font-semibold text-gray-800">{session.name}</span>
+          <header className="hidden md:flex sticky top-0 z-30 h-14 items-center border-b border-gray-200/50 dark:border-white/10 bg-white/60 dark:bg-slate-950/60 backdrop-blur-md px-6">
+            <span className="text-sm text-gray-500 dark:text-slate-400">
+              Welcome back, <span className="font-semibold text-gray-800 dark:text-slate-100">{session.name}</span>
             </span>
           </header>
 

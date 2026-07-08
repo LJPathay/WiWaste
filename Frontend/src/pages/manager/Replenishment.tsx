@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { CheckCircle, AlertCircle, ShoppingCart, Check, Search } from 'lucide-react';
+import { CheckCircle, AlertCircle, Info, ShoppingCart, Check, Search } from 'lucide-react';
+import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 
 interface ReplenishMock {
   id: string;
@@ -47,11 +48,21 @@ export function Replenishment() {
     <div className="space-y-6 w-full">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
+        <div className="flex items-center gap-2">
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <ShoppingCart className="h-6 w-6 text-[#006a61]" />
             Replenishment Orders
           </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Review AI-calculated replenishment recommendations based on velocity factors.</p>
+          <UITooltip>
+            <TooltipTrigger asChild>
+              <Info className="h-5 w-5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
+            </TooltipTrigger>
+            <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
+              AI-calculated replenishment recommendations based on velocity factors, safety minimums, and lead times.
+            </TooltipContent>
+          </UITooltip>
+        </div>
+
         </div>
         {criticalCount > 0 && (
           <div className="bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-100 dark:border-rose-500/20 px-4 py-2 rounded-xl flex items-center gap-2 text-xs font-semibold">

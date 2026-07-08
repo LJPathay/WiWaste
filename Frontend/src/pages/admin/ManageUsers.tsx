@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Users, Search, Plus, Edit2, X } from 'lucide-react';
+import { Users, Search, Plus, Edit2, X, Info } from 'lucide-react';
+import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 
 interface UserMock {
   id: string;
@@ -82,8 +83,17 @@ export function ManageUsers() {
     <div className="space-y-6 w-full font-sans">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Manage Users</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Configure system users and access levels.</p>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Manage Users</h1>
+            <UITooltip>
+              <TooltipTrigger asChild>
+                <Info className="h-5 w-5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
+                Configure system users and access levels.
+              </TooltipContent>
+            </UITooltip>
+          </div>
         </div>
         <button
           onClick={() => {

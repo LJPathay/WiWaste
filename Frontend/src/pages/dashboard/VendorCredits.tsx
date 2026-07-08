@@ -1,6 +1,8 @@
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { AlertTriangle, CircleDollarSign, FileCheck, TimerReset, XCircle } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, PhilippinePeso, FileCheck, Info, TimerReset, XCircle } from 'lucide-react';
+import { Link } from 'react-router';
 import { useDashboardData } from '../../hooks/useDashboardData';
+import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 
 const currencyFormatter = new Intl.NumberFormat('en-PH', {
   style: 'currency',
@@ -52,9 +54,17 @@ export function VendorCreditsPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div>
+      <div className="flex items-center gap-2">
+        <Link to="/dashboard?highlightKpi=2" className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-slate-200 dark:border-white/10 text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-white/10 dark:hover:text-slate-200 transition-colors" aria-label="Back to Dashboard"><ArrowLeft className="h-4 w-4" /></Link>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Vendor Credit Recovery</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Track supplier return opportunities and recoverable credits. Act before return windows close permanently.</p>
+        <UITooltip>
+          <TooltipTrigger asChild>
+            <Info className="h-5 w-5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
+          </TooltipTrigger>
+          <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
+            Track supplier return opportunities and recoverable credits. Act before return windows close permanently.
+          </TooltipContent>
+        </UITooltip>
       </div>
 
 
@@ -63,7 +73,7 @@ export function VendorCreditsPage() {
         <div className="rounded-3xl border border-emerald-100 bg-emerald-50 p-5 dark:border-emerald-500/20 dark:bg-emerald-500/5">
           <div className="flex items-center justify-between">
             <div className="text-xs font-semibold uppercase tracking-widest text-emerald-500 dark:text-emerald-400">Total Recoverable</div>
-            <CircleDollarSign className="h-4 w-4 text-emerald-500" />
+            <PhilippinePeso className="h-4 w-4 text-emerald-500" />
           </div>
           <div className="mt-2 text-2xl font-bold text-emerald-700 dark:text-emerald-300">{currencyFormatter.format(totalCredits)}</div>
           <div className="mt-1 text-xs text-emerald-600/70">eligible across {data.vendorReturns.length} suppliers</div>
@@ -89,12 +99,19 @@ export function VendorCreditsPage() {
       {/* Chart */}
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-slate-900">
         <div className="flex items-center justify-between gap-4 flex-wrap mb-5">
-          <div>
+          <div className="flex items-center gap-2">
             <h2 className="text-lg font-bold text-[#0b1c30] dark:text-slate-100">Credit by Vendor</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Color-coded by deadline risk — red=missed, amber=urgent, teal=open</p>
+            <UITooltip>
+              <TooltipTrigger asChild>
+                <Info className="h-4 w-4 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
+                Color-coded by deadline risk — red=missed, amber=urgent, teal=open
+              </TooltipContent>
+            </UITooltip>
           </div>
           <span className="inline-flex items-center gap-2 text-xs rounded-full bg-emerald-50 text-emerald-700 px-3 py-1 font-semibold dark:bg-emerald-500/10 dark:text-emerald-400">
-            <CircleDollarSign className="h-3.5 w-3.5" />
+            <PhilippinePeso className="h-3.5 w-3.5" />
             {currencyFormatter.format(totalCredits)} recoverable
           </span>
         </div>

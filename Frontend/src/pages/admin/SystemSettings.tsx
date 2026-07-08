@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Save, Download, Trash2, Upload, Loader2 } from 'lucide-react';
+import { Save, Download, Trash2, Upload, Loader2, Info } from 'lucide-react';
+import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { Toast, useToast, FormField, inputCls } from '../../components/ui/Toast';
 
 /* ── Toggle Switch ── */
@@ -128,10 +129,17 @@ export function SystemSettings() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">System Settings</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-            Configure your store profile, alert preferences and data management options.
-          </p>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">System Settings</h1>
+            <UITooltip>
+              <TooltipTrigger asChild>
+                <Info className="h-5 w-5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
+                Configure your store profile, alert preferences and data management options.
+              </TooltipContent>
+            </UITooltip>
+          </div>
         </div>
         <button
           onClick={handleSaveConfig}

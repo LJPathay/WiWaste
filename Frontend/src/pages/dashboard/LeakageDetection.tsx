@@ -1,6 +1,8 @@
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { AlertCircle, ShieldAlert, TrendingDown } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Info, ShieldAlert, TrendingDown } from 'lucide-react';
+import { Link } from 'react-router';
 import { useDashboardData } from '../../hooks/useDashboardData';
+import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 
 const currencyFormatter = new Intl.NumberFormat('en-PH', {
   style: 'currency',
@@ -62,9 +64,17 @@ export function LeakageDetectionPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div>
+      <div className="flex items-center gap-2">
+        <Link to="/dashboard?highlightKpi=1" className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-slate-200 dark:border-white/10 text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-white/10 dark:hover:text-slate-200 transition-colors" aria-label="Back to Dashboard"><ArrowLeft className="h-4 w-4" /></Link>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Profit Leakage Detection</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Ranked financial loss drivers — identify where money is leaking and prioritize containment.</p>
+        <UITooltip>
+          <TooltipTrigger asChild>
+            <Info className="h-5 w-5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
+          </TooltipTrigger>
+          <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
+            Ranked financial loss drivers — identify where money is leaking and prioritize containment.
+          </TooltipContent>
+        </UITooltip>
       </div>
 
       {/* Summary Stats */}
@@ -91,21 +101,28 @@ export function LeakageDetectionPage() {
       {/* Horizontal Bar Chart */}
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-slate-900">
         <div className="flex items-center justify-between gap-4 flex-wrap mb-5">
-          <div>
+          <div className="flex items-center gap-2">
             <h2 className="text-lg font-bold text-[#0b1c30] dark:text-slate-100">Leakage by Category</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Ranked loss drivers — largest at top.</p>
+            <UITooltip>
+              <TooltipTrigger asChild>
+                <Info className="h-4 w-4 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
+                Ranked loss drivers — largest at top.
+              </TooltipContent>
+            </UITooltip>
           </div>
           <span className="inline-flex items-center gap-2 text-xs rounded-full bg-rose-50 text-rose-700 px-3 py-1 font-semibold dark:bg-rose-500/10 dark:text-rose-400">
             <ShieldAlert className="h-3.5 w-3.5" />
             {currencyFormatter.format(totalLeakage)} total leakage
           </span>
         </div>
-        <div className="h-96 w-full">
+        <div style={{ height: leakageChart.length * 56 + 40 }} className="w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={leakageChart} layout="vertical" margin={{ left: 24, right: 24 }}>
+            <BarChart data={leakageChart} layout="vertical" margin={{ left: 16, right: 32, top: 8, bottom: 8 }} barSize={28}>
               <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e8edf5" />
               <XAxis type="number" tick={{ fontSize: 12 }} stroke="#94a3b8" />
-              <YAxis type="category" dataKey="name" width={150} tick={{ fontSize: 12 }} stroke="#94a3b8" />
+              <YAxis type="category" dataKey="name" width={170} tick={{ fontSize: 12 }} stroke="#94a3b8" />
               <Tooltip
                 formatter={(value) => currencyFormatter.format(Number(value))}
                 contentStyle={{

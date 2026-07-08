@@ -1,5 +1,7 @@
 import React, { useState, useMemo } from 'react';
+import { Info } from 'lucide-react';
 import { Toast, useToast, ConfirmDialog } from '../../components/ui/Toast';
+import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 
 const currencyFormatter = new Intl.NumberFormat('en-PH', {
   style: 'currency',
@@ -78,11 +80,11 @@ const initialItems: OverstockItem[] = [
 ];
 
 const actionColor: Record<string, string> = {
-  'Return to Supplier': 'bg-blue-100 text-blue-700',
-  'Markdown & Sell': 'bg-yellow-100 text-yellow-700',
-  'Inter-Branch Transfer': 'bg-purple-100 text-purple-700',
-  Liquidate: 'bg-red-100 text-red-700',
-  'Donate / Write-off': 'bg-green-100 text-green-700',
+  'Return to Supplier': 'bg-sky-100 text-sky-700 dark:bg-sky-500/10 dark:text-sky-400',
+  'Markdown & Sell': 'bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400',
+  'Inter-Branch Transfer': 'bg-violet-100 text-violet-700 dark:bg-violet-500/10 dark:text-violet-400',
+  Liquidate: 'bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400',
+  'Donate / Write-off': 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
 };
 
 export function OverstockRisks() {
@@ -140,12 +142,18 @@ export function OverstockRisks() {
       )}
 
       {/* Header */}
-      <div className="flex flex-col gap-1">
+      <div className="flex items-center gap-2">
         <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Overstock Risks</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400">
-          Identify excess inventory and apply remediation actions.
-        </p>
+        <UITooltip>
+          <TooltipTrigger asChild>
+            <Info className="h-5 w-5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
+          </TooltipTrigger>
+          <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
+            Identify excess inventory above reorder thresholds and apply remediation actions to free up capital.
+          </TooltipContent>
+        </UITooltip>
       </div>
+
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

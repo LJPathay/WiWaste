@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { AlertTriangle, Trash2, Search, Loader2 } from 'lucide-react';
+import { AlertTriangle, Trash2, Search, Loader2, Info } from 'lucide-react';
+import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { Toast, useToast, ConfirmDialog, FormField, inputCls } from '../../components/ui/Toast';
 
 interface WastageMock {
@@ -99,10 +100,17 @@ export function RecordWastage() {
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            Record Wastage
-          </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Log inventory spoilage, shelf exps, packaging ruptures, or vendor write-offs.</p>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Record Wastage</h1>
+            <UITooltip>
+              <TooltipTrigger asChild>
+                <Info className="h-5 w-5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
+                Log inventory spoilage, shelf expirations, packaging ruptures, or vendor write-offs.
+              </TooltipContent>
+            </UITooltip>
+          </div>
         </div>
         <div className="bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-100 dark:border-rose-500/20 px-5 py-3 rounded-xl flex items-center gap-3 shadow-sm">
           <div className="text-xs font-semibold uppercase tracking-wider">Total Loss Value</div>

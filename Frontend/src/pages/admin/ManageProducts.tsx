@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Package, Search, Plus, Archive, Edit2 } from 'lucide-react';
+import { Package, Search, Plus, Archive, Edit2, Info } from 'lucide-react';
+import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 
 interface ProductMock {
   id: string;
@@ -50,8 +51,17 @@ export function ManageProducts() {
     <div className="space-y-6 w-full font-sans">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Manage Products</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Manage product details and baseline tracking limits.</p>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Manage Products</h1>
+            <UITooltip>
+              <TooltipTrigger asChild>
+                <Info className="h-5 w-5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
+                Manage product details and baseline tracking limits.
+              </TooltipContent>
+            </UITooltip>
+          </div>
         </div>
         <button className="inline-flex items-center gap-2 rounded-lg bg-[#006a61] text-white px-4 py-2 text-sm font-semibold hover:bg-[#00574f] transition-all">
           <Plus className="h-4 w-4" />

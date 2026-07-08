@@ -1,7 +1,8 @@
 import React from 'react';
 import { AreaChart, Area, CartesianGrid, Tooltip, XAxis, YAxis, ResponsiveContainer, Legend } from 'recharts';
-import { TrendingUp } from 'lucide-react';
+import { Info, TrendingUp } from 'lucide-react';
 import { useDashboardData } from '../../hooks/useDashboardData';
+import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 
 const FORECAST_DATA = [
   { month: 'Jan', actual: 4200, forecast: 4100, lower: 3800, upper: 4400 },
@@ -33,13 +34,21 @@ export function DemandForecasts() {
 
   return (
     <div className="space-y-6 w-full">
-      <div>
+      <div className="flex items-center gap-2">
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
           <TrendingUp className="h-6 w-6 text-[#006a61]" />
           Demand Forecast Analytics
         </h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Review statistical demand models, confidence indexes, and seasonal warning triggers.</p>
+        <UITooltip>
+          <TooltipTrigger asChild>
+            <Info className="h-5 w-5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
+          </TooltipTrigger>
+          <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
+            Statistical demand models, confidence indexes, and seasonal warning triggers to guide purchase order decisions.
+          </TooltipContent>
+        </UITooltip>
       </div>
+
 
       {/* KPI highlights */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

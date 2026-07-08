@@ -1,10 +1,11 @@
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { Brain, UsersRound } from 'lucide-react';
+import { Brain, Info, UsersRound } from 'lucide-react';
 import { useDashboardData } from '../../hooks/useDashboardData';
+import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 
-const currencyFormatter = new Intl.NumberFormat('en-US', {
+const currencyFormatter = new Intl.NumberFormat('en-PH', {
   style: 'currency',
-  currency: 'USD',
+  currency: 'PHP',
   maximumFractionDigits: 0,
 });
 
@@ -29,11 +30,23 @@ export function BehavioralIntelligencePage() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-3xl bg-white border border-slate-200 shadow-sm p-6">
+      <div className="flex items-center gap-2">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Behavioral Intelligence</h1>
+        <UITooltip>
+          <TooltipTrigger asChild>
+            <Info className="h-5 w-5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
+          </TooltipTrigger>
+          <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
+            Staff, customer, and partner behavior patterns causing preventable loss — ranked by financial impact.
+          </TooltipContent>
+        </UITooltip>
+      </div>
+
+      <section className="rounded-3xl bg-white border border-slate-200 shadow-sm p-6 dark:border-white/10 dark:bg-slate-900">
         <div className="flex items-center justify-between gap-4 flex-wrap mb-5">
           <div>
-            <h2 className="text-xl font-semibold text-[#0b1c30]">Behavioral Intelligence</h2>
-            <p className="text-sm text-slate-500">Staff, customer, and partner behavior patterns causing preventable loss.</p>
+            <h2 className="text-lg font-bold text-[#0b1c30] dark:text-slate-100">Behavior Impact by Pattern</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Sorted by highest financial impact.</p>
           </div>
           <span className="inline-flex items-center gap-2 text-xs rounded-full bg-violet-50 text-violet-700 px-3 py-1 font-semibold">
             <Brain className="h-3.5 w-3.5" />

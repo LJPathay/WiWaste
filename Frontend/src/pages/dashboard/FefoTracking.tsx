@@ -10,8 +10,10 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { AlertTriangle, Clock3, Package, PackageSearch, RotateCcw, Tag } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Clock3, Info, Package, PackageSearch, RotateCcw, Tag } from 'lucide-react';
+import { Link } from 'react-router';
 import { useDashboardData } from '../../hooks/useDashboardData';
+import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 
 const currencyFormatter = new Intl.NumberFormat('en-PH', {
   style: 'currency',
@@ -66,9 +68,17 @@ export function FefoTrackingPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div>
+      <div className="flex items-center gap-2">
+        <Link to="/dashboard?highlightKpi=3" className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-slate-200 dark:border-white/10 text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-white/10 dark:hover:text-slate-200 transition-colors" aria-label="Back to Dashboard"><ArrowLeft className="h-4 w-4" /></Link>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">FEFO Batch Tracking</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Monitor batches by expiration date. Trigger rotation or promotional pricing before stock becomes unsellable.</p>
+        <UITooltip>
+          <TooltipTrigger asChild>
+            <Info className="h-5 w-5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
+          </TooltipTrigger>
+          <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
+            Monitor batches by expiration date. Trigger rotation or promotional pricing before stock becomes unsellable.
+          </TooltipContent>
+        </UITooltip>
       </div>
 
       {/* Stat Row */}
@@ -90,9 +100,16 @@ export function FefoTrackingPage() {
       {/* Chart */}
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-slate-900">
         <div className="flex items-center justify-between gap-4 flex-wrap mb-5">
-          <div>
+          <div className="flex items-center gap-2">
             <h2 className="text-lg font-bold text-[#0b1c30] dark:text-slate-100">Days to Expiry by Batch</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Color-coded risk with recommended price drop %</p>
+            <UITooltip>
+              <TooltipTrigger asChild>
+                <Info className="h-4 w-4 text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
+                Color-coded risk with recommended price drop %
+              </TooltipContent>
+            </UITooltip>
           </div>
           <div className="flex gap-3 text-xs font-medium">
             <span className="flex items-center gap-1.5 text-rose-600"><span className="inline-block h-3 w-3 rounded-sm bg-rose-500" /> Critical</span>

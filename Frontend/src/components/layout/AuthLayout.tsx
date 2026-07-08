@@ -1,5 +1,4 @@
 import { Outlet, Link, useLocation } from 'react-router';
-import { ShieldCheck } from 'lucide-react';
 import { ThemeToggle } from '../ThemeToggle';
 import { getStoredSession } from '../../utils/mockAuthAndFeatures';
 
@@ -19,10 +18,7 @@ export function AuthLayout() {
         <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
           <Link to={isAuthed ? '/dashboard' : '/'} className="flex items-center gap-3">
             <img src={BRAND_WORDMARK} alt="WiWaste" className="h-10 w-auto object-contain" />
-            <span className="hidden sm:inline-flex items-center gap-2 text-sm font-semibold text-[#0b1c30] dark:text-slate-100">
-              <ShieldCheck className="h-4 w-4 text-[#006b5f]" />
-              Secure Portal
-            </span>
+
           </Link>
 
           <div className="flex items-center gap-3">

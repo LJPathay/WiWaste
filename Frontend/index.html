@@ -4,10 +4,67 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>wiwaste</title>
+    <title>WiWaste</title>
+    <style>
+      #splash {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        background: #f4f7fb;
+        z-index: 9999;
+        transition: opacity 0.3s ease;
+      }
+      @media (prefers-color-scheme: dark) {
+        #splash { background: #0f172a; }
+      }
+      #splash img {
+        width: 140px;
+        object-fit: contain;
+      }
+      #splash-bar {
+        width: 160px;
+        height: 3px;
+        border-radius: 99px;
+        background: #e2e8f0;
+        overflow: hidden;
+      }
+      @media (prefers-color-scheme: dark) {
+        #splash-bar { background: #1e293b; }
+      }
+      #splash-fill {
+        height: 100%;
+        width: 0%;
+        border-radius: 99px;
+        background: #006a61;
+        animation: fill 0.6s cubic-bezier(0.4,0,0.2,1) forwards;
+      }
+      @keyframes fill {
+        to { width: 100%; }
+      }
+      #splash.hide {
+        opacity: 0;
+        pointer-events: none;
+      }
+    </style>
   </head>
   <body>
+    <div id="splash">
+      <img src="/images/Logo_full.PNG" alt="WiWaste" />
+      <div id="splash-bar"><div id="splash-fill"></div></div>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      window.__hideSplash = function () {
+        var s = document.getElementById('splash');
+        if (!s) return;
+        s.classList.add('hide');
+        setTimeout(function () { s.remove(); }, 350);
+      };
+    </script>
   </body>
 </html>

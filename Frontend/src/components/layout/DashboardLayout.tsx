@@ -13,10 +13,7 @@ import {
   TrendingUp,
   AlertTriangle,
   CheckCircle,
-  ClipboardList,
   Package,
-  ArrowUpCircle,
-  ArrowDownCircle,
   Eye,
   Menu,
   X,
@@ -24,6 +21,7 @@ import {
   Layers,
   PhilippinePeso,
   FlaskConical,
+  Activity,
 } from 'lucide-react';
 import { ThemeToggle } from '../ThemeToggle';
 import { clearStoredSession, getStoredSession, type UserRole } from '../../utils/mockAuthAndFeatures';
@@ -54,11 +52,9 @@ const sidebarGroupsByRole: Record<UserRole, SidebarGroup[]> = {
       group: 'Management',
       items: [
         { to: '/admin/users', label: 'Manage Users', icon: Users },
-        { to: '/admin/products', label: 'Manage Products', icon: Package },
-        { to: '/admin/categories', label: 'Manage Categories', icon: ClipboardList },
-        { to: '/admin/suppliers', label: 'Manage Suppliers', icon: TrendingUp },
         { to: '/admin/settings', label: 'System Settings', icon: Settings },
         { to: '/admin/reports', label: 'Generate Reports', icon: FileText },
+        { to: '/admin/audit-logs', label: 'Audit Logs', icon: Activity },
       ],
     },
   ],
@@ -72,10 +68,8 @@ const sidebarGroupsByRole: Record<UserRole, SidebarGroup[]> = {
     {
       group: 'Inventory',
       items: [
-        { to: '/inventory/stock-in', label: 'Stock In', icon: ArrowUpCircle },
-        { to: '/inventory/stock-out', label: 'Stock Out', icon: ArrowDownCircle },
-        { to: '/inventory/wastage', label: 'Record Wastage', icon: AlertTriangle },
         { to: '/inventory/manage', label: 'Manage Inventory', icon: Package },
+        { to: '/inventory/wastage', label: 'Record Wastage', icon: AlertTriangle },
         { to: '/inventory/fefo', label: 'FEFO Tracking', icon: CheckCircle },
         { to: '/inventory/recommendations', label: 'Recommendations', icon: Eye },
       ],
@@ -86,6 +80,13 @@ const sidebarGroupsByRole: Record<UserRole, SidebarGroup[]> = {
       group: 'Overview',
       items: [
         { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      ],
+    },
+    {
+      group: 'Management',
+      items: [
+        { to: '/admin/products', label: 'Manage Products', icon: Package },
+        { to: '/admin/suppliers', label: 'Manage Suppliers', icon: TrendingUp },
       ],
     },
     {

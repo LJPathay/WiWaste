@@ -8,6 +8,9 @@ import { Solutions } from "./pages/Solutions";
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
 import { Dashboard } from "./pages/Dashboard";
+import { ManagerDashboard } from "./pages/dashboard/ManagerDashboard";
+import { InventoryDashboard } from "./pages/dashboard/InventoryDashboard";
+import { AdminDashboard } from "./pages/dashboard/AdminDashboard";
 import { PredictiveAnalyticsPage } from "./pages/dashboard/PredictiveAnalytics";
 import { LeakageDetectionPage } from "./pages/dashboard/LeakageDetection";
 import { FefoTrackingPage } from "./pages/dashboard/FefoTracking";
@@ -21,6 +24,7 @@ import { ManageCategories } from "./pages/admin/ManageCategories";
 import { ManageSuppliers } from "./pages/admin/ManageSuppliers";
 import { SystemSettings } from "./pages/admin/SystemSettings";
 import { GenerateReports } from "./pages/admin/GenerateReports";
+import { AuditLogs } from "./pages/admin/AuditLogs";
 // Inventory pages
 import { StockIn } from "./pages/inventory/StockIn";
 import { StockOut } from "./pages/inventory/StockOut";
@@ -64,6 +68,9 @@ export const router = createBrowserRouter([
         children: [
             // Dashboard overview & sub-pages
             { path: "dashboard", Component: Dashboard },
+            { path: "dashboard/manager", Component: ManagerDashboard },
+            { path: "dashboard/inventory", Component: InventoryDashboard },
+            { path: "dashboard/admin", Component: AdminDashboard },
             { path: "dashboard/predictive", Component: PredictiveAnalyticsPage },
             { path: "dashboard/leakage", Component: LeakageDetectionPage },
             { path: "dashboard/fefo", Component: FefoTrackingPage },
@@ -77,6 +84,7 @@ export const router = createBrowserRouter([
             { path: "admin/suppliers", Component: ManageSuppliers },
             { path: "admin/settings", Component: SystemSettings },
             { path: "admin/reports", Component: GenerateReports },
+            { path: "admin/audit-logs", Component: AuditLogs },
             // Inventory routes
             { path: "inventory/stock-in", Component: StockIn },
             { path: "inventory/stock-out", Component: StockOut },

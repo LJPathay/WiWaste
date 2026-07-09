@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Package, Search, Plus, Archive, Edit2, Info } from 'lucide-react';
+import { Search, Plus, Info } from 'lucide-react';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
+import { Modal, FormField, inputCls, useToast, Toast } from '../../components/ui/Toast';
 
 interface ProductMock {
   id: string;
@@ -32,12 +33,128 @@ const currencyFormatter = new Intl.NumberFormat('en-PH', {
 });
 
 export function ManageProducts() {
+  const { toasts, dismiss, success } = useToast();
   const [products, setProducts] = useState<ProductMock[]>(INITIAL_PRODUCTS);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<'All' | 'Food' | 'Medicine' | 'Beverages' | 'Personal Care'>('All');
+  const [selectedProduct, setSelectedProduct] = useState<ProductMock | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [addForm, setAddForm] = useState({
+    name: '',
+    sku: '',
+    category: 'Food' as 'Food' | 'Medicine' | 'Beverages' | 'Personal Care',
+    price: '',
+    stock: '',
+    expiry: '',
+  });
+  const [editForm, setEditForm] = useState({
+    name: '',
+    sku: '',
+    category: 'Food' as 'Food' | 'Medicine' | 'Beverages' | 'Personal Care',
+    price: '',
+    stock: '',
+    expiry: '',
+  });
+  const [addError, setAddError] = useState('');
+  const [editError, setEditError] = useState('');
+  const [processing, setProcessing] = useState(false);
 
-  const handleArchive = (id: string) => {
-    setProducts(prev => prev.filter(p => p.id !== id));
+  const handleAddProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const { name, sku, category, price, stock, expiry } = addForm;
+
+    if (!name.trim() || !sku.trim() || !price || !stock || !expiry) {
+      setAddError('All fields are required.');
+      return;
+    }
+    if (Number(price) <= 0 || Number(stock) < 0) {
+      setAddError('Price must be greater than 0 and stock must be 0 or greater.');
+      return;
+    }
+
+    setAddError('');
+    setProcessing(true);
+    await new Promise(r => setTimeout(r, 500));
+
+    const newProduct: ProductMock = {
+      id: Date.now().toString(),
+      name: name.trim(),
+      sku: sku.trim().toUpperCase(),
+      category,
+      price: Number(price),
+      stock: Number(stock),
+      expiry,
+    };
+
+    setProducts(prev => [newProduct, ...prev]);
+    setProcessing(false);
+    setShowAddModal(false);
+    setAddForm({
+      name: '',
+      sku: '',
+      category: 'Food',
+      price: '',
+      stock: '',
+      expiry: '',
+    });
+    success(`Product "${newProduct.name}" added successfully.`);
+  };
+
+  const handleEditClick = () => {
+    if (!selectedProduct) return;
+    setEditForm({
+      name: selectedProduct.name,
+      sku: selectedProduct.sku,
+      category: selectedProduct.category,
+      price: selectedProduct.price.toString(),
+      stock: selectedProduct.stock.toString(),
+      expiry: selectedProduct.expiry,
+    });
+    setShowEditModal(true);
+  };
+
+  const handleEditProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedProduct) return;
+
+    const { name, sku, category, price, stock, expiry } = editForm;
+
+    if (!name.trim() || !sku.trim() || !price || !stock || !expiry) {
+      setEditError('All fields are required.');
+      return;
+    }
+    if (Number(price) <= 0 || Number(stock) < 0) {
+      setEditError('Price must be greater than 0 and stock must be 0 or greater.');
+      return;
+    }
+
+    setEditError('');
+    setProcessing(true);
+    await new Promise(r => setTimeout(r, 500));
+
+    const updatedProduct: ProductMock = {
+      ...selectedProduct,
+      name: name.trim(),
+      sku: sku.trim().toUpperCase(),
+      category,
+      price: Number(price),
+      stock: Number(stock),
+      expiry,
+    };
+
+    setProducts(prev =>
+      prev.map(p => (p.id === selectedProduct.id ? updatedProduct : p))
+    );
+    setSelectedProduct(updatedProduct);
+    setProcessing(false);
+    setShowEditModal(false);
+    success(`Product "${updatedProduct.name}" updated successfully.`);
+  };
+
+  const handleEditCancel = () => {
+    setShowEditModal(false);
+    setEditError('');
   };
 
   const filteredProducts = products.filter(product => {
@@ -63,7 +180,7 @@ export function ManageProducts() {
             </UITooltip>
           </div>
         </div>
-        <button className="inline-flex items-center gap-2 rounded-lg bg-[#006a61] text-white px-4 py-2 text-sm font-semibold hover:bg-[#00574f] transition-all">
+        <button onClick={() => setShowAddModal(true)} className="inline-flex items-center gap-2 rounded-lg bg-[#006a61] text-white px-4 py-2 text-sm font-semibold hover:bg-[#00574f] transition-all">
           <Plus className="h-4 w-4" />
           Add Product
         </button>
@@ -109,37 +226,265 @@ export function ManageProducts() {
                 <th className="px-6 py-3">Unit Price</th>
                 <th className="px-6 py-3">Stock Level</th>
                 <th className="px-6 py-3">Expiry Date</th>
-                <th className="px-6 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-white/5">
               {filteredProducts.map((p) => (
-                <tr key={p.id} className="hover:bg-slate-55/20 dark:hover:bg-white/5">
+                <tr
+                  key={p.id}
+                  className="hover:bg-slate-55/20 dark:hover:bg-white/5 cursor-pointer"
+                  onClick={() => setSelectedProduct(p)}
+                >
                   <td className="px-6 py-4 font-medium text-slate-900 dark:text-slate-100">{p.name}</td>
                   <td className="px-6 py-4 text-slate-500 dark:text-slate-400 font-mono">{p.sku}</td>
                   <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{p.category}</td>
                   <td className="px-6 py-4 text-slate-700 dark:text-slate-300">{currencyFormatter.format(p.price)}</td>
                   <td className="px-6 py-4 text-slate-700 dark:text-slate-300">{p.stock} units</td>
                   <td className="px-6 py-4 text-slate-500 dark:text-slate-400">{p.expiry}</td>
-                  <td className="px-6 py-4 text-right flex items-center justify-end gap-3">
-                    <button className="inline-flex items-center gap-1 text-xs font-bold text-[#006a61] dark:text-[#7ef0cf] hover:underline">
-                      <Edit2 className="h-3.5 w-3.5" />
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleArchive(p.id)}
-                      className="inline-flex items-center gap-1 text-xs font-bold text-slate-500 hover:text-slate-700 hover:underline"
-                    >
-                      <Archive className="h-3.5 w-3.5" />
-                      Archive
-                    </button>
-                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </div>
+
+      {/* Add Product Modal */}
+      {showAddModal && (
+        <Modal title="Add New Product" onClose={() => setShowAddModal(false)} size="lg">
+          <form onSubmit={handleAddProduct} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <FormField label="Product Name">
+                <input
+                  type="text"
+                  className={inputCls}
+                  value={addForm.name}
+                  onChange={e => setAddForm({...addForm, name: e.target.value})}
+                  placeholder="e.g. Del Monte Tomato Sauce 250g"
+                  required
+                />
+              </FormField>
+              <FormField label="SKU">
+                <input
+                  type="text"
+                  className={inputCls}
+                  value={addForm.sku}
+                  onChange={e => setAddForm({...addForm, sku: e.target.value})}
+                  placeholder="e.g. DM-TS-250"
+                  required
+                />
+              </FormField>
+              <FormField label="Category">
+                <select
+                  className={inputCls}
+                  value={addForm.category}
+                  onChange={e => setAddForm({...addForm, category: e.target.value as any})}
+                  required
+                >
+                  <option value="Food">Food</option>
+                  <option value="Medicine">Medicine</option>
+                  <option value="Beverages">Beverages</option>
+                  <option value="Personal Care">Personal Care</option>
+                </select>
+              </FormField>
+              <FormField label="Unit Price (₱)">
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  className={inputCls}
+                  value={addForm.price}
+                  onChange={e => setAddForm({...addForm, price: e.target.value})}
+                  placeholder="e.g. 32.50"
+                  required
+                />
+              </FormField>
+              <FormField label="Initial Stock">
+                <input
+                  type="number"
+                  min="0"
+                  className={inputCls}
+                  value={addForm.stock}
+                  onChange={e => setAddForm({...addForm, stock: e.target.value})}
+                  placeholder="e.g. 100"
+                  required
+                />
+              </FormField>
+              <FormField label="Expiry Date">
+                <input
+                  type="date"
+                  className={inputCls}
+                  value={addForm.expiry}
+                  onChange={e => setAddForm({...addForm, expiry: e.target.value})}
+                  required
+                />
+              </FormField>
+            </div>
+
+            {addError && (
+              <p className="text-xs text-rose-600 dark:text-rose-400 font-medium">{addError}</p>
+            )}
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowAddModal(false)}
+                className="flex-1 rounded-lg border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-600 dark:text-slate-300 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={processing}
+                className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-[#006a61] hover:bg-[#00574f] disabled:opacity-60 text-white text-xs font-semibold py-2 transition-colors"
+              >
+                {processing ? 'Adding...' : 'Add Product'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Product Details Modal */}
+      {selectedProduct && (
+        <Modal title={selectedProduct.name} onClose={() => setSelectedProduct(null)} size="lg">
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-semibold text-slate-500">SKU</label>
+                <div className="text-sm font-mono">{selectedProduct.sku}</div>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-500">Category</label>
+                <div className="text-sm">{selectedProduct.category}</div>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-500">Unit Price</label>
+                <div className="text-sm font-bold">{currencyFormatter.format(selectedProduct.price)}</div>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-500">Stock Level</label>
+                <div className="text-sm font-bold">{selectedProduct.stock} units</div>
+              </div>
+              <div className="col-span-2">
+                <label className="text-xs font-semibold text-slate-500">Expiry Date</label>
+                <div className="text-sm">{selectedProduct.expiry}</div>
+              </div>
+            </div>
+            <div className="flex gap-3 pt-4 border-t border-slate-200 dark:border-white/10">
+              <button
+                onClick={() => setSelectedProduct(null)}
+                className="flex-1 rounded-lg border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-600 dark:text-slate-300 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+              >
+                Close
+              </button>
+              <button
+                onClick={handleEditClick}
+                className="flex-1 rounded-lg bg-[#006a61] hover:bg-[#00574f] text-white text-xs font-semibold py-2 transition-colors"
+              >
+                Edit Product
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Edit Product Modal */}
+      {showEditModal && (
+        <Modal title="Edit Product" onClose={handleEditCancel} size="lg">
+          <form onSubmit={handleEditProduct} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <FormField label="Product Name">
+                <input
+                  type="text"
+                  className={inputCls}
+                  value={editForm.name}
+                  onChange={e => setEditForm({...editForm, name: e.target.value})}
+                  placeholder="e.g. Del Monte Tomato Sauce 250g"
+                  required
+                />
+              </FormField>
+              <FormField label="SKU">
+                <input
+                  type="text"
+                  className={inputCls}
+                  value={editForm.sku}
+                  onChange={e => setEditForm({...editForm, sku: e.target.value})}
+                  placeholder="e.g. DM-TS-250"
+                  required
+                />
+              </FormField>
+              <FormField label="Category">
+                <select
+                  className={inputCls}
+                  value={editForm.category}
+                  onChange={e => setEditForm({...editForm, category: e.target.value as any})}
+                  required
+                >
+                  <option value="Food">Food</option>
+                  <option value="Medicine">Medicine</option>
+                  <option value="Beverages">Beverages</option>
+                  <option value="Personal Care">Personal Care</option>
+                </select>
+              </FormField>
+              <FormField label="Unit Price (₱)">
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  className={inputCls}
+                  value={editForm.price}
+                  onChange={e => setEditForm({...editForm, price: e.target.value})}
+                  placeholder="e.g. 32.50"
+                  required
+                />
+              </FormField>
+              <FormField label="Stock Level">
+                <input
+                  type="number"
+                  min="0"
+                  className={inputCls}
+                  value={editForm.stock}
+                  onChange={e => setEditForm({...editForm, stock: e.target.value})}
+                  placeholder="e.g. 100"
+                  required
+                />
+              </FormField>
+              <FormField label="Expiry Date">
+                <input
+                  type="date"
+                  className={inputCls}
+                  value={editForm.expiry}
+                  onChange={e => setEditForm({...editForm, expiry: e.target.value})}
+                  required
+                />
+              </FormField>
+            </div>
+
+            {editError && (
+              <p className="text-xs text-rose-600 dark:text-rose-400 font-medium">{editError}</p>
+            )}
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={handleEditCancel}
+                className="flex-1 rounded-lg border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-600 dark:text-slate-300 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={processing}
+                className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-[#006a61] hover:bg-[#00574f] disabled:opacity-60 text-white text-xs font-semibold py-2 transition-colors"
+              >
+                {processing ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      <Toast toasts={toasts} onDismiss={dismiss} />
     </div>
   );
 }

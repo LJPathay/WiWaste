@@ -77,12 +77,20 @@ interface ModalProps {
   title: string;
   onClose: () => void;
   children: React.ReactNode;
+  size?: 'sm' | 'md' | 'lg' | 'xl';
 }
 
-export function Modal({ title, onClose, children }: ModalProps) {
+export function Modal({ title, onClose, children, size = 'md' }: ModalProps) {
+  const sizeClasses = {
+    sm: 'max-w-md',
+    md: 'max-w-lg',
+    lg: 'max-w-2xl',
+    xl: 'max-w-4xl',
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-md shadow-xl relative">
+      <div className={`bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 w-full ${sizeClasses[size]} shadow-xl relative`}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-white/10">
           <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">{title}</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">

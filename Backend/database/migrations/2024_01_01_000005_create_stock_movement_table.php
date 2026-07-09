@@ -12,9 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('Stock_Movements', function (Blueprint $table) {
-            $table->unsignedBigInteger('movement_id')->autoIncrement()->primary();
-            $table->unsignedBigInteger('product_id');
-            $table->unsignedBigInteger('user_id');
+            $table->unsignedInteger('movement_id')->autoIncrement()->primary();
+            $table->unsignedInteger('product_id');
+            $table->unsignedInteger('user_id');
             $table->enum('movement_type', ['Stock In', 'Stock Out']);
             $table->integer('quantity');
             $table->text('remarks')->nullable();

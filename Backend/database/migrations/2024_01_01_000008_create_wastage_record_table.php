@@ -12,9 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('Wastage_Records', function (Blueprint $table) {
-            $table->unsignedBigInteger('wastage_id')->autoIncrement()->primary();
-            $table->unsignedBigInteger('product_id');
-            $table->unsignedBigInteger('user_id');
+            $table->unsignedInteger('wastage_id')->autoIncrement()->primary();
+            $table->unsignedInteger('product_id');
+            $table->unsignedInteger('user_id');
             $table->enum('wastage_type', ['Expired', 'Damaged', 'Spoiled', 'Lost']);
             $table->integer('quantity');
             $table->decimal('estimated_loss', 10, 2);

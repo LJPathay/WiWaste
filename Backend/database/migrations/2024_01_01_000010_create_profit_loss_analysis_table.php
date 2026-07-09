@@ -12,8 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('Profit_Loss_Analysis', function (Blueprint $table) {
-            $table->unsignedBigInteger('analysis_id')->autoIncrement()->primary();
-            $table->unsignedBigInteger('product_id');
+            $table->unsignedInteger('analysis_id')->autoIncrement()->primary();
+            $table->unsignedInteger('product_id');
             $table->decimal('total_sales', 10, 2);
             $table->decimal('total_wastage_loss', 10, 2);
             $table->enum('risk_level', ['Low', 'Medium', 'High']);

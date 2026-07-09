@@ -12,8 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('Forecast_Results', function (Blueprint $table) {
-            $table->unsignedBigInteger('forecast_id')->autoIncrement()->primary();
-            $table->unsignedBigInteger('product_id');
+            $table->unsignedInteger('forecast_id')->autoIncrement()->primary();
+            $table->unsignedInteger('product_id');
             $table->string('forecast_period', 50);
             $table->integer('predicted_demand');
             $table->enum('overstock_risk', ['Low', 'Medium', 'High']);

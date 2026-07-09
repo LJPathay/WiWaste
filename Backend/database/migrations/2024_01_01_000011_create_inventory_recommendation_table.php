@@ -12,8 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('Inventory_Recommendations', function (Blueprint $table) {
-            $table->unsignedBigInteger('recommendation_id')->autoIncrement()->primary();
-            $table->unsignedBigInteger('product_id');
+            $table->unsignedInteger('recommendation_id')->autoIncrement()->primary();
+            $table->unsignedInteger('product_id');
             $table->integer('current_stock');
             $table->integer('recommended_stock');
             $table->enum('recommendation_type', ['Restock', 'Reduce Stock', 'Maintain']);

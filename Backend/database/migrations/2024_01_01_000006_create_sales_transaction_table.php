@@ -12,8 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('Sales_Transactions', function (Blueprint $table) {
-            $table->unsignedBigInteger('transaction_id')->autoIncrement()->primary();
-            $table->unsignedBigInteger('user_id');
+            $table->unsignedInteger('transaction_id')->autoIncrement()->primary();
+            $table->unsignedInteger('user_id');
             $table->decimal('total_amount', 10, 2);
             $table->dateTime('transaction_date');
             

@@ -12,8 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('Inventory', function (Blueprint $table) {
-            $table->unsignedBigInteger('inventory_id')->autoIncrement()->primary();
-            $table->unsignedBigInteger('product_id')->unique();
+            $table->unsignedInteger('inventory_id')->autoIncrement()->primary();
+            $table->unsignedInteger('product_id')->unique();
             $table->integer('current_stock');
             $table->enum('stock_status', ['Normal', 'Low Stock', 'Overstock']);
             $table->dateTime('last_updated');

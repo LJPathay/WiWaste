@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Search } from 'lucide-react';
+import { Info, Search } from 'lucide-react';
 import { Toast, useToast, ConfirmDialog } from '../../components/ui/Toast';
 import { useDashboardData } from '../../hooks/useDashboardData';
+import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 
 function getStatusLabel(days: number): { label: string; cls: string } {
   if (days <= 5) return { label: 'Urgent', cls: 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400' };
@@ -51,12 +52,18 @@ export function FEFOTracking() {
       )}
 
       {/* Header */}
-      <div>
+      <div className="flex items-center gap-2">
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">FEFO Tracking</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-          First-Expired-First-Out batch tracking with dynamic price decay and urgency status.
-        </p>
+        <UITooltip>
+          <TooltipTrigger asChild>
+            <Info className="h-5 w-5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
+          </TooltipTrigger>
+          <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
+            First-Expired-First-Out batch tracking with dynamic price decay and urgency status to minimise write-offs.
+          </TooltipContent>
+        </UITooltip>
       </div>
+
 
       {/* Table card */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden">

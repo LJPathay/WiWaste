@@ -8,9 +8,11 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { AlertTriangle, Brain, TrendingUp, Zap } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Brain, Info, TrendingUp, Zap } from 'lucide-react';
+import { Link } from 'react-router';
 import { useDashboardData } from '../../hooks/useDashboardData';
 import { retailExamples } from '../../utils/mockAuthAndFeatures';
+import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 
 export function PredictiveAnalyticsPage() {
   const { data, loading } = useDashboardData();
@@ -80,19 +82,34 @@ export function PredictiveAnalyticsPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div>
+      <div className="flex items-center gap-2">
+        <Link to="/dashboard?highlightKpi=0" className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-slate-200 dark:border-white/10 text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-white/10 dark:hover:text-slate-200 transition-colors" aria-label="Back to Dashboard"><ArrowLeft className="h-4 w-4" /></Link>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Predictive Analytics</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">AI-powered demand forecasts, projected wastage trends, and anomaly detection for smarter replenishment decisions.</p>
+        <UITooltip>
+          <TooltipTrigger asChild>
+            <Info className="h-5 w-5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
+          </TooltipTrigger>
+          <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
+            AI-powered demand forecasts, projected wastage trends, and anomaly detection for smarter replenishment decisions.
+          </TooltipContent>
+        </UITooltip>
       </div>
 
 
       {/* Main Chart */}
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-slate-900">
         <div className="flex items-center justify-between gap-4 flex-wrap mb-5">
-          <div>
-            <h2 className="text-lg font-bold text-[#0b1c30] dark:text-slate-100">Forecast vs Confidence</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Forecasted waste volume and model confidence in one view.</p>
-          </div>
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-bold text-[#0b1c30] dark:text-slate-100">Forecast vs Confidence</h2>
+          <UITooltip>
+            <TooltipTrigger asChild>
+              <Info className="h-4 w-4 text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 cursor-help" />
+            </TooltipTrigger>
+            <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
+              Forecasted waste volume and model confidence in one view.
+            </TooltipContent>
+          </UITooltip>
+        </div>
           <div className="flex gap-4 text-xs font-medium">
             <span className="flex items-center gap-1.5 text-sky-600 dark:text-sky-400"><span className="inline-block h-3 w-3 rounded-sm bg-sky-400" /> Forecasted waste</span>
             <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400"><span className="inline-block h-0.5 w-6 bg-emerald-500" /> Confidence %</span>

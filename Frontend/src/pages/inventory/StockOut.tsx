@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Search } from 'lucide-react';
+import { Search, Info } from 'lucide-react';
 import { Toast, useToast, FormField, inputCls } from '../../components/ui/Toast';
+import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 
 const REASONS = ['Sales Dispatch', 'Spoilage', 'Transfer', 'Return to Supplier'] as const;
 type Reason = typeof REASONS[number];
@@ -125,11 +126,16 @@ export function StockOut() {
     <div className="space-y-6 w-full">
       <Toast toasts={toasts} onDismiss={dismiss} />
 
-      <div>
+      <div className="flex items-center gap-2">
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Stock Out Records</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-          Log dispatched, spoiled, transferred, or returned inventory items.
-        </p>
+        <UITooltip>
+          <TooltipTrigger asChild>
+            <Info className="h-5 w-5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
+          </TooltipTrigger>
+          <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
+            Log dispatched, spoiled, transferred, or returned inventory items.
+          </TooltipContent>
+        </UITooltip>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-6 items-start">

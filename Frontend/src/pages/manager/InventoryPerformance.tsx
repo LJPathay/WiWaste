@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { TrendingUp, Award, Download, Loader2 } from 'lucide-react';
+import { TrendingUp, Award, Download, Info, Loader2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { Toast, useToast } from '../../components/ui/Toast';
+import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 
 const TURNOVER_DATA = [
   { month: 'Jan', turnover: 3.5, deadStock: 18 },
@@ -48,8 +49,18 @@ export function InventoryPerformance() {
     <div className="space-y-6 w-full">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
+        <div className="flex items-center gap-2">
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Inventory Performance Audit</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Review stock turnover metrics, high-velocity assets, and shelf placement diagnostics.</p>
+          <UITooltip>
+            <TooltipTrigger asChild>
+              <Info className="h-5 w-5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
+            </TooltipTrigger>
+            <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
+              Stock turnover metrics, high-velocity assets, and shelf placement diagnostics to optimize inventory flow.
+            </TooltipContent>
+          </UITooltip>
+        </div>
+
         </div>
         <button
           onClick={handleExport}

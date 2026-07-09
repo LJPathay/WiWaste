@@ -1,4 +1,5 @@
-import { Link } from 'react-router';
+import { useState, useRef, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router';
 import {
   Area,
   AreaChart,
@@ -14,13 +15,22 @@ import {
   ArrowUpRight,
   BarChart3,
   CalendarClock,
-  CircleDollarSign,
+  ChevronDown,
+  GripVertical,
+  Info,
   LayoutDashboard,
+  Package,
   PackageCheck,
+  Plus,
   ShieldAlert,
+  Stethoscope,
   TrendingUp,
+  Trash2,
+  X,
 } from 'lucide-react';
+import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { useDashboardData } from '../../hooks/useDashboardData';
+import { useKpiHighlight } from '../../hooks/useKpiHighlight';
 import { retailExamples } from '../../utils/mockAuthAndFeatures';
 
 const currencyFormatter = new Intl.NumberFormat('en-PH', {
@@ -29,8 +39,45 @@ const currencyFormatter = new Intl.NumberFormat('en-PH', {
   maximumFractionDigits: 0,
 });
 
+function PhpIcon({ className }: { className?: string }) {
+  return (
+    <span
+      className={`inline-flex items-center justify-center font-black leading-none select-none ${className ?? ''}`}
+      style={{ fontSize: '1.1em' }}
+    >₱</span>
+  );
+}
+
+const AVAILABLE_SHORTCUTS = [
+  { id: 'predictive', label: 'Predictive Analytics', description: 'Forecast demand and detect seasonal anomalies.', to: '/dashboard/predictive', icon: TrendingUp },
+  { id: 'leakage', label: 'Leakage Detection', description: 'Find categories leaking the most margin.', to: '/dashboard/leakage', icon: BarChart3 },
+  { id: 'prescriptive', label: 'Decision Sandbox', description: 'Compare actions by ROI before rollout.', to: '/dashboard/prescriptive', icon: CalendarClock },
+  { id: 'fefo', label: 'FEFO Tracking', description: 'Monitor batches by expiry priority order.', to: '/dashboard/fefo', icon: PackageCheck },
+  { id: 'vendors', label: 'Vendor Credits', description: 'Track and recover eligible supplier credits.', to: '/dashboard/vendors', icon: PhpIcon },
+];
+
 export function DashboardOverview() {
   const { data, loading } = useDashboardData();
+  const navigate = useNavigate();
+  const [basketOpen, setBasketOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [shortcuts, setShortcuts] = useState(AVAILABLE_SHORTCUTS.slice(0, 3));
+  const [tempShortcuts, setTempShortcuts] = useState(AVAILABLE_SHORTCUTS.slice(0, 3));
+  const [draggedItem, setDraggedItem] = useState<string | null>(null);
+  const [clickedKpi, setClickedKpi] = useState<number | null>(null);
+  const kpiTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const highlightedKpi = useKpiHighlight(5000);
+
+  // Merge: a card is "active" if it was clicked OR returned-to via URL
+  const activeKpi = clickedKpi ?? highlightedKpi;
+
+  // Auto-scroll the highlighted KPI card into view when arriving via URL
+  const kpiSectionRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (highlightedKpi !== null && kpiSectionRef.current) {
+      kpiSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [highlightedKpi]);
 
   if (loading) {
     return (
@@ -84,9 +131,18 @@ export function DashboardOverview() {
       note: `${forecastChart.length} monthly demand points`,
       icon: TrendingUp,
       accent: 'from-sky-500 to-cyan-400',
-      glow: 'shadow-sky-200 dark:shadow-sky-900/40',
+      iconBg: 'bg-sky-500/10 dark:bg-sky-400/10',
+      iconColor: 'text-sky-600 dark:text-sky-400',
+      ringColor: 'ring-sky-400',
+      alertBg: 'bg-sky-50 dark:bg-sky-500/15',
+      alertText: 'text-sky-700 dark:text-sky-300',
+      alertDot: 'bg-sky-500',
       change: '+2.3%',
       up: true,
+      critical: averageConfidence < 70
+        ? `Low confidence — only ${averageConfidence}% avg across forecasts`
+        : `${averageConfidence}% avg confidence across ${forecastChart.length} months`,
+      isCritical: averageConfidence < 70,
     },
     {
       label: 'Monthly Leakage',
@@ -94,19 +150,35 @@ export function DashboardOverview() {
       note: `${topLeakage.category} is the largest driver`,
       icon: ShieldAlert,
       accent: 'from-rose-500 to-orange-400',
-      glow: 'shadow-rose-200 dark:shadow-rose-900/40',
+      iconBg: 'bg-rose-500/10 dark:bg-rose-400/10',
+      iconColor: 'text-rose-600 dark:text-rose-400',
+      ringColor: 'ring-rose-400',
+      alertBg: 'bg-rose-50 dark:bg-rose-500/15',
+      alertText: 'text-rose-700 dark:text-rose-300',
+      alertDot: 'bg-rose-500',
       change: '-1.1%',
       up: false,
+      critical: `${topLeakage.category} is leaking ${currencyFormatter.format(topLeakage.leakageAmount)} — highest this month`,
+      isCritical: true,
     },
     {
       label: 'Recoverable Credits',
       value: currencyFormatter.format(totalCredits),
       note: `${expiredVendorWindows} return window needs attention`,
-      icon: CircleDollarSign,
+      icon: PhpIcon,
       accent: 'from-emerald-500 to-teal-400',
-      glow: 'shadow-emerald-200 dark:shadow-emerald-900/40',
+      iconBg: 'bg-emerald-500/10 dark:bg-emerald-400/10',
+      iconColor: 'text-emerald-600 dark:text-emerald-400',
+      ringColor: 'ring-emerald-400',
+      alertBg: 'bg-emerald-50 dark:bg-emerald-500/15',
+      alertText: 'text-emerald-700 dark:text-emerald-300',
+      alertDot: 'bg-emerald-500',
       change: '+5.8%',
       up: true,
+      critical: expiredVendorWindows > 0
+        ? `${expiredVendorWindows} return window${expiredVendorWindows > 1 ? 's' : ''} expired — act now to recover ${currencyFormatter.format(totalCredits)}`
+        : `${currencyFormatter.format(totalCredits)} eligible across all supplier windows`,
+      isCritical: expiredVendorWindows > 0,
     },
     {
       label: 'Critical FEFO Batches',
@@ -114,9 +186,18 @@ export function DashboardOverview() {
       note: `${nextBatch.batchId} expires in ${nextBatch.daysToExpiry} days`,
       icon: PackageCheck,
       accent: 'from-violet-500 to-indigo-400',
-      glow: 'shadow-violet-200 dark:shadow-violet-900/40',
+      iconBg: 'bg-violet-500/10 dark:bg-violet-400/10',
+      iconColor: 'text-violet-600 dark:text-violet-400',
+      ringColor: 'ring-violet-400',
+      alertBg: 'bg-violet-50 dark:bg-violet-500/15',
+      alertText: 'text-violet-700 dark:text-violet-300',
+      alertDot: 'bg-violet-500',
       change: '+1',
       up: false,
+      critical: criticalBatches > 0
+        ? `${criticalBatches} batch${criticalBatches > 1 ? 'es' : ''} expire within 7 days — ${nextBatch.batchId} is next (${nextBatch.daysToExpiry}d)`
+        : `${nextBatch.batchId} expires in ${nextBatch.daysToExpiry} days`,
+      isCritical: criticalBatches > 0,
     },
   ];
 
@@ -189,41 +270,77 @@ export function DashboardOverview() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div>
+      <div className="flex items-center gap-2">
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Dashboard Overview</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Your operational intelligence at a glance — powered by live inventory data.</p>
+        <UITooltip>
+          <TooltipTrigger asChild>
+            <Info className="h-5 w-5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
+          </TooltipTrigger>
+          <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
+            Your operational intelligence at a glance — powered by live inventory data.
+          </TooltipContent>
+        </UITooltip>
       </div>
 
-      {/* KPI Cards */}
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {kpiCards.map((card) => {
+      {/* KPI Cards - Clickable */}
+      <section ref={kpiSectionRef} className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {kpiCards.map((card, idx) => {
           const Icon = card.icon;
+          const cardRoutes = ['/dashboard/predictive', '/dashboard/leakage', '/dashboard/vendors', '/dashboard/fefo'];
+          const isActive = activeKpi === idx;
           return (
-            <div
+            <button
               key={card.label}
-              className={`group relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-5 shadow-md transition-all hover:-translate-y-1 hover:shadow-xl ${card.glow} dark:border-white/10 dark:bg-slate-900`}
+              onClick={() => {
+                if (kpiTimerRef.current) clearTimeout(kpiTimerRef.current);
+                setClickedKpi(idx);
+                kpiTimerRef.current = setTimeout(() => {
+                  setClickedKpi(null);
+                  navigate(cardRoutes[idx] || '#');
+                }, 800);
+              }}
+              className={`group relative overflow-hidden rounded-3xl border bg-white/70 backdrop-blur-xl p-5 shadow-sm transition-all hover:-translate-y-1 hover:shadow-md hover:bg-white/80 cursor-pointer text-left dark:bg-white/5 dark:backdrop-blur-xl dark:hover:bg-white/8 ${
+                isActive
+                  ? `ring-2 ${card.ringColor} border-transparent scale-[1.02] shadow-lg`
+                  : 'border-white/60 dark:border-white/10'
+              }`}
             >
-              <div className={`absolute inset-0 bg-gradient-to-br ${card.accent} opacity-0 transition-opacity group-hover:opacity-5`} />
               <div className="flex items-start justify-between gap-4">
-                <div>
-                  <div className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">{card.label}</div>
-                  <div className="mt-2 text-3xl font-bold tracking-tight text-[#0b1c30] dark:text-slate-100">{card.value}</div>
-                </div>
-                <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${card.accent} text-white shadow-lg`}>
-                  <Icon className="h-5 w-5" />
-                </div>
-              </div>
-              <div className="mt-4 flex items-center justify-between gap-2">
-                <div className="text-xs leading-5 text-slate-500 dark:text-slate-400">{card.note}</div>
-                <span className={`inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xs font-semibold ${
+                <span className={`inline-flex items-center justify-center h-6 w-6 rounded-full text-xs font-semibold ${
                   card.up
                     ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400'
                     : 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400'
                 }`}>
-                  {card.up ? '▲' : '▼'} {card.change}
+                  {card.up ? '▲' : '▼'}
                 </span>
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">{card.label}</div>
+                  <div className="mt-2 text-3xl font-bold tracking-tight text-[#0b1c30] dark:text-slate-100">{card.value}</div>
+                </div>
+                <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl transition-transform ${card.iconBg} ${isActive ? 'scale-110' : ''}`}>
+                  <Icon className={`h-5 w-5 text-xl ${card.iconColor}`} />
+                </div>
               </div>
-            </div>
+              <div className="mt-4 flex items-center justify-between gap-2">
+                <div className="text-xs leading-5 text-slate-500 dark:text-slate-400">{card.note}</div>
+                <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">{card.change}</span>
+              </div>
+              {/* Critical signal banner */}
+              <div className={`overflow-hidden transition-all duration-300 ${
+                isActive ? 'max-h-16 mt-3 opacity-100' : 'max-h-0 mt-0 opacity-0'
+              }`}>
+                <div className={`flex items-center gap-2 rounded-xl px-3 py-2 ${card.alertBg}`}>
+                  <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${card.alertDot} ${card.isCritical ? 'animate-pulse' : ''}`} />
+                  <span className={`text-[11px] font-medium leading-4 ${card.alertText}`}>{card.critical}</span>
+                </div>
+              </div>
+              {/* Countdown ring */}
+              {isActive && (
+                <div className="absolute bottom-2 right-3 text-[10px] font-bold text-slate-400 dark:text-slate-500 animate-pulse">
+                  navigating…
+                </div>
+              )}
+            </button>
           );
         })}
       </section>
@@ -232,10 +349,17 @@ export function DashboardOverview() {
       <section className="grid grid-cols-1 gap-6 xl:grid-cols-[1.25fr_0.75fr]">
         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-slate-900">
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-bold text-[#0b1c30] dark:text-slate-100">Forecast Trend</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Projected waste volume with model confidence</p>
-            </div>
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-bold text-[#0b1c30] dark:text-slate-100">Forecast Trend</h2>
+          <UITooltip>
+            <TooltipTrigger asChild>
+              <Info className="h-4 w-4 text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 cursor-help" />
+            </TooltipTrigger>
+            <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
+              Projected waste volume with model confidence
+            </TooltipContent>
+          </UITooltip>
+        </div>
             <span className="rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700 dark:bg-sky-500/10 dark:text-sky-400">
               {averageConfidence}% avg confidence
             </span>
@@ -267,10 +391,17 @@ export function DashboardOverview() {
 
         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-slate-900">
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-bold text-[#0b1c30] dark:text-slate-100">Leakage Mix</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Loss amount by category</p>
-            </div>
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-bold text-[#0b1c30] dark:text-slate-100">Leakage Mix</h2>
+          <UITooltip>
+            <TooltipTrigger asChild>
+              <Info className="h-4 w-4 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 cursor-help" />
+            </TooltipTrigger>
+            <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
+              Loss amount by category
+            </TooltipContent>
+          </UITooltip>
+        </div>
             <span className="rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700 dark:bg-rose-500/10 dark:text-rose-400">
               {currencyFormatter.format(totalLeakage)}
             </span>
@@ -301,10 +432,17 @@ export function DashboardOverview() {
         {/* Priority Queue */}
         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-slate-900">
           <div className="mb-5 flex items-center justify-between gap-4">
-            <div>
-              <h2 className="text-lg font-bold text-[#0b1c30] dark:text-slate-100">Priority Action Queue</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400">The next actions worth looking at first</p>
-            </div>
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-bold text-[#0b1c30] dark:text-slate-100">Priority Action Queue</h2>
+            <UITooltip>
+              <TooltipTrigger asChild>
+                <Info className="h-4 w-4 text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
+                The next actions worth looking at first
+              </TooltipContent>
+            </UITooltip>
+          </div>
             <CalendarClock className="h-5 w-5 text-slate-400" />
           </div>
           <div className="space-y-3">
@@ -325,52 +463,204 @@ export function DashboardOverview() {
           </div>
         </div>
 
-        {/* Quick Nav Module Cards */}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          {actionCards.map((card) => {
-            const Icon = card.icon;
-            return (
-              <Link
-                key={card.title}
-                to={card.to}
-                className="group relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-200/70 dark:border-white/10 dark:bg-slate-900 dark:hover:shadow-black/20"
-              >
-                <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${card.gradientFrom} ${card.gradientTo} opacity-0 transition-opacity group-hover:opacity-100`} />
-                <div className="flex items-start justify-between gap-4">
-                  <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${card.bg}`}>
-                    <Icon className={`h-5 w-5 ${card.text}`} />
+        {/* Quick Shortcuts */}
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-slate-900 flex flex-col">
+          <div className="flex items-center justify-between gap-4 mb-4">
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-bold text-[#0b1c30] dark:text-slate-100">Quick Shortcuts</h2>
+            <UITooltip>
+              <TooltipTrigger asChild>
+                <Info className="h-4 w-4 text-slate-400 hover:text-violet-600 dark:hover:text-violet-400 cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
+                Your favorite modules
+              </TooltipContent>
+            </UITooltip>
+          </div>
+            <button
+              onClick={() => {
+                setTempShortcuts(shortcuts);
+                setShortcutsOpen(true);
+              }}
+              className="rounded-lg bg-slate-100 dark:bg-white/10 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/20 transition-colors"
+            >
+              Edit
+            </button>
+          </div>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3 flex-1">
+            {shortcuts.map((shortcut) => {
+              const Icon = shortcut.icon;
+              return (
+                <Link
+                  key={shortcut.id}
+                  to={shortcut.to}
+                  className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-white/10 dark:bg-slate-800/50 dark:hover:bg-slate-800 flex flex-col"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white dark:bg-slate-700">
+                      <Icon className="h-4 w-4 text-slate-600 dark:text-slate-300" />
+                    </div>
+                    <ArrowUpRight className="h-3 w-3 text-slate-300 transition-all group-hover:text-slate-500 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
                   </div>
-                  <ArrowUpRight className="h-4 w-4 text-slate-300 transition-all group-hover:text-slate-500 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-                </div>
-                <h3 className="mt-5 text-base font-bold text-[#0b1c30] dark:text-slate-100">{card.title}</h3>
-                <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">{card.description}</p>
-              </Link>
-            );
-          })}
+                  <h3 className="mt-3 text-sm font-semibold text-[#0b1c30] dark:text-slate-100">{shortcut.label}</h3>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-relaxed flex-1">{shortcut.description}</p>
+                </Link>
+              );
+            })}
+          </div>
         </div>
       </section>
 
-      {/* Sample Baskets */}
-      <section className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        {[
-          { label: 'Minimart basket', store: retailExamples.minimart.storeName, items: retailExamples.minimart.sampleItems, tone: 'bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300', dot: 'bg-sky-400' },
-          { label: 'Pharmacy basket', store: retailExamples.pharma.storeName, items: retailExamples.pharma.sampleItems, tone: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300', dot: 'bg-emerald-400' },
-        ].map((basket) => (
-          <div key={basket.label} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-slate-900">
-            <div className="flex items-center gap-2">
-              <span className={`h-2 w-2 rounded-full ${basket.dot}`} />
-              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">{basket.label}</div>
+      {/* Edit Shortcuts Modal */}
+      {shortcutsOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white shadow-xl dark:border-white/10 dark:bg-slate-900">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/10 p-6">
+              <h3 className="text-lg font-bold text-[#0b1c30] dark:text-slate-100">Edit Shortcuts</h3>
+              <button
+                onClick={() => {
+                  setShortcutsOpen(false);
+                  setTempShortcuts(shortcuts);
+                }}
+                className="rounded-lg p-1 hover:bg-slate-100 dark:hover:bg-white/10"
+              >
+                <X className="h-5 w-5 text-slate-400" />
+              </button>
             </div>
-            <h3 className="mt-2 text-base font-bold text-[#0b1c30] dark:text-slate-100">{basket.store}</h3>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {basket.items.map((item) => (
-                <span key={item} className={`rounded-full px-3 py-1 text-xs font-medium ${basket.tone}`}>
-                  {item}
-                </span>
-              ))}
+            <div className="p-6 space-y-4 max-h-96 overflow-y-auto">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-3">Current Shortcuts ({tempShortcuts.length}/3)</p>
+                <div className="space-y-2">
+                  {tempShortcuts.map((shortcut, idx) => {
+                    const Icon = shortcut.icon;
+                    return (
+                      <div
+                        key={shortcut.id}
+                        draggable
+                        onDragStart={() => setDraggedItem(shortcut.id)}
+                        onDragEnd={() => setDraggedItem(null)}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={() => {
+                          if (draggedItem && draggedItem !== shortcut.id) {
+                            const draggedIdx = tempShortcuts.findIndex((s) => s.id === draggedItem);
+                            const newShortcuts = [...tempShortcuts];
+                            [newShortcuts[draggedIdx], newShortcuts[idx]] = [newShortcuts[idx], newShortcuts[draggedIdx]];
+                            setTempShortcuts(newShortcuts);
+                          }
+                        }}
+                        className={`flex items-center gap-3 rounded-lg border p-3 transition-all ${
+                          draggedItem === shortcut.id
+                            ? 'border-slate-400 bg-slate-100 dark:bg-slate-800'
+                            : 'border-slate-200 bg-slate-50 hover:bg-slate-100 dark:border-white/10 dark:bg-slate-800/50 dark:hover:bg-slate-800'
+                        } cursor-move`}
+                      >
+                        <GripVertical className="h-4 w-4 text-slate-400 shrink-0" />
+                        <Icon className="h-4 w-4 text-slate-600 dark:text-slate-300 shrink-0" />
+                        <span className="text-sm font-medium text-slate-700 dark:text-slate-200 flex-1">{shortcut.label}</span>
+                        <button
+                          onClick={() => setTempShortcuts(tempShortcuts.filter((s) => s.id !== shortcut.id))}
+                          className="p-1 hover:bg-red-100 dark:hover:bg-red-500/20 rounded transition-colors shrink-0"
+                        >
+                          <Trash2 className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              {tempShortcuts.length < 3 && (
+                <div className="border-t border-slate-200 dark:border-white/10 pt-4">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-3">Available to Add</p>
+                  <div className="space-y-2">
+                    {AVAILABLE_SHORTCUTS.filter((s) => !tempShortcuts.find((sh) => sh.id === s.id)).map((shortcut) => {
+                      const Icon = shortcut.icon;
+                      return (
+                        <button
+                          key={shortcut.id}
+                          onClick={() => setTempShortcuts([...tempShortcuts, shortcut])}
+                          className="w-full flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-left transition-all hover:bg-slate-100 dark:border-white/10 dark:bg-slate-800/50 dark:hover:bg-slate-800"
+                        >
+                          <Icon className="h-4 w-4 text-slate-600 dark:text-slate-300 shrink-0" />
+                          <span className="text-sm font-medium text-slate-700 dark:text-slate-200 flex-1">{shortcut.label}</span>
+                          <Plus className="h-4 w-4 text-slate-400 shrink-0" />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="border-t border-slate-200 dark:border-white/10 flex gap-3 p-6">
+              <button
+                onClick={() => {
+                  setShortcutsOpen(false);
+                  setTempShortcuts(shortcuts);
+                }}
+                className="flex-1 rounded-lg bg-slate-100 dark:bg-white/10 px-4 py-2 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/20 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShortcuts(tempShortcuts);
+                  setShortcutsOpen(false);
+                }}
+                disabled={tempShortcuts.length !== 3}
+                className="flex-1 rounded-lg bg-[#006a61] px-4 py-2 text-sm font-semibold text-white hover:bg-[#005550] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Save Changes
+              </button>
             </div>
           </div>
-        ))}
+        </div>
+      )}
+
+      {/* Collapsible Baskets */}
+      <section className="rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-slate-900">
+        <button
+          onClick={() => setBasketOpen(!basketOpen)}
+          className="w-full flex items-center justify-between gap-4 p-6 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+        >
+          <div className="flex items-center gap-3 flex-1">
+            <Package className="h-5 w-5 text-slate-600 dark:text-slate-300 shrink-0" />
+            <div className="text-left">
+              <h2 className="text-lg font-bold text-[#0b1c30] dark:text-slate-100">Sample Baskets</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Minimart and pharmacy inventory snapshots</p>
+            </div>
+          </div>
+          <ChevronDown className={`h-5 w-5 text-slate-400 transition-transform shrink-0 ${basketOpen ? 'rotate-180' : ''}`} />
+        </button>
+        {basketOpen && (
+          <div className="border-t border-slate-200 dark:border-white/10 px-6 py-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+            {[
+              { label: 'Minimart basket', store: retailExamples.minimart.storeName, items: retailExamples.minimart.sampleItems, tone: 'bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300', dot: 'bg-sky-400', icon: Package },
+              { label: 'Pharmacy basket', store: retailExamples.pharma.storeName, items: retailExamples.pharma.sampleItems, tone: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300', dot: 'bg-emerald-400', icon: Stethoscope },
+            ].map((basket) => {
+              const BasketIcon = basket.icon;
+              return (
+                <div key={basket.label} className="rounded-2xl border border-slate-200 dark:border-white/10 p-4 bg-slate-50 dark:bg-slate-800/50">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${basket.tone}`}>
+                      <BasketIcon className="h-4 w-4" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`h-2 w-2 rounded-full ${basket.dot}`} />
+                      <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">{basket.label}</div>
+                    </div>
+                  </div>
+                  <h3 className="text-sm font-bold text-[#0b1c30] dark:text-slate-100">{basket.store}</h3>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {basket.items.map((item) => (
+                      <span key={item} className={`rounded-full px-3 py-1 text-xs font-medium ${basket.tone}`}>
+                        {item}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </section>
     </div>
   );

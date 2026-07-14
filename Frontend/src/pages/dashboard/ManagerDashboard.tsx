@@ -31,11 +31,11 @@ export function ManagerDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Fetch manager stats from backend
+    // Fetch owner/administrator stats from backend
     const fetchStats = async () => {
       try {
         // TODO: Replace with actual API call
-        // const response = await fetch('/api/manager/stats');
+        // const response = await fetch('/api/owner/stats');
         // const data = await response.json();
         
         // Mock data for now
@@ -48,7 +48,7 @@ export function ManagerDashboard() {
           recommendationsGenerated: 28,
         });
       } catch (error) {
-        console.error('Failed to fetch manager stats:', error);
+        console.error('Failed to fetch owner/administrator stats:', error);
       } finally {
         setLoading(false);
       }
@@ -116,25 +116,25 @@ export function ManagerDashboard() {
     {
       title: 'Demand Forecasts',
       description: 'ARIMA-powered demand predictions',
-      to: '/manager/forecasts',
+      to: '/owner/forecasts',
       icon: TrendingUp,
     },
     {
       title: 'Loss Trends',
       description: 'XGBoost profit leakage analysis',
-      to: '/manager/loss-trends',
+      to: '/owner/loss-trends',
       icon: ShieldAlert,
     },
     {
       title: 'Replenishment',
       description: 'Genetic Algorithm optimization',
-      to: '/manager/replenishment',
+      to: '/owner/replenishment',
       icon: BarChart3,
     },
     {
       title: 'Executive Reports',
       description: 'High-level business insights',
-      to: '/manager/reports',
+      to: '/owner/executive-reports',
       icon: DollarSign,
     },
   ];
@@ -156,13 +156,13 @@ export function ManagerDashboard() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-2">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Manager Dashboard</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Owner/Administrator Dashboard</h1>
         <UITooltip>
           <TooltipTrigger asChild>
             <Info className="h-5 w-5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
           </TooltipTrigger>
           <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
-            Strategic analytics and decision support for business owners
+            Strategic analytics and administrative decision support
           </TooltipContent>
         </UITooltip>
       </div>

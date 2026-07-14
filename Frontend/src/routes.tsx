@@ -1,4 +1,4 @@
-import { createBrowserRouter } from "react-router";
+import { createBrowserRouter, Navigate } from "react-router";
 import { MainLayout } from "./components/layout/MainLayout";
 import { AuthLayout } from "./components/layout/AuthLayout";
 import { DashboardLayout } from "./components/layout/DashboardLayout";
@@ -32,6 +32,10 @@ import { RecordWastage } from "./pages/inventory/RecordWastage";
 import { ManageInventory } from "./pages/inventory/ManageInventory";
 import { FEFOTracking } from "./pages/inventory/FEFOTracking";
 import { Recommendations } from "./pages/inventory/Recommendations";
+// Cashier pages
+import { POSTerminal } from "./pages/cashier/POSTerminal";
+import { ReturnsRefunds } from "./pages/cashier/ReturnsRefunds";
+import { CashierHistory } from "./pages/cashier/CashierHistory";
 // Manager pages
 import { InventoryPerformance } from "./pages/manager/InventoryPerformance";
 import { DemandForecasts } from "./pages/manager/DemandForecasts";
@@ -68,23 +72,40 @@ export const router = createBrowserRouter([
         children: [
             // Dashboard overview & sub-pages
             { path: "dashboard", Component: Dashboard },
-            { path: "dashboard/manager", Component: ManagerDashboard },
+            { path: "dashboard/manager", element: <Navigate to="/owner/dashboard" replace /> },
             { path: "dashboard/inventory", Component: InventoryDashboard },
-            { path: "dashboard/admin", Component: AdminDashboard },
+            { path: "dashboard/admin", element: <Navigate to="/owner/admin-dashboard" replace /> },
             { path: "dashboard/predictive", Component: PredictiveAnalyticsPage },
             { path: "dashboard/leakage", Component: LeakageDetectionPage },
             { path: "dashboard/fefo", Component: FefoTrackingPage },
             { path: "dashboard/vendors", Component: VendorCreditsPage },
             { path: "dashboard/behavior", Component: BehavioralIntelligencePage },
             { path: "dashboard/prescriptive", Component: PrescriptiveSandboxPage },
-            // Admin routes
-            { path: "admin/users", Component: ManageUsers },
-            { path: "admin/products", Component: ManageProducts },
-            { path: "admin/categories", Component: ManageCategories },
-            { path: "admin/suppliers", Component: ManageSuppliers },
-            { path: "admin/settings", Component: SystemSettings },
-            { path: "admin/reports", Component: GenerateReports },
-            { path: "admin/audit-logs", Component: AuditLogs },
+            // Owner/Administrator routes
+            { path: "owner/dashboard", Component: ManagerDashboard },
+            { path: "owner/admin-dashboard", Component: AdminDashboard },
+            { path: "owner/users", Component: ManageUsers },
+            { path: "owner/products", Component: ManageProducts },
+            { path: "owner/categories", Component: ManageCategories },
+            { path: "owner/suppliers", Component: ManageSuppliers },
+            { path: "owner/settings", Component: SystemSettings },
+            { path: "owner/reports", Component: GenerateReports },
+            { path: "owner/audit-logs", Component: AuditLogs },
+            { path: "owner/performance", Component: InventoryPerformance },
+            { path: "owner/forecasts", Component: DemandForecasts },
+            { path: "owner/overstock", Component: OverstockRisks },
+            { path: "owner/loss-trends", Component: LossTrends },
+            { path: "owner/replenishment", Component: Replenishment },
+            { path: "owner/supplier-performance", Component: SupplierPerformance },
+            { path: "owner/executive-reports", Component: ExecutiveReports },
+            // Legacy redirects
+            { path: "admin/users", element: <Navigate to="/owner/users" replace /> },
+            { path: "admin/products", element: <Navigate to="/owner/products" replace /> },
+            { path: "admin/categories", element: <Navigate to="/owner/categories" replace /> },
+            { path: "admin/suppliers", element: <Navigate to="/owner/suppliers" replace /> },
+            { path: "admin/settings", element: <Navigate to="/owner/settings" replace /> },
+            { path: "admin/reports", element: <Navigate to="/owner/reports" replace /> },
+            { path: "admin/audit-logs", element: <Navigate to="/owner/audit-logs" replace /> },
             // Inventory routes
             { path: "inventory/stock-in", Component: StockIn },
             { path: "inventory/stock-out", Component: StockOut },
@@ -92,14 +113,17 @@ export const router = createBrowserRouter([
             { path: "inventory/manage", Component: ManageInventory },
             { path: "inventory/fefo", Component: FEFOTracking },
             { path: "inventory/recommendations", Component: Recommendations },
-            // Manager routes
-            { path: "manager/performance", Component: InventoryPerformance },
-            { path: "manager/forecasts", Component: DemandForecasts },
-            { path: "manager/overstock", Component: OverstockRisks },
-            { path: "manager/loss-trends", Component: LossTrends },
-            { path: "manager/replenishment", Component: Replenishment },
-            { path: "manager/suppliers", Component: SupplierPerformance },
-            { path: "manager/reports", Component: ExecutiveReports },
+            // Cashier routes
+            { path: "cashier/pos", Component: POSTerminal },
+            { path: "cashier/returns", Component: ReturnsRefunds },
+            { path: "cashier/history", Component: CashierHistory },
+            { path: "manager/performance", element: <Navigate to="/owner/performance" replace /> },
+            { path: "manager/forecasts", element: <Navigate to="/owner/forecasts" replace /> },
+            { path: "manager/overstock", element: <Navigate to="/owner/overstock" replace /> },
+            { path: "manager/loss-trends", element: <Navigate to="/owner/loss-trends" replace /> },
+            { path: "manager/replenishment", element: <Navigate to="/owner/replenishment" replace /> },
+            { path: "manager/suppliers", element: <Navigate to="/owner/supplier-performance" replace /> },
+            { path: "manager/reports", element: <Navigate to="/owner/executive-reports" replace /> },
         ],
     },
 ]);

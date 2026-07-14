@@ -48,7 +48,7 @@ export function Home() {
                                     <div className="w-8 h-8 rounded-full bg-[#dcd9db] border border-[#fcf8fa] flex items-center justify-center text-xs font-medium text-[#1b1b1d]">M</div>
                                     <div className="w-8 h-8 rounded-full bg-[#dcd9db] border border-[#fcf8fa] flex items-center justify-center text-xs font-medium text-[#1b1b1d]">A</div>
                                 </div>
-                                <p className="text-sm text-[#45464d]">Trusted by 500+ regional managers</p>
+                                <p className="text-sm text-[#45464d]">Trusted by 500+ Owner/Administrators</p>
                             </div>
                         </motion.div>
 

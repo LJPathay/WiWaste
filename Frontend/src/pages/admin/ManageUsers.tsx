@@ -6,24 +6,25 @@ interface UserMock {
   id: string;
   name: string;
   email: string;
-  role: 'admin' | 'manager' | 'inventory';
+  role: 'owner' | 'inventory' | 'cashier';
   status: 'Active' | 'Inactive';
 }
 
 const INITIAL_USERS: UserMock[] = [
-  { id: '1', name: 'Lia Cruz', email: 'admin@wiwaste.com', role: 'admin', status: 'Active' },
-  { id: '2', name: 'John Store Ops', email: 'manager@wiwaste.com', role: 'manager', status: 'Active' },
+  { id: '1', name: 'Lia Cruz', email: 'owner@wiwaste.com', role: 'owner', status: 'Active' },
+  { id: '2', name: 'John Store Ops', email: 'ops@wiwaste.com', role: 'owner', status: 'Active' },
   { id: '3', name: 'Mia Stockwell', email: 'inventory@wiwaste.com', role: 'inventory', status: 'Active' },
+  { id: '9', name: 'Carlo Reyes', email: 'cashier@wiwaste.com', role: 'cashier', status: 'Active' },
   { id: '4', name: 'Robert Rivera', email: 'robert.r@wiwaste.com', role: 'inventory', status: 'Active' },
-  { id: '5', name: 'Sarah Santos', email: 'sarah.s@wiwaste.com', role: 'manager', status: 'Inactive' },
+  { id: '5', name: 'Sarah Santos', email: 'sarah.s@wiwaste.com', role: 'owner', status: 'Inactive' },
   { id: '6', name: 'Dave Diaz', email: 'dave.d@wiwaste.com', role: 'inventory', status: 'Active' },
-  { id: '7', name: 'Grace Gomez', email: 'grace.g@wiwaste.com', role: 'admin', status: 'Active' },
+  { id: '7', name: 'Grace Gomez', email: 'grace.g@wiwaste.com', role: 'owner', status: 'Active' },
   { id: '8', name: 'Kevin Kalaw', email: 'kevin.k@wiwaste.com', role: 'inventory', status: 'Inactive' },
 ];
 
 export function ManageUsers() {
   const [users, setUsers] = useState<UserMock[]>(INITIAL_USERS);
-  const [filter, setFilter] = useState<'all' | 'admin' | 'manager' | 'inventory'>('all');
+  const [filter, setFilter] = useState<'all' | 'owner' | 'inventory' | 'cashier'>('all');
   const [search, setSearch] = useState('');
   
   // Add/Edit Modals state
@@ -34,7 +35,7 @@ export function ManageUsers() {
   // Form states
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState<'admin' | 'manager' | 'inventory'>('inventory');
+  const [role, setRole] = useState<'owner' | 'inventory' | 'cashier'>('inventory');
   const [status, setStatus] = useState<'Active' | 'Inactive'>('Active');
 
   const handleAddUser = (e: React.FormEvent) => {
@@ -113,7 +114,7 @@ export function ManageUsers() {
       <div className="bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden">
         <div className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 dark:border-white/10">
           <div className="flex gap-2 bg-slate-100 dark:bg-slate-900 p-1 rounded-lg">
-            {(['all', 'admin', 'manager', 'inventory'] as const).map(tab => (
+            {(['all', 'owner', 'inventory', 'cashier'] as const).map(tab => (
               <button
                 key={tab}
                 onClick={() => setFilter(tab)}
@@ -123,7 +124,7 @@ export function ManageUsers() {
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
                 }`}
               >
-                {tab}
+                {tab === 'owner' ? 'Owner/Administrator' : tab}
               </button>
             ))}
           </div>
@@ -219,8 +220,8 @@ export function ManageUsers() {
                   className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-850 dark:text-slate-100"
                 >
                   <option value="inventory">Inventory Staff</option>
-                  <option value="manager">Store Manager</option>
-                  <option value="admin">Administrator</option>
+                  <option value="cashier">Cashier</option>
+                  <option value="owner">Owner/Administrator</option>
                 </select>
               </div>
               <div>
@@ -284,8 +285,8 @@ export function ManageUsers() {
                   className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-850 dark:text-slate-100"
                 >
                   <option value="inventory">Inventory Staff</option>
-                  <option value="manager">Store Manager</option>
-                  <option value="admin">Administrator</option>
+                  <option value="cashier">Cashier</option>
+                  <option value="owner">Owner/Administrator</option>
                 </select>
               </div>
               <div>

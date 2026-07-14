@@ -68,10 +68,10 @@ export function AdminDashboard() {
           activeInventoryAlerts: 5,
         });
         setActivities([
-          { id: '1', action: 'Product "Lucky Me! Pancit Canton" added', user: 'Manager', time: '2 min ago', status: 'success' },
+          { id: '1', action: 'Product "Lucky Me! Pancit Canton" added', user: 'Owner/Administrator', time: '2 min ago', status: 'success' },
           { id: '2', action: 'Stock-in recorded for SKU: LM-PC-80', user: 'Inventory Staff', time: '15 min ago', status: 'success' },
           { id: '3', action: 'Low stock alert: Coca-Cola 1.5L', user: 'System', time: '1 hour ago', status: 'warning' },
-          { id: '4', action: 'Supplier "Nestle Philippines" updated', user: 'Manager', time: '2 hours ago', status: 'success' },
+          { id: '4', action: 'Supplier "Nestle Philippines" updated', user: 'Owner/Administrator', time: '2 hours ago', status: 'success' },
           { id: '5', action: 'Database backup completed', user: 'System', time: '3 hours ago', status: 'success' },
         ]);
         setUserGrowth([
@@ -87,12 +87,11 @@ export function AdminDashboard() {
           { label: 'Personal Care', value: 15 },
         ]);
         setSystemUsage([
-          { label: 'Owners', value: 5 },
-          { label: 'Managers', value: 8 },
+          { label: 'Owner/Administrators', value: 13 },
           { label: 'Inventory Staff', value: 12 },
         ]);
       } catch (error) {
-        console.error('Failed to fetch admin data:', error);
+        console.error('Failed to fetch owner/administrator data:', error);
       } finally {
         setLoading(false);
       }
@@ -145,37 +144,37 @@ export function AdminDashboard() {
     {
       title: 'Manage Users',
       description: 'User accounts and permissions',
-      to: '/admin/users',
+      to: '/owner/users',
       icon: Users,
     },
     {
       title: 'System Settings',
       description: 'Configuration and settings',
-      to: '/admin/settings',
+      to: '/owner/settings',
       icon: Settings,
     },
     {
       title: 'Generate Reports',
       description: 'System and usage reports',
-      to: '/admin/reports',
+      to: '/owner/reports',
       icon: Activity,
     },
     {
       title: 'Database Management',
       description: 'Database status and backups',
-      to: '/admin/settings',
+      to: '/owner/settings',
       icon: Database,
     },
     {
       title: 'Security Settings',
       description: 'Access control and security',
-      to: '/admin/settings',
+      to: '/owner/settings',
       icon: Lock,
     },
     {
       title: 'API Configuration',
       description: 'API keys and endpoints',
-      to: '/admin/settings',
+      to: '/owner/settings',
       icon: Globe,
     },
   ];
@@ -197,7 +196,7 @@ export function AdminDashboard() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-2">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Admin Dashboard</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Owner/Administrator Dashboard</h1>
         <UITooltip>
           <TooltipTrigger asChild>
             <Info className="h-5 w-5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
@@ -334,8 +333,7 @@ export function AdminDashboard() {
               const maxValue = Math.max(...systemUsage.map(d => d.value));
               const percentage = (data.value / maxValue) * 100;
               const colors = {
-                'Owners': 'bg-blue-500 dark:bg-blue-600',
-                'Managers': 'bg-emerald-500 dark:bg-emerald-600',
+                'Owner/Administrators': 'bg-blue-500 dark:bg-blue-600',
                 'Inventory Staff': 'bg-violet-500 dark:bg-violet-600',
               };
               return (

@@ -14,9 +14,9 @@ export function DashboardRedirect() {
 
     // Redirect to role-specific dashboard
     const roleRoutes: Record<UserRole, string> = {
-      admin: '/dashboard/admin',
+      owner: '/dashboard',
       inventory: '/dashboard/inventory',
-      manager: '/dashboard',
+      cashier: '/cashier/pos',
     };
 
     navigate(roleRoutes[session.role], { replace: true });

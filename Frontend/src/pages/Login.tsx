@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { initializeDashboard, setStoredSession, type UserRole } from '../utils/mockAuthAndFeatures';
-import { Shield, Package, BarChart3 } from 'lucide-react';
+import { Shield, Package, Receipt } from 'lucide-react';
 
 const ROLE_OPTIONS: Array<{ value: UserRole; label: string; icon: React.ReactNode; description: string }> = [
   {
-    value: 'admin',
-    label: 'Administrator',
+    value: 'owner',
+    label: 'Owner/Administrator',
     icon: <Shield className="h-5 w-5" />,
-    description: 'Manage users, products, categories, suppliers, and system settings',
+    description: 'Manage users, settings, products, suppliers, dashboards, analytics, and reports',
   },
   {
     value: 'inventory',
@@ -17,10 +17,10 @@ const ROLE_OPTIONS: Array<{ value: UserRole; label: string; icon: React.ReactNod
     description: 'Record stock-in/out, wastage, manage inventory, and track FEFO',
   },
   {
-    value: 'manager',
-    label: 'Business Owner/Manager',
-    icon: <BarChart3 className="h-5 w-5" />,
-    description: 'View dashboard, monitor performance, and approve replenishment',
+    value: 'cashier',
+    label: 'Cashier',
+    icon: <Receipt className="h-5 w-5" />,
+    description: 'Operate POS, process returns, and reprint receipts',
   },
 ];
 
@@ -46,8 +46,8 @@ export function Login() {
       const resolvedEmail = email.trim() || `${selectedRole}@wiwaste.demo`;
       setStoredSession({
         email: resolvedEmail,
-        name: selectedRole === 'admin' ? 'Lia Cruz' : selectedRole === 'inventory' ? 'Mia Stockwell' : 'John Store Ops',
-        company: selectedRole === 'admin' ? 'WiWaste Central Administration' : selectedRole === 'inventory' ? 'WiWaste Inventory Floor' : 'WiWaste MiniMart + Pharma',
+        name: selectedRole === 'owner' ? 'Lia Cruz' : selectedRole === 'inventory' ? 'Mia Stockwell' : 'Carlo Reyes',
+        company: selectedRole === 'owner' ? 'WiWaste Owner Administration' : selectedRole === 'inventory' ? 'WiWaste Inventory Floor' : 'Ipharma Mart POS',
         role: selectedRole,
       });
       // Redirect to main dashboard

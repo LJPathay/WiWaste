@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FileText, Download, Loader2, CheckCircle2 } from 'lucide-react';
 import { Toast, useToast } from '../../components/ui/Toast';
+import { formatCurrency, initialReturnTransactions, initialSalesTransactions, paymentMethods, type PaymentMethod } from '../../utils/cashierData';
 
 interface ReportCard {
   id: string;
@@ -40,6 +41,8 @@ export function GenerateReports() {
   const { toasts, dismiss, success } = useToast();
 
   const [compilations, setCompilations] = useState<Compilation[]>(INITIAL_COMPILATIONS);
+  const [paymentFilter, setPaymentFilter] = useState<'all' | PaymentMethod>('all');
+  const [cashierFilter, setCashierFilter] = useState('all');
 
   // Per-card generating state: id -> boolean
   const [generatingIds, setGeneratingIds] = useState<Set<string>>(new Set());
@@ -82,6 +85,14 @@ export function GenerateReports() {
     });
     success(`"${comp.reportName}" downloaded successfully.`);
   };
+
+  const cashierOptions = Array.from(new Set(initialSalesTransactions.map(transaction => transaction.cashier_name)));
+  const filteredSales = initialSalesTransactions.filter(transaction => {
+    const matchesPayment = paymentFilter === 'all' || transaction.payment_method === paymentFilter;
+    const matchesCashier = cashierFilter === 'all' || transaction.cashier_name === cashierFilter;
+    return matchesPayment && matchesCashier;
+  });
+  const filteredRevenue = filteredSales.reduce((sum, transaction) => sum + transaction.total_amount, 0);
 
   return (
     <div className="space-y-8 w-full font-sans">
@@ -128,6 +139,66 @@ export function GenerateReports() {
               </div>
             );
           })}
+        </div>
+      </div>
+
+      <div>
+        <h2 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4">Sales Report Filters</h2>
+        <div className="bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm p-4">
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-3 items-end">
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">Payment Method</label>
+              <select
+                value={paymentFilter}
+                onChange={e => setPaymentFilter(e.target.value as 'all' | PaymentMethod)}
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-850 dark:text-slate-100"
+              >
+                <option value="all">All payment methods</option>
+                {paymentMethods.map(method => (
+                  <option key={method} value={method}>{method}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">Cashier</label>
+              <select
+                value={cashierFilter}
+                onChange={e => setCashierFilter(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-850 dark:text-slate-100"
+              >
+                <option value="all">All cashiers</option>
+                {cashierOptions.map(cashier => (
+                  <option key={cashier} value={cashier}>{cashier}</option>
+                ))}
+              </select>
+            </div>
+            <div className="rounded-lg bg-slate-50 dark:bg-slate-900 px-4 py-2">
+              <div className="text-xs text-slate-500 dark:text-slate-400">Filtered Revenue</div>
+              <div className="text-right text-sm font-bold text-slate-900 dark:text-slate-100">{formatCurrency(filteredRevenue)}</div>
+            </div>
+          </div>
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-xs text-left">
+              <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400">
+                <tr>
+                  <th className="px-4 py-2 font-semibold">Transaction</th>
+                  <th className="px-4 py-2 font-semibold">Cashier</th>
+                  <th className="px-4 py-2 font-semibold">Payment</th>
+                  <th className="px-4 py-2 font-semibold text-right">Total</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                {filteredSales.map(transaction => (
+                  <tr key={transaction.transaction_id}>
+                    <td className="px-4 py-3 font-mono text-slate-600 dark:text-slate-300">{transaction.transaction_id}</td>
+                    <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{transaction.cashier_name}</td>
+                    <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{transaction.payment_method}</td>
+                    <td className="px-4 py-3 text-right font-bold text-slate-900 dark:text-slate-100">{formatCurrency(transaction.total_amount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -194,6 +265,36 @@ export function GenerateReports() {
           </div>
           <div className="px-6 py-3 border-t border-slate-100 dark:border-white/5 text-xs text-slate-400">
             {compilations.length} report{compilations.length !== 1 ? 's' : ''} compiled
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h2 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4">Returns Oversight</h2>
+        <div className="bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs text-left">
+              <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-white/10">
+                <tr>
+                  <th className="px-6 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400">Return ID</th>
+                  <th className="px-6 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400">Reason</th>
+                  <th className="px-6 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400">Processed By</th>
+                  <th className="px-6 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400">Date</th>
+                  <th className="px-6 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 text-right">Refund Amount</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                {initialReturnTransactions.map(returnItem => (
+                  <tr key={returnItem.return_id} className="hover:bg-slate-50/60 dark:hover:bg-white/5 transition-colors">
+                    <td className="px-6 py-4 font-mono text-slate-600 dark:text-slate-300">{returnItem.return_id}</td>
+                    <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{returnItem.reason}</td>
+                    <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{returnItem.processed_by}</td>
+                    <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{returnItem.return_date}</td>
+                    <td className="px-6 py-4 text-right font-bold text-slate-900 dark:text-slate-100">{formatCurrency(returnItem.refund_amount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>

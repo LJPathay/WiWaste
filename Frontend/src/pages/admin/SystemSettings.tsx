@@ -65,7 +65,7 @@ export function SystemSettings() {
   /* ── Store Profile ── */
   const [profile, setProfile] = useState({
     storeName: 'WiWaste Store',
-    storeEmail: 'admin@wiwaste.com',
+    storeEmail: 'owner@wiwaste.com',
     storePhone: '(02) 8123 4567',
     storeAddress: '123 Eco Street, Quezon City, Metro Manila',
     currency: 'PHP',
@@ -178,7 +178,7 @@ export function SystemSettings() {
               value={profile.storeEmail}
               onChange={e => setProfile(p => ({ ...p, storeEmail: e.target.value }))}
               className={inputCls}
-              placeholder="admin@wiwaste.com"
+              placeholder="owner@wiwaste.com"
             />
           </FormField>
           <FormField label="Phone Number">
@@ -229,7 +229,7 @@ export function SystemSettings() {
       {/* ── Smart Alerts ── */}
       <SectionCard title="Smart Alerts">
         <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-          Enable or disable automated notifications sent to store managers and admins.
+          Enable or disable automated notifications sent to Owner/Administrators.
         </p>
         <div className="divide-y divide-slate-100 dark:divide-white/5">
           <AlertRow

@@ -181,7 +181,7 @@ export function Solutions() {
                         <motion.div whileHover={{ y: -10 }} className="bg-[#131b2e] border border-gray-800 p-8 rounded-2xl hover:border-[#006a61] transition-all duration-300 shadow-lg hover:shadow-[#006a61]/20">
                             <Users className="w-10 h-10 text-[#006a61] mb-6" />
                             <h3 className="text-xl font-semibold mb-3">Role-Based Intelligence</h3>
-                            <p className="text-gray-400 text-sm">Give store managers actionable local insights while providing regional directors with macro-level loss trend reports.</p>
+                            <p className="text-gray-400 text-sm">Give Owner/Administrators actionable local insights while providing regional directors with macro-level loss trend reports.</p>
                         </motion.div>
 
                         <motion.div whileHover={{ y: -10 }} className="bg-[#131b2e] border border-gray-800 p-8 rounded-2xl hover:border-[#006a61] transition-all duration-300 shadow-lg hover:shadow-[#006a61]/20">

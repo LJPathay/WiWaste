@@ -32,6 +32,7 @@ import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../comp
 import { useDashboardData } from '../../hooks/useDashboardData';
 import { useKpiHighlight } from '../../hooks/useKpiHighlight';
 import { retailExamples } from '../../utils/mockAuthAndFeatures';
+import { initialSalesTransactions } from '../../utils/cashierData';
 
 const currencyFormatter = new Intl.NumberFormat('en-PH', {
   style: 'currency',
@@ -107,6 +108,13 @@ export function DashboardOverview() {
     name: item.category.replace(' ', '\n'),
     amount: item.leakageAmount,
   }));
+  const paymentBreakdown = ['Cash', 'E-wallet', 'Credit Card', 'Debit Card'].map((method) => ({
+    method,
+    revenue: initialSalesTransactions
+      .filter(transaction => transaction.payment_method === method)
+      .reduce((sum, transaction) => sum + transaction.total_amount, 0),
+  }));
+  const paymentRevenue = paymentBreakdown.reduce((sum, item) => sum + item.revenue, 0);
   const totalLeakage = data.profitLeakage.reduce((sum, item) => sum + item.leakageAmount, 0);
   const totalCredits = data.vendorReturns.reduce((sum, item) => sum + item.eligibleCredit, 0);
   const averageConfidence = Math.round(
@@ -423,6 +431,71 @@ export function DashboardOverview() {
                 <Bar dataKey="amount" radius={[12, 12, 0, 0]} fill="#ef4444" />
               </BarChart>
             </ResponsiveContainer>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid grid-cols-1 gap-6 xl:grid-cols-[0.85fr_1.15fr]">
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-slate-900">
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-bold text-[#0b1c30] dark:text-slate-100">Payment Method Breakdown</h2>
+              <UITooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-4 w-4 text-slate-400 hover:text-[#006a61] dark:hover:text-[#7ef0cf] cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
+                  Revenue share from completed POS transactions
+                </TooltipContent>
+              </UITooltip>
+            </div>
+            <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">
+              {currencyFormatter.format(paymentRevenue)}
+            </span>
+          </div>
+          <div className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={paymentBreakdown}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e8edf5" />
+                <XAxis dataKey="method" tick={{ fontSize: 11 }} stroke="#94a3b8" interval={0} />
+                <YAxis tick={{ fontSize: 12 }} stroke="#94a3b8" />
+                <Tooltip
+                  formatter={(value) => currencyFormatter.format(Number(value))}
+                  contentStyle={{
+                    borderRadius: '12px',
+                    border: '1px solid #e2e8f0',
+                    boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
+                  }}
+                />
+                <Bar dataKey="revenue" radius={[12, 12, 0, 0]} fill="#006a61" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-slate-900">
+          <div className="mb-5 flex items-center justify-between gap-4">
+            <h2 className="text-lg font-bold text-[#0b1c30] dark:text-slate-100">Payment Share</h2>
+            <BarChart3 className="h-5 w-5 text-slate-400" />
+          </div>
+          <div className="space-y-3">
+            {paymentBreakdown.map(item => {
+              const share = paymentRevenue > 0 ? Math.round((item.revenue / paymentRevenue) * 100) : 0;
+              return (
+                <div key={item.method} className="rounded-2xl border border-slate-200 dark:border-white/10 p-4 bg-slate-50 dark:bg-slate-800/50">
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">{item.method}</span>
+                    <span className="text-right text-sm font-bold text-slate-900 dark:text-slate-100">{currencyFormatter.format(item.revenue)}</span>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between gap-4">
+                    <div className="h-2 flex-1 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+                      <div className="h-full rounded-full bg-[#006a61]" style={{ width: `${share}%` }} />
+                    </div>
+                    <span className="w-12 text-right text-xs font-semibold text-slate-500 dark:text-slate-400">{share}%</span>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>

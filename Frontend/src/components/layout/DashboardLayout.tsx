@@ -22,9 +22,11 @@ import {
   PhilippinePeso,
   FlaskConical,
   Activity,
+  Receipt,
+  RotateCcw,
 } from 'lucide-react';
 import { ThemeToggle } from '../ThemeToggle';
-import { clearStoredSession, getStoredSession, type UserRole } from '../../utils/mockAuthAndFeatures';
+import { clearStoredSession, getRoleDisplayName, getStoredSession, type UserRole } from '../../utils/mockAuthAndFeatures';
 
 const BRAND_ICON = '/images/logo.PNG';
 const BRAND_WORDMARK = '/images/Logo_full.PNG';
@@ -33,28 +35,43 @@ type SidebarItem = { to: string; label: string; icon: any };
 type SidebarGroup = { group: string; items: SidebarItem[] };
 
 const sidebarGroupsByRole: Record<UserRole, SidebarGroup[]> = {
-  admin: [
+  owner: [
     {
-      group: 'Overview',
+      group: 'Owner/Administrator',
       items: [
         { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-      ],
-    },
-    {
-      group: 'Analytics Modules',
-      items: [
-        { to: '/dashboard/leakage', label: 'Leakage Detection', icon: AlertTriangle },
-        { to: '/dashboard/vendors', label: 'Vendor Credits', icon: PhilippinePeso },
-        { to: '/dashboard/prescriptive', label: 'Decision Sandbox', icon: FlaskConical },
+        { to: '/owner/dashboard', label: 'Owner Dashboard', icon: BarChart3 },
+        { to: '/owner/admin-dashboard', label: 'Administrative View', icon: Activity },
       ],
     },
     {
       group: 'Management',
       items: [
-        { to: '/admin/users', label: 'Manage Users', icon: Users },
-        { to: '/admin/settings', label: 'System Settings', icon: Settings },
-        { to: '/admin/reports', label: 'Generate Reports', icon: FileText },
-        { to: '/admin/audit-logs', label: 'Audit Logs', icon: Activity },
+        { to: '/owner/users', label: 'Manage Users', icon: Users },
+        { to: '/owner/products', label: 'Manage Products', icon: Package },
+        { to: '/owner/categories', label: 'Manage Categories', icon: Layers },
+        { to: '/owner/suppliers', label: 'Manage Suppliers', icon: TrendingUp },
+        { to: '/owner/settings', label: 'System Settings', icon: Settings },
+        { to: '/owner/audit-logs', label: 'Audit Logs', icon: Activity },
+      ],
+    },
+    {
+      group: 'Analytics & Reports',
+      items: [
+        { to: '/dashboard/predictive', label: 'Predictive Analytics', icon: TrendingUp },
+        { to: '/dashboard/leakage', label: 'Leakage Detection', icon: AlertTriangle },
+        { to: '/dashboard/fefo', label: 'FEFO Tracking', icon: Layers },
+        { to: '/dashboard/vendors', label: 'Vendor Credits', icon: PhilippinePeso },
+        { to: '/dashboard/behavior', label: 'Behavioral Intelligence', icon: Brain },
+        { to: '/dashboard/prescriptive', label: 'Decision Sandbox', icon: FlaskConical },
+        { to: '/owner/performance', label: 'Inventory Performance', icon: Package },
+        { to: '/owner/forecasts', label: 'Demand Forecasts', icon: LineChart },
+        { to: '/owner/overstock', label: 'Overstock Risks', icon: AlertTriangle },
+        { to: '/owner/loss-trends', label: 'Loss Trends', icon: BarChart3 },
+        { to: '/owner/replenishment', label: 'Replenishment', icon: CheckCircle },
+        { to: '/owner/supplier-performance', label: 'Supplier Performance', icon: Users },
+        { to: '/owner/reports', label: 'Generate Reports', icon: FileText },
+        { to: '/owner/executive-reports', label: 'Executive Reports', icon: FileText },
       ],
     },
   ],
@@ -75,41 +92,13 @@ const sidebarGroupsByRole: Record<UserRole, SidebarGroup[]> = {
       ],
     },
   ],
-  manager: [
+  cashier: [
     {
-      group: 'Overview',
+      group: 'Cashier',
       items: [
-        { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-      ],
-    },
-    {
-      group: 'Management',
-      items: [
-        { to: '/admin/products', label: 'Manage Products', icon: Package },
-        { to: '/admin/suppliers', label: 'Manage Suppliers', icon: TrendingUp },
-      ],
-    },
-    {
-      group: 'Analytics Modules',
-      items: [
-        { to: '/dashboard/predictive', label: 'Predictive Analytics', icon: TrendingUp },
-        { to: '/dashboard/leakage', label: 'Leakage Detection', icon: AlertTriangle },
-        { to: '/dashboard/fefo', label: 'FEFO Tracking', icon: Layers },
-        { to: '/dashboard/vendors', label: 'Vendor Credits', icon: PhilippinePeso },
-        { to: '/dashboard/behavior', label: 'Behavioral Intelligence', icon: Brain },
-        { to: '/dashboard/prescriptive', label: 'Decision Sandbox', icon: FlaskConical },
-      ],
-    },
-    {
-      group: 'Reports',
-      items: [
-        { to: '/manager/performance', label: 'Inventory Performance', icon: Package },
-        { to: '/manager/forecasts', label: 'Demand Forecasts', icon: LineChart },
-        { to: '/manager/overstock', label: 'Overstock Risks', icon: AlertTriangle },
-        { to: '/manager/loss-trends', label: 'Loss Trends', icon: BarChart3 },
-        { to: '/manager/replenishment', label: 'Replenishment', icon: CheckCircle },
-        { to: '/manager/suppliers', label: 'Supplier Performance', icon: Users },
-        { to: '/manager/reports', label: 'Executive Reports', icon: FileText },
+        { to: '/cashier/pos', label: 'POS Terminal', icon: Receipt },
+        { to: '/cashier/returns', label: 'Returns & Refunds', icon: RotateCcw },
+        { to: '/cashier/history', label: 'Transaction History', icon: FileText },
       ],
     },
   ],
@@ -220,7 +209,7 @@ if (!session) {
       {!compact && (
         <div className="border-b border-gray-200 dark:border-white/10 px-4 py-3 bg-white dark:bg-slate-950">
           <p className="text-xs font-semibold text-gray-800 dark:text-slate-100 truncate">{session.name}</p>
-          <p className="text-xs text-gray-500 dark:text-slate-400 capitalize">{session.role}</p>
+          <p className="text-xs text-gray-500 dark:text-slate-400">{getRoleDisplayName(session.role)}</p>
         </div>
       )}
 

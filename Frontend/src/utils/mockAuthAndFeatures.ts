@@ -1,11 +1,9 @@
 /**
  * Mock Authentication & WiWaste Platform Features
- * Demonstrates all core functionality with sample data
+ * Demonstrates core functionality with sample data.
  */
 
-// ============ Types & Interfaces ============
-
-export type UserRole = 'admin' | 'manager' | 'inventory';
+export type UserRole = 'owner' | 'inventory' | 'cashier';
 
 interface User {
   id: string;
@@ -26,31 +24,31 @@ export interface AuthSession {
 export const AUTH_SESSION_KEY = 'wiwaste-session';
 
 const ROLE_LABELS: Record<UserRole, string> = {
-  admin: 'Administrator',
-  manager: 'Business Owner / Manager',
+  owner: 'Owner/Administrator',
   inventory: 'Inventory Staff',
+  cashier: 'Cashier',
 };
 
 const ROLE_LIMITS: Record<UserRole, number> = {
-  admin: 5,
-  manager: 4,
+  owner: 5,
   inventory: 3,
+  cashier: 2,
 };
 
 function normalizeRole(role?: string): UserRole {
-  if (role === 'admin' || role === 'manager' || role === 'inventory') return role;
+  if (role === 'owner' || role === 'inventory' || role === 'cashier') return role;
   if (role === 'analyst') return 'inventory';
-  return 'manager';
+  return 'owner';
 }
 
 export function inferRoleFromEmail(email: string): UserRole {
   const normalized = email.toLowerCase();
 
-  if (normalized.includes('admin')) return 'admin';
+  if (normalized.includes('cashier') || normalized.includes('pos')) return 'cashier';
   if (normalized.includes('inventory') || normalized.includes('staff') || normalized.includes('stock')) return 'inventory';
-  if (normalized.includes('manager') || normalized.includes('owner')) return 'manager';
+  if (normalized.includes('owner')) return 'owner';
 
-  return 'manager';
+  return 'owner';
 }
 
 export function getRoleDisplayName(role: UserRole): string {
@@ -65,7 +63,6 @@ export function getStoredSession(): AuthSession | null {
 
   try {
     const session = JSON.parse(rawSession) as Partial<AuthSession>;
-    // Only name and role are required; email and company are optional in mock auth
     if (!session.name || !session.role) return null;
 
     return {
@@ -152,10 +149,10 @@ interface BehavioralInsight {
 export const retailExamples = {
   minimart: {
     storeName: 'Barangay MiniMart Plus',
-    topBrands: ['Magnolia', 'Lucky Me', 'Marlboro', 'Nescafé', 'C2', 'Tide', 'Purefoods'],
+    topBrands: ['Magnolia', 'Lucky Me', 'Marlboro', 'Nescafe', 'C2', 'Tide', 'Purefoods'],
     sampleItems: [
       'Lucky Me! Pancit Canton',
-      'Nescafé 3-in-1 Original',
+      'Nescafe 3-in-1 Original',
       'C2 Green Tea Apple',
       'Tide Powder Detergent Sachet',
       'Purefoods Tender Juicy Hotdog',
@@ -176,49 +173,40 @@ export const retailExamples = {
   },
 };
 
-// ============ Mock Login Function ============
-
 export async function mockLogin(email: string, password: string, role?: UserRole): Promise<User> {
-  console.log(`🔐 Attempting login for: ${email}`);
-  console.log(`🔑 Password received: ${'*'.repeat(Math.max(3, password.length))}`);
+  console.log(`Attempting login for: ${email}`);
+  console.log(`Password received: ${'*'.repeat(Math.max(3, password.length))}`);
   const resolvedRole = normalizeRole(role ?? inferRoleFromEmail(email));
 
-  // Simulate network delay
   await new Promise((resolve) => setTimeout(resolve, 1500));
 
   const profileByRole: Record<UserRole, Pick<User, 'name' | 'company'>> = {
-    admin: {
+    owner: {
       name: 'Lia Cruz',
-      company: 'WiWaste Central Administration',
-    },
-    manager: {
-      name: 'John Store Ops',
-      company: 'WiWaste MiniMart + Pharma',
+      company: 'WiWaste Owner Administration',
     },
     inventory: {
       name: 'Mia Stockwell',
       company: 'WiWaste Inventory Floor',
     },
+    cashier: {
+      name: 'Carlo Reyes',
+      company: 'Ipharma Mart POS',
+    },
   };
 
-  // Mock user data
-  const mockUser: User = {
+  return {
     id: 'user_' + Math.random().toString(36).substr(2, 9),
-    email: email,
+    email,
     name: profileByRole[resolvedRole].name,
     company: profileByRole[resolvedRole].company,
     role: resolvedRole,
     loginTime: new Date(),
   };
-
-  console.log(`✅ Login successful! Welcome ${mockUser.name}`);
-  return mockUser;
 }
 
-// ============ Feature 1: Predictive Analytics ============
-
-export function getPredictiveAnalytics(role: UserRole = 'manager'): PredictiveAnalytics {
-  console.log(`📊 Fetching Predictive Analytics for ${getRoleDisplayName(role)}...`);
+export function getPredictiveAnalytics(role: UserRole = 'owner'): PredictiveAnalytics {
+  console.log(`Fetching Predictive Analytics for ${getRoleDisplayName(role)}...`);
 
   const baseForecast = [
     { month: 'Jan 2026', predicted: 1240, confidence: 0.92 },
@@ -230,31 +218,31 @@ export function getPredictiveAnalytics(role: UserRole = 'manager'): PredictiveAn
 
   const roleForecast = clampByRole(baseForecast, role).map((point, index) => ({
     ...point,
-    predicted: point.predicted + (role === 'admin' ? 45 * index : role === 'inventory' ? -30 * index : 0),
-    confidence: Math.min(0.98, point.confidence + (role === 'admin' ? 0.02 : role === 'inventory' ? -0.01 : 0)),
+    predicted: point.predicted + (role === 'owner' ? 45 * index : role === 'inventory' ? -30 * index : 0),
+    confidence: Math.min(0.98, point.confidence + (role === 'owner' ? 0.02 : role === 'inventory' ? -0.01 : 0)),
   }));
 
   const seasonalTrendsByRole: Record<UserRole, string> = {
-    admin: 'Corporate-wide Q2 demand shows the sharpest lift in expiry risk across all branches, with recovery tied to weekly governance checks.',
-    manager: 'Q2 shows 40% increase in near-expiry snacks, OTC medicine cartons, and sachet packaging due to seasonal demand',
+    owner: 'Corporate and store-level demand shows rising Q2 expiry risk, with recovery tied to governance checks, FEFO oversight, and supplier coordination.',
     inventory: 'Stockroom activity rises fastest before weekend closeouts, so FEFO rotation and shelf pulls need earlier cutoffs.',
+    cashier: 'Checkout and returns patterns show near-expiry pharmacy items need careful receipt matching during shift operations.',
   };
 
   const anomalyByRole: Record<UserRole, PredictiveAnalytics['anomalyDetection']> = {
-    admin: {
+    owner: {
       detected: true,
       severity: 'high',
-      description: 'Cross-branch overstock spike detected across admin-managed locations on 2026-06-15',
-    },
-    manager: {
-      detected: true,
-      severity: 'high',
-      description: 'Unusual spike detected in snack shelf returns and pharmacy blister-pack waste on 2026-06-15',
+      description: 'Cross-store overstock and pharmacy blister-pack waste spike detected on 2026-06-15.',
     },
     inventory: {
       detected: true,
       severity: 'medium',
       description: 'Shelf pull delays and stock-in mismatches were detected during the latest inventory closeout.',
+    },
+    cashier: {
+      detected: true,
+      severity: 'low',
+      description: 'Refund corrections rose during the latest POS shift closeout.',
     },
   };
 
@@ -265,43 +253,15 @@ export function getPredictiveAnalytics(role: UserRole = 'manager'): PredictiveAn
   };
 }
 
-// ============ Feature 2: Prescriptive Decision Support Simulation Sandbox ============
-
-export function getPrescriptiveDecisions(role: UserRole = 'manager'): PrescriptiveDecision[] {
-  console.log(`🎯 Running Prescriptive Decision Support Simulations for ${getRoleDisplayName(role)}...`);
+export function getPrescriptiveDecisions(role: UserRole = 'owner'): PrescriptiveDecision[] {
+  console.log(`Running Prescriptive Decision Support Simulations for ${getRoleDisplayName(role)}...`);
 
   const scenarios: Record<UserRole, PrescriptiveDecision[]> = {
-    admin: [
+    owner: [
       {
         scenario: 'Scenario A: Enforce branch-level FEFO compliance',
         recommendation: 'Require weekly inventory approvals and branch audit checkpoints before replenishment release',
         expectedROI: 35200,
-        riskLevel: 'low',
-      },
-      {
-        scenario: 'Scenario B: Improve recovery across vendor returns',
-        recommendation: 'Standardize claim evidence, supplier sign-off, and escalation routes for all returned stock',
-        expectedROI: 49800,
-        riskLevel: 'medium',
-      },
-      {
-        scenario: 'Scenario C: Optimize store operations only',
-        recommendation: 'Apply AI route optimization for store replenishment and aisle-based shelf restocking',
-        expectedROI: 12800,
-        riskLevel: 'low',
-      },
-      {
-        scenario: 'Scenario D: Expand premium retail recovery',
-        recommendation: 'Build a small sorting hub for mixed minimart and pharma packaging returns',
-        expectedROI: 86500,
-        riskLevel: 'high',
-      },
-    ],
-    manager: [
-      {
-        scenario: 'Scenario A: Reduce near-expiry minimart write-offs by 15%',
-        recommendation: 'Cross-sell Lucky Me, C2, and Magnolia items using FEFO rotation and promo bundles',
-        expectedROI: 28500,
         riskLevel: 'low',
       },
       {
@@ -311,9 +271,9 @@ export function getPrescriptiveDecisions(role: UserRole = 'manager'): Prescripti
         riskLevel: 'medium',
       },
       {
-        scenario: 'Scenario C: Optimize current store operations only',
-        recommendation: 'Apply AI route optimization for store replenishment and aisle-based shelf restocking',
-        expectedROI: 12800,
+        scenario: 'Scenario C: Optimize store operations',
+        recommendation: 'Apply route optimization for replenishment, aisle restocking, and near-expiry promo bundles',
+        expectedROI: 28500,
         riskLevel: 'low',
       },
       {
@@ -343,23 +303,35 @@ export function getPrescriptiveDecisions(role: UserRole = 'manager'): Prescripti
         riskLevel: 'low',
       },
     ],
+    cashier: [
+      {
+        scenario: 'Scenario A: Keep checkout stock synchronized',
+        recommendation: 'Complete POS transactions only after payment confirmation so inventory deductions stay traceable',
+        expectedROI: 11800,
+        riskLevel: 'low',
+      },
+      {
+        scenario: 'Scenario B: Improve returns handling',
+        recommendation: 'Search original receipts and record exact returned quantities before refund processing',
+        expectedROI: 7600,
+        riskLevel: 'low',
+      },
+    ],
   };
 
   return scenarios[role];
 }
 
-// ============ Feature 3: Profit Leakage Detection Engine ============
-
-export function getProfitLeakage(role: UserRole = 'manager'): ProfitLeakage[] {
-  console.log(`💰 Detecting Profit Leakage for ${getRoleDisplayName(role)}...`);
+export function getProfitLeakage(role: UserRole = 'owner'): ProfitLeakage[] {
+  console.log(`Detecting Profit Leakage for ${getRoleDisplayName(role)}...`);
 
   const datasets: Record<UserRole, ProfitLeakage[]> = {
-    admin: [
+    owner: [
       {
         category: 'Minimart Overstock',
         leakageAmount: 9100,
         percentage: 3.2,
-        source: 'Extra cases of Lucky Me, Nescafé, and C2 were received beyond display capacity',
+        source: 'Extra cases of Lucky Me, Nescafe, and C2 were received beyond display capacity',
       },
       {
         category: 'Pharmacy Expiry Waste',
@@ -383,39 +355,7 @@ export function getProfitLeakage(role: UserRole = 'manager'): ProfitLeakage[] {
         category: 'Administrative Overhead',
         leakageAmount: 7300,
         percentage: 2.67,
-        source: 'Manual SKU matching across minimart and pharmacy branches',
-      },
-    ],
-    manager: [
-      {
-        category: 'Minimart Overstock',
-        leakageAmount: 9100,
-        percentage: 3.2,
-        source: 'Extra cases of Lucky Me, Nescafé, and C2 were received beyond display capacity',
-      },
-      {
-        category: 'Pharmacy Expiry Waste',
-        leakageAmount: 12950,
-        percentage: 4.6,
-        source: 'Biogesic, Neozep, and Enervon items were flagged near expiry in back stock',
-      },
-      {
-        category: 'Unclaimed Vendor Credits',
-        leakageAmount: 5600,
-        percentage: 1.96,
-        source: 'Return windows for Unilab and distributor cartons were missed',
-      },
-      {
-        category: 'Promo Pricing Gaps',
-        leakageAmount: 4200,
-        percentage: 1.43,
-        source: 'Magnolia and Purefoods bundles were sold below planned margin',
-      },
-      {
-        category: 'Operational Coordination',
-        leakageAmount: 7300,
-        percentage: 2.67,
-        source: 'Manual SKU matching across minimart and pharmacy branches slowed replenishment decisions',
+        source: 'Manual SKU matching across minimart and pharmacy branches slowed approvals and replenishment decisions',
       },
     ],
     inventory: [
@@ -438,22 +378,34 @@ export function getProfitLeakage(role: UserRole = 'manager'): ProfitLeakage[] {
         source: 'Recorded wastage did not fully match the physical bin count after shift closeout',
       },
     ],
+    cashier: [
+      {
+        category: 'Unmatched Returns',
+        leakageAmount: 2400,
+        percentage: 1.1,
+        source: 'Refunds without original transaction lookup create reconciliation gaps at shift close',
+      },
+      {
+        category: 'Payment Exceptions',
+        leakageAmount: 1800,
+        percentage: 0.8,
+        source: 'Non-cash confirmations need cashier verification before receipt release',
+      },
+    ],
   };
 
   return datasets[role];
 }
 
-// ============ Feature 4: Batch-Level FEFO Tracking & Dynamic Price Decay ============
-
-export function getBatchFEFOTracking(role: UserRole = 'manager'): BATCHTracking[] {
-  console.log(`📦 Running FEFO Batch Tracking & Price Decay Analysis for ${getRoleDisplayName(role)}...`);
+export function getBatchFEFOTracking(role: UserRole = 'owner'): BATCHTracking[] {
+  console.log(`Running FEFO Batch Tracking & Price Decay Analysis for ${getRoleDisplayName(role)}...`);
 
   const now = new Date();
 
   const batchesByRole: Record<UserRole, BATCHTracking[]> = {
-    admin: [
+    owner: [
       {
-        batchId: 'ADMIN-2026-001',
+        batchId: 'OWNER-2026-001',
         expiryDate: new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000),
         currentPrice: 2.5,
         decayRate: 0.15,
@@ -461,7 +413,7 @@ export function getBatchFEFOTracking(role: UserRole = 'manager'): BATCHTracking[
         daysToExpiry: 5,
       },
       {
-        batchId: 'ADMIN-2026-002',
+        batchId: 'OWNER-2026-002',
         expiryDate: new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000),
         currentPrice: 3.8,
         decayRate: 0.08,
@@ -469,7 +421,7 @@ export function getBatchFEFOTracking(role: UserRole = 'manager'): BATCHTracking[
         daysToExpiry: 15,
       },
       {
-        batchId: 'ADMIN-2026-003',
+        batchId: 'OWNER-2026-003',
         expiryDate: new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000),
         currentPrice: 1.2,
         decayRate: 0.25,
@@ -477,7 +429,7 @@ export function getBatchFEFOTracking(role: UserRole = 'manager'): BATCHTracking[
         daysToExpiry: 2,
       },
       {
-        batchId: 'ADMIN-2026-004',
+        batchId: 'OWNER-2026-004',
         expiryDate: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
         currentPrice: 4.5,
         decayRate: 0.05,
@@ -485,46 +437,12 @@ export function getBatchFEFOTracking(role: UserRole = 'manager'): BATCHTracking[
         daysToExpiry: 30,
       },
       {
-        batchId: 'ADMIN-2026-005',
+        batchId: 'OWNER-2026-005',
         expiryDate: new Date(now.getTime() + 9 * 24 * 60 * 60 * 1000),
         currentPrice: 2.95,
         decayRate: 0.11,
         recommendedPrice: 2.71,
         daysToExpiry: 9,
-      },
-    ],
-    manager: [
-      {
-        batchId: 'MINI-2026-001',
-        expiryDate: new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000),
-        currentPrice: 2.5,
-        decayRate: 0.15,
-        recommendedPrice: 2.12,
-        daysToExpiry: 5,
-      },
-      {
-        batchId: 'PHARMA-2026-002',
-        expiryDate: new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000),
-        currentPrice: 3.8,
-        decayRate: 0.08,
-        recommendedPrice: 3.49,
-        daysToExpiry: 15,
-      },
-      {
-        batchId: 'MINI-2026-003',
-        expiryDate: new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000),
-        currentPrice: 1.2,
-        decayRate: 0.25,
-        recommendedPrice: 0.9,
-        daysToExpiry: 2,
-      },
-      {
-        batchId: 'PHARMA-2026-004',
-        expiryDate: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
-        currentPrice: 4.5,
-        decayRate: 0.05,
-        recommendedPrice: 4.28,
-        daysToExpiry: 30,
       },
     ],
     inventory: [
@@ -553,54 +471,36 @@ export function getBatchFEFOTracking(role: UserRole = 'manager'): BATCHTracking[
         daysToExpiry: 18,
       },
     ],
+    cashier: [
+      {
+        batchId: 'POS-2026-001',
+        expiryDate: new Date(now.getTime() + 4 * 24 * 60 * 60 * 1000),
+        currentPrice: 25,
+        decayRate: 0.12,
+        recommendedPrice: 22,
+        daysToExpiry: 4,
+      },
+      {
+        batchId: 'POS-2026-002',
+        expiryDate: new Date(now.getTime() + 10 * 24 * 60 * 60 * 1000),
+        currentPrice: 12,
+        decayRate: 0.08,
+        recommendedPrice: 11,
+        daysToExpiry: 10,
+      },
+    ],
   };
 
   return batchesByRole[role];
 }
 
-// ============ Feature 5: Automated Vendor Return-Window & Credit Recovery Engine ============
-
-export function getVendorReturns(role: UserRole = 'manager'): VendorReturn[] {
-  console.log(`🔄 Processing Vendor Return-Window & Credit Recovery for ${getRoleDisplayName(role)}...`);
+export function getVendorReturns(role: UserRole = 'owner'): VendorReturn[] {
+  console.log(`Processing Vendor Return-Window & Credit Recovery for ${getRoleDisplayName(role)}...`);
 
   const now = new Date();
 
   const vendorsByRole: Record<UserRole, VendorReturn[]> = {
-    admin: [
-      {
-        vendorId: 'VENDOR-A123',
-        vendorName: 'Unilab Distribution',
-        returnWindowDays: 30,
-        eligibleCredit: 4500,
-        returnDeadline: new Date(now.getTime() + 8 * 24 * 60 * 60 * 1000),
-        status: 'pending',
-      },
-      {
-        vendorId: 'VENDOR-B456',
-        vendorName: 'Magnolia Food Service',
-        returnWindowDays: 45,
-        eligibleCredit: 7200,
-        returnDeadline: new Date(now.getTime() + 20 * 24 * 60 * 60 * 1000),
-        status: 'pending',
-      },
-      {
-        vendorId: 'VENDOR-C789',
-        vendorName: 'PascualLab Pharma Supply',
-        returnWindowDays: 14,
-        eligibleCredit: 2100,
-        returnDeadline: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000),
-        status: 'pending',
-      },
-      {
-        vendorId: 'VENDOR-D012',
-        vendorName: 'Purefoods Wholesale',
-        returnWindowDays: 60,
-        eligibleCredit: 9800,
-        returnDeadline: new Date(now.getTime() + 45 * 24 * 60 * 60 * 1000),
-        status: 'approved',
-      },
-    ],
-    manager: [
+    owner: [
       {
         vendorId: 'VENDOR-A123',
         vendorName: 'Unilab Distribution',
@@ -660,18 +560,34 @@ export function getVendorReturns(role: UserRole = 'manager'): VendorReturn[] {
         status: 'pending',
       },
     ],
+    cashier: [
+      {
+        vendorId: 'RETURN-POS-001',
+        vendorName: 'Ipharma Mart Customer Returns',
+        returnWindowDays: 7,
+        eligibleCredit: 1800,
+        returnDeadline: new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000),
+        status: 'pending',
+      },
+      {
+        vendorId: 'RETURN-POS-002',
+        vendorName: 'Damaged OTC Counter Goods',
+        returnWindowDays: 14,
+        eligibleCredit: 1200,
+        returnDeadline: new Date(now.getTime() + 6 * 24 * 60 * 60 * 1000),
+        status: 'pending',
+      },
+    ],
   };
 
   return vendorsByRole[role];
 }
 
-// ============ Feature 6: Behavioral Loss Intelligence Module ============
-
-export function getBehavioralLossIntelligence(role: UserRole = 'manager'): BehavioralInsight[] {
-  console.log(`🧠 Analyzing Behavioral Loss Patterns for ${getRoleDisplayName(role)}...`);
+export function getBehavioralLossIntelligence(role: UserRole = 'owner'): BehavioralInsight[] {
+  console.log(`Analyzing Behavioral Loss Patterns for ${getRoleDisplayName(role)}...`);
 
   const insightsByRole: Record<UserRole, BehavioralInsight[]> = {
-    admin: [
+    owner: [
       {
         patternId: 'PATTERN-001',
         description: 'Weekend overloading in minimart shelf replenishment',
@@ -688,57 +604,13 @@ export function getBehavioralLossIntelligence(role: UserRole = 'manager'): Behav
       },
       {
         patternId: 'PATTERN-003',
-        description: 'Staff efficiency drops on Mondays after inventory closeout',
-        frequency: 6,
-        impact: 1800,
-        recommendation: 'Rotate cashier and stockroom duties across minimart and pharmacy teams',
-      },
-      {
-        patternId: 'PATTERN-004',
-        description: 'Material missorting by contract partners',
-        frequency: 15,
-        impact: 8900,
-        recommendation: 'Implement automated sorting verification for Unilab, Nescafé, and Purefoods returns',
-      },
-      {
-        patternId: 'PATTERN-005',
         description: 'Administrative exceptions are delaying approvals',
         frequency: 4,
         impact: 12000,
-        recommendation: 'Lock approval thresholds and route outlier requests through the admin queue before they stall inventory flow',
-      },
-    ],
-    manager: [
-      {
-        patternId: 'PATTERN-001',
-        description: 'Weekend overloading in minimart shelf replenishment',
-        frequency: 8,
-        impact: 2300,
-        recommendation: 'Shift Lucky Me, C2, and Magnolia restocks to Thursday to avoid weekend congestion',
-      },
-      {
-        patternId: 'PATTERN-002',
-        description: 'High contamination rates in pharmacy return bins',
-        frequency: 12,
-        impact: 5600,
-        recommendation: 'Separate medicine cartons, blister packs, and medical waste signage by color code',
-      },
-      {
-        patternId: 'PATTERN-003',
-        description: 'Staff efficiency drops on Mondays after inventory closeout',
-        frequency: 6,
-        impact: 1800,
-        recommendation: 'Rotate cashier and stockroom duties across minimart and pharmacy teams',
+        recommendation: 'Lock approval thresholds and route outlier requests through the owner queue before they stall inventory flow',
       },
       {
         patternId: 'PATTERN-004',
-        description: 'Material missorting by contract partners',
-        frequency: 15,
-        impact: 8900,
-        recommendation: 'Implement automated sorting verification for Unilab, Nescafé, and Purefoods returns',
-      },
-      {
-        patternId: 'PATTERN-005',
         description: 'Customer opt-out spikes after promo changes',
         frequency: 4,
         impact: 12000,
@@ -768,12 +640,26 @@ export function getBehavioralLossIntelligence(role: UserRole = 'manager'): Behav
         recommendation: 'Use separate bins for damaged goods, expiry waste, and vendor returns at every shift end',
       },
     ],
+    cashier: [
+      {
+        patternId: 'PATTERN-POS-001',
+        description: 'Cash tender entries are corrected near shift close',
+        frequency: 5,
+        impact: 900,
+        recommendation: 'Review cash amount and change due before completing receipt',
+      },
+      {
+        patternId: 'PATTERN-POS-002',
+        description: 'Returns cluster around near-expiry pharmacy items',
+        frequency: 7,
+        impact: 1600,
+        recommendation: 'Confirm returned quantities against original sales items before restocking',
+      },
+    ],
   };
 
   return insightsByRole[role];
 }
-
-// ============ Complete Dashboard Data (All Features) ============
 
 export interface DashboardData {
   user: User;
@@ -786,38 +672,21 @@ export interface DashboardData {
 }
 
 export async function initializeDashboard(email: string, password: string, role?: UserRole): Promise<DashboardData> {
-  console.log('🚀 Initializing WiWaste Dashboard...\n');
+  console.log('Initializing WiWaste Dashboard...');
 
   const resolvedRole = normalizeRole(role ?? inferRoleFromEmail(email));
-
-  // Step 1: Login
   const user = await mockLogin(email, password, resolvedRole);
-  console.log('');
-
-  // Step 2: Fetch all features in parallel
-  console.log('📥 Loading platform features...\n');
-
-  const predictiveAnalytics = getPredictiveAnalytics(resolvedRole);
-  const prescriptiveDecisions = getPrescriptiveDecisions(resolvedRole);
-  const profitLeakage = getProfitLeakage(resolvedRole);
-  const batchFEFO = getBatchFEFOTracking(resolvedRole);
-  const vendorReturns = getVendorReturns(resolvedRole);
-  const behavioralInsights = getBehavioralLossIntelligence(resolvedRole);
-
-  console.log('\n✨ Dashboard Ready!\n');
 
   return {
     user,
-    predictiveAnalytics,
-    prescriptiveDecisions,
-    profitLeakage,
-    batchFEFO,
-    vendorReturns,
-    behavioralInsights,
+    predictiveAnalytics: getPredictiveAnalytics(resolvedRole),
+    prescriptiveDecisions: getPrescriptiveDecisions(resolvedRole),
+    profitLeakage: getProfitLeakage(resolvedRole),
+    batchFEFO: getBatchFEFOTracking(resolvedRole),
+    vendorReturns: getVendorReturns(resolvedRole),
+    behavioralInsights: getBehavioralLossIntelligence(resolvedRole),
   };
 }
-
-// ============ Summary & Reporting ============
 
 export function generateSummaryReport(data: DashboardData): string {
   const totalLeakage = data.profitLeakage.reduce((sum, leak) => sum + leak.leakageAmount, 0);
@@ -825,51 +694,38 @@ export function generateSummaryReport(data: DashboardData): string {
     (sum, vendor) => sum + vendor.eligibleCredit,
     0
   );
-  const criticalBatches = data.batchFEFO.filter((b) => b.daysToExpiry <= 7).length;
+  const criticalBatches = data.batchFEFO.filter((batch) => batch.daysToExpiry <= 7).length;
 
   return `
-╔════════════════════════════════════════════════════════════╗
-║           WiWaste Platform - Executive Summary             ║
-╚════════════════════════════════════════════════════════════╝
+WiWaste Platform - Executive Summary
 
-👤 User: ${data.user.name} (${data.user.role})
-🏢 Company: ${data.user.company}
-⏰ Login Time: ${data.user.loginTime.toLocaleString()}
+User: ${data.user.name} (${getRoleDisplayName(data.user.role)})
+Company: ${data.user.company}
+Login Time: ${data.user.loginTime.toLocaleString()}
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Predictive Analytics
+- Forecast Confidence: 88.7% average
+- Seasonal Trend: ${data.predictiveAnalytics.seasonalTrends}
+- Anomalies Detected: ${data.predictiveAnalytics.anomalyDetection.detected ? 'Yes' : 'No'}
 
-📊 PREDICTIVE ANALYTICS
-   • Forecast Confidence: 88.7% average
-   • Seasonal Trend: Q2 +40% waste volume
-   • Anomalies Detected: 1 (HIGH severity)
+Prescriptive Decisions
+- Evaluated Scenarios: ${data.prescriptiveDecisions.length}
+- Top ROI Opportunity: ${data.prescriptiveDecisions[0]?.scenario ?? 'None'}
 
-🎯 PRESCRIPTIVE DECISIONS
-   • Top ROI Opportunity: Scenario D ($85,000)
-   • Low-Risk Alternative: Scenario A ($28,000)
-   • Evaluated Scenarios: 4
+Profit Leakage
+- Total Monthly Leakage: ${totalLeakage.toLocaleString()}
+- Primary Sources: ${data.profitLeakage.map((leak) => leak.category).join(', ')}
 
-💰 PROFIT LEAKAGE
-   • Total Monthly Leakage: $${totalLeakage.toLocaleString()}
-   • Primary Sources: Processing Waste (4.6%), Logistics (3.2%)
-   • Recoverable: ~$15,000 through optimization
+Batch FEFO Tracking
+- Active Batches: ${data.batchFEFO.length}
+- Critical Batches: ${criticalBatches}
 
-📦 BATCH FEFO TRACKING
-   • Active Batches: ${data.batchFEFO.length}
-   • Critical (≤7 days): ${criticalBatches} batches
-   • Price Optimization Potential: ${data.batchFEFO.map((b) => b.currentPrice - b.recommendedPrice).reduce((a, b) => a + b, 0).toFixed(2)}
+Vendor Credits
+- Recoverable Credits: ${totalRecoverableCredit.toLocaleString()}
+- Pending Returns: ${data.vendorReturns.filter((vendor) => vendor.status === 'pending').length}
 
-🔄 VENDOR CREDITS
-   • Recoverable Credits: $${totalRecoverableCredit.toLocaleString()}
-   • Pending Returns: ${data.vendorReturns.filter((v) => v.status === 'pending').length}
-   • At Risk (expired windows): 1
-
-🧠 BEHAVIORAL INTELLIGENCE
-   • Patterns Identified: ${data.behavioralInsights.length}
-   • Total Impact: $${data.behavioralInsights.reduce((sum, b) => sum + b.impact, 0).toLocaleString()}
-   • Top Priority: Material missorting ($8,900 impact)
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  ✅ All systems operational | 🟢 Data synchronized
-╔════════════════════════════════════════════════════════════╗
+Behavioral Intelligence
+- Patterns Identified: ${data.behavioralInsights.length}
+- Total Impact: ${data.behavioralInsights.reduce((sum, insight) => sum + insight.impact, 0).toLocaleString()}
   `;
 }

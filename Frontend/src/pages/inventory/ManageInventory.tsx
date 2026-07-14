@@ -10,6 +10,7 @@ interface StockMovement {
   date: string;
   user: string;
   remarks?: string;
+  source: string;
 }
 
 interface InventoryItem {
@@ -41,8 +42,8 @@ const INITIAL_ITEMS: InventoryItem[] = [
     sellingPrice: 12.00,
     supplier: 'Nestle Philippines',
     recentMovements: [
-      { id: '1', type: 'Stock In', quantity: 100, date: '2026-07-08 10:30', user: 'John Doe', remarks: 'Regular restock' },
-      { id: '2', type: 'Stock Out', quantity: 25, date: '2026-07-07 14:20', user: 'Jane Smith', remarks: 'Customer purchase' },
+      { id: '1', type: 'Stock In', quantity: 100, date: '2026-07-08 10:30', user: 'John Doe', remarks: 'Regular restock', source: 'Manual Adjustment' },
+      { id: '2', type: 'Stock Out', quantity: 25, date: '2026-07-07 14:20', user: 'Jane Smith', remarks: 'Customer purchase', source: 'Sale #SALE-20260707-004' },
     ],
   },
   {
@@ -58,7 +59,7 @@ const INITIAL_ITEMS: InventoryItem[] = [
     sellingPrice: 25.00,
     supplier: 'Unilab',
     recentMovements: [
-      { id: '3', type: 'Stock Out', quantity: 15, date: '2026-07-07 09:15', user: 'John Doe', remarks: 'Bulk purchase' },
+      { id: '3', type: 'Stock Out', quantity: 15, date: '2026-07-07 09:15', user: 'John Doe', remarks: 'Bulk purchase', source: 'Sale #SALE-20260707-002' },
     ],
   },
   {
@@ -74,8 +75,8 @@ const INITIAL_ITEMS: InventoryItem[] = [
     sellingPrice: 10.00,
     supplier: 'Nestle Philippines',
     recentMovements: [
-      { id: '4', type: 'Stock In', quantity: 50, date: '2026-07-07 11:00', user: 'Jane Smith', remarks: 'Weekly delivery' },
-      { id: '5', type: 'Stock Out', quantity: 30, date: '2026-07-06 16:45', user: 'John Doe' },
+      { id: '4', type: 'Stock In', quantity: 50, date: '2026-07-07 11:00', user: 'Jane Smith', remarks: 'Weekly delivery', source: 'Manual Adjustment' },
+      { id: '5', type: 'Stock Out', quantity: 30, date: '2026-07-06 16:45', user: 'John Doe', source: 'Sale #SALE-20260706-008' },
     ],
   },
   {
@@ -91,7 +92,7 @@ const INITIAL_ITEMS: InventoryItem[] = [
     sellingPrice: 5.50,
     supplier: 'P&G Philippines',
     recentMovements: [
-      { id: '6', type: 'Stock Out', quantity: 20, date: '2026-07-06 13:30', user: 'Jane Smith', remarks: 'Promotion sale' },
+      { id: '6', type: 'Stock Out', quantity: 20, date: '2026-07-06 13:30', user: 'Jane Smith', remarks: 'Promotion sale', source: 'Sale #SALE-20260706-005' },
     ],
   },
   {
@@ -107,8 +108,8 @@ const INITIAL_ITEMS: InventoryItem[] = [
     sellingPrice: 180.00,
     supplier: 'San Miguel Foods',
     recentMovements: [
-      { id: '7', type: 'Stock In', quantity: 30, date: '2026-07-08 08:00', user: 'John Doe', remarks: 'Fresh delivery' },
-      { id: '8', type: 'Stock Out', quantity: 8, date: '2026-07-07 18:00', user: 'Jane Smith' },
+      { id: '7', type: 'Stock In', quantity: 30, date: '2026-07-08 08:00', user: 'John Doe', remarks: 'Fresh delivery', source: 'Manual Adjustment' },
+      { id: '8', type: 'Stock Out', quantity: 8, date: '2026-07-07 18:00', user: 'Jane Smith', source: 'Sale #SALE-20260707-009' },
     ],
   },
 ];
@@ -153,6 +154,7 @@ export function ManageInventory() {
       date: new Date().toLocaleString(),
       user: 'Current User',
       remarks: stockRemarks || undefined,
+      source: 'Manual Adjustment',
     };
 
     setItems(prev =>
@@ -531,6 +533,9 @@ export function ManageInventory() {
                         <div className="text-xs text-slate-500">
                           {movement.user} • {movement.date}
                         </div>
+                        <span className="mt-1 inline-flex rounded bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[10px] font-bold text-slate-500 dark:text-slate-400">
+                          {movement.source}
+                        </span>
                       </div>
                       <div className="text-right">
                         <div className={`text-sm font-bold ${
@@ -601,6 +606,7 @@ export function ManageInventory() {
                 <th className="px-5 py-3 text-left font-semibold">Item / SKU</th>
                 <th className="px-5 py-3 text-left font-semibold">Category</th>
                 <th className="px-5 py-3 text-left font-semibold">Quantity</th>
+                <th className="px-5 py-3 text-left font-semibold">Latest Source</th>
                 <th className="px-5 py-3 text-left font-semibold">Location</th>
                 <th className="px-5 py-3 text-left font-semibold">Last Updated</th>
                 <th className="px-5 py-3 text-left font-semibold">Actions</th>
@@ -609,7 +615,7 @@ export function ManageInventory() {
             <tbody className="divide-y divide-slate-100 dark:divide-white/5">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-10 text-slate-400 dark:text-slate-500">
+                  <td colSpan={7} className="text-center py-10 text-slate-400 dark:text-slate-500">
                     No items found.
                   </td>
                 </tr>
@@ -644,6 +650,11 @@ export function ManageInventory() {
                             </span>
                           )}
                         </div>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <span className="inline-flex rounded bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[10px] font-bold text-slate-500 dark:text-slate-400">
+                          {item.recentMovements[0]?.source ?? 'Manual Adjustment'}
+                        </span>
                       </td>
                       <td className="px-5 py-3.5 text-slate-600 dark:text-slate-300">{item.location}</td>
                       <td className="px-5 py-3.5 text-slate-500 dark:text-slate-400">{item.lastUpdated}</td>

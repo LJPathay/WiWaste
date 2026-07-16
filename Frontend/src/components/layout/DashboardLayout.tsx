@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { HeaderLabelProvider } from './HeaderLabelProvider';
 import { Navigate, Outlet, Link, useLocation, useNavigate } from 'react-router';
 import {
   LogOut,
@@ -285,17 +286,51 @@ if (!session) {
             <ThemeToggle />
           </header>
 
-          {/* Top bar for desktop — clean, no duplicate sign out */}
-          <header className="hidden md:flex sticky top-0 z-30 h-14 items-center border-b border-gray-200/50 dark:border-white/10 bg-white/60 dark:bg-slate-950/60 backdrop-blur-md px-6">
-            <span className="text-sm text-gray-500 dark:text-slate-400">
-              Welcome back, <span className="font-semibold text-gray-800 dark:text-slate-100">{session.name}</span>
-            </span>
-          </header>
+          {/* Top bar for desktop — animated label */}
+          <HeaderLabelProvider
+            welcomeName={session.name}
+          >
+            {(state) => (
+              <>
+                <header className="hidden md:flex sticky top-0 z-30 h-14 items-center border-b border-gray-200/50 dark:border-white/10 bg-white/60 dark:bg-slate-950/60 backdrop-blur-md px-6 gap-3 overflow-hidden">
+                  {/* Logo — fades in after welcome */}
+                  <img
+                    src={BRAND_ICON}
+                    alt="WiWaste"
+                    className="h-7 w-7 object-contain shrink-0"
+                    style={{
+                      opacity: state.logoVisible ? 1 : 0,
+                      transition: 'opacity 400ms ease',
+                    }}
+                  />
+                  {/* Divider */}
+                  <span
+                    className="h-5 w-px bg-gray-300 dark:bg-white/20 shrink-0"
+                    style={{
+                      opacity: state.logoVisible && state.textVisible ? 1 : 0,
+                      transition: 'opacity 300ms ease',
+                    }}
+                  />
+                  {/* Sliding text */}
+                  <span
+                    className="text-sm font-semibold text-gray-700 dark:text-slate-200 whitespace-nowrap"
+                    style={{
+                      opacity: state.textVisible ? 1 : 0,
+                      transform: state.textVisible ? 'translateX(0)' : 'translateX(-14px)',
+                      transition: 'opacity 350ms ease, transform 350ms ease',
+                    }}
+                  >
+                    {state.text}
+                  </span>
+                </header>
 
-          {/* Page content */}
-          <div className="theme-content min-w-0 flex-1 px-4 py-6 sm:px-6 lg:pl-6 lg:pr-8 lg:py-8">
-            <Outlet />
-          </div>
+                {/* Page content */}
+                <div className="theme-content min-w-0 flex-1 overflow-hidden relative px-4 py-6 sm:px-6 lg:pl-6 lg:pr-8 lg:py-8">
+                  <Outlet />
+                </div>
+              </>
+            )}
+          </HeaderLabelProvider>
         </div>
       </div>
     </div>

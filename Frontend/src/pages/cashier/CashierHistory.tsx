@@ -4,7 +4,7 @@ import { formatCurrency, initialSalesTransactions, type SalesTransaction } from 
 
 export function CashierHistory() {
   const [selectedReceipt, setSelectedReceipt] = useState<SalesTransaction | null>(null);
-  const cashierTransactions = initialSalesTransactions.filter(transaction => transaction.user_id === 'cashier-001');
+  const cashierTransactions = initialSalesTransactions.filter(t => t.user_id === 'cashier-001');
 
   return (
     <div className="space-y-6 w-full font-sans">

@@ -289,3 +289,26 @@
 .dark .scrollbar-modern {
     scrollbar-color: rgba(148, 163, 184, 0.2) transparent;
 }
+
+
+
+/* Product name marquee */
+.product-marquee {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+@media (min-width: 1280px) {
+    @keyframes marquee-scroll {
+        0%   { transform: translateX(0); }
+        20%  { transform: translateX(0); }
+        80%  { transform: translateX(-55%); }
+        100% { transform: translateX(0); }
+    }
+    .product-marquee:hover {
+        text-overflow: clip;
+        animation: marquee-scroll 3s ease-in-out infinite;
+    }
+}

@@ -11,6 +11,8 @@ export interface CashierProduct {
   reorder_level: number;
   expiration_date: string;
   current_stock: number;
+  image_url?: string;
+  capstone_badge?: { type: 'overstock' | 'fefo' | 'leakage'; label: string; severity: 'low' | 'medium' | 'high' };
 }
 
 export interface SalesItem {
@@ -78,6 +80,8 @@ export const cashierProducts: CashierProduct[] = [
     reorder_level: 10,
     expiration_date: '2026-11-15',
     current_stock: 72,
+    image_url: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=300&q=80',
+    capstone_badge: { type: 'fefo', label: 'Expires in 6 days', severity: 'high' }
   },
   {
     product_id: 'P-1002',
@@ -90,6 +94,7 @@ export const cashierProducts: CashierProduct[] = [
     reorder_level: 12,
     expiration_date: '2026-10-08',
     current_stock: 64,
+    image_url: 'https://images.unsplash.com/photo-1628771065518-0d82f1938462?w=300&q=80',
   },
   {
     product_id: 'P-1003',
@@ -102,6 +107,7 @@ export const cashierProducts: CashierProduct[] = [
     reorder_level: 20,
     expiration_date: '2027-01-20',
     current_stock: 130,
+    image_url: 'https://images.unsplash.com/photo-1550572017-edb3df213b28?w=300&q=80',
   },
   {
     product_id: 'P-1004',
@@ -114,6 +120,8 @@ export const cashierProducts: CashierProduct[] = [
     reorder_level: 30,
     expiration_date: '2026-12-01',
     current_stock: 180,
+    image_url: 'https://images.unsplash.com/photo-1559525839-b184a4d698c7?w=300&q=80',
+    capstone_badge: { type: 'leakage', label: 'Leakage Risk: Low', severity: 'low' }
   },
   {
     product_id: 'P-1005',
@@ -126,6 +134,8 @@ export const cashierProducts: CashierProduct[] = [
     reorder_level: 25,
     expiration_date: '2026-09-12',
     current_stock: 320,
+    image_url: 'https://images.unsplash.com/photo-1612929633738-8fe44f7ec841?w=300&q=80',
+    capstone_badge: { type: 'overstock', label: 'Overstock Risk: Medium', severity: 'medium' }
   },
 ];
 

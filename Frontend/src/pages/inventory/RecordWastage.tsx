@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { AlertTriangle, Trash2, Search, Loader2, Info } from 'lucide-react';
+﻿import React, { useState } from 'react';
+import { AlertTriangle, Trash2, Search, Loader2, Info, TrendingDown, BarChart2, PackageX } from 'lucide-react';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { Toast, useToast, ConfirmDialog, FormField, inputCls } from '../../components/ui/Toast';
 
@@ -24,6 +24,14 @@ const currencyFormatter = new Intl.NumberFormat('en-PH', {
   currency: 'PHP',
   maximumFractionDigits: 0,
 });
+
+function getReasonBadge(reason: string): string {
+  const r = reason.toLowerCase();
+  if (r.includes('expired')) return 'bg-red-50 text-red-700 border border-red-100';
+  if (r.includes('mould') || r.includes('spoilage') || r.includes('spillage')) return 'bg-orange-50 text-orange-700 border border-orange-100';
+  if (r.includes('damaged') || r.includes('broken') || r.includes('seal') || r.includes('defect')) return 'bg-amber-50 text-amber-700 border border-amber-100';
+  return 'bg-slate-100 text-slate-600 border border-slate-200';
+}
 
 export function RecordWastage() {
   const { toasts, dismiss, success, error } = useToast();
@@ -86,7 +94,7 @@ export function RecordWastage() {
   const totalCost = filteredRecords.reduce((sum, r) => sum + r.cost, 0);
 
   return (
-    <div className="space-y-6 w-full">
+    <div className="space-y-6 w-full bg-[#F8FAFC] min-h-full">
       <Toast toasts={toasts} onDismiss={dismiss} />
 
       {confirmData && (
@@ -98,134 +106,225 @@ export function RecordWastage() {
         />
       )}
 
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Record Wastage</h1>
-            <UITooltip>
-              <TooltipTrigger asChild>
-                <Info className="h-5 w-5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
-              </TooltipTrigger>
-              <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
-                Log inventory spoilage, shelf expirations, packaging ruptures, or vendor write-offs.
-              </TooltipContent>
-            </UITooltip>
+      {/* Page Header */}
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-[#0F172A]">Record Wastage</h1>
+          <UITooltip>
+            <TooltipTrigger asChild>
+              <Info className="h-4 w-4 text-slate-400 hover:text-slate-600 cursor-help" />
+            </TooltipTrigger>
+            <TooltipContent className="bg-slate-900 text-white max-w-xs">
+              Log inventory spoilage, shelf expirations, packaging ruptures, or vendor write-offs.
+            </TooltipContent>
+          </UITooltip>
+        </div>
+        <p className="text-sm text-[#64748B]">
+          Log inventory losses for audit, analytics, and cost recovery tracking
+        </p>
+      </div>
+
+      {/* Loss Summary Strip */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="rounded-xl border border-red-100 bg-red-50 p-4 flex items-center gap-4 shadow-sm">
+          <div className="rounded-lg p-2.5 bg-red-100 flex-shrink-0">
+            <TrendingDown className="h-5 w-5 text-red-600" />
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-red-500 uppercase tracking-wider">Today's Loss</p>
+            <p className="text-xl font-black text-red-700 mt-0.5">&#8369;3,635</p>
           </div>
         </div>
-        <div className="bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-100 dark:border-rose-500/20 px-5 py-3 rounded-xl flex items-center gap-3 shadow-sm">
-          <div className="text-xs font-semibold uppercase tracking-wider">Total Loss Value</div>
-          <div className="text-xl font-black">{currencyFormatter.format(totalCost)}</div>
+        <div className="rounded-xl border border-orange-100 bg-orange-50 p-4 flex items-center gap-4 shadow-sm">
+          <div className="rounded-lg p-2.5 bg-orange-100 flex-shrink-0">
+            <BarChart2 className="h-5 w-5 text-orange-600" />
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-orange-500 uppercase tracking-wider">Weekly Loss</p>
+            <p className="text-xl font-black text-orange-700 mt-0.5">&#8369;12,450</p>
+          </div>
+        </div>
+        <div className="rounded-xl border border-amber-100 bg-amber-50 p-4 flex items-center gap-4 shadow-sm">
+          <div className="rounded-lg p-2.5 bg-amber-100 flex-shrink-0">
+            <AlertTriangle className="h-5 w-5 text-amber-600" />
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-amber-600 uppercase tracking-wider">Monthly Loss</p>
+            <p className="text-xl font-black text-amber-700 mt-0.5">&#8369;48,200</p>
+          </div>
         </div>
       </div>
 
+      {/* Two-Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-6 items-start">
-        {/* Form */}
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 p-6 shadow-sm h-fit">
-          <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-5">
-            Log Expired/Spoiled Item
-          </h2>
+
+        {/* LEFT: Form Card */}
+        <div className="bg-white rounded-xl border border-[#E5E7EB] shadow-sm p-6 h-fit">
+          <div className="flex items-center gap-2 mb-5">
+            <div className="rounded-lg p-1.5 bg-red-50">
+              <Trash2 className="h-4 w-4 text-red-600" />
+            </div>
+            <h2 className="text-sm font-bold text-[#0F172A]">Log Wastage Record</h2>
+          </div>
+
           <form onSubmit={handleRecord} className="space-y-4">
-            <FormField label="Item Name">
-              <input
-                type="text"
-                placeholder="e.g. Selecta Fortified Milk 1L"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className={inputCls}
-                required
-              />
-            </FormField>
+            <div>
+              <label className="block text-xs font-semibold text-[#374151] mb-1.5">Item Name</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="e.g. Selecta Fortified Milk 1L"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-[#E5E7EB] text-sm text-[#0F172A] bg-white focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all"
+                  required
+                />
+              </div>
+            </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <FormField label="Quantity">
+              <div>
+                <label className="block text-xs font-semibold text-[#374151] mb-1.5">Quantity</label>
                 <input
                   type="number"
                   placeholder="e.g. 5"
                   value={qty}
                   onChange={(e) => setQty(e.target.value)}
-                  className={inputCls}
+                  className="w-full px-3 py-2.5 rounded-lg border border-[#E5E7EB] text-sm text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all"
                   required
                 />
-              </FormField>
-              <FormField label="Loss Cost (₱)">
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-[#374151] mb-1.5">Loss Cost (&#8369;)</label>
                 <input
                   type="number"
                   placeholder="e.g. 450"
                   value={cost}
                   onChange={(e) => setCost(e.target.value)}
-                  className={inputCls}
+                  className="w-full px-3 py-2.5 rounded-lg border border-[#E5E7EB] text-sm text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all"
                   required
                 />
-              </FormField>
+              </div>
             </div>
 
-            <FormField label="Wastage Reason">
+            <div>
+              <label className="block text-xs font-semibold text-[#374151] mb-1.5">Wastage Reason</label>
               <select
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                className={inputCls}
+                className="w-full px-3 py-2.5 rounded-lg border border-[#E5E7EB] text-sm text-[#0F172A] bg-white focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all"
               >
                 <option value="Expired on Shelf">Expired on Shelf</option>
-                <option value="Mould/Spoilage">Mould/Spoilage</option>
-                <option value="Damaged Pack Leakage">Damaged Pack Leakage</option>
-                <option value="Theft/Discrepancy">Theft/Discrepancy</option>
+                <option value="Damaged / Broken">Damaged / Broken</option>
+                <option value="Spoilage / Mould">Spoilage / Mould</option>
+                <option value="Broken Seal">Broken Seal</option>
+                <option value="Supplier Defect">Supplier Defect</option>
+                <option value="Spillage">Spillage</option>
+                <option value="Other">Other</option>
               </select>
-            </FormField>
+            </div>
+
+            {cost && Number(cost) > 0 && (
+              <div className="rounded-lg border border-red-100 bg-red-50 px-4 py-3 flex items-center justify-between">
+                <span className="text-xs font-semibold text-red-600">Estimated Loss</span>
+                <span className="text-sm font-black text-red-700">
+                  &#8369;{Number(cost).toLocaleString('en-PH')}
+                </span>
+              </div>
+            )}
 
             <button
               type="submit"
               disabled={submitting}
-              className="w-full flex items-center justify-center gap-2 bg-[#006a61] hover:bg-[#00574f] disabled:opacity-60 text-white text-sm font-semibold rounded-lg py-2.5 transition-colors mt-2"
+              className="w-full flex items-center justify-center gap-2 text-white text-sm font-semibold rounded-lg py-3 mt-1 shadow-sm hover:shadow-md active:scale-[0.98] transition-all disabled:opacity-60"
+              style={{ background: submitting ? '#64748B' : '#0F766E' }}
             >
               {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-              {submitting ? 'Saving...' : 'Commit Loss Record'}
+              {submitting ? 'Saving...' : 'Commit Wastage Record'}
             </button>
           </form>
         </div>
 
-        {/* History list */}
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden flex flex-col justify-between">
-          <div className="p-4 border-b border-slate-200 dark:border-white/10 flex items-center justify-between gap-4">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">Wastage Logs</h3>
-            <div className="relative max-w-xs w-full">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+        {/* RIGHT: Wastage Logs */}
+        <div className="bg-white rounded-xl border border-[#E5E7EB] shadow-sm overflow-hidden flex flex-col">
+          <div className="px-5 py-4 border-b border-[#E5E7EB] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-bold text-[#0F172A]">Wastage Logs</h3>
+              <p className="text-xs text-[#64748B] mt-0.5">
+                {filteredRecords.length} record{filteredRecords.length !== 1 ? 's' : ''} found
+              </p>
+            </div>
+            <div className="relative w-full sm:max-w-xs">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
               <input
                 type="text"
                 placeholder="Search logs..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 pl-9 pr-3 py-1.5 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-700 dark:text-slate-200"
+                className="w-full pl-9 pr-3 py-2 rounded-lg border border-[#E5E7EB] text-xs text-[#374151] bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all"
               />
             </div>
           </div>
+
           <div className="overflow-x-auto">
             <table className="w-full text-xs text-left">
-              <thead className="bg-slate-50 dark:bg-slate-950 text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-white/10">
+              <thead className="bg-[#F8FAFC] border-b border-[#E5E7EB]">
                 <tr>
-                  <th className="px-6 py-3 font-semibold">Spoiled Item</th>
-                  <th className="px-6 py-3 font-semibold">Quantity</th>
-                  <th className="px-6 py-3 font-semibold">Loss Cost</th>
-                  <th className="px-6 py-3 font-semibold">Reason</th>
-                  <th className="px-6 py-3 font-semibold">Recorded At</th>
+                  <th className="px-5 py-3 font-semibold text-[10px] uppercase tracking-wider text-[#64748B]">Item</th>
+                  <th className="px-5 py-3 font-semibold text-[10px] uppercase tracking-wider text-[#64748B]">Qty</th>
+                  <th className="px-5 py-3 font-semibold text-[10px] uppercase tracking-wider text-[#64748B]">Loss Cost</th>
+                  <th className="px-5 py-3 font-semibold text-[10px] uppercase tracking-wider text-[#64748B]">Reason</th>
+                  <th className="px-5 py-3 font-semibold text-[10px] uppercase tracking-wider text-[#64748B]">Recorded At</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-                {filteredRecords.map((r) => (
-                  <tr key={r.id} className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors">
-                    <td className="px-6 py-4 font-semibold text-slate-800 dark:text-slate-100">{r.name}</td>
-                    <td className="px-6 py-4 text-slate-700 dark:text-slate-300">-{r.qty} units</td>
-                    <td className="px-6 py-4 font-semibold text-slate-700 dark:text-slate-350">{currencyFormatter.format(r.cost)}</td>
-                    <td className="px-6 py-4">
-                      <span className="inline-flex rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2 py-0.5 text-[10px] font-semibold">
-                        {r.reason}
-                      </span>
+              <tbody className="divide-y divide-[#F1F5F9]">
+                {filteredRecords.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="text-center py-16">
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="rounded-full bg-slate-100 p-4">
+                          <PackageX className="h-8 w-8 text-slate-400" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-[#64748B]">No wastage records found</p>
+                          <p className="text-xs mt-1 text-slate-400">Try adjusting your search or log a new record</p>
+                        </div>
+                      </div>
                     </td>
-                    <td className="px-6 py-4 text-slate-500 dark:text-slate-400">{r.recordedAt}</td>
                   </tr>
-                ))}
+                ) : (
+                  filteredRecords.map((r) => (
+                    <tr key={r.id} className="hover:bg-[#F8FAFC] transition-colors">
+                      <td className="px-5 py-4 font-semibold text-[#0F172A]">{r.name}</td>
+                      <td className="px-5 py-4">
+                        <span className="font-semibold text-[#DC2626]">-{r.qty}</span>
+                        <span className="ml-1 text-[#64748B]">units</span>
+                      </td>
+                      <td className="px-5 py-4 font-bold text-[#DC2626]">{currencyFormatter.format(r.cost)}</td>
+                      <td className="px-5 py-4">
+                        <span className={`inline-flex rounded-md px-2 py-0.5 text-[10px] font-semibold ${getReasonBadge(r.reason)}`}>
+                          {r.reason}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4 text-[#64748B]">{r.recordedAt}</td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
+
+          {filteredRecords.length > 0 && (
+            <div className="px-5 py-3 border-t border-[#E5E7EB] bg-slate-50 flex items-center justify-between">
+              <span className="text-xs font-semibold text-[#64748B]">
+                Total Loss ({filteredRecords.length} items)
+              </span>
+              <span className="text-sm font-black text-[#DC2626]">
+                {currencyFormatter.format(totalCost)}
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </div>

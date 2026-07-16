@@ -6,30 +6,28 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::create('Wastage_Records', function (Blueprint $table) {
-            $table->unsignedInteger('wastage_id')->autoIncrement()->primary();
-            $table->unsignedInteger('product_id');
-            $table->unsignedInteger('user_id');
+        Schema::create('Wastage_Record', function (Blueprint $table) {
+            $table->integer('wastage_id')->autoIncrement();
+            $table->integer('product_id');
+            $table->integer('user_id');
             $table->enum('wastage_type', ['Expired', 'Damaged', 'Spoiled', 'Lost']);
             $table->integer('quantity');
             $table->decimal('estimated_loss', 10, 2);
             $table->dateTime('date_recorded');
             
-            $table->foreign('product_id')->references('product_id')->on('Products');
+            $table->foreign('product_id')->references('product_id')->on('Product');
             $table->foreign('user_id')->references('User_id')->on('Users');
+        });
+
+        Schema::table('Stock_Movement', function (Blueprint $table) {
+            $table->foreign('wastage_id')->references('wastage_id')->on('Wastage_Record');
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('Wastage_Records');
+        Schema::dropIfExists('Wastage_Record');
     }
 };

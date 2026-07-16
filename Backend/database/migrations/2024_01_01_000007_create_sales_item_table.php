@@ -6,29 +6,27 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::create('Sales_Items', function (Blueprint $table) {
-            $table->unsignedInteger('sales_item_id')->autoIncrement()->primary();
-            $table->unsignedInteger('transaction_id');
-            $table->unsignedInteger('product_id');
+        Schema::create('Sales_Item', function (Blueprint $table) {
+            $table->integer('sales_item_id')->autoIncrement();
+            $table->integer('transaction_id');
+            $table->integer('product_id');
             $table->integer('quantity');
             $table->decimal('unit_price', 10, 2);
             $table->decimal('subtotal', 10, 2);
             
-            $table->foreign('transaction_id')->references('transaction_id')->on('Sales_Transactions');
-            $table->foreign('product_id')->references('product_id')->on('Products');
+            $table->foreign('transaction_id')->references('transaction_id')->on('Sales_Transaction');
+            $table->foreign('product_id')->references('product_id')->on('Product');
+        });
+
+        Schema::table('Stock_Movement', function (Blueprint $table) {
+            $table->foreign('sale_item_id')->references('sales_item_id')->on('Sales_Item');
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('Sales_Items');
+        Schema::dropIfExists('Sales_Item');
     }
 };

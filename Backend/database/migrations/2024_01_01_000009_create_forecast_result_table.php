@@ -6,28 +6,22 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::create('Forecast_Results', function (Blueprint $table) {
-            $table->unsignedInteger('forecast_id')->autoIncrement()->primary();
-            $table->unsignedInteger('product_id');
+        Schema::create('Forecast_Result', function (Blueprint $table) {
+            $table->integer('forecast_id')->autoIncrement();
+            $table->integer('product_id');
             $table->string('forecast_period', 50);
             $table->integer('predicted_demand');
             $table->enum('overstock_risk', ['Low', 'Medium', 'High']);
             $table->dateTime('generated_date');
             
-            $table->foreign('product_id')->references('product_id')->on('Products');
+            $table->foreign('product_id')->references('product_id')->on('Product');
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('Forecast_Results');
+        Schema::dropIfExists('Forecast_Result');
     }
 };

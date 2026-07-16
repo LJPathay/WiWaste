@@ -6,30 +6,26 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::create('Stock_Movements', function (Blueprint $table) {
-            $table->unsignedInteger('movement_id')->autoIncrement()->primary();
-            $table->unsignedInteger('product_id');
-            $table->unsignedInteger('user_id');
+        Schema::create('Stock_Movement', function (Blueprint $table) {
+            $table->integer('movement_id')->autoIncrement();
+            $table->integer('product_id');
+            $table->integer('user_id');
             $table->enum('movement_type', ['Stock In', 'Stock Out']);
             $table->integer('quantity');
             $table->text('remarks')->nullable();
             $table->dateTime('movement_date');
+            $table->integer('sale_item_id')->nullable();
+            $table->integer('wastage_id')->nullable();
             
-            $table->foreign('product_id')->references('product_id')->on('Products');
+            $table->foreign('product_id')->references('product_id')->on('Product');
             $table->foreign('user_id')->references('User_id')->on('Users');
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('Stock_Movements');
+        Schema::dropIfExists('Stock_Movement');
     }
 };

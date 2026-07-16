@@ -6,27 +6,21 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('Profit_Loss_Analysis', function (Blueprint $table) {
-            $table->unsignedInteger('analysis_id')->autoIncrement()->primary();
-            $table->unsignedInteger('product_id');
+            $table->integer('analysis_id')->autoIncrement();
+            $table->integer('product_id');
             $table->decimal('total_sales', 10, 2);
             $table->decimal('total_wastage_loss', 10, 2);
             $table->enum('risk_level', ['Low', 'Medium', 'High']);
             $table->decimal('predicted_profit_leakage', 10, 2);
             $table->dateTime('analysis_date');
             
-            $table->foreign('product_id')->references('product_id')->on('Products');
+            $table->foreign('product_id')->references('product_id')->on('Product');
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('Profit_Loss_Analysis');

@@ -12,6 +12,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../../components/ui/dropdown-menu';
+import { useNavigate } from 'react-router';
 import {
   cashierProducts,
   createTransactionId,
@@ -20,11 +21,12 @@ import {
   type PaymentMethod,
   type SalesTransaction,
 } from '../../utils/cashierData';
-import { getStoredSession } from '../../utils/mockAuthAndFeatures';
+import { clearStoredSession, getStoredSession } from '../../utils/mockAuthAndFeatures';
 
 interface CartLine {
   product: CashierProduct;
   quantity: number;
+  discountPct?: number;
 }
 
 const CATEGORIES = [
@@ -41,6 +43,7 @@ export function POSTerminal() {
   const { toasts, dismiss, success, error } = useToast();
   const { setAction } = useHeaderAction();
   const session = getStoredSession();
+  const navigate = useNavigate();
   const barcodeRef = useRef<HTMLInputElement | null>(null);
   
   const [search, setSearch] = useState('');
@@ -54,6 +57,8 @@ export function POSTerminal() {
   const [showDiscountModal, setShowDiscountModal] = useState(false);
   const [showReturnModal, setShowReturnModal] = useState(false);
   const [showVoidModal, setShowVoidModal] = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [selectedLineId, setSelectedLineId] = useState<string | null>(null);
   
   const [receipt, setReceipt] = useState<SalesTransaction | null>(null);
   const [showPrintedReceipt, setShowPrintedReceipt] = useState(false);
@@ -85,6 +90,7 @@ export function POSTerminal() {
         setShowDiscountModal(false);
         setShowReturnModal(false);
         setShowVoidModal(false);
+        setShowExitConfirm(false);
         setSearch('');
       }
     };
@@ -112,7 +118,7 @@ export function POSTerminal() {
 
   const totalItems = cart.reduce((sum, l) => sum + l.quantity, 0);
   const subtotal = cart.reduce((sum, l) => sum + l.product.selling_price * l.quantity, 0);
-  const discountAmount = subtotal * globalDiscountPct; 
+  const discountAmount = cart.reduce((sum, l) => sum + (l.product.selling_price * l.quantity * (l.discountPct || 0)), 0); 
   const tax = (subtotal - discountAmount) * 0.12; // 12% VAT
   const grandTotal = (subtotal - discountAmount) + tax;
   const tendered = Number(amountTendered || 0);
@@ -139,7 +145,7 @@ export function POSTerminal() {
             : l
         );
       }
-      return [...prev, { product, quantity: 1 }];
+      return [...prev, { product, quantity: 1, discountPct: 0 }];
     });
     setSearch('');
     barcodeRef.current?.focus();
@@ -170,16 +176,37 @@ export function POSTerminal() {
   };
 
   const applyDiscount = (pct: number) => {
-    setGlobalDiscountPct(pct);
+    if (pct > 0 && !selectedLineId) {
+      error('Please select an item first.');
+      return;
+    }
+    
+    if (selectedLineId) {
+      setCart(prev => prev.map(l => l.product.product_id === selectedLineId ? { ...l, discountPct: pct } : l));
+      success(`Applied ${pct * 100}% discount to item`);
+    } else {
+      // Clear discount (pct == 0) clears all selected or global? 
+      // The button says "Clear Discount". Let's clear all.
+      setCart(prev => prev.map(l => ({ ...l, discountPct: 0 })));
+      success('Cleared discounts');
+    }
     setShowDiscountModal(false);
-    success(`Applied ${pct * 100}% discount`);
+    barcodeRef.current?.focus();
+  };
+
+  const voidItem = () => {
+    if (!selectedLineId) return;
+    setCart(prev => prev.filter(l => l.product.product_id !== selectedLineId));
+    setSelectedLineId(null);
+    setShowVoidModal(false);
+    success('Item voided.');
     barcodeRef.current?.focus();
   };
 
   const voidTransaction = () => {
     setCart([]);
     setGlobalDiscountPct(0);
-    setShowVoidModal(false);
+    setSelectedLineId(null);
     success('Transaction voided.');
     barcodeRef.current?.focus();
   };
@@ -205,7 +232,7 @@ export function POSTerminal() {
         product_name: l.product.product_name,
         quantity: l.quantity,
         unit_price: l.product.selling_price,
-        subtotal: l.product.selling_price * l.quantity,
+        subtotal: l.product.selling_price * l.quantity * (1 - (l.discountPct || 0)),
       })),
     };
     setReceipt(completedReceipt);
@@ -218,7 +245,7 @@ export function POSTerminal() {
     setAmountTendered('');
     setReceipt(null);
     setShowPrintedReceipt(false);
-    setGlobalDiscountPct(0);
+    setSelectedLineId(null);
     setCurrentTxnId(createTransactionId());
     barcodeRef.current?.focus();
   };
@@ -264,10 +291,17 @@ export function POSTerminal() {
           </div>
           
           <button 
-            onClick={() => window.history.back()}
-            className="text-xs font-bold text-white bg-[#0F766E] hover:bg-[#0d615b] px-3 py-1.5 rounded-lg transition-colors ml-4 shadow-sm"
+            onClick={() => {
+              if (cart.length > 0) {
+                setShowExitConfirm(true);
+              } else {
+                clearStoredSession();
+                navigate('/login');
+              }
+            }}
+            className="text-xs font-bold text-slate-500 bg-white border border-slate-300 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700 px-3 py-1.5 rounded-lg transition-colors ml-4 shadow-sm flex items-center gap-1.5"
           >
-            Exit POS
+            Exit POS <span className="bg-slate-100 dark:bg-slate-700 text-[9px] px-1 rounded text-slate-400">Esc</span>
           </button>
         </div>
       </header>
@@ -329,17 +363,10 @@ export function POSTerminal() {
                 <div 
                   key={product.product_id}
                   onClick={() => addProduct(product)}
-                  className="flex flex-col bg-white dark:bg-slate-800 rounded-lg border border-[#E5E7EB] dark:border-slate-700 p-2 shadow-sm hover:shadow-md hover:border-[#0F766E] cursor-pointer transition-all active:scale-[0.97]"
+                  className="flex flex-col bg-white dark:bg-slate-800 rounded-lg border border-[#E5E7EB] dark:border-slate-700 p-2 shadow-sm hover:shadow-md hover:border-[#0F766E] cursor-pointer transition-all active:scale-[0.97] min-h-[70px]"
                 >
-                  <div className="h-16 bg-[#F8FAFC] dark:bg-slate-700 rounded border border-slate-100 dark:border-slate-600 mb-2 flex items-center justify-center overflow-hidden shrink-0 group-hover:opacity-90">
-                    {product.image_url ? (
-                      <img src={product.image_url} alt={product.product_name} className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-2xl text-slate-300">📦</span>
-                    )}
-                  </div>
                   
-                  <div className="flex-1 flex flex-col justify-between">
+                  <div className="flex-1 flex flex-col justify-between pt-1">
                     <p className="text-[11px] font-bold text-slate-800 dark:text-slate-100 leading-tight line-clamp-2 mb-1">{product.product_name}</p>
                     
                     <div className="flex items-center justify-between mt-auto">
@@ -377,7 +404,7 @@ export function POSTerminal() {
             <div>Qty</div>
             <div>Item</div>
             <div className="text-right">Price</div>
-            <div className="text-right pr-2">Total</div>
+            <div className="text-right pr-6">Total</div>
           </div>
 
           {/* Cart Table with Zebra Spacing */}
@@ -389,21 +416,43 @@ export function POSTerminal() {
               </div>
             ) : (
               <div className="flex flex-col">
-                {cart.map((line, idx) => (
-                  <div key={line.product.product_id} className={`grid grid-cols-[25%_45%_15%_15%] gap-2 px-6 py-3 items-center group transition-colors border-b border-slate-100 dark:border-slate-700 ${idx % 2 === 0 ? 'bg-white dark:bg-slate-800' : 'bg-slate-50 dark:bg-slate-750'} hover:bg-slate-100 dark:hover:bg-slate-700`}>
+                {cart.map((line, idx) => {
+                  const isSelected = selectedLineId === line.product.product_id;
+                  return (
+                  <div 
+                    key={line.product.product_id} 
+                    onClick={() => setSelectedLineId(line.product.product_id)}
+                    className={`grid grid-cols-[25%_45%_15%_15%] gap-2 px-6 py-3 items-center group transition-colors border-b cursor-pointer ${
+                      isSelected 
+                        ? 'bg-[#E8F7F2] dark:bg-[#0F766E]/20 border-l-4 border-l-[#0F766E] border-b-[#0F766E]/20' 
+                        : idx % 2 === 0 
+                          ? 'bg-white dark:bg-slate-800 border-l-4 border-l-transparent border-b-slate-100 dark:border-b-slate-700' 
+                          : 'bg-slate-50 dark:bg-slate-750 border-l-4 border-l-transparent border-b-slate-100 dark:border-b-slate-700'
+                    } hover:bg-slate-100 dark:hover:bg-slate-700`}
+                  >
                     
                     {/* Qty Control */}
-                    <div className="flex items-center justify-center w-[90px] bg-white dark:bg-slate-700 rounded-md border border-[#E5E7EB] dark:border-slate-600 overflow-hidden shadow-sm">
+                    <div className="flex items-center justify-center w-[90px] bg-white dark:bg-slate-700 rounded-md border border-[#E5E7EB] dark:border-slate-600 overflow-hidden shadow-sm" onClick={e => e.stopPropagation()}>
                       <button 
                         onClick={() => updateQty(line.product.product_id, line.quantity - 1)}
-                        className="w-8 h-8 flex items-center justify-center text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors"
+                        className="w-8 h-8 flex items-center justify-center text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors shrink-0"
                       >
                         <Minus className="w-3 h-3" />
                       </button>
-                      <span className="flex-1 text-center text-sm font-bold text-slate-800 dark:text-slate-100">{line.quantity}</span>
+                      <input 
+                        type="text"
+                        inputMode="numeric"
+                        value={line.quantity}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value, 10);
+                          if (!isNaN(val)) updateQty(line.product.product_id, val);
+                          else if (e.target.value === '') updateQty(line.product.product_id, 0);
+                        }}
+                        className="w-full text-center text-sm font-bold text-slate-800 dark:text-slate-100 bg-transparent focus:outline-none focus:bg-slate-50 dark:focus:bg-slate-600"
+                      />
                       <button 
                         onClick={() => updateQty(line.product.product_id, line.quantity + 1)}
-                        className="w-8 h-8 flex items-center justify-center text-[#0F766E] bg-[#E8F7F2] hover:bg-[#d1f4e8] transition-colors"
+                        className="w-8 h-8 flex items-center justify-center text-[#0F766E] bg-[#E8F7F2] hover:bg-[#d1f4e8] transition-colors shrink-0"
                       >
                         <Plus className="w-3 h-3" />
                       </button>
@@ -413,9 +462,14 @@ export function POSTerminal() {
                     <div className="pr-2 flex items-center gap-3 overflow-hidden">
                       <div className="truncate">
                         <p className="font-bold text-slate-800 dark:text-slate-100 text-xs truncate leading-snug">{line.product.product_name}</p>
-                        <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium truncate mt-0.5">
-                          {line.product.barcode}
-                        </p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium truncate">
+                            {line.product.barcode}
+                          </p>
+                          {line.discountPct && line.discountPct > 0 ? (
+                            <span className="text-[9px] font-bold text-[#0F766E] bg-[#0F766E]/10 px-1 rounded">-{line.discountPct * 100}%</span>
+                          ) : null}
+                        </div>
                       </div>
                     </div>
 
@@ -425,20 +479,20 @@ export function POSTerminal() {
                     </div>
 
                     {/* Subtotal & Remove Button */}
-                    <div className="text-right flex items-center justify-end gap-2 relative">
+                    <div className="text-right flex items-center justify-end gap-2 relative pr-6">
                       <span className="font-bold text-slate-800 dark:text-slate-100 text-sm group-hover:opacity-0 transition-opacity">
-                        {formatCurrency(line.product.selling_price * line.quantity)}
+                        {formatCurrency(line.product.selling_price * line.quantity * (1 - (line.discountPct || 0)))}
                       </span>
                       <button 
-                        onClick={() => removeProduct(line.product.product_id)}
-                        className="absolute right-0 w-7 h-7 flex items-center justify-center text-red-500 bg-red-50 hover:bg-red-100 rounded-md transition-all opacity-0 group-hover:opacity-100"
+                        onClick={(e) => { e.stopPropagation(); removeProduct(line.product.product_id); }}
+                        className="absolute right-4 w-7 h-7 flex items-center justify-center text-red-500 bg-red-50 hover:bg-red-100 rounded-md transition-all opacity-0 group-hover:opacity-100"
                         title="Remove Item"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
-                ))}
+                )})}
               </div>
             )}
           </div>
@@ -455,7 +509,7 @@ export function POSTerminal() {
                 <span className="font-bold text-slate-800 dark:text-slate-100">{formatCurrency(subtotal)}</span>
               </div>
               <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400 font-medium">
-                <span>Discount {globalDiscountPct > 0 && `(${globalDiscountPct * 100}%)`}</span>
+                <span>Discount</span>
                 <span className="font-bold text-slate-800 dark:text-slate-100">-{formatCurrency(discountAmount)}</span>
               </div>
               <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400 font-medium">
@@ -468,7 +522,7 @@ export function POSTerminal() {
             
             <div className="flex justify-between items-center mb-5 px-2">
               <span className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-widest">Total Due</span>
-              <span className="text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-none">{formatCurrency(grandTotal)}</span>
+              <span className="text-4xl font-black text-slate-900 dark:text-white leading-none">{formatCurrency(grandTotal)}</span>
             </div>
 
             <button 
@@ -500,14 +554,16 @@ export function POSTerminal() {
           </button>
           <button 
             onClick={() => setShowDiscountModal(true)}
-            className="flex items-center justify-center gap-2 px-4 py-2 bg-[#F8FAFC] dark:bg-slate-700 border border-[#E5E7EB] dark:border-slate-600 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:border-[#0F766E] hover:text-[#0F766E] transition-all relative"
+            disabled={!selectedLineId}
+            className={`flex items-center justify-center gap-2 px-4 py-2 bg-[#F8FAFC] dark:bg-slate-700 border border-[#E5E7EB] dark:border-slate-600 rounded-lg text-xs font-bold transition-all relative ${selectedLineId ? 'text-slate-600 dark:text-slate-300 hover:border-[#0F766E] hover:text-[#0F766E]' : 'text-slate-400 cursor-not-allowed opacity-50'}`}
           >
             <Percent className="w-4 h-4" /> Discount
             <span className="ml-1 text-[9px] text-slate-400 dark:text-slate-500 bg-slate-200 dark:bg-slate-600 px-1 rounded">F9</span>
           </button>
           <button 
-            onClick={() => cart.length > 0 && setShowVoidModal(true)}
-            className="flex items-center justify-center gap-2 px-4 py-2 bg-[#F8FAFC] dark:bg-slate-700 border border-[#E5E7EB] dark:border-slate-600 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:border-red-500 hover:text-red-600 transition-all"
+            onClick={() => selectedLineId && setShowVoidModal(true)}
+            disabled={!selectedLineId}
+            className={`flex items-center justify-center gap-2 px-4 py-2 bg-[#F8FAFC] dark:bg-slate-700 border border-[#E5E7EB] dark:border-slate-600 rounded-lg text-xs font-bold transition-all ${selectedLineId ? 'text-slate-600 dark:text-slate-300 hover:border-red-500 hover:text-red-600' : 'text-slate-400 cursor-not-allowed opacity-50'}`}
           >
             <Trash2 className="w-4 h-4" /> Void Item
           </button>
@@ -519,6 +575,10 @@ export function POSTerminal() {
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48 bg-white dark:bg-slate-800 border border-[#E5E7EB] dark:border-slate-700 shadow-lg rounded-xl mb-2">
+              <DropdownMenuItem className="cursor-pointer font-bold text-xs text-red-600 dark:text-red-400 py-3" onClick={voidTransaction} disabled={cart.length === 0}>
+                <Trash2 className="w-4 h-4 mr-2" /> Void Transaction
+              </DropdownMenuItem>
+              <div className="h-px bg-slate-200 dark:bg-slate-700 my-1 w-full" />
               <DropdownMenuItem className="cursor-pointer font-bold text-xs text-slate-700 dark:text-slate-200 py-3" onClick={() => success('Drawer opened')}>
                 <Archive className="w-4 h-4 mr-2 text-slate-400 dark:text-slate-500" /> Open Drawer
               </DropdownMenuItem>
@@ -536,12 +596,6 @@ export function POSTerminal() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        </div>
-        
-        <div className="text-[10px] font-medium text-slate-400 dark:text-slate-600 flex gap-4">
-          <span>[Esc] Cancel/Close</span>
-          <span>[F2] Search</span>
-          <span>[F4] Checkout</span>
         </div>
       </footer>
 
@@ -591,12 +645,36 @@ export function POSTerminal() {
         <div className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden p-6 animate-in fade-in zoom-in-95 duration-200">
             <h3 className="text-lg font-bold text-red-600 mb-2 flex items-center gap-2">
-              <AlertCircle className="w-5 h-5" /> Void Transaction
+              <AlertCircle className="w-5 h-5" /> Void Selected Item
             </h3>
-            <p className="text-sm text-slate-600 mb-6">Are you sure you want to void this entire transaction? All items will be cleared.</p>
+            <p className="text-sm text-slate-600 mb-6">Are you sure you want to void this item from the transaction?</p>
             <div className="flex gap-2">
               <button onClick={() => setShowVoidModal(false)} className="flex-1 py-2 bg-slate-100 text-slate-600 font-bold rounded-lg hover:bg-slate-200">Cancel (Esc)</button>
-              <button onClick={voidTransaction} className="flex-1 py-2 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700">Yes, Void All</button>
+              <button onClick={voidItem} className="flex-1 py-2 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700">Yes, Void Item</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Exit Confirm Modal */}
+      {showExitConfirm && (
+        <div className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden p-6 animate-in fade-in zoom-in-95 duration-200">
+            <h3 className="text-lg font-bold text-slate-800 mb-2 flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-red-500" /> Exit POS
+            </h3>
+            <p className="text-sm text-slate-600 mb-6">You have items in your current transaction. If you exit now, this transaction will be lost.</p>
+            <div className="flex gap-2">
+              <button onClick={() => setShowExitConfirm(false)} className="flex-1 py-2 bg-slate-100 text-slate-600 font-bold rounded-lg hover:bg-slate-200">Cancel (Esc)</button>
+              <button 
+                onClick={() => {
+                  clearStoredSession();
+                  navigate('/login');
+                }} 
+                className="flex-1 py-2 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700"
+              >
+                Exit POS
+              </button>
             </div>
           </div>
         </div>

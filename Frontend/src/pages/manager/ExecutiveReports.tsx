@@ -1,27 +1,35 @@
 import React, { useState } from 'react';
 import { FileText, Download, Info, Loader2 } from 'lucide-react';
 import {
-  AreaChart, Area,
-  BarChart, Bar,
-  LineChart, Line,
+  ComposedChart,
+  Area,
+  Bar,
+  Line,
+  LineChart,
+  BarChart,
+  PieChart,
+  Pie,
+  Cell,
+  ReferenceLine,
   CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
 import { Toast, useToast } from '../../components/ui/Toast';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 
+// N4: Total Wastage YTD = ₱637,900 (authoritative); N5: Credits Recovered = ₱389,600
 const MONTHLY_DATA = [
-  { month: 'Jan', revenue: 2200000, waste: 54000, recovery: 22000 },
-  { month: 'Feb', revenue: 2400000, waste: 48200, recovery: 19400 },
-  { month: 'Mar', revenue: 2300000, waste: 51200, recovery: 28000 },
-  { month: 'Apr', revenue: 2500000, waste: 42000, recovery: 31000 },
-  { month: 'May', revenue: 2600000, waste: 38000, recovery: 25600 },
-  { month: 'Jun', revenue: 2800000, waste: 32000, recovery: 33200 },
-  { month: 'Jul', revenue: 2750000, waste: 35000, recovery: 30000 },
-  { month: 'Aug', revenue: 2900000, waste: 29500, recovery: 36000 },
-  { month: 'Sep', revenue: 3100000, waste: 27000, recovery: 38500 },
-  { month: 'Oct', revenue: 3000000, waste: 25000, recovery: 40200 },
-  { month: 'Nov', revenue: 3200000, waste: 22000, recovery: 42100 },
-  { month: 'Dec', revenue: 3500000, waste: 18000, recovery: 43500 },
+  { month: 'Jan', revenue: 2200000, waste: 79000, recovery: 22000 },
+  { month: 'Feb', revenue: 2400000, waste: 72000, recovery: 31400 },
+  { month: 'Mar', revenue: 2300000, waste: 69500, recovery: 36000 },
+  { month: 'Apr', revenue: 2500000, waste: 62000, recovery: 40000 },
+  { month: 'May', revenue: 2600000, waste: 57000, recovery: 35600 },
+  { month: 'Jun', revenue: 2800000, waste: 51000, recovery: 44200 },
+  { month: 'Jul', revenue: 2750000, waste: 54000, recovery: 40000 },
+  { month: 'Aug', revenue: 2900000, waste: 47500, recovery: 36000 },
+  { month: 'Sep', revenue: 3100000, waste: 42000, recovery: 38500 },
+  { month: 'Oct', revenue: 3000000, waste: 36000, recovery: 22000 },
+  { month: 'Nov', revenue: 3200000, waste: 34000, recovery: 15500 },
+  { month: 'Dec', revenue: 3500000, waste: 33900, recovery: 28400 },
 ];
 
 const EFFICIENCY_DATA = [
@@ -40,11 +48,11 @@ const EFFICIENCY_DATA = [
 ];
 
 const CATEGORY_DATA = [
-  { category: 'Food & Bev', wastage: 128400 },
-  { category: 'Medicine', wastage: 43600 },
-  { category: 'Personal Care', wastage: 31200 },
-  { category: 'Household', wastage: 22800 },
-  { category: 'Dairy', wastage: 58700 },
+  { category: 'Food & Bev', wastage: 128400, color: '#f87171' },
+  { category: 'Medicine', wastage: 43600, color: '#f59e0b' },
+  { category: 'Personal Care', wastage: 31200, color: '#0ea5e9' },
+  { category: 'Household', wastage: 22800, color: '#8b5cf6' },
+  { category: 'Dairy', wastage: 58700, color: '#10b981' },
 ];
 
 interface GeneratedFile {
@@ -130,30 +138,65 @@ export function ExecutiveReports() {
         ))}
       </div>
 
-      {/* Chart 1: Revenue vs Wastage area chart */}
+      {/* Chart 1: Revenue vs Wastage — Dual-Axis ComposedChart */}
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 p-6 shadow-sm">
-        <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-5">Revenue vs Wastage Cost (Full Year)</h3>
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">Revenue vs Wastage Cost (Full Year)</h3>
+          <div className="flex items-center gap-3 text-xs text-slate-500">
+            <span className="flex items-center gap-1"><span className="h-2 w-6 rounded bg-[#006a61] inline-block" />Revenue (left axis)</span>
+            <span className="flex items-center gap-1"><span className="h-2 w-6 rounded bg-rose-400 inline-block" />Wastage (right axis)</span>
+          </div>
+        </div>
         <div className="h-72 w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={MONTHLY_DATA}>
+            <ComposedChart data={MONTHLY_DATA}>
               <defs>
                 <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#006a61" stopOpacity={0.15} />
                   <stop offset="95%" stopColor="#006a61" stopOpacity={0.01} />
                 </linearGradient>
-                <linearGradient id="wasteGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#f87171" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="#f87171" stopOpacity={0.01} />
-                </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e8edf5" />
               <XAxis dataKey="month" tick={{ fontSize: 11 }} stroke="#94a3b8" />
-              <YAxis tick={{ fontSize: 11 }} stroke="#94a3b8" tickFormatter={v => `₱${(v / 1000000).toFixed(1)}M`} />
-              <Tooltip formatter={(v: number) => currencyFormatter.format(v)} />
-              <Legend />
-              <Area type="monotone" dataKey="revenue" name="Revenue" stroke="#006a61" fill="url(#revGrad)" strokeWidth={2.5} />
-              <Area type="monotone" dataKey="waste" name="Wastage Cost" stroke="#f87171" fill="url(#wasteGrad)" strokeWidth={2.5} />
-            </AreaChart>
+              <YAxis
+                yAxisId="revenue"
+                orientation="left"
+                tick={{ fontSize: 11 }}
+                stroke="#94a3b8"
+                tickFormatter={(v) => `₱${(v / 1000000).toFixed(1)}M`}
+              />
+              <YAxis
+                yAxisId="waste"
+                orientation="right"
+                tick={{ fontSize: 11 }}
+                stroke="#f87171"
+                tickFormatter={(v) => `₱${(v / 1000).toFixed(0)}k`}
+              />
+              <Tooltip
+                formatter={(v: number, name: string) =>
+                  name === 'Wastage Cost'
+                    ? [`₱${(v / 1000).toFixed(1)}k`, name]
+                    : [`₱${(v / 1000000).toFixed(2)}M`, name]
+                }
+              />
+              <Area
+                yAxisId="revenue"
+                type="monotone"
+                dataKey="revenue"
+                name="Revenue"
+                stroke="#006a61"
+                fill="url(#revGrad)"
+                strokeWidth={2.5}
+              />
+              <Bar
+                yAxisId="waste"
+                dataKey="waste"
+                name="Wastage Cost"
+                fill="#f87171"
+                radius={[4, 4, 0, 0]}
+                opacity={0.85}
+              />
+            </ComposedChart>
           </ResponsiveContainer>
         </div>
       </div>
@@ -170,6 +213,7 @@ export function ExecutiveReports() {
                 <XAxis dataKey="month" tick={{ fontSize: 11 }} stroke="#94a3b8" />
                 <YAxis domain={[65, 90]} tick={{ fontSize: 11 }} stroke="#94a3b8" />
                 <Tooltip />
+                <ReferenceLine y={80} stroke="#f87171" strokeDasharray="3 3" label={{ value: 'Target (80)', position: 'insideTopLeft', fill: '#f87171', fontSize: 11 }} />
                 <Line type="monotone" dataKey="score" name="Score" stroke="#006a61" strokeWidth={2.5} dot={{ r: 3 }} />
               </LineChart>
             </ResponsiveContainer>
@@ -181,13 +225,25 @@ export function ExecutiveReports() {
           <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-5">Wastage by Category</h3>
           <div className="h-56 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={CATEGORY_DATA} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e8edf5" />
-                <XAxis type="number" tick={{ fontSize: 11 }} stroke="#94a3b8" tickFormatter={v => `₱${(v / 1000).toFixed(0)}k`} />
-                <YAxis dataKey="category" type="category" tick={{ fontSize: 11 }} stroke="#94a3b8" width={90} />
+              <PieChart>
+                <Pie
+                  data={CATEGORY_DATA}
+                  dataKey="wastage"
+                  nameKey="category"
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={80}
+                  paddingAngle={2}
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  labelLine={false}
+                >
+                  {CATEGORY_DATA.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
                 <Tooltip formatter={(v: number) => currencyFormatter.format(v)} />
-                <Bar dataKey="wastage" name="Wastage" fill="#f87171" radius={[0, 4, 4, 0]} />
-              </BarChart>
+              </PieChart>
             </ResponsiveContainer>
           </div>
         </div>

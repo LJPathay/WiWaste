@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Users, Info, Loader2 } from 'lucide-react';
-import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, LineChart, Line } from 'recharts';
+import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, LineChart, Line, LabelList } from 'recharts';
 import { Toast, useToast, ConfirmDialog } from '../../components/ui/Toast';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 
@@ -15,11 +15,12 @@ interface PerformanceMock {
 }
 
 const SUPPLIERS: PerformanceMock[] = [
-  { id: '1', name: 'Unilab Distribution', delivery: 98, returns: 1.5, leadTime: 3, credits: 15400, creditPending: false },
-  { id: '2', name: 'Purefoods Wholesale', delivery: 92, returns: 4.2, leadTime: 4, credits: 23600, creditPending: false },
-  { id: '3', name: 'Universal Robina Corp', delivery: 95, returns: 2.1, leadTime: 3, credits: 12000, creditPending: false },
+  { id: '1', name: 'Unilab Distribution Inc.', delivery: 98, returns: 1.5, leadTime: 3, credits: 8100, creditPending: false },
+  { id: '2', name: 'Purefoods Wholesale Corp.', delivery: 92, returns: 4.2, leadTime: 4, credits: 6200, creditPending: false },
+  { id: '3', name: 'Universal Robina Corp.', delivery: 95, returns: 2.1, leadTime: 3, credits: 4800, creditPending: false },
   { id: '4', name: 'Johnson & Johnson PH', delivery: 88, returns: 5.8, leadTime: 5, credits: 0, creditPending: false },
   { id: '5', name: 'Nestlé Philippines', delivery: 94, returns: 3.0, leadTime: 3, credits: 4500, creditPending: false },
+  { id: '6', name: 'Gardenia Bakeries PH', delivery: 97, returns: 1.8, leadTime: 2, credits: 0, creditPending: false },
 ];
 
 const TREND_DATA = [
@@ -102,14 +103,18 @@ export function SupplierPerformance() {
           <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-5">Delivery Rate vs Return Exposure</h3>
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e8edf5" />
-                <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#94a3b8" />
-                <YAxis tick={{ fontSize: 11 }} stroke="#94a3b8" />
+              <BarChart data={chartData} layout="vertical" margin={{ left: 16, right: 40, top: 8, bottom: 8 }}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e8edf5" />
+                <XAxis type="number" tick={{ fontSize: 11 }} stroke="#94a3b8" />
+                <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 11 }} stroke="#94a3b8" />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="On-Time %" radius={[4, 4, 0, 0]} fill="#006a61" />
-                <Bar dataKey="Return Rate" radius={[4, 4, 0, 0]} fill="#f87171" />
+                <Bar dataKey="On-Time %" radius={[0, 4, 4, 0]} fill="#006a61">
+                  <LabelList dataKey="On-Time %" position="right" style={{ fill: '#64748b', fontSize: 10, fontWeight: 600 }} />
+                </Bar>
+                <Bar dataKey="Return Rate" radius={[0, 4, 4, 0]} fill="#f87171">
+                  <LabelList dataKey="Return Rate" position="right" style={{ fill: '#64748b', fontSize: 10, fontWeight: 600 }} />
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -126,9 +131,9 @@ export function SupplierPerformance() {
                 <YAxis domain={[85, 100]} tick={{ fontSize: 11 }} stroke="#94a3b8" />
                 <Tooltip />
                 <Legend />
-                <Line type="monotone" dataKey="unilab" name="Unilab" stroke="#006a61" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="purefoods" name="Purefoods" stroke="#f59e0b" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="urc" name="URC" stroke="#6366f1" strokeWidth={2} dot={false} />
+                <Line type="linear" dataKey="unilab" name="Unilab" stroke="#006a61" strokeWidth={2} dot={false} />
+                <Line type="linear" dataKey="purefoods" name="Purefoods" stroke="#f59e0b" strokeWidth={2} dot={false} />
+                <Line type="linear" dataKey="urc" name="URC" stroke="#6366f1" strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>

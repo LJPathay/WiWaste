@@ -1,4 +1,4 @@
-import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis, LabelList } from 'recharts';
 import { AlertTriangle, ArrowLeft, PhilippinePeso, FileCheck, Info, TimerReset, XCircle } from 'lucide-react';
 import { Link } from 'react-router';
 import { useDashboardData } from '../../hooks/useDashboardData';
@@ -117,7 +117,7 @@ export function VendorCreditsPage() {
         </div>
         <div className="h-96 w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={vendorChart} layout="vertical" margin={{ left: 48, right: 24 }}>
+            <BarChart data={vendorChart} layout="vertical" margin={{ left: 48, right: 80 }}>
               <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e8edf5" />
               <XAxis type="number" tick={{ fontSize: 12 }} stroke="#94a3b8" />
               <YAxis type="category" dataKey="name" width={190} tick={{ fontSize: 12 }} stroke="#94a3b8" />
@@ -130,6 +130,7 @@ export function VendorCreditsPage() {
                 }}
               />
               <Bar dataKey="credit" radius={[0, 12, 12, 0]} name="Eligible credit">
+                <LabelList dataKey="credit" position="right" formatter={(value: number) => currencyFormatter.format(value)} style={{ fill: '#64748b', fontSize: 11, fontWeight: 600 }} />
                 {vendorChart.map((item) => (
                   <Cell key={item.name} fill={item.risk.color} />
                 ))}

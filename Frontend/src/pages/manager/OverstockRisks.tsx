@@ -1,7 +1,30 @@
 import React, { useState, useMemo } from 'react';
 import { Info } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { Toast, useToast, ConfirmDialog } from '../../components/ui/Toast';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
+
+const OVERSTOCK_TREND_DATA = [
+  { month: 'Jan', exposure: 125000 },
+  { month: 'Feb', exposure: 120000 },
+  { month: 'Mar', exposure: 135000 },
+  { month: 'Apr', exposure: 142000 },
+  { month: 'May', exposure: 130000 },
+  { month: 'Jun', exposure: 115000 },
+  { month: 'Jul', exposure: 105000 },
+  { month: 'Aug', exposure: 95000 },
+  { month: 'Sep', exposure: 110000 },
+  { month: 'Oct', exposure: 118000 },
+  { month: 'Nov', exposure: 105000 },
+  { month: 'Dec', exposure: 98000 },
+];
+
+const OVERSTOCK_CATEGORY_DATA = [
+  { category: 'Beverages', value: 45000, color: '#0ea5e9' },
+  { category: 'Personal Care', value: 28000, color: '#f59e0b' },
+  { category: 'Canned Goods', value: 15000, color: '#f87171' },
+  { category: 'Household', value: 10000, color: '#8b5cf6' },
+];
 
 const currencyFormatter = new Intl.NumberFormat('en-PH', {
   style: 'currency',
@@ -24,57 +47,57 @@ interface OverstockItem {
 const initialItems: OverstockItem[] = [
   {
     id: 1,
-    name: 'Biodegradable Bags (L)',
-    category: 'Packaging',
+    name: 'Del Monte Tomato Sauce 250g',
+    category: 'Canned Goods',
     qtyOnHand: 1200,
-    reorderPoint: 400,
-    excessQty: 800,
-    unitCost: 12,
-    recommendedAction: 'Return to Supplier',
-    applied: false,
-  },
-  {
-    id: 2,
-    name: 'Recycled Paper Rolls',
-    category: 'Office Supply',
-    qtyOnHand: 950,
-    reorderPoint: 200,
-    excessQty: 750,
-    unitCost: 45,
+    reorderPoint: 350,
+    excessQty: 850,
+    unitCost: 28,
     recommendedAction: 'Markdown & Sell',
     applied: false,
   },
   {
+    id: 2,
+    name: 'Coca-Cola 1.5L',
+    category: 'Beverages',
+    qtyOnHand: 980,
+    reorderPoint: 200,
+    excessQty: 780,
+    unitCost: 72,
+    recommendedAction: 'Return to Supplier',
+    applied: false,
+  },
+  {
     id: 3,
-    name: 'Compost Liners (M)',
-    category: 'Packaging',
+    name: 'Safeguard Bar Soap 135g',
+    category: 'Personal Care',
     qtyOnHand: 3400,
-    reorderPoint: 800,
-    excessQty: 2600,
-    unitCost: 8,
-    recommendedAction: 'Inter-Branch Transfer',
+    reorderPoint: 700,
+    excessQty: 2700,
+    unitCost: 55,
+    recommendedAction: 'Markdown & Sell',
     applied: false,
   },
   {
     id: 4,
-    name: 'Eco Detergent Refill',
-    category: 'Cleaning',
-    qtyOnHand: 560,
-    reorderPoint: 150,
-    excessQty: 410,
-    unitCost: 210,
+    name: 'Gardenia Classic White Bread',
+    category: 'Bakery',
+    qtyOnHand: 420,
+    reorderPoint: 120,
+    excessQty: 300,
+    unitCost: 65,
     recommendedAction: 'Liquidate',
     applied: false,
   },
   {
     id: 5,
-    name: 'Reusable Tote Bags',
-    category: 'Retail',
-    qtyOnHand: 2100,
-    reorderPoint: 600,
-    excessQty: 1500,
-    unitCost: 55,
-    recommendedAction: 'Donate / Write-off',
+    name: 'Nestlé Bear Brand Powdered Milk',
+    category: 'Dairy',
+    qtyOnHand: 1800,
+    reorderPoint: 500,
+    excessQty: 1300,
+    unitCost: 145,
+    recommendedAction: 'Return to Supplier',
     applied: false,
   },
 ];
@@ -82,7 +105,6 @@ const initialItems: OverstockItem[] = [
 const actionColor: Record<string, string> = {
   'Return to Supplier': 'bg-sky-100 text-sky-700 dark:bg-sky-500/10 dark:text-sky-400',
   'Markdown & Sell': 'bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400',
-  'Inter-Branch Transfer': 'bg-violet-100 text-violet-700 dark:bg-violet-500/10 dark:text-violet-400',
   Liquidate: 'bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400',
   'Donate / Write-off': 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
 };
@@ -183,6 +205,54 @@ export function OverstockRisks() {
             {appliedCount} / {items.length}
           </p>
           <p className="text-xs text-slate-400 mt-1">Resolved this period</p>
+        </div>
+      </div>
+
+      {/* Charts row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Trend line */}
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 p-6 shadow-sm">
+          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-5">Total Overstock Exposure Trend (Full Year)</h3>
+          <div className="h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={OVERSTOCK_TREND_DATA}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e8edf5" />
+                <XAxis dataKey="month" tick={{ fontSize: 11 }} stroke="#94a3b8" />
+                <YAxis tick={{ fontSize: 11 }} stroke="#94a3b8" tickFormatter={v => `₱${(v / 1000).toFixed(0)}k`} />
+                <Tooltip formatter={(v: number) => currencyFormatter.format(v)} />
+                <Line type="linear" dataKey="exposure" name="Exposure" stroke="#ef4444" strokeWidth={2} dot={{ r: 3 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Category donut */}
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 p-6 shadow-sm">
+          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-5">Overstock by Category</h3>
+          <div className="h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={OVERSTOCK_CATEGORY_DATA}
+                  dataKey="value"
+                  nameKey="category"
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={80}
+                  paddingAngle={2}
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  labelLine={false}
+                >
+                  {OVERSTOCK_CATEGORY_DATA.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(v: number) => currencyFormatter.format(v)} />
+                <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '11px' }} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
 

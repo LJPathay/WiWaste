@@ -38,11 +38,9 @@ type SidebarGroup = { group: string; items: SidebarItem[] };
 const sidebarGroupsByRole: Record<UserRole, SidebarGroup[]> = {
   owner: [
     {
-      group: 'Owner/Administrator',
+      group: 'Overview',
       items: [
         { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-        { to: '/owner/dashboard', label: 'Owner Dashboard', icon: BarChart3 },
-        { to: '/owner/admin-dashboard', label: 'Administrative View', icon: Activity },
       ],
     },
     {
@@ -63,12 +61,8 @@ const sidebarGroupsByRole: Record<UserRole, SidebarGroup[]> = {
         { to: '/dashboard/leakage', label: 'Leakage Detection', icon: AlertTriangle },
         { to: '/dashboard/fefo', label: 'FEFO Tracking', icon: Layers },
         { to: '/dashboard/vendors', label: 'Vendor Credits', icon: PhilippinePeso },
-        { to: '/dashboard/behavior', label: 'Behavioral Intelligence', icon: Brain },
-        { to: '/dashboard/prescriptive', label: 'Decision Sandbox', icon: FlaskConical },
         { to: '/owner/performance', label: 'Inventory Performance', icon: Package },
-        { to: '/owner/forecasts', label: 'Demand Forecasts', icon: LineChart },
         { to: '/owner/overstock', label: 'Overstock Risks', icon: AlertTriangle },
-        { to: '/owner/loss-trends', label: 'Loss Trends', icon: BarChart3 },
         { to: '/owner/replenishment', label: 'Replenishment', icon: CheckCircle },
         { to: '/owner/supplier-performance', label: 'Supplier Performance', icon: Users },
         { to: '/owner/reports', label: 'Generate Reports', icon: FileText },

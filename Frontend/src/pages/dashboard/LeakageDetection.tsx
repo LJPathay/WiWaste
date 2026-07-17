@@ -1,4 +1,4 @@
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis, LabelList } from 'recharts';
 import { AlertCircle, ArrowLeft, Info, ShieldAlert, TrendingDown } from 'lucide-react';
 import { Link } from 'react-router';
 import { useDashboardData } from '../../hooks/useDashboardData';
@@ -119,7 +119,7 @@ export function LeakageDetectionPage() {
         </div>
         <div style={{ height: leakageChart.length * 56 + 40 }} className="w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={leakageChart} layout="vertical" margin={{ left: 16, right: 32, top: 8, bottom: 8 }} barSize={28}>
+            <BarChart data={leakageChart} layout="vertical" margin={{ left: 16, right: 80, top: 8, bottom: 8 }} barSize={28}>
               <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e8edf5" />
               <XAxis type="number" tick={{ fontSize: 12 }} stroke="#94a3b8" />
               <YAxis type="category" dataKey="name" width={170} tick={{ fontSize: 12 }} stroke="#94a3b8" />
@@ -131,7 +131,9 @@ export function LeakageDetectionPage() {
                   boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
                 }}
               />
-              <Bar dataKey="amount" radius={[0, 12, 12, 0]} fill="#ef4444" name="Leakage amount" />
+              <Bar dataKey="amount" radius={[0, 12, 12, 0]} fill="#ef4444" name="Leakage amount">
+                <LabelList dataKey="amount" position="right" formatter={(value: number) => currencyFormatter.format(value)} style={{ fill: '#64748b', fontSize: 11, fontWeight: 600 }} />
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>

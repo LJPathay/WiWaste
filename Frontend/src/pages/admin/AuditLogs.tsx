@@ -16,7 +16,7 @@ const MOCK_AUDIT_LOGS: AuditLog[] = [
     id: '1',
     action: 'Created product "Lucky Me! Pancit Canton"',
     user: 'John Doe',
-    role: 'Manager',
+    role: 'Owner/Administrator',
     timestamp: '2026-07-09 14:30:25',
     status: 'success',
   },
@@ -24,7 +24,7 @@ const MOCK_AUDIT_LOGS: AuditLog[] = [
     id: '2',
     action: 'Stock-in recorded for SKU: LM-PC-80',
     user: 'Jane Smith',
-    role: 'Inventory Staff',
+    role: 'Inventory',
     timestamp: '2026-07-09 14:15:10',
     status: 'success',
   },
@@ -38,9 +38,9 @@ const MOCK_AUDIT_LOGS: AuditLog[] = [
   },
   {
     id: '4',
-    action: 'Updated supplier "Nestle Philippines"',
+    action: 'Updated supplier "Nestlé Philippines"',
     user: 'John Doe',
-    role: 'Manager',
+    role: 'Owner/Administrator',
     timestamp: '2026-07-09 12:30:15',
     status: 'success',
   },
@@ -48,15 +48,15 @@ const MOCK_AUDIT_LOGS: AuditLog[] = [
     id: '5',
     action: 'Low stock alert: Coca-Cola 1.5L',
     user: 'System',
-    role: 'System',
+    role: 'N/A',
     timestamp: '2026-07-09 11:20:00',
     status: 'warning',
   },
   {
     id: '6',
     action: 'Deleted user account "Test User"',
-    user: 'Admin',
-    role: 'Admin',
+    user: 'John Doe',
+    role: 'Owner/Administrator',
     timestamp: '2026-07-09 10:15:30',
     status: 'success',
   },
@@ -64,16 +64,24 @@ const MOCK_AUDIT_LOGS: AuditLog[] = [
     id: '7',
     action: 'Generated inventory report',
     user: 'Jane Smith',
-    role: 'Inventory Staff',
+    role: 'Inventory',
     timestamp: '2026-07-09 09:00:00',
     status: 'success',
   },
   {
     id: '8',
     action: 'Changed system settings',
-    user: 'Admin',
-    role: 'Admin',
+    user: 'John Doe',
+    role: 'Owner/Administrator',
     timestamp: '2026-07-09 08:30:45',
+    status: 'success',
+  },
+  {
+    id: '9',
+    action: 'Processed POS transaction #TXN-0042',
+    user: 'Maria Santos',
+    role: 'Cashier',
+    timestamp: '2026-07-09 08:05:10',
     status: 'success',
   },
 ];
@@ -82,7 +90,7 @@ export function AuditLogs() {
   const [logs, setLogs] = useState<AuditLog[]>(MOCK_AUDIT_LOGS);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'All' | 'success' | 'warning' | 'error'>('All');
-  const [roleFilter, setRoleFilter] = useState<'All' | 'Admin' | 'Manager' | 'Inventory Staff'>('All');
+  const [roleFilter, setRoleFilter] = useState<'All' | 'Owner/Administrator' | 'Inventory' | 'Cashier'>('All');
 
   const filteredLogs = logs.filter(log => {
     const matchesSearch = log.action.toLowerCase().includes(search.toLowerCase()) ||
@@ -140,9 +148,9 @@ export function AuditLogs() {
               className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-400 focus:outline-none focus:ring-1 focus:ring-[#006a61]"
             >
               <option value="All">All Roles</option>
-              <option value="Admin">Admin</option>
-              <option value="Manager">Manager</option>
-              <option value="Inventory Staff">Inventory Staff</option>
+              <option value="Owner/Administrator">Owner/Administrator</option>
+              <option value="Inventory">Inventory</option>
+              <option value="Cashier">Cashier</option>
             </select>
           </div>
 

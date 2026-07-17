@@ -1,6 +1,13 @@
 import React, { useState } from 'react';
 import { CheckCircle, AlertCircle, Info, ShoppingCart, Check, Search } from 'lucide-react';
+import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, Legend, LabelList } from 'recharts';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
+
+const currencyFormatter = new Intl.NumberFormat('en-PH', {
+  style: 'currency',
+  currency: 'PHP',
+  maximumFractionDigits: 0,
+});
 
 interface ReplenishMock {
   id: string;
@@ -12,17 +19,18 @@ interface ReplenishMock {
   supplier: string;
   leadTime: number;
   urgency: 'Critical' | 'Soon' | 'Scheduled';
+  unitCost: number;
 }
 
 const INITIAL_REPLENISH: ReplenishMock[] = [
-  { id: '1', name: 'Century Tuna Flakes in Oil 180g', sku: 'CT-FO-180', stock: 3, min: 15, suggested: 48, supplier: 'Universal Robina Corp.', leadTime: 3, urgency: 'Critical' },
-  { id: '2', name: 'Coca-Cola 1.5L', sku: 'CC-15L', stock: 8, min: 20, suggested: 36, supplier: 'San Miguel Corp. Beverage', leadTime: 2, urgency: 'Critical' },
-  { id: '3', name: 'Gardenia Classic White Bread', sku: 'GD-WB-400', stock: 6, min: 20, suggested: 40, supplier: 'Gardenia Bakeries PH', leadTime: 1, urgency: 'Critical' },
-  { id: '4', name: 'Del Monte Tomato Sauce 250g', sku: 'DM-TS-250', stock: 45, min: 50, suggested: 100, supplier: 'Purefoods Wholesale Corp.', leadTime: 4, urgency: 'Soon' },
-  { id: '5', name: 'Safeguard White Soap 130g', sku: 'SG-WS-130', stock: 25, min: 30, suggested: 60, supplier: 'Johnson & Johnson PH', leadTime: 5, urgency: 'Soon' },
-  { id: '6', name: 'Nestlé Bear Brand 900g', sku: 'NB-BB-900', stock: 14, min: 20, suggested: 36, supplier: 'Nestlé Philippines', leadTime: 4, urgency: 'Soon' },
-  { id: '7', name: 'Biogesic Paracetamol 500mg', sku: 'BG-P-500', stock: 120, min: 100, suggested: 300, supplier: 'Unilab Distribution Inc.', leadTime: 3, urgency: 'Scheduled' },
-  { id: '8', name: 'Colgate Triple Action 150g', sku: 'CG-TA-150', stock: 18, min: 15, suggested: 60, supplier: 'Colgate-Palmolive PH', leadTime: 5, urgency: 'Scheduled' },
+  { id: '1', name: 'Century Tuna Flakes in Oil 180g', sku: 'CT-FO-180', stock: 3, min: 15, suggested: 48, supplier: 'Universal Robina Corp.', leadTime: 3, urgency: 'Critical', unitCost: 45 },
+  { id: '2', name: 'Coca-Cola 1.5L', sku: 'CC-15L', stock: 8, min: 20, suggested: 36, supplier: 'San Miguel Corp. Beverage', leadTime: 2, urgency: 'Critical', unitCost: 72 },
+  { id: '3', name: 'Gardenia Classic White Bread', sku: 'GD-WB-400', stock: 6, min: 20, suggested: 40, supplier: 'Gardenia Bakeries PH', leadTime: 1, urgency: 'Critical', unitCost: 85 },
+  { id: '4', name: 'Del Monte Tomato Sauce 250g', sku: 'DM-TS-250', stock: 45, min: 50, suggested: 100, supplier: 'Purefoods Wholesale Corp.', leadTime: 4, urgency: 'Soon', unitCost: 28 },
+  { id: '5', name: 'Safeguard White Soap 130g', sku: 'SG-WS-130', stock: 25, min: 30, suggested: 60, supplier: 'Johnson & Johnson PH', leadTime: 5, urgency: 'Soon', unitCost: 55 },
+  { id: '6', name: 'Nestlé Bear Brand 900g', sku: 'NB-BB-900', stock: 14, min: 20, suggested: 36, supplier: 'Nestlé Philippines', leadTime: 4, urgency: 'Soon', unitCost: 215 },
+  { id: '7', name: 'Biogesic Paracetamol 500mg', sku: 'BG-P-500', stock: 120, min: 100, suggested: 300, supplier: 'Unilab Distribution Inc.', leadTime: 3, urgency: 'Scheduled', unitCost: 7 },
+  { id: '8', name: 'Colgate Triple Action 150g', sku: 'CG-TA-150', stock: 18, min: 15, suggested: 60, supplier: 'Colgate-Palmolive PH', leadTime: 5, urgency: 'Scheduled', unitCost: 95 },
 ];
 
 export function Replenishment() {
@@ -42,6 +50,13 @@ export function Replenishment() {
     const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase()) ||
       item.sku.toLowerCase().includes(search.toLowerCase());
     return matchesUrgency && matchesSearch;
+  });
+
+  const chartData = ['Critical', 'Soon', 'Scheduled'].map(tier => {
+    const tierItems = items.filter(i => i.urgency === tier);
+    const quantity = tierItems.reduce((acc, curr) => acc + curr.suggested, 0);
+    const cost = tierItems.reduce((acc, curr) => acc + (curr.suggested * curr.unitCost), 0);
+    return { name: tier, quantity, cost };
   });
 
   return (
@@ -70,6 +85,25 @@ export function Replenishment() {
             {criticalCount} critical items need restocking
           </div>
         )}
+      </div>
+
+      {/* Aggregated Chart */}
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 p-6 shadow-sm">
+        <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-5">Replenishment Needs by Urgency</h3>
+        <div className="h-64 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e8edf5" />
+              <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#94a3b8" />
+              <YAxis yAxisId="left" tick={{ fontSize: 11 }} stroke="#94a3b8" label={{ value: 'Total Cost (₱)', angle: -90, position: 'insideLeft', style: { fill: '#94a3b8', fontSize: 11 } }} tickFormatter={v => `₱${v / 1000}k`} />
+              <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} stroke="#94a3b8" label={{ value: 'Total Units', angle: 90, position: 'insideRight', style: { fill: '#94a3b8', fontSize: 11 } }} />
+              <RechartsTooltip />
+              <Legend />
+              <Bar yAxisId="left" dataKey="cost" name="Total Cost" radius={[4, 4, 0, 0]} fill="#0ea5e9" />
+              <Bar yAxisId="right" dataKey="quantity" name="Total Units" radius={[4, 4, 0, 0]} fill="#f59e0b" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </div>
 
       {/* Filters */}

@@ -1,22 +1,22 @@
 import React, { useState } from 'react';
 import { TrendingUp, Award, Download, Info, Loader2 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ComposedChart, Line, ReferenceLine } from 'recharts';
 import { Toast, useToast } from '../../components/ui/Toast';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 
 const TURNOVER_DATA = [
-  { month: 'Jan', turnover: 3.5, deadStock: 18 },
-  { month: 'Feb', turnover: 3.8, deadStock: 16 },
-  { month: 'Mar', turnover: 4.0, deadStock: 15 },
-  { month: 'Apr', turnover: 4.2, deadStock: 14 },
-  { month: 'May', turnover: 4.1, deadStock: 13 },
-  { month: 'Jun', turnover: 4.5, deadStock: 12 },
-  { month: 'Jul', turnover: 4.3, deadStock: 14 },
-  { month: 'Aug', turnover: 4.7, deadStock: 11 },
-  { month: 'Sep', turnover: 4.4, deadStock: 12 },
-  { month: 'Oct', turnover: 5.0, deadStock: 9 },
-  { month: 'Nov', turnover: 5.3, deadStock: 8 },
-  { month: 'Dec', turnover: 5.6, deadStock: 7 },
+  { month: 'Jan', turnover: 3.5, deadStock: 18, daysOnShelf: 26 },
+  { month: 'Feb', turnover: 3.8, deadStock: 16, daysOnShelf: 24 },
+  { month: 'Mar', turnover: 4.0, deadStock: 15, daysOnShelf: 22 },
+  { month: 'Apr', turnover: 4.2, deadStock: 14, daysOnShelf: 21 },
+  { month: 'May', turnover: 4.1, deadStock: 13, daysOnShelf: 20 },
+  { month: 'Jun', turnover: 4.5, deadStock: 12, daysOnShelf: 19 },
+  { month: 'Jul', turnover: 4.3, deadStock: 14, daysOnShelf: 19 },
+  { month: 'Aug', turnover: 4.7, deadStock: 11, daysOnShelf: 18 },
+  { month: 'Sep', turnover: 4.4, deadStock: 12, daysOnShelf: 18 },
+  { month: 'Oct', turnover: 5.0, deadStock: 9, daysOnShelf: 17 },
+  { month: 'Nov', turnover: 5.3, deadStock: 8, daysOnShelf: 16 },
+  { month: 'Dec', turnover: 5.6, deadStock: 7, daysOnShelf: 15 },
 ];
 
 const TOP_PRODUCTS = [
@@ -94,15 +94,18 @@ export function InventoryPerformance() {
           <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-5">Monthly Turnover Index & Dead Stock (Full Year)</h3>
           <div className="h-72 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={TURNOVER_DATA}>
+              <ComposedChart data={TURNOVER_DATA}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e8edf5" />
                 <XAxis dataKey="month" tick={{ fontSize: 11 }} stroke="#94a3b8" />
-                <YAxis tick={{ fontSize: 11 }} stroke="#94a3b8" />
+                <YAxis yAxisId="left" tick={{ fontSize: 11 }} stroke="#94a3b8" />
+                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} stroke="#94a3b8" />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="turnover" name="Turnover Rate (x)" radius={[6, 6, 0, 0]} fill="#006a61" />
-                <Bar dataKey="deadStock" name="Dead Stock Items" radius={[6, 6, 0, 0]} fill="#cbd5e1" />
-              </BarChart>
+                <Bar yAxisId="left" dataKey="turnover" name="Turnover Rate (x)" radius={[6, 6, 0, 0]} fill="#006a61" />
+                <Bar yAxisId="left" dataKey="deadStock" name="Dead Stock Items" radius={[6, 6, 0, 0]} fill="#cbd5e1" />
+                <ReferenceLine yAxisId="right" y={20} stroke="#f59e0b" strokeDasharray="3 3" label={{ value: 'Target (20 days)', position: 'insideTopRight', fill: '#f59e0b', fontSize: 11 }} />
+                <Line yAxisId="right" type="linear" dataKey="daysOnShelf" name="Days on Shelf" stroke="#f59e0b" strokeWidth={2} />
+              </ComposedChart>
             </ResponsiveContainer>
           </div>
         </div>

@@ -214,6 +214,13 @@ export function getPredictiveAnalytics(role: UserRole = 'owner'): PredictiveAnal
     { month: 'Mar 2026', predicted: 1495, confidence: 0.85 },
     { month: 'Apr 2026', predicted: 1820, confidence: 0.88 },
     { month: 'May 2026', predicted: 2055, confidence: 0.91 },
+    { month: 'Jun 2026', predicted: 2150, confidence: 0.87 },
+    { month: 'Jul 2026', predicted: 1980, confidence: 0.93 },
+    { month: 'Aug 2026', predicted: 1750, confidence: 0.86 },
+    { month: 'Sep 2026', predicted: 1890, confidence: 0.84 },
+    { month: 'Oct 2026', predicted: 2210, confidence: 0.82 },
+    { month: 'Nov 2026', predicted: 2450, confidence: 0.85 },
+    { month: 'Dec 2026', predicted: 2680, confidence: 0.80 },
   ];
 
   const roleForecast = clampByRole(baseForecast, role).map((point, index) => ({
@@ -405,7 +412,7 @@ export function getBatchFEFOTracking(role: UserRole = 'owner'): BATCHTracking[] 
   const batchesByRole: Record<UserRole, BATCHTracking[]> = {
     owner: [
       {
-        batchId: 'OWNER-2026-001',
+        batchId: 'BATCH-001',
         expiryDate: new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000),
         currentPrice: 2.5,
         decayRate: 0.15,
@@ -413,7 +420,7 @@ export function getBatchFEFOTracking(role: UserRole = 'owner'): BATCHTracking[] 
         daysToExpiry: 5,
       },
       {
-        batchId: 'OWNER-2026-002',
+        batchId: 'BATCH-002',
         expiryDate: new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000),
         currentPrice: 3.8,
         decayRate: 0.08,
@@ -421,7 +428,7 @@ export function getBatchFEFOTracking(role: UserRole = 'owner'): BATCHTracking[] 
         daysToExpiry: 15,
       },
       {
-        batchId: 'OWNER-2026-003',
+        batchId: 'BATCH-003',
         expiryDate: new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000),
         currentPrice: 1.2,
         decayRate: 0.25,
@@ -429,7 +436,7 @@ export function getBatchFEFOTracking(role: UserRole = 'owner'): BATCHTracking[] 
         daysToExpiry: 2,
       },
       {
-        batchId: 'OWNER-2026-004',
+        batchId: 'BATCH-004',
         expiryDate: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
         currentPrice: 4.5,
         decayRate: 0.05,
@@ -437,7 +444,7 @@ export function getBatchFEFOTracking(role: UserRole = 'owner'): BATCHTracking[] 
         daysToExpiry: 30,
       },
       {
-        batchId: 'OWNER-2026-005',
+        batchId: 'BATCH-005',
         expiryDate: new Date(now.getTime() + 9 * 24 * 60 * 60 * 1000),
         currentPrice: 2.95,
         decayRate: 0.11,
@@ -519,7 +526,7 @@ export function getVendorReturns(role: UserRole = 'owner'): VendorReturn[] {
       },
       {
         vendorId: 'VENDOR-C789',
-        vendorName: 'PascualLab Pharma Supply',
+        vendorName: 'Nestlé Philippines',
         returnWindowDays: 14,
         eligibleCredit: 2100,
         returnDeadline: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000),
@@ -545,7 +552,7 @@ export function getVendorReturns(role: UserRole = 'owner'): VendorReturn[] {
       },
       {
         vendorId: 'VENDOR-C789',
-        vendorName: 'PascualLab Pharma Supply',
+        vendorName: 'Nestlé Philippines',
         returnWindowDays: 14,
         eligibleCredit: 2100,
         returnDeadline: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000),
@@ -553,7 +560,7 @@ export function getVendorReturns(role: UserRole = 'owner'): VendorReturn[] {
       },
       {
         vendorId: 'VENDOR-E222',
-        vendorName: 'Store Supply Returns',
+        vendorName: 'Universal Robina Corp.',
         returnWindowDays: 21,
         eligibleCredit: 1650,
         returnDeadline: new Date(now.getTime() + 11 * 24 * 60 * 60 * 1000),

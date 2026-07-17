@@ -1,6 +1,6 @@
 import {
+  ComposedChart,
   Area,
-  AreaChart,
   CartesianGrid,
   Line,
   ResponsiveContainer,
@@ -118,7 +118,7 @@ export function PredictiveAnalyticsPage() {
 
         <div className="h-80 w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={forecastChart}>
+            <ComposedChart data={forecastChart}>
               <defs>
                 <linearGradient id="forecastFill" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.35} />
@@ -127,8 +127,8 @@ export function PredictiveAnalyticsPage() {
               </defs>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e8edf5" />
               <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#94a3b8" />
-              <YAxis yAxisId="forecast" tick={{ fontSize: 12 }} stroke="#94a3b8" />
-              <YAxis yAxisId="confidence" orientation="right" domain={[70, 100]} tick={{ fontSize: 12 }} stroke="#94a3b8" />
+              <YAxis yAxisId="forecast" tick={{ fontSize: 12 }} stroke="#94a3b8" label={{ value: 'Units', angle: -90, position: 'insideLeft', style: { fill: '#94a3b8', fontSize: 12 } }} />
+              <YAxis yAxisId="confidence" orientation="right" domain={[70, 100]} tick={{ fontSize: 12 }} stroke="#94a3b8" label={{ value: 'Confidence %', angle: 90, position: 'insideRight', style: { fill: '#94a3b8', fontSize: 12 } }} />
               <Tooltip
                 contentStyle={{
                   borderRadius: '12px',
@@ -136,9 +136,9 @@ export function PredictiveAnalyticsPage() {
                   boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
                 }}
               />
-              <Area yAxisId="forecast" type="monotone" dataKey="forecast" stroke="#0ea5e9" fill="url(#forecastFill)" strokeWidth={3} name="Forecasted waste" />
-              <Line yAxisId="confidence" type="monotone" dataKey="confidence" stroke="#22c55e" strokeWidth={3} dot={{ r: 4 }} name="Confidence %" />
-            </AreaChart>
+              <Area yAxisId="forecast" type="linear" dataKey="forecast" stroke="#0ea5e9" fill="url(#forecastFill)" strokeWidth={3} name="Forecasted waste" />
+              <Line yAxisId="confidence" type="linear" dataKey="confidence" stroke="#22c55e" strokeWidth={3} dot={{ r: 4 }} name="Confidence %" />
+            </ComposedChart>
           </ResponsiveContainer>
         </div>
       </section>

@@ -122,8 +122,8 @@ export function FefoTrackingPage() {
             <ComposedChart data={fefoChart}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e8edf5" />
               <XAxis dataKey="name" tick={{ fontSize: 12 }} stroke="#94a3b8" />
-              <YAxis yAxisId="days" tick={{ fontSize: 12 }} stroke="#94a3b8" />
-              <YAxis yAxisId="drop" orientation="right" tick={{ fontSize: 12 }} stroke="#94a3b8" />
+              <YAxis yAxisId="days" tick={{ fontSize: 12 }} stroke="#94a3b8" label={{ value: 'Days to Expiry', angle: -90, position: 'insideLeft', style: { fill: '#94a3b8', fontSize: 12 } }} />
+              <YAxis yAxisId="drop" orientation="right" tick={{ fontSize: 12 }} stroke="#94a3b8" label={{ value: 'Price Drop %', angle: 90, position: 'insideRight', style: { fill: '#94a3b8', fontSize: 12 } }} />
               <Tooltip
                 contentStyle={{
                   borderRadius: '12px',
@@ -137,7 +137,7 @@ export function FefoTrackingPage() {
                   <Cell key={item.name} fill={item.risk.color} />
                 ))}
               </Bar>
-              <Line yAxisId="drop" type="monotone" dataKey="priceDrop" name="Recommended price drop %" stroke="#0ea5e9" strokeWidth={3} />
+              <Line yAxisId="drop" type="linear" dataKey="priceDrop" name="Recommended price drop %" stroke="#0ea5e9" strokeWidth={3} />
             </ComposedChart>
           </ResponsiveContainer>
         </div>

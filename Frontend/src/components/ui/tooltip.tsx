@@ -87,21 +87,31 @@ function TooltipContent({
     children,
     className,
     sideOffset = 4,
+    align = "center",
     ...props
 }: {
     children: React.ReactNode;
     className?: string;
     sideOffset?: number;
+    align?: "center" | "start" | "end";
     [key: string]: any;
 }) {
     const { open } = React.useContext(TooltipContext);
     if (!open) return null;
 
+    const alignClass =
+        align === "end"
+            ? "right-0"
+            : align === "start"
+            ? "left-0"
+            : "left-1/2 -translate-x-1/2";
+
     return (
         <div
             role="tooltip"
             className={cn(
-                "absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 w-max max-w-xs rounded-md px-3 py-1.5 text-xs shadow-md",
+                "absolute bottom-full mb-2 z-[999] w-64 rounded-md px-3 py-2 text-xs shadow-md",
+                alignClass,
                 className
             )}
             {...props}

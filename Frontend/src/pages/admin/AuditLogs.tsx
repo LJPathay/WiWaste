@@ -1,113 +1,36 @@
-import { useState } from 'react';
-import { Search, Download, Info } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Search, Download, Info, Loader2 } from 'lucide-react';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
-
-interface AuditLog {
-  id: string;
-  action: string;
-  user: string;
-  role: string;
-  timestamp: string;
-  status: 'success' | 'warning' | 'error';
-}
-
-const MOCK_AUDIT_LOGS: AuditLog[] = [
-  {
-    id: '1',
-    action: 'Created product "Lucky Me! Pancit Canton"',
-    user: 'John Doe',
-    role: 'Owner/Administrator',
-    timestamp: '2026-07-09 14:30:25',
-    status: 'success',
-  },
-  {
-    id: '2',
-    action: 'Stock-in recorded for SKU: LM-PC-80',
-    user: 'Jane Smith',
-    role: 'Inventory',
-    timestamp: '2026-07-09 14:15:10',
-    status: 'success',
-  },
-  {
-    id: '3',
-    action: 'Failed login attempt',
-    user: 'Unknown',
-    role: 'N/A',
-    timestamp: '2026-07-09 13:45:00',
-    status: 'error',
-  },
-  {
-    id: '4',
-    action: 'Updated supplier "Nestlé Philippines"',
-    user: 'John Doe',
-    role: 'Owner/Administrator',
-    timestamp: '2026-07-09 12:30:15',
-    status: 'success',
-  },
-  {
-    id: '5',
-    action: 'Low stock alert: Coca-Cola 1.5L',
-    user: 'System',
-    role: 'N/A',
-    timestamp: '2026-07-09 11:20:00',
-    status: 'warning',
-  },
-  {
-    id: '6',
-    action: 'Deleted user account "Test User"',
-    user: 'John Doe',
-    role: 'Owner/Administrator',
-    timestamp: '2026-07-09 10:15:30',
-    status: 'success',
-  },
-  {
-    id: '7',
-    action: 'Generated inventory report',
-    user: 'Jane Smith',
-    role: 'Inventory',
-    timestamp: '2026-07-09 09:00:00',
-    status: 'success',
-  },
-  {
-    id: '8',
-    action: 'Changed system settings',
-    user: 'John Doe',
-    role: 'Owner/Administrator',
-    timestamp: '2026-07-09 08:30:45',
-    status: 'success',
-  },
-  {
-    id: '9',
-    action: 'Processed POS transaction #TXN-0042',
-    user: 'Maria Santos',
-    role: 'Cashier',
-    timestamp: '2026-07-09 08:05:10',
-    status: 'success',
-  },
-];
+import { auditLogs as auditLogsApi } from '../../services/api';
 
 export function AuditLogs() {
-  const [logs, setLogs] = useState<AuditLog[]>(MOCK_AUDIT_LOGS);
+  const [logs, setLogs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'All' | 'success' | 'warning' | 'error'>('All');
-  const [roleFilter, setRoleFilter] = useState<'All' | 'Owner/Administrator' | 'Inventory' | 'Cashier'>('All');
+  const [actionFilter, setActionFilter] = useState('');
+  const [entityTypeFilter, setEntityTypeFilter] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
-  const filteredLogs = logs.filter(log => {
-    const matchesSearch = log.action.toLowerCase().includes(search.toLowerCase()) ||
-                          log.user.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = statusFilter === 'All' || log.status === statusFilter;
-    const matchesRole = roleFilter === 'All' || log.role === roleFilter;
-    return matchesSearch && matchesStatus && matchesRole;
-  });
+  const fetchLogs = useCallback(() => {
+    setLoading(true);
+    auditLogsApi.list({
+      search: search || undefined,
+      action: actionFilter || undefined,
+      entity_type: entityTypeFilter || undefined,
+      page,
+    }).then((res: any) => {
+      const data = res.data ?? res;
+      setLogs(Array.isArray(data) ? data : []);
+      setTotalPages(res.last_page ?? 1);
+    }).catch(() => setLogs([]))
+    .finally(() => setLoading(false));
+  }, [search, actionFilter, entityTypeFilter, page]);
 
-  const getStatusBadge = (status: string) => {
-    const styles = {
-      success: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400',
-      warning: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400',
-      error: 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400',
-    };
-    return styles[status as keyof typeof styles] || styles.success;
-  };
+  useEffect(() => { fetchLogs(); }, [fetchLogs]);
+
+  const uniqueEntityTypes = [...new Set(logs.map((l: any) => l.entity_type))].filter(Boolean);
+  const uniqueActions = [...new Set(logs.map((l: any) => l.action))].filter(Boolean);
 
   return (
     <div className="space-y-6 w-full font-sans">
@@ -133,24 +56,20 @@ export function AuditLogs() {
         <div className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 dark:border-white/10">
           <div className="flex flex-wrap gap-2">
             <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as any)}
+              value={actionFilter}
+              onChange={(e) => { setActionFilter(e.target.value); setPage(1); }}
               className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-400 focus:outline-none focus:ring-1 focus:ring-[#006a61]"
             >
-              <option value="All">All Status</option>
-              <option value="success">Success</option>
-              <option value="warning">Warning</option>
-              <option value="error">Error</option>
+              <option value="">All Actions</option>
+              {uniqueActions.map(a => <option key={a} value={a}>{a}</option>)}
             </select>
             <select
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value as any)}
+              value={entityTypeFilter}
+              onChange={(e) => { setEntityTypeFilter(e.target.value); setPage(1); }}
               className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-400 focus:outline-none focus:ring-1 focus:ring-[#006a61]"
             >
-              <option value="All">All Roles</option>
-              <option value="Owner/Administrator">Owner/Administrator</option>
-              <option value="Inventory">Inventory</option>
-              <option value="Cashier">Cashier</option>
+              <option value="">All Entity Types</option>
+              {uniqueEntityTypes.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
 
@@ -160,44 +79,54 @@ export function AuditLogs() {
               type="text"
               placeholder="Search logs..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
               className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-white/10 pl-9 pr-3 py-2 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-700 dark:text-slate-250"
             />
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs text-left">
-            <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-450 border-b border-slate-200 dark:border-white/10 font-bold">
-              <tr>
-                <th className="px-6 py-3">Timestamp</th>
-                <th className="px-6 py-3">Action</th>
-                <th className="px-6 py-3">User</th>
-                <th className="px-6 py-3">Role</th>
-                <th className="px-6 py-3">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200 dark:divide-white/5">
-              {filteredLogs.map((log) => (
-                <tr key={log.id} className="hover:bg-slate-55/20 dark:hover:bg-white/5">
-                  <td className="px-6 py-4 text-slate-500 dark:text-slate-400 font-mono">{log.timestamp}</td>
-                  <td className="px-6 py-4 font-medium text-slate-900 dark:text-slate-100">{log.action}</td>
-                  <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{log.user}</td>
-                  <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{log.role}</td>
-                  <td className="px-6 py-4">
-                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${getStatusBadge(log.status)}`}>
-                      {log.status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        {loading ? (
+          <div className="p-12 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto text-slate-400" /></div>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs text-left">
+                <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-450 border-b border-slate-200 dark:border-white/10 font-bold">
+                  <tr>
+                    <th className="px-6 py-3">Timestamp</th>
+                    <th className="px-6 py-3">Action</th>
+                    <th className="px-6 py-3">User</th>
+                    <th className="px-6 py-3">Entity</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 dark:divide-white/5">
+                  {logs.map((log: any) => (
+                    <tr key={log.id} className="hover:bg-slate-55/20 dark:hover:bg-white/5">
+                      <td className="px-6 py-4 text-slate-500 dark:text-slate-400 font-mono">{log.timestamp}</td>
+                      <td className="px-6 py-4 font-medium text-slate-900 dark:text-slate-100">{log.action}</td>
+                      <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{log.user} <span className="text-slate-400">({log.role})</span></td>
+                      <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{log.entity_type}#{log.entity_id}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-        {filteredLogs.length === 0 && (
-          <div className="p-12 text-center">
-            <p className="text-sm text-slate-500 dark:text-slate-400">No logs found matching your filters.</p>
+            {logs.length === 0 && (
+              <div className="p-12 text-center">
+                <p className="text-sm text-slate-500 dark:text-slate-400">No logs found matching your filters.</p>
+              </div>
+            )}
+          </>
+        )}
+
+        {totalPages > 1 && (
+          <div className="px-6 py-3 border-t border-slate-200 dark:border-white/10 flex items-center justify-between text-xs text-slate-500">
+            <span>Page {page} of {totalPages}</span>
+            <div className="flex gap-2">
+              <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="px-3 py-1 rounded border border-slate-200 dark:border-white/10 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-800">Prev</button>
+              <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} className="px-3 py-1 rounded border border-slate-200 dark:border-white/10 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-800">Next</button>
+            </div>
           </div>
         )}
       </div>

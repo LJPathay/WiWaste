@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Inventory;
 use App\Models\StockMovement;
+use App\Models\AuditLog;
 use Illuminate\Http\Request;
 
 class InventoryController extends Controller
@@ -69,6 +70,16 @@ class InventoryController extends Controller
             'movement_date' => now(),
         ]);
 
+        AuditLog::create([
+            'user_id'       => $request->user()?->User_id ?? 1,
+            'action'        => "Stock-in: {$data['quantity']} units of {$inventory->product?->product_name}",
+            'entity_type'   => 'Inventory',
+            'entity_id'     => $inventory->inventory_id,
+            'old_values'    => null,
+            'new_values'    => json_encode(['current_stock' => $inventory->current_stock]),
+            'created_at'    => now(),
+        ]);
+
         return response()->json(['message' => 'Stock added.', 'new_stock' => $inventory->current_stock]);
     }
 
@@ -98,6 +109,16 @@ class InventoryController extends Controller
             'quantity'      => $data['quantity'],
             'remarks'       => $data['remarks'] ?? null,
             'movement_date' => now(),
+        ]);
+
+        AuditLog::create([
+            'user_id'       => $request->user()?->User_id ?? 1,
+            'action'        => "Stock-out: {$data['quantity']} units of {$inventory->product?->product_name}",
+            'entity_type'   => 'Inventory',
+            'entity_id'     => $inventory->inventory_id,
+            'old_values'    => null,
+            'new_values'    => json_encode(['current_stock' => $inventory->current_stock]),
+            'created_at'    => now(),
         ]);
 
         return response()->json(['message' => 'Stock removed.', 'new_stock' => $inventory->current_stock]);

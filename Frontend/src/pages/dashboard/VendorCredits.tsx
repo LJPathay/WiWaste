@@ -1,16 +1,18 @@
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis, LabelList } from 'recharts';
 import { AlertTriangle, ArrowLeft, PhilippinePeso, FileCheck, Info, TimerReset, XCircle } from 'lucide-react';
-import { useState, useEffect } from 'react';
 import { Link } from 'react-router';
-import { useDashboardData } from '../../hooks/useDashboardData';
-import { suppliers as suppliersApi, returns as returnsApi } from '../../services/api';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 
-const currencyFormatter = new Intl.NumberFormat('en-PH', {
-  style: 'currency',
-  currency: 'PHP',
-  maximumFractionDigits: 0,
-});
+const currencyFormatter = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 });
+
+const MOCK_VENDOR_RETURNS = [
+  { vendorId: 'VENDOR-001', vendorName: 'Nestlé Philippines', returnWindowDays: 30, eligibleCredit: 28500, returnDeadline: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), status: 'urgent' as const, returnItems: ['Nestlé Bear Brand 800g', 'Nestlé Coffee Creamer'] },
+  { vendorId: 'VENDOR-002', vendorName: 'Procter & Gamble', returnWindowDays: 45, eligibleCredit: 18200, returnDeadline: new Date(Date.now() + 12 * 24 * 60 * 60 * 1000), status: 'open' as const, returnItems: ['Safeguard Bar Soap 135g', 'Tide Powder 1kg'] },
+  { vendorId: 'VENDOR-003', vendorName: 'Coca-Cola Beverages', returnWindowDays: 20, eligibleCredit: 9500, returnDeadline: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000), status: 'urgent' as const, returnItems: ['Coca-Cola 1.5L'] },
+  { vendorId: 'VENDOR-004', vendorName: 'Del Monte Philippines', returnWindowDays: 30, eligibleCredit: 12400, returnDeadline: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), status: 'missed' as const, returnItems: ['Del Monte Tomato Sauce 250g', 'Del Monte Pineapple Tidbits'] },
+  { vendorId: 'VENDOR-005', vendorName: 'Unilever Philippines', returnWindowDays: 60, eligibleCredit: 32100, returnDeadline: new Date(Date.now() + 35 * 24 * 60 * 60 * 1000), status: 'open' as const, returnItems: ['Knorr Seasoning 1kg', 'Lux Soap Pack', 'Rexona Deodorant'] },
+  { vendorId: 'VENDOR-006', vendorName: 'San Miguel Corporation', returnWindowDays: 25, eligibleCredit: 7800, returnDeadline: new Date(Date.now() + 18 * 24 * 60 * 60 * 1000), status: 'open' as const, returnItems: ['San Miguel Pale Pilsen 6-pack'] },
+];
 
 function getDaysUntil(date: Date) {
   return Math.ceil((date.getTime() - Date.now()) / (24 * 60 * 60 * 1000));
@@ -23,47 +25,7 @@ function getDeadlineRisk(daysUntilDeadline: number) {
 }
 
 export function VendorCreditsPage() {
-  const { data, loading: dashLoading } = useDashboardData();
-  const [suppliersList, setSuppliersList] = useState<any[]>([]);
-  const [returnsList, setReturnsList] = useState<any[]>([]);
-  const [dataLoading, setDataLoading] = useState(true);
-
-  useEffect(() => {
-    Promise.all([
-      suppliersApi.list().catch(() => [] as any),
-      returnsApi.list().catch(() => [] as any),
-    ]).then(([s, r]) => {
-      setSuppliersList(s);
-      setReturnsList(r);
-    }).finally(() => setDataLoading(false));
-  }, []);
-
-  const loading = dashLoading || dataLoading;
-
-  if (loading) {
-    return (
-      <div className="space-y-6 animate-pulse">
-        <div className="h-28 rounded-2xl bg-slate-200 dark:bg-slate-800" />
-        <div className="grid gap-4 sm:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-28 rounded-3xl bg-slate-200 dark:bg-slate-800" />
-          ))}
-        </div>
-        <div className="h-80 rounded-3xl bg-slate-200 dark:bg-slate-800" />
-      </div>
-    );
-  }
-
-  const vendorReturns = (data?.vendorReturns ?? []).length > 0
-    ? data!.vendorReturns
-    : suppliersList.map((s: any, i) => ({
-        vendorId: `VENDOR-${s.id ?? i}`,
-        vendorName: s.name ?? s.supplier_name ?? `Supplier ${i + 1}`,
-        returnWindowDays: 30,
-        eligibleCredit: 0,
-        returnDeadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        status: 'pending' as const,
-      }));
+  const vendorReturns = MOCK_VENDOR_RETURNS;
 
   const vendorChart = vendorReturns.map((item) => {
     const daysUntilDeadline = getDaysUntil(item.returnDeadline);
@@ -80,7 +42,6 @@ export function VendorCreditsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
       <div className="flex items-center gap-2">
         <Link to="/dashboard?highlightKpi=2" className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-slate-200 dark:border-white/10 text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-white/10 dark:hover:text-slate-200 transition-colors" aria-label="Back to Dashboard"><ArrowLeft className="h-4 w-4" /></Link>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Vendor Credit Recovery</h1>
@@ -94,8 +55,6 @@ export function VendorCreditsPage() {
         </UITooltip>
       </div>
 
-
-      {/* Stat Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="rounded-3xl border border-emerald-100 bg-emerald-50 p-5 dark:border-emerald-500/20 dark:bg-emerald-500/5">
           <div className="flex items-center justify-between">
@@ -123,7 +82,6 @@ export function VendorCreditsPage() {
         </div>
       </div>
 
-      {/* Chart */}
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-slate-900">
         <div className="flex items-center justify-between gap-4 flex-wrap mb-5">
           <div className="flex items-center gap-2">
@@ -148,14 +106,7 @@ export function VendorCreditsPage() {
               <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e8edf5" />
               <XAxis type="number" tick={{ fontSize: 12 }} stroke="#94a3b8" />
               <YAxis type="category" dataKey="name" width={190} tick={{ fontSize: 12 }} stroke="#94a3b8" />
-              <Tooltip
-                formatter={(value) => currencyFormatter.format(Number(value))}
-                contentStyle={{
-                  borderRadius: '12px',
-                  border: '1px solid #e2e8f0',
-                  boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
-                }}
-              />
+              <Tooltip formatter={(value) => currencyFormatter.format(Number(value))} contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 24px rgba(0,0,0,0.08)' }} />
               <Bar dataKey="credit" radius={[0, 12, 12, 0]} name="Eligible credit">
                 <LabelList dataKey="credit" position="right" formatter={(value: number) => currencyFormatter.format(value)} style={{ fill: '#64748b', fontSize: 11, fontWeight: 600 }} />
                 {vendorChart.map((item) => (
@@ -167,7 +118,6 @@ export function VendorCreditsPage() {
         </div>
       </section>
 
-      {/* Note Banner */}
       <section className="rounded-3xl border border-slate-200 bg-slate-50 p-5 dark:border-white/10 dark:bg-slate-800/40">
         <div className="flex items-start gap-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-200 dark:bg-slate-700">
@@ -182,7 +132,6 @@ export function VendorCreditsPage() {
         </div>
       </section>
 
-      {/* Vendor Table */}
       <section className="rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-slate-900 overflow-hidden">
         <div className="p-5 border-b border-slate-200 dark:border-white/10 flex items-center gap-2">
           <FileCheck className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
@@ -230,8 +179,8 @@ export function VendorCreditsPage() {
                         {daysUntilDeadline < 0 ? `${Math.abs(daysUntilDeadline)}d overdue` : `${daysUntilDeadline}d left`}
                       </span>
                     </td>
-                    <td className="px-5 py-4 text-slate-600 dark:text-slate-400 max-w-[160px] truncate" title={(vendor as { returnItems?: string[] }).returnItems?.join(', ')}>
-                      {(vendor as { returnItems?: string[] }).returnItems?.slice(0, 2).join(', ') ?? '—'}{(vendor as { returnItems?: string[] }).returnItems && (vendor as { returnItems?: string[] }).returnItems!.length > 2 ? ` +${(vendor as { returnItems?: string[] }).returnItems!.length - 2}` : ''}
+                    <td className="px-5 py-4 text-slate-600 dark:text-slate-400 max-w-[160px] truncate" title={vendor.returnItems.join(', ')}>
+                      {vendor.returnItems.slice(0, 2).join(', ')}{vendor.returnItems.length > 2 ? ` +${vendor.returnItems.length - 2}` : ''}
                     </td>
                     <td className="px-5 py-4">
                       <span className={`rounded-full px-3 py-0.5 text-xs font-bold ${actionColor}`}>{actionLabel}</span>

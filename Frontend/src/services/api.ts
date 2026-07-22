@@ -323,3 +323,49 @@ export interface ApiDashboard {
   today_sales: number;
   recent_wastage: number;
 }
+
+// ─── Purchase Orders ──────────────────────────────────────
+export const purchaseOrders = {
+  list: (params?: { status?: string; search?: string; page?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.status) qs.set('status', params.status);
+    if (params?.search) qs.set('search', params.search);
+    if (params?.page) qs.set('page', String(params.page));
+    const q = qs.toString();
+    return request<any>(`/purchase-orders${q ? '?' + q : ''}`);
+  },
+  show: (id: number) => request<any>(`/purchase-orders/${id}`),
+  create: (data: any) =>
+    request('/purchase-orders', { method: 'POST', body: JSON.stringify(data) }),
+  updateStatus: (id: number, status: string) =>
+    request(`/purchase-orders/${id}`, { method: 'PUT', body: JSON.stringify({ status }) }),
+  receive: (id: number, items: { po_item_id: number; received_qty: number }[]) =>
+    request(`/purchase-orders/${id}/receive`, { method: 'POST', body: JSON.stringify({ items }) }),
+};
+
+// ─── Audit Logs ───────────────────────────────────────────
+export const auditLogs = {
+  list: (params?: { search?: string; action?: string; entity_type?: string; page?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.search) qs.set('search', params.search);
+    if (params?.action) qs.set('action', params.action);
+    if (params?.entity_type) qs.set('entity_type', params.entity_type);
+    if (params?.page) qs.set('page', String(params.page));
+    const q = qs.toString();
+    return request<any>(`/audit-logs${q ? '?' + q : ''}`);
+  },
+};
+
+// ─── Profit & Loss ────────────────────────────────────────
+export const profitLoss = {
+  overview: () => request<any>('/profit-loss/overview'),
+  byCategory: () => request<any[]>('/profit-loss/by-category'),
+  trends: (period?: string) => request<any[]>(`/profit-loss/trends${period ? '?period=' + period : ''}`),
+};
+
+// ─── Inventory Analytics ──────────────────────────────────
+export const inventoryAnalytics = {
+  turnover: () => request<any>('/analytics/turnover'),
+  overstock: () => request<any>('/analytics/overstock'),
+  deadStock: () => request<any>('/analytics/dead-stock'),
+};

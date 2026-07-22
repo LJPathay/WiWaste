@@ -20,6 +20,7 @@ import { ManageSuppliers } from "./pages/admin/ManageSuppliers";
 import { SystemSettings } from "./pages/admin/SystemSettings";
 import { GenerateReports } from "./pages/admin/GenerateReports";
 import { AuditLogs } from "./pages/admin/AuditLogs";
+import { PurchaseOrders } from "./pages/admin/PurchaseOrders";
 // Inventory pages
 import { StockIn } from "./pages/inventory/StockIn";
 import { StockOut } from "./pages/inventory/StockOut";
@@ -77,6 +78,7 @@ export const router = createBrowserRouter([
             { path: "owner/settings", Component: SystemSettings },
             { path: "owner/reports", Component: GenerateReports },
             { path: "owner/audit-logs", Component: AuditLogs },
+            { path: "owner/purchase-orders", Component: PurchaseOrders },
             { path: "owner/performance", Component: InventoryPerformance },
             { path: "owner/overstock", Component: OverstockRisks },
             { path: "owner/replenishment", Component: Replenishment },
@@ -90,6 +92,7 @@ export const router = createBrowserRouter([
             { path: "admin/settings", element: <Navigate to="/owner/settings" replace /> },
             { path: "admin/reports", element: <Navigate to="/owner/reports" replace /> },
             { path: "admin/audit-logs", element: <Navigate to="/owner/audit-logs" replace /> },
+            { path: "admin/purchase-orders", element: <Navigate to="/owner/purchase-orders" replace /> },
             // Inventory routes
             { path: "inventory/stock-in", Component: StockIn },
             { path: "inventory/stock-out", Component: StockOut },

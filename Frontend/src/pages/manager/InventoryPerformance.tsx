@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { TrendingUp, Award, Download, Info, Loader2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ComposedChart, Line, ReferenceLine } from 'recharts';
 import { Toast, useToast } from '../../components/ui/Toast';
@@ -27,11 +27,7 @@ const TOP_PRODUCTS = [
   { name: 'C2 Green Tea 500ml', category: 'Beverages', sold: 130, revenue: 2860, rate: '3.2x' },
 ];
 
-const currencyFormatter = new Intl.NumberFormat('en-PH', {
-  style: 'currency',
-  currency: 'PHP',
-  maximumFractionDigits: 0,
-});
+const currencyFormatter = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 });
 
 export function InventoryPerformance() {
   const { toasts, dismiss, success } = useToast();
@@ -60,7 +56,6 @@ export function InventoryPerformance() {
             </TooltipContent>
           </UITooltip>
         </div>
-
         </div>
         <button
           onClick={handleExport}
@@ -72,7 +67,6 @@ export function InventoryPerformance() {
         </button>
       </div>
 
-      {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: 'Active Catalog SKUs', value: '248', note: '98% stock accuracy rating' },
@@ -88,7 +82,6 @@ export function InventoryPerformance() {
         ))}
       </div>
 
-      {/* Chart + Top Products */}
       <div className="grid grid-cols-1 lg:grid-cols-[1.3fr_0.7fr] gap-6">
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 p-6 shadow-sm">
           <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-5">Monthly Turnover Index & Dead Stock (Full Year)</h3>
@@ -132,7 +125,6 @@ export function InventoryPerformance() {
         </div>
       </div>
 
-      {/* Full turnover table */}
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-200 dark:border-white/10">
           <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">Monthly Performance Breakdown</h3>

@@ -10,18 +10,21 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { AlertTriangle, ArrowLeft, Clock3, Info, Package, PackageSearch, RotateCcw, Tag } from 'lucide-react';
 import { Link } from 'react-router';
-import { useDashboardData } from '../../hooks/useDashboardData';
-import { products as productsApi } from '../../services/api';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 
-const currencyFormatter = new Intl.NumberFormat('en-PH', {
-  style: 'currency',
-  currency: 'PHP',
-  maximumFractionDigits: 0,
-});
+const currencyFormatter = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 });
+
+const MOCK_BATCHES = [
+  { batchId: 'BATCH-001', expiryDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), currentPrice: 45, decayRate: 0.12, recommendedPrice: 40, daysToExpiry: 2 },
+  { batchId: 'BATCH-002', expiryDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), currentPrice: 120, decayRate: 0.08, recommendedPrice: 100, daysToExpiry: 5 },
+  { batchId: 'BATCH-003', expiryDate: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000), currentPrice: 85, decayRate: 0.05, recommendedPrice: 72, daysToExpiry: 8 },
+  { batchId: 'BATCH-004', expiryDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), currentPrice: 200, decayRate: 0.03, recommendedPrice: 170, daysToExpiry: 14 },
+  { batchId: 'BATCH-005', expiryDate: new Date(Date.now() + 22 * 24 * 60 * 60 * 1000), currentPrice: 55, decayRate: 0.02, recommendedPrice: 50, daysToExpiry: 22 },
+  { batchId: 'BATCH-006', expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), currentPrice: 150, decayRate: 0.01, recommendedPrice: 140, daysToExpiry: 30 },
+];
 
 function getRisk(daysToExpiry: number) {
   if (daysToExpiry <= 3) return { label: 'Critical', color: '#ef4444', tone: 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300', border: 'border-l-rose-500' };
@@ -30,48 +33,10 @@ function getRisk(daysToExpiry: number) {
 }
 
 export function FefoTrackingPage() {
-  const { data: dashboardData, loading: dashLoading } = useDashboardData();
-  const [products, setProducts] = useState<any[]>([]);
-  const [prodsLoading, setProdsLoading] = useState(true);
-
-  useEffect(() => {
-    productsApi.list().then(all => {
-      const withExpiry = all
-        .filter(p => p.expiration_date)
-        .sort((a, b) => new Date(a.expiration_date!).getTime() - new Date(b.expiration_date!).getTime());
-      setProducts(withExpiry);
-    }).catch(() => {}).finally(() => setProdsLoading(false));
-  }, []);
-
-  const loading = dashLoading || prodsLoading;
-
-  const batchFEFO = products.length > 0
-    ? products.map((p, i) => ({
-        batchId: `BATCH-${String(i + 1).padStart(3, '0')}`,
-        expiryDate: new Date(p.expiration_date!),
-        currentPrice: p.selling_price,
-        decayRate: 0.1,
-        recommendedPrice: +(p.selling_price * 0.85).toFixed(2),
-        daysToExpiry: Math.max(0, Math.ceil((new Date(p.expiration_date!).getTime() - Date.now()) / (24 * 60 * 60 * 1000))),
-      }))
-    : (dashboardData?.batchFEFO ?? []);
-
-  if (loading) {
-    return (
-      <div className="space-y-6 animate-pulse">
-        <div className="h-28 rounded-2xl bg-slate-200 dark:bg-slate-800" />
-        <div className="grid gap-4 sm:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-24 rounded-3xl bg-slate-200 dark:bg-slate-800" />
-          ))}
-        </div>
-        <div className="h-80 rounded-3xl bg-slate-200 dark:bg-slate-800" />
-      </div>
-    );
-  }
+  const [batchFEFO] = useState(MOCK_BATCHES);
 
   const fefoChart = batchFEFO.map((item) => ({
-    name: item.batchId.replace('-2026-', ' '),
+    name: item.batchId,
     daysToExpiry: item.daysToExpiry,
     priceDrop: Number(((item.currentPrice - item.recommendedPrice) / item.currentPrice * 100).toFixed(1)),
     risk: getRisk(item.daysToExpiry),
@@ -79,9 +44,7 @@ export function FefoTrackingPage() {
   const criticalBatches = batchFEFO.filter((item) => item.daysToExpiry <= 3);
   const highRiskBatches = batchFEFO.filter((item) => item.daysToExpiry > 3 && item.daysToExpiry <= 7);
   const stableBatches = batchFEFO.filter((item) => item.daysToExpiry > 7);
-  const nearestBatch = [...batchFEFO].sort(
-    (firstBatch, secondBatch) => firstBatch.daysToExpiry - secondBatch.daysToExpiry
-  )[0];
+  const nearestBatch = [...batchFEFO].sort((a, b) => a.daysToExpiry - b.daysToExpiry)[0];
 
   const statCards = [
     { label: 'Total Batches', value: batchFEFO.length, icon: Package, color: 'text-slate-700 dark:text-slate-200', bg: 'bg-slate-50 dark:bg-slate-800', border: 'border-slate-200 dark:border-white/10' },
@@ -92,7 +55,6 @@ export function FefoTrackingPage() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
       <div className="flex items-center gap-2">
         <Link to="/dashboard?highlightKpi=3" className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-slate-200 dark:border-white/10 text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-white/10 dark:hover:text-slate-200 transition-colors" aria-label="Back to Dashboard"><ArrowLeft className="h-4 w-4" /></Link>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">FEFO Batch Tracking</h1>
@@ -106,7 +68,6 @@ export function FefoTrackingPage() {
         </UITooltip>
       </div>
 
-      {/* Stat Row */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {statCards.map((card) => {
           const Icon = card.icon;
@@ -122,7 +83,6 @@ export function FefoTrackingPage() {
         })}
       </div>
 
-      {/* Chart */}
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-slate-900">
         <div className="flex items-center justify-between gap-4 flex-wrap mb-5">
           <div className="flex items-center gap-2">
@@ -149,13 +109,7 @@ export function FefoTrackingPage() {
               <XAxis dataKey="name" tick={{ fontSize: 12 }} stroke="#94a3b8" />
               <YAxis yAxisId="days" tick={{ fontSize: 12 }} stroke="#94a3b8" label={{ value: 'Days to Expiry', angle: -90, position: 'insideLeft', style: { fill: '#94a3b8', fontSize: 12 } }} />
               <YAxis yAxisId="drop" orientation="right" tick={{ fontSize: 12 }} stroke="#94a3b8" label={{ value: 'Price Drop %', angle: 90, position: 'insideRight', style: { fill: '#94a3b8', fontSize: 12 } }} />
-              <Tooltip
-                contentStyle={{
-                  borderRadius: '12px',
-                  border: '1px solid #e2e8f0',
-                  boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
-                }}
-              />
+              <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 24px rgba(0,0,0,0.08)' }} />
               <ReferenceLine yAxisId="days" y={7} stroke="#f59e0b" strokeDasharray="4 4" label={{ value: '7-day risk', fontSize: 11, fill: '#f59e0b' }} />
               <Bar yAxisId="days" dataKey="daysToExpiry" name="Days to expiry" radius={[12, 12, 0, 0]}>
                 {fefoChart.map((item) => (
@@ -168,7 +122,6 @@ export function FefoTrackingPage() {
         </div>
       </section>
 
-      {/* Alert Banner */}
       <section className="rounded-3xl border border-amber-200 bg-amber-50 p-5 dark:border-amber-500/20 dark:bg-amber-500/5">
         <div className="flex items-start gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-amber-100 dark:bg-amber-500/20">
@@ -188,7 +141,6 @@ export function FefoTrackingPage() {
         </div>
       </section>
 
-      {/* Batch Table */}
       <section className="rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-slate-900 overflow-hidden">
         <div className="p-5 border-b border-slate-200 dark:border-white/10">
           <h3 className="text-lg font-bold text-[#0b1c30] dark:text-slate-100">Batch Vulnerability Table</h3>

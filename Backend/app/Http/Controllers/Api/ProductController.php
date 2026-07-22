@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\Inventory;
+use App\Models\AuditLog;
 use Illuminate\Http\Request;
 
 class ProductController extends Controller
@@ -74,6 +75,16 @@ class ProductController extends Controller
             'last_updated' => now(),
         ]);
 
+        AuditLog::create([
+            'user_id'       => $request->user()?->User_id ?? 1,
+            'action'        => "Created product \"{$product->product_name}\"",
+            'entity_type'   => 'Product',
+            'entity_id'     => $product->product_id,
+            'old_values'    => null,
+            'new_values'    => json_encode($data),
+            'created_at'    => now(),
+        ]);
+
         return response()->json([
             'message' => 'Product created.',
             'id'      => $product->product_id,
@@ -116,7 +127,19 @@ class ProductController extends Controller
             'expiration_date' => 'nullable|date',
             'status'          => 'sometimes|in:Active,Discontinued',
         ]);
+        $oldValues = $product->getOriginal();
         $product->update($data);
+
+        AuditLog::create([
+            'user_id'       => $request->user()?->User_id ?? 1,
+            'action'        => "Updated product \"{$product->product_name}\"",
+            'entity_type'   => 'Product',
+            'entity_id'     => $product->product_id,
+            'old_values'    => json_encode($oldValues),
+            'new_values'    => json_encode($data),
+            'created_at'    => now(),
+        ]);
+
         return response()->json(['message' => 'Product updated.']);
     }
 
@@ -126,6 +149,16 @@ class ProductController extends Controller
         $product = Product::findOrFail($id);
         $newStatus = $product->status === 'Discontinued' ? 'Active' : 'Discontinued';
         $product->update(['status' => $newStatus]);
+
+        AuditLog::create([
+            'user_id'       => $request->user()?->User_id ?? 1,
+            'action'        => "Product \"{$product->product_name}\" {$newStatus}",
+            'entity_type'   => 'Product',
+            'entity_id'     => $product->product_id,
+            'old_values'    => json_encode(['status' => $product->getOriginal()['status'] ?? 'Active']),
+            'new_values'    => json_encode(['status' => $newStatus]),
+            'created_at'    => now(),
+        ]);
 
         return response()->json([
             'message' => $newStatus === 'Discontinued' ? 'Product discontinued/archived.' : 'Product re-activated.',

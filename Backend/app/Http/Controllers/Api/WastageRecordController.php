@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\WastageRecord;
 use App\Models\Inventory;
 use App\Models\StockMovement;
+use App\Models\AuditLog;
 use Illuminate\Http\Request;
 
 class WastageRecordController extends Controller
@@ -61,6 +62,16 @@ class WastageRecordController extends Controller
             'remarks'       => 'Wastage: ' . $data['wastage_type'],
             'movement_date' => now(),
             'wastage_id'    => $wastage->wastage_id,
+        ]);
+
+        AuditLog::create([
+            'user_id'       => $userId,
+            'action'        => "Recorded {$data['wastage_type']} wastage: {$data['quantity']} units of {$wastage->product?->product_name}",
+            'entity_type'   => 'Wastage',
+            'entity_id'     => $wastage->wastage_id,
+            'old_values'    => null,
+            'new_values'    => json_encode($data),
+            'created_at'    => now(),
         ]);
 
         return response()->json(['message' => 'Wastage recorded.'], 201);

@@ -7,6 +7,7 @@ use App\Models\SalesTransaction;
 use App\Models\SalesItem;
 use App\Models\Inventory;
 use App\Models\StockMovement;
+use App\Models\AuditLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -124,6 +125,16 @@ class SalesTransactionController extends Controller
                     'sale_item_id'  => $saleItem->sales_item_id,
                 ]);
             }
+
+            AuditLog::create([
+                'user_id'       => $userId,
+                'action'        => "POS sale #{$transaction->transaction_id}: {$total} via {$data['payment_method']}",
+                'entity_type'   => 'Sales',
+                'entity_id'     => $transaction->transaction_id,
+                'old_values'    => null,
+                'new_values'    => json_encode(['total' => $total, 'items' => count($data['items'])]),
+                'created_at'    => now(),
+            ]);
 
             return response()->json([
                 'message'        => 'Transaction completed.',

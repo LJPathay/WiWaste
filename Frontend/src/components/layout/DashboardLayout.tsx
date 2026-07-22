@@ -51,6 +51,7 @@ const sidebarGroupsByRole: Record<UserRole, SidebarGroup[]> = {
         { to: '/owner/categories', label: 'Manage Categories', icon: Layers },
         { to: '/owner/suppliers', label: 'Manage Suppliers', icon: TrendingUp },
         { to: '/owner/settings', label: 'System Settings', icon: Settings },
+        { to: '/owner/purchase-orders', label: 'Purchase Orders', icon: Package },
         { to: '/owner/audit-logs', label: 'Audit Logs', icon: Activity },
       ],
     },

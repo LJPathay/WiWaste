@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ReturnTransaction;
 use App\Models\SalesItem;
 use App\Models\Inventory;
+use App\Models\AuditLog;
 use Illuminate\Http\Request;
 
 class ReturnTransactionController extends Controller
@@ -52,6 +53,15 @@ class ReturnTransactionController extends Controller
                 $inventory->save();
             }
         }
+
+        AuditLog::create([
+            'user_id'     => $data['user_id'],
+            'action'      => "Return: {$data['quantity_returned']} units, refund {$data['refund_amount']}",
+            'entity_type' => 'Return',
+            'entity_id'   => $return->return_id,
+            'new_values'  => json_encode($data),
+            'created_at'  => now(),
+        ]);
 
         return response()->json(['message' => 'Return recorded.', 'id' => $return->return_id], 201);
     }

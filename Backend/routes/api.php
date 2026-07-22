@@ -13,6 +13,10 @@ use App\Http\Controllers\Api\ReturnTransactionController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\SettingsController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\PurchaseOrderController;
+use App\Http\Controllers\Api\AuditLogController;
+use App\Http\Controllers\Api\ProfitLossController;
+use App\Http\Controllers\Api\InventoryAnalyticsController;
 
 /*
 |--------------------------------------------------------------------------
@@ -70,3 +74,25 @@ Route::put('/settings',  [SettingsController::class, 'update']);
 
 // Dashboard
 Route::get('/dashboard/overview', [DashboardController::class, 'overview']);
+
+// Purchase Orders
+Route::get('/purchase-orders',             [PurchaseOrderController::class, 'index']);
+Route::post('/purchase-orders',            [PurchaseOrderController::class, 'store']);
+Route::get('/purchase-orders/{id}',        [PurchaseOrderController::class, 'show']);
+Route::put('/purchase-orders/{id}',        [PurchaseOrderController::class, 'update']);
+Route::post('/purchase-orders/{id}/receive',[PurchaseOrderController::class, 'receive']);
+
+// Audit Logs
+Route::get('/audit-logs', [AuditLogController::class, 'index']);
+
+// Profit & Loss
+Route::prefix('/profit-loss')->group(function () {
+    Route::get('/overview',     [ProfitLossController::class, 'overview']);
+    Route::get('/by-category',  [ProfitLossController::class, 'byCategory']);
+    Route::get('/trends',       [ProfitLossController::class, 'trends']);
+});
+
+// Inventory Analytics
+Route::get('/analytics/turnover',  [InventoryAnalyticsController::class, 'turnover']);
+Route::get('/analytics/overstock', [InventoryAnalyticsController::class, 'overstock']);
+Route::get('/analytics/dead-stock',[InventoryAnalyticsController::class, 'deadStock']);

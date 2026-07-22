@@ -25,12 +25,15 @@ import {
   type SalesTransaction,
 } from '../../utils/cashierData';
 import { clearStoredSession, getStoredSession } from '../../utils/mockAuthAndFeatures';
-import { sales as salesApi } from '../../services/api';
+import { products as productsApi, sales as salesApi } from '../../services/api';
 
 interface CartLine {
   product: CashierProduct;
   quantity: number;
   discountPct?: number;
+  discountAmount?: number;
+  originalPrice?: number;
+  overrideReason?: string;
 }
 
 const PRODUCT_SLOT_KEYS = ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'] as const;
@@ -111,6 +114,9 @@ export function POSTerminal() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | 'GCash' | 'Maya'>('Cash');
   const [amountTendered, setAmountTendered] = useState('');
   
+  const [pluBuffer, setPluBuffer] = useState('');
+  const pluTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
   // Modals & States
   const [showCheckout, setShowCheckout] = useState(false);
   const [showDiscountModal, setShowDiscountModal] = useState(false);
@@ -118,6 +124,13 @@ export function POSTerminal() {
   const [showVoidModal, setShowVoidModal] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [selectedLineId, setSelectedLineId] = useState<string | null>(null);
+  const [discountType, setDiscountType] = useState<'percent' | 'fixed'>('percent');
+  const [fixedDiscountInput, setFixedDiscountInput] = useState('');
+  const [seniorPwdInfo, setSeniorPwdInfo] = useState<{ name: string; id: string } | null>(null);
+  const [showSeniorPwdModal, setShowSeniorPwdModal] = useState(false);
+  const [showPriceOverrideModal, setShowPriceOverrideModal] = useState(false);
+  const [overridePriceInput, setOverridePriceInput] = useState('');
+  const [overrideReasonInput, setOverrideReasonInput] = useState('');
   
   const [receipt, setReceipt] = useState<SalesTransaction | null>(null);
   const [showPrintedReceipt, setShowPrintedReceipt] = useState(false);
@@ -134,7 +147,6 @@ export function POSTerminal() {
   const [currentTime, setCurrentTime] = useState(new Date());
 
   const [currentTxnId, setCurrentTxnId] = useState(createTransactionId());
-  const [globalDiscountPct, setGlobalDiscountPct] = useState(0);
   const [hotkeys, setHotkeys] = useState<Record<HotkeyAction, string>>(() => {
     try {
       const saved = localStorage.getItem('pos_hotkeys');
@@ -242,8 +254,31 @@ export function POSTerminal() {
         setShowReturnModal(false);
         setShowVoidModal(false);
         setShowExitConfirm(false);
+        setShowSeniorPwdModal(false);
+        setShowPriceOverrideModal(false);
         setSearch('');
+        setPluBuffer('');
       } else if (document.activeElement !== barcodeRef.current) {
+        // ── PLU Quick-Code digit entry ──
+        if (/^[0-9]$/.test(e.key)) {
+          e.preventDefault();
+          setPluBuffer(prev => {
+            const next = prev + e.key;
+            if (pluTimerRef.current) clearTimeout(pluTimerRef.current);
+            pluTimerRef.current = setTimeout(() => {
+              handlePluLookup(next);
+            }, 300);
+            return next;
+          });
+          return;
+        }
+        if (e.key === 'Enter' && pluBuffer.length > 0) {
+          e.preventDefault();
+          if (pluTimerRef.current) clearTimeout(pluTimerRef.current);
+          handlePluLookup(pluBuffer);
+          return;
+        }
+
         // Product slot hotkeys — fire based on pinned order, not filtered index
         const slotIndex = PRODUCT_SLOT_KEYS.findIndex(
           (_, i) => hotkeys[`product_${i}` as ProductSlotKey] === e.key
@@ -271,8 +306,8 @@ export function POSTerminal() {
 
   const totalItems = cart.reduce((sum, l) => sum + l.quantity, 0);
   const subtotal = cart.reduce((sum, l) => sum + l.product.selling_price * l.quantity, 0);
-  const discountAmount = cart.reduce((sum, l) => sum + (l.product.selling_price * l.quantity * (l.discountPct || 0)), 0); 
-  const tax = isVatRegistered ? (subtotal - discountAmount) * 0.12 : 0; // 12% VAT if VAT registered, else Non-VAT (0%)
+  const discountAmount = cart.reduce((sum, l) => sum + (l.product.selling_price * l.quantity * (l.discountPct || 0)) + (l.discountAmount || 0), 0);
+  const tax = isVatRegistered ? (subtotal - discountAmount) * 0.12 : 0;
   const grandTotal = (subtotal - discountAmount) + tax;
   const tendered = Number(amountTendered || 0);
   const changeDue = paymentMethod === 'Cash' ? Math.max(0, tendered - grandTotal) : 0;
@@ -298,10 +333,44 @@ export function POSTerminal() {
   const pinnedOrderRef = useRef(pinnedOrder);
   useEffect(() => { pinnedOrderRef.current = pinnedOrder; }, [pinnedOrder]);
 
-  const addProduct = (product: CashierProduct) => {
+  const handlePluLookup = async (code: string) => {
+    const localMatch = cashierProducts.find(
+      p => p.plu_code === code || p.barcode === code || p.product_id.replace('P-', '') === code
+    );
+    if (localMatch) {
+      addProduct(localMatch);
+      return;
+    }
+    try {
+      const result = await productsApi.lookup(code);
+      const product: CashierProduct = {
+        product_id: `P-${String(result.id).padStart(4, '0')}`,
+        plu_code: result.plu_code ?? String(result.id),
+        category_id: `CAT-${result.category?.toUpperCase() ?? 'GEN'}`,
+        supplier_id: `SUP-${result.supplier?.toUpperCase() ?? 'GEN'}`,
+        barcode: result.sku,
+        product_name: result.name,
+        cost_price: result.cost_price,
+        selling_price: result.selling_price,
+        reorder_level: result.reorder_level,
+        expiration_date: result.expiration_date ?? '',
+        current_stock: result.stock,
+        image_url: undefined,
+      };
+      addProduct(product);
+    } catch {
+      error(`Product not found: ${code}`);
+    }
+    setPluBuffer('');
+  };
+
+  const addProduct = (product: CashierProduct, qtyOverride?: number) => {
+    const desiredQty = qtyOverride ?? 1;
     setCart(prev => {
       const existing = prev.find(l => l.product.product_id === product.product_id);
-      const newQty = existing ? Math.min(existing.quantity + 1, product.current_stock) : 1;
+      const newQty = existing
+        ? Math.min(existing.quantity + desiredQty, product.current_stock)
+        : Math.min(desiredQty, product.current_stock);
       setAction(`Added ${product.product_name} ×${newQty} to cart`);
       if (existing) {
         return prev.map(l =>
@@ -310,10 +379,9 @@ export function POSTerminal() {
             : l
         );
       }
-      return [...prev, { product, quantity: 1, discountPct: 0 }];
+      return [...prev, { product, quantity: newQty, discountPct: 0 }];
     });
     setSearch('');
-    // do not auto-focus search bar after adding — let user keep using hotkeys
   };
 
   const updateQty = (productId: string, qty: number) => {
@@ -338,22 +406,53 @@ export function POSTerminal() {
     setCart(prev => prev.filter(l => l.product.product_id !== productId));
   };
 
-  const applyDiscount = (pct: number) => {
-    if (pct > 0 && !selectedLineId) {
+  const applyDiscount = (pct: number, fixedAmount?: number) => {
+    if (pct > 0 && !selectedLineId && !fixedAmount) {
       error('Please select an item first.');
       return;
     }
     
     if (selectedLineId) {
-      setCart(prev => prev.map(l => l.product.product_id === selectedLineId ? { ...l, discountPct: pct } : l));
-      success(`Applied ${pct * 100}% discount to item`);
+      if (fixedAmount !== undefined) {
+        setCart(prev => prev.map(l => l.product.product_id === selectedLineId ? { ...l, discountAmount: fixedAmount, discountPct: 0 } : l));
+        success(`Applied ₱${fixedAmount} discount to item`);
+      } else {
+        setCart(prev => prev.map(l => l.product.product_id === selectedLineId ? { ...l, discountPct: pct, discountAmount: 0 } : l));
+        success(`Applied ${pct * 100}% discount to item`);
+      }
     } else {
-      // Clear discount (pct == 0) clears all selected or global? 
-      // The button says "Clear Discount". Let's clear all.
-      setCart(prev => prev.map(l => ({ ...l, discountPct: 0 })));
+      setCart(prev => prev.map(l => ({ ...l, discountPct: 0, discountAmount: 0 })));
       success('Cleared discounts');
     }
     setShowDiscountModal(false);
+  };
+
+  const handleSeniorPwdConfirm = () => {
+    if (!seniorPwdInfo?.name?.trim() || !seniorPwdInfo?.id?.trim()) {
+      error('Please enter both name and ID number.');
+      return;
+    }
+    if (selectedLineId) {
+      setCart(prev => prev.map(l => l.product.product_id === selectedLineId ? { ...l, discountPct: 0.20, discountAmount: 0 } : l));
+      success('Applied 20% Senior/PWD discount');
+    }
+    setShowSeniorPwdModal(false);
+    setShowDiscountModal(false);
+  };
+
+  const handlePriceOverride = () => {
+    if (!selectedLineId) { error('Select an item first.'); return; }
+    const price = Number(overridePriceInput);
+    if (isNaN(price) || price <= 0) { error('Enter a valid price.'); return; }
+    setCart(prev => prev.map(l =>
+      l.product.product_id === selectedLineId
+        ? { ...l, product: { ...l.product, selling_price: price }, originalPrice: l.product.selling_price, overrideReason: overrideReasonInput || undefined, discountPct: 0, discountAmount: 0 }
+        : l
+    ));
+    success(`Price overridden to ${formatCurrency(price)}${overrideReasonInput ? ` — ${overrideReasonInput}` : ''}`);
+    setShowPriceOverrideModal(false);
+    setOverridePriceInput('');
+    setOverrideReasonInput('');
   };
 
   const voidItem = () => {
@@ -366,8 +465,8 @@ export function POSTerminal() {
 
   const voidTransaction = () => {
     setCart([]);
-    setGlobalDiscountPct(0);
     setSelectedLineId(null);
+    setSeniorPwdInfo(null);
     success('Transaction voided.');
   };
 
@@ -381,10 +480,15 @@ export function POSTerminal() {
         payment_method: paymentMethod as any,
         amount_tendered: paymentMethod === 'Cash' ? tendered : grandTotal,
         change_due: paymentMethod === 'Cash' ? changeDue : 0,
+        senior_pwd_name: seniorPwdInfo?.name ?? null,
+        senior_pwd_id: seniorPwdInfo?.id ?? null,
         items: cart.map(l => ({
           product_id: Number(l.product.product_id),
           quantity: l.quantity,
-          unit_price: l.product.selling_price * (1 - (l.discountPct || 0)),
+          unit_price: l.product.selling_price * (1 - (l.discountPct || 0)) - (l.discountAmount || 0),
+          discount_pct: l.discountPct ?? 0,
+          discount_amount: l.discountAmount ?? 0,
+          override_reason: l.overrideReason ?? null,
         })),
       });
     } catch (err: any) {
@@ -401,6 +505,8 @@ export function POSTerminal() {
       amount_tendered: paymentMethod === 'Cash' ? tendered : grandTotal,
       change_due: paymentMethod === 'Cash' ? changeDue : 0,
       status: 'Completed',
+      seniorPwdName: seniorPwdInfo?.name ?? null,
+      seniorPwdId: seniorPwdInfo?.id ?? null,
       items: cart.map((l, i) => ({
         sales_item_id: `SI-${Date.now()}-${i + 1}`,
         transaction_id: currentTxnId,
@@ -408,7 +514,7 @@ export function POSTerminal() {
         product_name: l.product.product_name,
         quantity: l.quantity,
         unit_price: l.product.selling_price,
-        subtotal: l.product.selling_price * l.quantity * (1 - (l.discountPct || 0)),
+        subtotal: l.product.selling_price * l.quantity * (1 - (l.discountPct || 0)) - (l.discountAmount || 0),
       })),
     };
 
@@ -430,6 +536,7 @@ export function POSTerminal() {
     setShowPrintedReceipt(false);
     setSelectedLineId(null);
     setCurrentTxnId(createTransactionId());
+    setSeniorPwdInfo(null);
     barcodeRef.current?.focus();
   };
 
@@ -508,6 +615,11 @@ export function POSTerminal() {
                   placeholder={`Search product or scan barcode... (${hotkeys.focusSearch})`}
                   className="w-full pl-12 pr-4 py-3 bg-[#F8FAFC] dark:bg-slate-700 border border-[#E5E7EB] dark:border-slate-600 rounded-xl text-sm font-medium text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-transparent transition-all shadow-inner"
                 />
+                {pluBuffer.length > 0 && (
+                  <div className="absolute top-1/2 -translate-y-1/2 right-3 bg-[#0F766E] text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-in fade-in">
+                    PLU: {pluBuffer}
+                  </div>
+                )}
               </div>
               <button 
                 className="w-[25%] flex items-center justify-center gap-2 bg-white dark:bg-slate-700 border border-[#E5E7EB] dark:border-slate-600 text-slate-700 dark:text-slate-200 px-4 py-3 rounded-xl text-sm font-bold hover:bg-[#F8FAFC] dark:hover:bg-slate-600 hover:border-[#0F766E] hover:text-[#0F766E] transition-all shrink-0 shadow-sm"
@@ -608,7 +720,7 @@ export function POSTerminal() {
                       <p className="text-[11px] font-bold text-slate-800 dark:text-slate-100 leading-tight line-clamp-2 mb-1">{product.product_name}</p>
                       <div className="flex items-center justify-between mt-auto">
                         <p className="text-xs font-black text-slate-900 dark:text-slate-100">{formatCurrency(product.selling_price)}</p>
-                        <button className="bg-[#16A34A] text-white w-5 h-5 rounded flex items-center justify-center hover:bg-[#15803d]">
+                        <button className="flex items-center justify-center w-5 h-5 rounded bg-[#16A34A] text-white hover:bg-[#15803d]">
                           <Plus className="w-3 h-3" />
                         </button>
                       </div>
@@ -750,10 +862,12 @@ export function POSTerminal() {
                 <span>Subtotal</span>
                 <span className="font-bold text-slate-800 dark:text-slate-100">{formatCurrency(subtotal)}</span>
               </div>
-              <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400 font-medium">
-                <span>Discount</span>
-                <span className="font-bold text-slate-800 dark:text-slate-100">-{formatCurrency(discountAmount)}</span>
-              </div>
+              {discountAmount > 0 && (
+                <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400 font-medium">
+                  <span>Item Discount</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-100">-{formatCurrency(discountAmount)}</span>
+                </div>
+              )}
               <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400 font-medium">
                 <span>VAT (12%)</span>
                 <span className="font-bold text-slate-800 dark:text-slate-100">{formatCurrency(tax)}</span>
@@ -810,6 +924,23 @@ export function POSTerminal() {
             <Trash2 className="w-4 h-4" /> Void Item
             <span className="ml-1 text-[9px] text-slate-400 dark:text-slate-500 bg-slate-200 dark:bg-slate-600 px-1 rounded">{hotkeys.voidItem}</span>
           </button>
+          <button 
+            onClick={() => {
+              if (!selectedLineId) { error('Select an item first.'); return; }
+              const line = cart.find(l => l.product.product_id === selectedLineId);
+              if (line) setOverridePriceInput(String(line.product.selling_price));
+              setShowPriceOverrideModal(true);
+            }}
+            disabled={!selectedLineId}
+            className={`flex items-center justify-center gap-2 px-4 py-2 border rounded-lg text-xs font-bold transition-all ${
+              selectedLineId
+                ? 'bg-[#F8FAFC] dark:bg-slate-700 border-[#E5E7EB] dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-amber-500 hover:text-amber-600'
+                : 'text-slate-400 cursor-not-allowed opacity-50'
+            }`}
+          >
+            Override Price
+          </button>
+
           <div className="flex items-center gap-1 bg-[#F8FAFC] dark:bg-slate-700 border border-[#E5E7EB] dark:border-slate-600 rounded-lg overflow-hidden">
             <button
               onClick={() => { setDraftHotkeys(hotkeys); setShowHotkeySettings(true); }}
@@ -830,6 +961,7 @@ export function POSTerminal() {
               {hotkeysEnabled ? 'ON' : 'OFF'}
             </button>
           </div>
+
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -967,11 +1099,53 @@ export function POSTerminal() {
             <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
               <Percent className="w-5 h-5 text-[#0F766E]" /> Apply Discount
             </h3>
-            <div className="grid grid-cols-2 gap-3 mb-6">
-              <button onClick={() => applyDiscount(0.05)} className="py-3 border border-[#E5E7EB] dark:border-slate-600 rounded-lg font-bold text-slate-700 dark:text-slate-200 hover:border-[#0F766E] hover:text-[#0F766E]">5% OFF</button>
-              <button onClick={() => applyDiscount(0.10)} className="py-3 border border-[#E5E7EB] dark:border-slate-600 rounded-lg font-bold text-slate-700 dark:text-slate-200 hover:border-[#0F766E] hover:text-[#0F766E]">10% OFF</button>
-              <button onClick={() => applyDiscount(0.20)} className="py-3 border border-[#E5E7EB] dark:border-slate-600 rounded-lg font-bold col-span-2 text-[#0F766E] bg-[#E8F7F2] dark:bg-[#0F766E]/20 border-[#0F766E]/30">20% Senior/PWD</button>
+
+            {/* Discount Type Toggle */}
+            <div className="flex rounded-lg border border-[#E5E7EB] dark:border-slate-600 overflow-hidden mb-4">
+              <button
+                onClick={() => setDiscountType('percent')}
+                className={`flex-1 py-2 text-xs font-bold transition-colors ${discountType === 'percent' ? 'bg-[#0F766E] text-white' : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}
+              >
+                Percentage (%)
+              </button>
+              <button
+                onClick={() => setDiscountType('fixed')}
+                className={`flex-1 py-2 text-xs font-bold transition-colors ${discountType === 'fixed' ? 'bg-[#0F766E] text-white' : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}
+              >
+                Fixed Amount (₱)
+              </button>
             </div>
+
+            {discountType === 'percent' ? (
+              <div className="grid grid-cols-2 gap-3 mb-6">
+                <button onClick={() => applyDiscount(0.05)} className="py-3 border border-[#E5E7EB] dark:border-slate-600 rounded-lg font-bold text-slate-700 dark:text-slate-200 hover:border-[#0F766E] hover:text-[#0F766E]">5% OFF</button>
+                <button onClick={() => applyDiscount(0.10)} className="py-3 border border-[#E5E7EB] dark:border-slate-600 rounded-lg font-bold text-slate-700 dark:text-slate-200 hover:border-[#0F766E] hover:text-[#0F766E]">10% OFF</button>
+                <button onClick={() => { setShowSeniorPwdModal(true); }} className="py-3 border border-[#E5E7EB] dark:border-slate-600 rounded-lg font-bold col-span-2 text-[#0F766E] bg-[#E8F7F2] dark:bg-[#0F766E]/20 border-[#0F766E]/30">20% Senior/PWD</button>
+              </div>
+            ) : (
+              <div className="mb-6">
+                <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-2">Discount Amount (₱)</label>
+                <input
+                  type="number"
+                  autoFocus
+                  value={fixedDiscountInput}
+                  onChange={e => setFixedDiscountInput(e.target.value)}
+                  placeholder="0.00"
+                  className="w-full px-4 py-3 bg-[#F8FAFC] dark:bg-slate-700 border border-[#E5E7EB] dark:border-slate-600 rounded-xl text-lg font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-transparent"
+                />
+                <button
+                  onClick={() => {
+                    const amt = Number(fixedDiscountInput);
+                    if (isNaN(amt) || amt <= 0) { error('Enter a valid amount.'); return; }
+                    applyDiscount(0, amt);
+                    setFixedDiscountInput('');
+                  }}
+                  className="w-full mt-3 py-3 bg-[#0F766E] text-white font-bold rounded-lg hover:bg-[#0d615b]"
+                >
+                  Apply ₱{Number(fixedDiscountInput || 0).toFixed(2)} Discount
+                </button>
+              </div>
+            )}
             <div className="flex gap-2">
               <button onClick={() => setShowDiscountModal(false)} className="flex-1 py-2 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600">Cancel (Esc)</button>
               <button onClick={() => applyDiscount(0)} className="flex-1 py-2 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 font-bold rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700">Clear Discount</button>
@@ -992,6 +1166,86 @@ export function POSTerminal() {
             <div className="flex gap-2">
               <button onClick={() => setShowReturnModal(false)} className="flex-1 py-2 bg-slate-100 text-slate-600 font-bold rounded-lg hover:bg-slate-200">Cancel (Esc)</button>
               <button onClick={() => { success('Return processed'); setShowReturnModal(false); }} className="flex-1 py-2 bg-[#0F766E] text-white font-bold rounded-lg hover:bg-[#0d615b]">Find Receipt</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Senior/PWD ID Modal */}
+      {showSeniorPwdModal && (
+        <div className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-sm overflow-hidden p-6 animate-in fade-in zoom-in-95 duration-200">
+            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-2 flex items-center gap-2">
+              <Percent className="w-5 h-5 text-[#0F766E]" /> Senior/PWD Discount
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">Enter customer details to apply 20% discount.</p>
+            <div className="space-y-3 mb-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">Full Name</label>
+                <input
+                  type="text"
+                  autoFocus
+                  value={seniorPwdInfo?.name ?? ''}
+                  onChange={e => setSeniorPwdInfo(prev => ({ ...prev, name: e.target.value, id: prev?.id ?? '' }))}
+                  placeholder="e.g. Juan Dela Cruz"
+                  className="w-full px-4 py-3 bg-[#F8FAFC] dark:bg-slate-700 border border-[#E5E7EB] dark:border-slate-600 rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">OSCA / PWD ID Number</label>
+                <input
+                  type="text"
+                  value={seniorPwdInfo?.id ?? ''}
+                  onChange={e => setSeniorPwdInfo(prev => ({ ...prev, id: e.target.value, name: prev?.name ?? '' }))}
+                  placeholder="e.g. OSCA-1234-56"
+                  className="w-full px-4 py-3 bg-[#F8FAFC] dark:bg-slate-700 border border-[#E5E7EB] dark:border-slate-600 rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-transparent"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => { setShowSeniorPwdModal(false); setSeniorPwdInfo(null); }} className="flex-1 py-2 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600">Cancel (Esc)</button>
+              <button onClick={handleSeniorPwdConfirm} className="flex-1 py-2 bg-[#0F766E] text-white font-bold rounded-lg hover:bg-[#0d615b]">Apply 20% Discount</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Price Override Modal */}
+      {showPriceOverrideModal && (
+        <div className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-sm overflow-hidden p-6 animate-in fade-in zoom-in-95 duration-200">
+            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-2 flex items-center gap-2">
+              <Percent className="w-5 h-5 text-amber-500" /> Override Price
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">Change the selling price for the selected item.</p>
+            <div className="space-y-3 mb-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">New Price (₱)</label>
+                <input
+                  type="number"
+                  autoFocus
+                  value={overridePriceInput}
+                  onChange={e => setOverridePriceInput(e.target.value)}
+                  placeholder="0.00"
+                  step="0.01"
+                  min="0"
+                  className="w-full px-4 py-3 bg-[#F8FAFC] dark:bg-slate-700 border border-[#E5E7EB] dark:border-slate-600 rounded-xl text-lg font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">Reason (optional)</label>
+                <input
+                  type="text"
+                  value={overrideReasonInput}
+                  onChange={e => setOverrideReasonInput(e.target.value)}
+                  placeholder="e.g. Shelf tag mismatch"
+                  className="w-full px-4 py-3 bg-[#F8FAFC] dark:bg-slate-700 border border-[#E5E7EB] dark:border-slate-600 rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => { setShowPriceOverrideModal(false); setOverridePriceInput(''); setOverrideReasonInput(''); }} className="flex-1 py-2 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600">Cancel (Esc)</button>
+              <button onClick={handlePriceOverride} className="flex-1 py-2 bg-amber-500 text-white font-bold rounded-lg hover:bg-amber-600">Apply Override</button>
             </div>
           </div>
         </div>
@@ -1051,10 +1305,16 @@ export function POSTerminal() {
                     <span>Subtotal</span>
                     <span>{formatCurrency(subtotal)}</span>
                   </div>
-                  {globalDiscountPct > 0 && (
+                  {discountAmount > 0 && (
                     <div className="flex justify-between items-center text-white/80 text-sm font-medium">
-                      <span>Discount ({globalDiscountPct * 100}%)</span>
+                      <span>Discount</span>
                       <span>-{formatCurrency(discountAmount)}</span>
+                    </div>
+                  )}
+                  {seniorPwdInfo && (
+                    <div className="flex justify-between items-center text-white/80 text-sm font-medium">
+                      <span>Senior/PWD</span>
+                      <span className="text-[10px]">{seniorPwdInfo.name}</span>
                     </div>
                   )}
                   <div className="flex justify-between items-center text-white/80 text-sm font-medium">
@@ -1119,9 +1379,20 @@ export function POSTerminal() {
                     />
                   </div>
                   
-                  {/* Preset Buttons */}
-                  <div className="grid grid-cols-4 gap-2 mb-4">
-                    {[100, 500, 1000].map((amt) => (
+                  {/* Preset Buttons — Bills + Coins */}
+                  <div className="grid grid-cols-5 gap-2 mb-2">
+                    {[1, 5, 10, 20, 50].map((amt) => (
+                      <button
+                        key={amt}
+                        onClick={() => setAmountTendered(amt.toString())}
+                        className={`py-2 bg-white border border-[#E5E7EB] text-slate-700 text-xs font-bold rounded-xl hover:border-[#0F766E] hover:text-[#0F766E] transition-colors shadow-sm ${amt <= 10 ? 'text-amber-600' : ''}`}
+                      >
+                        {amt >= 20 ? `₱${amt}` : `${amt}`}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-5 gap-2 mb-4">
+                    {[100, 200, 500, 1000].map((amt) => (
                       <button
                         key={amt}
                         onClick={() => setAmountTendered(amt.toString())}
@@ -1134,7 +1405,7 @@ export function POSTerminal() {
                         onClick={() => setAmountTendered(Math.ceil(grandTotal).toString())}
                         className="py-3 bg-[#E8F7F2] border border-[#0F766E]/30 text-[#0F766E] text-sm font-bold rounded-xl hover:bg-[#d1f4e8] transition-colors shadow-sm"
                       >
-                        Exact Amount
+                        Exact
                     </button>
                   </div>
                 </div>
@@ -1233,6 +1504,18 @@ export function POSTerminal() {
                   <span>Subtotal</span>
                   <span>{formatCurrency(receipt.total_amount - (isVatRegistered ? receipt.total_amount * 0.12 : 0))}</span>
                 </div>
+                {receipt.seniorPwdName && (
+                  <div className="flex justify-between text-[10px]">
+                    <span>Senior/PWD</span>
+                    <span className="text-right">{receipt.seniorPwdName}</span>
+                  </div>
+                )}
+                {receipt.seniorPwdId && (
+                  <div className="flex justify-between text-[10px]">
+                    <span>ID No.</span>
+                    <span>{receipt.seniorPwdId}</span>
+                  </div>
+                )}
                 {isVatRegistered && (
                   <div className="flex justify-between">
                     <span>VAT (12%)</span>
@@ -1337,6 +1620,18 @@ export function POSTerminal() {
               <span>Subtotal:</span>
               <span>{formatCurrency(receipt.total_amount - (isVatRegistered ? receipt.total_amount * 0.12 : 0))}</span>
             </div>
+            {receipt.seniorPwdName && (
+              <div className="flex-row-item" style={{ fontSize: '9px' }}>
+                <span>Senior/PWD:</span>
+                <span>{receipt.seniorPwdName}</span>
+              </div>
+            )}
+            {receipt.seniorPwdId && (
+              <div className="flex-row-item" style={{ fontSize: '9px' }}>
+                <span>ID No:</span>
+                <span>{receipt.seniorPwdId}</span>
+              </div>
+            )}
             {isVatRegistered && (
               <div className="flex-row-item">
                 <span>VAT (12%):</span>

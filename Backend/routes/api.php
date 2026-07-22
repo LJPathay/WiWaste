@@ -32,6 +32,7 @@ Route::apiResource('/suppliers',  SupplierController::class);
 
 // Products
 Route::apiResource('/products', ProductController::class);
+Route::get('/products/lookup/{code}', [ProductController::class, 'lookup']);
 
 // Inventory
 Route::get('/inventory',             [InventoryController::class, 'index']);

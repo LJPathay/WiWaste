@@ -1,17 +1,21 @@
 import React, { useState } from 'react';
 import { ClipboardList, Plus, Edit2, Archive, Info, Loader2, X } from 'lucide-react';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
-import { useApi } from '../../hooks/useApi';
+import { Toast, useToast, ConfirmDialog } from '../../components/ui/Toast';
+import { useOptimisticList } from '../../hooks/useOptimisticList';
 import { categories as categoriesApi, type ApiCategory } from '../../services/api';
 
 export function ManageCategories() {
-  const { data: categoryList, loading, error, refetch } = useApi<ApiCategory[]>(categoriesApi.list);
+  const { toasts, dismiss, success, error } = useToast();
+  const { data: categoryList, loading, error: fetchError, addItem, updateItem, removeItem } = useOptimisticList(categoriesApi.list);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<ApiCategory | null>(null);
   const [name, setName] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [deleteName, setDeleteName] = useState('');
 
   const categories = categoryList ?? [];
 
@@ -21,10 +25,10 @@ export function ManageCategories() {
     setSubmitting(true);
     setFormError('');
     try {
-      await categoriesApi.create(name);
+      const created = await categoriesApi.create(name) as ApiCategory;
       setName('');
       setIsAddOpen(false);
-      refetch();
+      addItem(created);
     } catch (err: any) {
       setFormError(err.message ?? 'Failed to add category');
     } finally {
@@ -38,11 +42,11 @@ export function ManageCategories() {
     setSubmitting(true);
     setFormError('');
     try {
-      await categoriesApi.update(editingCategory.id, name);
+      const updated = await categoriesApi.update(editingCategory.id, name) as ApiCategory;
       setName('');
       setIsEditOpen(false);
       setEditingCategory(null);
-      refetch();
+      updateItem(editingCategory.id, updated);
     } catch (err: any) {
       setFormError(err.message ?? 'Failed to update category');
     } finally {
@@ -51,13 +55,14 @@ export function ManageCategories() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this category?')) return;
     try {
       await categoriesApi.delete(id);
-      refetch();
+      removeItem(id);
+      success('Category deleted successfully.');
     } catch (err: any) {
-      alert(err.message ?? 'Failed to delete category');
+      error(err.message ?? 'Failed to delete category');
     }
+    setDeletingId(null);
   };
 
   const openEdit = (cat: ApiCategory) => {
@@ -74,9 +79,9 @@ export function ManageCategories() {
     </div>
   );
 
-  if (error) return (
+  if (fetchError) return (
     <div className="p-6 bg-red-50 dark:bg-red-900/20 rounded-xl text-red-600 dark:text-red-400">
-      Failed to load categories: {error}
+      Failed to load categories: {fetchError}
     </div>
   );
 
@@ -128,7 +133,7 @@ export function ManageCategories() {
                       <Edit2 className="h-3.5 w-3.5" /> Edit
                     </button>
                     <button
-                      onClick={() => handleDelete(cat.id)}
+                      onClick={() => { setDeletingId(cat.id); setDeleteName(cat.name); }}
                       className="inline-flex items-center gap-1 text-xs font-bold text-red-500 hover:text-red-700 hover:underline"
                     >
                       <Archive className="h-3.5 w-3.5" /> Delete
@@ -190,6 +195,17 @@ export function ManageCategories() {
           </div>
         </div>
       )}
+      {deletingId && (
+        <ConfirmDialog
+          message={`Are you sure you want to delete "${deleteName}"? This operation cannot be undone.`}
+          confirmLabel="Delete"
+          danger
+          onConfirm={() => handleDelete(deletingId)}
+          onCancel={() => setDeletingId(null)}
+        />
+      )}
+
+      <Toast toasts={toasts} onDismiss={dismiss} />
     </div>
   );
 }

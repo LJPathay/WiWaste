@@ -9,10 +9,24 @@ use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $query = Product::with(['category', 'supplier', 'inventory']);
+
+        if ($search = $request->input('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('product_name', 'like', "%{$search}%")
+                  ->orWhere('barcode', 'like', "%{$search}%");
+            });
+        }
+
+        if ($categoryId = $request->input('category_id')) {
+            $query->where('category_id', $categoryId);
+        }
+
+        $limit = min((int) $request->input('per_page', 500), 1000);
         return response()->json(
-            Product::with(['category', 'supplier', 'inventory'])->get()->map(fn ($p) => [
+            $query->take($limit)->get()->map(fn ($p) => [
                 'id'              => $p->product_id,
                 'name'            => $p->product_name,
                 'sku'             => $p->barcode,
@@ -116,6 +130,39 @@ class ProductController extends Controller
         return response()->json([
             'message' => $newStatus === 'Discontinued' ? 'Product discontinued/archived.' : 'Product re-activated.',
             'status'  => $newStatus,
+        ]);
+    }
+
+    public function lookup($code)
+    {
+        $product = Product::where('barcode', $code)->first();
+
+        if (!$product && is_numeric($code) && strlen($code) <= 6) {
+            $product = Product::find((int) $code);
+        }
+
+        if (!$product) {
+            return response()->json(['message' => 'Product not found.'], 404);
+        }
+
+        $product->load(['category', 'supplier', 'inventory']);
+
+        return response()->json([
+            'id'              => $product->product_id,
+            'name'            => $product->product_name,
+            'sku'             => $product->barcode,
+            'plu_code'        => (string) $product->product_id,
+            'category_id'     => $product->category_id,
+            'category'        => $product->category?->Category_name,
+            'supplier_id'     => $product->supplier_id,
+            'supplier'        => $product->supplier?->supplier_name,
+            'cost_price'      => $product->cost_price,
+            'selling_price'   => $product->selling_price,
+            'reorder_level'   => $product->reorder_level,
+            'expiration_date' => $product->expiration_date,
+            'status'          => $product->status ?? 'Active',
+            'stock'           => $product->inventory?->current_stock ?? 0,
+            'stock_status'    => $product->inventory?->stock_status ?? 'Normal',
         ]);
     }
 }

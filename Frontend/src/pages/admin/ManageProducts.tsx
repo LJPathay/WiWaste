@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Search, Plus, Info, Loader2 } from 'lucide-react';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
-import { Modal, FormField, inputCls, useToast, Toast } from '../../components/ui/Toast';
-import { useApi } from '../../hooks/useApi';
+import { Modal, FormField, inputCls, useToast, Toast, ConfirmDialog } from '../../components/ui/Toast';
+import { useOptimisticList } from '../../hooks/useOptimisticList';
 import {
   products as productsApi,
   categories as categoriesApi,
@@ -21,9 +21,9 @@ const currencyFormatter = new Intl.NumberFormat('en-PH', {
 
 export function ManageProducts() {
   const { toasts, dismiss, success, error: toastError } = useToast();
-  const { data: productList, loading: pLoading, error: pError, refetch: refetchProducts } = useApi<ApiProduct[]>(productsApi.list);
-  const { data: categoryList } = useApi<ApiCategory[]>(categoriesApi.list);
-  const { data: supplierList } = useApi<ApiSupplier[]>(suppliersApi.list);
+  const { data: productList, loading: pLoading, error: pError, addItem, updateItem, removeItem } = useOptimisticList(productsApi.list);
+  const { data: categoryList } = useOptimisticList(categoriesApi.list);
+  const { data: supplierList } = useOptimisticList(suppliersApi.list);
 
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
@@ -57,6 +57,7 @@ export function ManageProducts() {
   const [addError, setAddError] = useState('');
   const [editError, setEditError] = useState('');
   const [processing, setProcessing] = useState(false);
+  const [archiving, setArchiving] = useState<{ id: number; name: string; status?: string } | null>(null);
 
   const products = productList ?? [];
   const categories = categoryList ?? [];
@@ -98,8 +99,8 @@ export function ManageProducts() {
         product_name: '', barcode: '', category_id: '', supplier_id: '',
         cost_price: '', selling_price: '', reorder_level: '10', expiration_date: '', initial_stock: '0',
       });
+      addItem(res as ApiProduct);
       success(`Product "${payload.product_name}" created successfully (SKU: ${res.sku ?? 'Auto-generated'}).`);
-      refetchProducts();
     } catch (err: any) {
       setAddError(err.message ?? 'Failed to create product.');
     } finally {
@@ -135,7 +136,7 @@ export function ManageProducts() {
     setProcessing(true);
 
     try {
-      await productsApi.update(selectedProduct.id, {
+      const updated = await productsApi.update(selectedProduct.id, {
         product_name: editForm.product_name.trim(),
         barcode: editForm.barcode.trim() || undefined,
         category_id: Number(editForm.category_id),
@@ -144,11 +145,11 @@ export function ManageProducts() {
         selling_price: Number(editForm.selling_price),
         reorder_level: Number(editForm.reorder_level),
         expiration_date: editForm.expiration_date || undefined,
-      });
+      }) as ApiProduct;
+      updateItem(selectedProduct.id, updated);
       setShowEditModal(false);
       setSelectedProduct(null);
       success(`Product "${editForm.product_name}" updated successfully.`);
-      refetchProducts();
     } catch (err: any) {
       setEditError(err.message ?? 'Failed to update product.');
     } finally {
@@ -157,15 +158,14 @@ export function ManageProducts() {
   };
 
   const handleArchive = async (id: number, name: string, status?: string) => {
-    const action = status === 'Discontinued' ? 're-activate' : 'discontinue/archive';
-    if (!confirm(`Are you sure you want to ${action} "${name}"? Historical sales, wastage logs, and forecast records for this item will be safely preserved for audit compliance.`)) return;
     try {
       await productsApi.delete(id);
+      removeItem(id);
       success(`Product "${name}" status updated.`);
-      refetchProducts();
     } catch (err: any) {
       toastError(err.message ?? 'Failed to update product status.');
     }
+    setArchiving(null);
   };
 
   if (pLoading) return (
@@ -302,7 +302,7 @@ export function ManageProducts() {
                       Edit
                     </button>
                     <button
-                      onClick={() => handleArchive(p.id, p.name, p.status)}
+                      onClick={() => setArchiving({ id: p.id, name: p.name, status: p.status })}
                       className={`text-xs font-bold hover:underline ${
                         p.status === 'Discontinued' ? 'text-emerald-600' : 'text-slate-500 hover:text-slate-700'
                       }`}
@@ -437,6 +437,15 @@ export function ManageProducts() {
             </button>
           </form>
         </Modal>
+      )}
+
+      {archiving && (
+        <ConfirmDialog
+          message={`Are you sure you want to ${archiving.status === 'Discontinued' ? 're-activate' : 'archive'} "${archiving.name}"? Historical sales, wastage logs, and forecast records for this item will be safely preserved for audit compliance.`}
+          confirmLabel={archiving.status === 'Discontinued' ? 'Re-activate' : 'Archive'}
+          onConfirm={() => handleArchive(archiving.id, archiving.name, archiving.status)}
+          onCancel={() => setArchiving(null)}
+        />
       )}
 
       <Toast toasts={toasts} onDismiss={dismiss} />

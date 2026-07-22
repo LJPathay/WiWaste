@@ -9,7 +9,7 @@ import {
   FormField,
   inputCls,
 } from '../../components/ui/Toast';
-import { useApi } from '../../hooks/useApi';
+import { useOptimisticList } from '../../hooks/useOptimisticList';
 import { suppliers as suppliersApi, type ApiSupplier } from '../../services/api';
 
 const EMPTY_FORM = {
@@ -20,7 +20,7 @@ const EMPTY_FORM = {
 };
 
 export function ManageSuppliers() {
-  const { data: supplierList, loading, error: fetchError, refetch } = useApi<ApiSupplier[]>(suppliersApi.list);
+  const { data: supplierList, loading, error: fetchError, addItem, updateItem, removeItem } = useOptimisticList(suppliersApi.list);
   const { toasts, dismiss, success, error } = useToast();
 
   const [search, setSearch] = useState('');
@@ -56,10 +56,10 @@ export function ManageSuppliers() {
     }
     setAddLoading(true);
     try {
-      await suppliersApi.create(addForm);
+      const created = await suppliersApi.create(addForm) as ApiSupplier;
       setIsAddOpen(false);
+      addItem(created);
       success(`Supplier "${addForm.supplier_name}" added successfully.`);
-      refetch();
     } catch (err: any) {
       error(err.message ?? 'Failed to add supplier');
     } finally {
@@ -86,10 +86,10 @@ export function ManageSuppliers() {
     }
     setEditLoading(true);
     try {
-      await suppliersApi.update(editingSupplier.id, editForm);
+      const updated = await suppliersApi.update(editingSupplier.id, editForm) as ApiSupplier;
+      updateItem(editingSupplier.id, updated);
       setEditingSupplier(null);
       success(`Supplier "${editForm.supplier_name}" updated successfully.`);
-      refetch();
     } catch (err: any) {
       error(err.message ?? 'Failed to update supplier');
     } finally {
@@ -103,9 +103,9 @@ export function ManageSuppliers() {
     try {
       await suppliersApi.delete(archivingSupplier.id);
       const name = archivingSupplier.name;
+      removeItem(archivingSupplier.id);
       setArchivingSupplier(null);
       success(`Supplier "${name}" has been deleted.`);
-      refetch();
     } catch (err: any) {
       error(err.message ?? 'Failed to delete supplier');
     } finally {

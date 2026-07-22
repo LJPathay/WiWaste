@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Users, Search, Plus, Edit2, X, Info, Loader2 } from 'lucide-react';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
-import { useApi } from '../../hooks/useApi';
+import { useOptimisticList } from '../../hooks/useOptimisticList';
 import { users as usersApi, type ApiUser, type CreateUserPayload } from '../../services/api';
 
 export function ManageUsers() {
-  const { data: userList, loading, error, refetch } = useApi<ApiUser[]>(usersApi.list);
+  const { data: userList, loading, error, addItem, updateItem, refetch } = useOptimisticList(usersApi.list);
   const [filter, setFilter] = useState<'all' | 'Admin' | 'Inventory' | 'Business Owner'>('all');
   const [search, setSearch] = useState('');
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -35,10 +35,10 @@ export function ManageUsers() {
     setSubmitting(true);
     setFormError('');
     try {
-      await usersApi.create(form);
+      const created = await usersApi.create(form) as ApiUser;
       resetForm();
       setIsAddOpen(false);
-      refetch();
+      addItem(created);
     } catch (err: any) {
       setFormError(err.message ?? 'Failed to add user');
     } finally {
@@ -59,10 +59,9 @@ export function ManageUsers() {
         status: form.status,
       };
       if (form.password) payload.password = form.password;
-      await usersApi.update(editingUser.id, payload);
+      const updated = await usersApi.update(editingUser.id, payload) as ApiUser;
+      updateItem(editingUser.id, updated);
       setIsEditOpen(false);
-      setEditingUser(null);
-      refetch();
     } catch (err: any) {
       setFormError(err.message ?? 'Failed to update user');
     } finally {

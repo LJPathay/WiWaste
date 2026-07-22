@@ -10,10 +10,11 @@ use Illuminate\Http\Request;
 
 class WastageRecordController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $limit = min((int) $request->input('per_page', 200), 1000);
         return response()->json(
-            WastageRecord::with(['product', 'user'])->orderByDesc('date_recorded')->get()->map(fn ($w) => [
+            WastageRecord::with(['product', 'user'])->orderByDesc('date_recorded')->take($limit)->get()->map(fn ($w) => [
                 'id'             => $w->wastage_id,
                 'product_id'     => $w->product_id,
                 'product_name'   => $w->product?->product_name,

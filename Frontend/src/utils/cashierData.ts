@@ -5,6 +5,7 @@ export interface CashierProduct {
   category_id: string;
   supplier_id: string;
   barcode: string;
+  plu_code?: string;
   product_name: string;
   cost_price: number;
   selling_price: number;
@@ -35,6 +36,8 @@ export interface SalesTransaction {
   amount_tendered: number | null;
   change_due: number | null;
   status: 'Completed' | 'Voided' | 'Refunded';
+  seniorPwdName?: string | null;
+  seniorPwdId?: string | null;
   items: SalesItem[];
 }
 
@@ -71,6 +74,7 @@ export const paymentMethods: PaymentMethod[] = ['Cash', 'E-wallet', 'Credit Card
 export const cashierProducts: CashierProduct[] = [
   {
     product_id: 'P-1001',
+    plu_code: '1001',
     category_id: 'CAT-PHARMA',
     supplier_id: 'SUP-UNILAB',
     barcode: '4806507830015',
@@ -85,6 +89,7 @@ export const cashierProducts: CashierProduct[] = [
   },
   {
     product_id: 'P-1002',
+    plu_code: '1002',
     category_id: 'CAT-PHARMA',
     supplier_id: 'SUP-UNILAB',
     barcode: '4806507830022',
@@ -98,6 +103,7 @@ export const cashierProducts: CashierProduct[] = [
   },
   {
     product_id: 'P-1003',
+    plu_code: '1003',
     category_id: 'CAT-VITAMIN',
     supplier_id: 'SUP-UNILAB',
     barcode: '4806507830039',
@@ -111,6 +117,7 @@ export const cashierProducts: CashierProduct[] = [
   },
   {
     product_id: 'P-1004',
+    plu_code: '1004',
     category_id: 'CAT-GROCERY',
     supplier_id: 'SUP-NESTLE',
     barcode: '4800361410018',
@@ -125,6 +132,7 @@ export const cashierProducts: CashierProduct[] = [
   },
   {
     product_id: 'P-1005',
+    plu_code: '1005',
     category_id: 'CAT-GROCERY',
     supplier_id: 'SUP-MONDE',
     barcode: '4800016010014',

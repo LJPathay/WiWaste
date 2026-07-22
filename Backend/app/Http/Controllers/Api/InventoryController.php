@@ -9,10 +9,24 @@ use Illuminate\Http\Request;
 
 class InventoryController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $query = Inventory::with('product');
+
+        if ($search = $request->input('search')) {
+            $query->whereHas('product', function ($q) use ($search) {
+                $q->where('product_name', 'like', "%{$search}%")
+                  ->orWhere('barcode', 'like', "%{$search}%");
+            });
+        }
+
+        if ($status = $request->input('status')) {
+            $query->where('stock_status', $status);
+        }
+
+        $limit = min((int) $request->input('per_page', 200), 1000);
         return response()->json(
-            Inventory::with('product')->get()->map(fn ($i) => [
+            $query->take($limit)->get()->map(fn ($i) => [
                 'id'            => $i->inventory_id,
                 'product_id'    => $i->product_id,
                 'product_name'  => $i->product?->product_name,

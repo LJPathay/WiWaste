@@ -70,6 +70,7 @@ export const suppliers = {
 // ─── Products ───────────────────────────────────────────
 export const products = {
   list: () => request<ApiProduct[]>('/products'),
+  lookup: (code: string) => request<ApiProduct>(`/products/lookup/${encodeURIComponent(code)}`),
   create: (data: CreateProductPayload) =>
     request('/products', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: number, data: Partial<CreateProductPayload>) =>
@@ -137,6 +138,7 @@ export interface ApiProduct {
   id: number;
   name: string;
   sku: string;
+  plu_code?: string;
   category_id: number;
   category: string;
   supplier_id: number;
@@ -244,7 +246,15 @@ export interface CreateSalePayload {
   payment_method: 'Cash' | 'E-wallet' | 'Credit Card' | 'Debit Card';
   amount_tendered?: number;
   change_due?: number;
-  items: Array<{ product_id: number; quantity: number; unit_price: number }>;
+  senior_pwd_name?: string | null;
+  senior_pwd_id?: string | null;
+  items: Array<{
+    product_id: number;
+    quantity: number;
+    unit_price: number;
+    discount_pct?: number;
+    discount_amount?: number;
+  }>;
 }
 
 export interface CreateReturnPayload {

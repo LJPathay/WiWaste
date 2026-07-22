@@ -19,10 +19,6 @@ return new class extends Migration
             $table->foreign('transaction_id')->references('transaction_id')->on('Sales_Transaction');
             $table->foreign('product_id')->references('product_id')->on('Product');
         });
-
-        Schema::table('Stock_Movement', function (Blueprint $table) {
-            $table->foreign('sale_item_id')->references('sales_item_id')->on('Sales_Item');
-        });
     }
 
     public function down(): void

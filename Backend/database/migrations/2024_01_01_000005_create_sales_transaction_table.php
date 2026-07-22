@@ -18,7 +18,7 @@ return new class extends Migration
             $table->decimal('change_due', 10, 2)->nullable();
             $table->enum('status', ['Completed', 'Voided', 'Refunded']);
             
-            $table->foreign('user_id')->references('User_id')->on('Users');
+            $table->foreign('user_id')->references('User_id')->on('User');
         });
     }
 

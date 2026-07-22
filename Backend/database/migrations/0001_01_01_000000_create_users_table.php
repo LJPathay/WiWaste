@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('Users', function (Blueprint $table) {
+        Schema::create('User', function (Blueprint $table) {
             $table->integer('User_id')->autoIncrement();
             $table->string('Full_name', 100);
             $table->string('username', 50)->unique();
@@ -22,6 +22,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('Users');
+        Schema::dropIfExists('User');
     }
 };

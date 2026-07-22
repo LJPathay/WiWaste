@@ -20,7 +20,9 @@ return new class extends Migration
             $table->integer('wastage_id')->nullable();
             
             $table->foreign('product_id')->references('product_id')->on('Product');
-            $table->foreign('user_id')->references('User_id')->on('Users');
+            $table->foreign('user_id')->references('User_id')->on('User');
+            $table->foreign('sale_item_id')->references('sales_item_id')->on('Sales_Item')->nullOnDelete();
+            $table->foreign('wastage_id')->references('wastage_id')->on('Wastage_Record')->nullOnDelete();
         });
     }
 

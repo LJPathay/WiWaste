@@ -6,7 +6,6 @@ import { Home } from "./pages/Home";
 import { Pricing } from "./pages/Pricing";
 import { Solutions } from "./pages/Solutions";
 import { Login } from "./pages/Login";
-import { Register } from "./pages/Register";
 import { Dashboard } from "./pages/Dashboard";
 import { InventoryDashboard } from "./pages/dashboard/InventoryDashboard";
 import { PredictiveAnalyticsPage } from "./pages/dashboard/PredictiveAnalytics";
@@ -56,7 +55,6 @@ export const router = createBrowserRouter([
         Component: AuthLayout,
         children: [
             { path: "login", Component: Login },
-            { path: "register", Component: Register },
         ],
     },
 

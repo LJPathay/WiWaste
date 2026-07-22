@@ -18,7 +18,7 @@ return new class extends Migration
             $table->dateTime('return_date');
             
             $table->foreign('sale_item_id')->references('sales_item_id')->on('Sales_Item');
-            $table->foreign('user_id')->references('User_id')->on('Users');
+            $table->foreign('user_id')->references('User_id')->on('User');
         });
     }
 

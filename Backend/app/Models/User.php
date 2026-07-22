@@ -2,31 +2,42 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Database\Factories\UserFactory;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Attributes\Hidden;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['name', 'email', 'password'])]
-#[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
-    /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasApiTokens;
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
-    protected function casts(): array
+    protected $table = 'User';
+    protected $primaryKey = 'User_id';
+    public $timestamps = false;
+
+    protected $fillable = [
+        'Full_name', 'username', 'password', 'email', 'role', 'status', 'Created_at'
+    ];
+
+    protected $hidden = [
+        'password',
+    ];
+
+    public function stockMovements()
     {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
+        return $this->hasMany(StockMovement::class, 'user_id', 'User_id');
+    }
+
+    public function salesTransactions()
+    {
+        return $this->hasMany(SalesTransaction::class, 'user_id', 'User_id');
+    }
+
+    public function wastageRecords()
+    {
+        return $this->hasMany(WastageRecord::class, 'user_id', 'User_id');
+    }
+
+    public function returnTransactions()
+    {
+        return $this->hasMany(ReturnTransaction::class, 'user_id', 'User_id');
     }
 }

@@ -18,11 +18,7 @@ return new class extends Migration
             $table->dateTime('date_recorded');
             
             $table->foreign('product_id')->references('product_id')->on('Product');
-            $table->foreign('user_id')->references('User_id')->on('Users');
-        });
-
-        Schema::table('Stock_Movement', function (Blueprint $table) {
-            $table->foreign('wastage_id')->references('wastage_id')->on('Wastage_Record');
+            $table->foreign('user_id')->references('User_id')->on('User');
         });
     }
 

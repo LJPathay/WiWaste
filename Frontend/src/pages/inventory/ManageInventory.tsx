@@ -314,7 +314,7 @@ export function ManageInventory() {
     e.preventDefault();
     const { itemName, sku, qty, location, category, costPrice, sellingPrice, supplier } = addForm;
 
-    if (!itemName.trim() || !sku.trim() || !qty || !location.trim() || !category.trim() || !costPrice || !sellingPrice || !supplier.trim()) {
+    if (!itemName.trim() || !qty || !location.trim() || !category.trim() || !costPrice || !sellingPrice || !supplier.trim()) {
       setAddError('All fields are required.');
       return;
     }
@@ -331,10 +331,12 @@ export function ManageInventory() {
     setProcessing(true);
     await new Promise(r => setTimeout(r, 500));
 
+    const generatedSku = sku.trim() ? sku.trim().toUpperCase() : `SKU-AUTO-${Math.floor(100000 + Math.random() * 900000)}`;
+
     const newItem: InventoryItem = {
       id: Date.now().toString(),
       itemName: itemName.trim(),
-      sku: sku.trim().toUpperCase(),
+      sku: generatedSku,
       qty: Number(qty),
       location: location.trim(),
       category: category.trim(),
@@ -487,14 +489,13 @@ export function ManageInventory() {
                   required
                 />
               </FormField>
-              <FormField label="SKU">
+              <FormField label="SKU (Auto-Generated)">
                 <input
                   type="text"
-                  className={inputCls}
-                  value={addForm.sku}
-                  onChange={e => setAddForm({...addForm, sku: e.target.value})}
-                  placeholder="e.g. LM-PC-80"
-                  required
+                  className={`${inputCls} bg-slate-100 dark:bg-slate-800 text-slate-500 cursor-not-allowed`}
+                  value={addForm.sku || 'Auto-generated on save'}
+                  disabled
+                  placeholder="Auto-generated on save"
                 />
               </FormField>
               <FormField label="Quantity">

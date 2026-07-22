@@ -1,30 +1,17 @@
 import React, { useState } from 'react';
-import { Search, Plus, Info } from 'lucide-react';
+import { Search, Plus, Info, Loader2 } from 'lucide-react';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { Modal, FormField, inputCls, useToast, Toast } from '../../components/ui/Toast';
-
-interface ProductMock {
-  id: string;
-  name: string;
-  sku: string;
-  category: 'Food' | 'Medicine' | 'Beverages' | 'Personal Care';
-  price: number;
-  stock: number;
-  expiry: string;
-}
-
-const INITIAL_PRODUCTS: ProductMock[] = [
-  { id: '1', name: 'Del Monte Tomato Sauce 250g', sku: 'DM-TS-250', category: 'Food', price: 32.50, stock: 45, expiry: '2026-11-20' },
-  { id: '2', name: 'Biogesic Paracetamol 500mg', sku: 'BG-P-500', category: 'Medicine', price: 7.50, stock: 120, expiry: '2027-03-15' },
-  { id: '3', name: 'Coca-Cola 1.5L', sku: 'CC-15L', category: 'Beverages', price: 68.00, stock: 8, expiry: '2026-09-05' },
-  { id: '4', name: 'Safeguard White Soap 130g', sku: 'SG-WS-130', category: 'Personal Care', price: 54.00, stock: 25, expiry: '2028-05-10' },
-  { id: '5', name: 'Century Tuna Flakes in Oil 180g', sku: 'CT-FO-180', category: 'Food', price: 42.00, stock: 3, expiry: '2026-08-12' },
-  { id: '6', name: 'Neozep Forte (Tablet)', sku: 'NZ-F-TAB', category: 'Medicine', price: 8.50, stock: 95, expiry: '2026-12-01' },
-  { id: '7', name: 'C2 Green Tea 500ml', sku: 'C2-GT-500', category: 'Beverages', price: 22.00, stock: 32, expiry: '2026-10-18' },
-  { id: '8', name: 'Colgate Triple Action 150g', sku: 'CG-TA-150', category: 'Personal Care', price: 115.00, stock: 15, expiry: '2027-08-22' },
-  { id: '9', name: 'San Miguel Pale Pilsen Can', sku: 'SM-PP-CAN', category: 'Beverages', price: 72.00, stock: 50, expiry: '2026-12-31' },
-  { id: '10', name: 'Gatorade Blue Bolt 500ml', sku: 'GT-BB-500', category: 'Beverages', price: 45.00, stock: 12, expiry: '2026-10-10' },
-];
+import { useApi } from '../../hooks/useApi';
+import {
+  products as productsApi,
+  categories as categoriesApi,
+  suppliers as suppliersApi,
+  type ApiProduct,
+  type ApiCategory,
+  type ApiSupplier,
+  type CreateProductPayload,
+} from '../../services/api';
 
 const currencyFormatter = new Intl.NumberFormat('en-PH', {
   style: 'currency',
@@ -33,136 +20,166 @@ const currencyFormatter = new Intl.NumberFormat('en-PH', {
 });
 
 export function ManageProducts() {
-  const { toasts, dismiss, success } = useToast();
-  const [products, setProducts] = useState<ProductMock[]>(INITIAL_PRODUCTS);
+  const { toasts, dismiss, success, error: toastError } = useToast();
+  const { data: productList, loading: pLoading, error: pError, refetch: refetchProducts } = useApi<ApiProduct[]>(productsApi.list);
+  const { data: categoryList } = useApi<ApiCategory[]>(categoriesApi.list);
+  const { data: supplierList } = useApi<ApiSupplier[]>(suppliersApi.list);
+
   const [search, setSearch] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<'All' | 'Food' | 'Medicine' | 'Beverages' | 'Personal Care'>('All');
-  const [selectedProduct, setSelectedProduct] = useState<ProductMock | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<string>('All');
+  const [selectedProduct, setSelectedProduct] = useState<ApiProduct | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+
   const [addForm, setAddForm] = useState({
-    name: '',
-    sku: '',
-    category: 'Food' as 'Food' | 'Medicine' | 'Beverages' | 'Personal Care',
-    price: '',
-    stock: '',
-    expiry: '',
+    product_name: '',
+    barcode: '',
+    category_id: '',
+    supplier_id: '',
+    cost_price: '',
+    selling_price: '',
+    reorder_level: '10',
+    expiration_date: '',
+    initial_stock: '0',
   });
+
   const [editForm, setEditForm] = useState({
-    name: '',
-    sku: '',
-    category: 'Food' as 'Food' | 'Medicine' | 'Beverages' | 'Personal Care',
-    price: '',
-    stock: '',
-    expiry: '',
+    product_name: '',
+    barcode: '',
+    category_id: '',
+    supplier_id: '',
+    cost_price: '',
+    selling_price: '',
+    reorder_level: '10',
+    expiration_date: '',
   });
+
   const [addError, setAddError] = useState('');
   const [editError, setEditError] = useState('');
   const [processing, setProcessing] = useState(false);
 
+  const products = productList ?? [];
+  const categories = categoryList ?? [];
+  const suppliers = supplierList ?? [];
+
+  const filteredProducts = products.filter(p => {
+    const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) ||
+                          (p.sku?.toLowerCase() ?? '').includes(search.toLowerCase());
+    const matchesCategory = categoryFilter === 'All' || String(p.category_id) === categoryFilter || p.category === categoryFilter;
+    return matchesSearch && matchesCategory;
+  });
+
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { name, sku, category, price, stock, expiry } = addForm;
-
-    if (!name.trim() || !sku.trim() || !price || !stock || !expiry) {
-      setAddError('All fields are required.');
-      return;
-    }
-    if (Number(price) <= 0 || Number(stock) < 0) {
-      setAddError('Price must be greater than 0 and stock must be 0 or greater.');
+    if (!addForm.product_name.trim() || !addForm.category_id || !addForm.supplier_id || !addForm.cost_price || !addForm.selling_price) {
+      setAddError('Product name, category, supplier, cost price, and selling price are required.');
       return;
     }
 
     setAddError('');
     setProcessing(true);
-    await new Promise(r => setTimeout(r, 500));
 
-    const newProduct: ProductMock = {
-      id: Date.now().toString(),
-      name: name.trim(),
-      sku: sku.trim().toUpperCase(),
-      category,
-      price: Number(price),
-      stock: Number(stock),
-      expiry,
-    };
+    try {
+      const payload: CreateProductPayload = {
+        product_name: addForm.product_name.trim(),
+        barcode: addForm.barcode.trim() || undefined, // If empty, backend auto-generates SKU!
+        category_id: Number(addForm.category_id),
+        supplier_id: Number(addForm.supplier_id),
+        cost_price: Number(addForm.cost_price),
+        selling_price: Number(addForm.selling_price),
+        reorder_level: Number(addForm.reorder_level || 10),
+        expiration_date: addForm.expiration_date || undefined,
+        initial_stock: Number(addForm.initial_stock || 0),
+      };
 
-    setProducts(prev => [newProduct, ...prev]);
-    setProcessing(false);
-    setShowAddModal(false);
-    setAddForm({
-      name: '',
-      sku: '',
-      category: 'Food',
-      price: '',
-      stock: '',
-      expiry: '',
-    });
-    success(`Product "${newProduct.name}" added successfully.`);
+      const res: any = await productsApi.create(payload);
+      setShowAddModal(false);
+      setAddForm({
+        product_name: '', barcode: '', category_id: '', supplier_id: '',
+        cost_price: '', selling_price: '', reorder_level: '10', expiration_date: '', initial_stock: '0',
+      });
+      success(`Product "${payload.product_name}" created successfully (SKU: ${res.sku ?? 'Auto-generated'}).`);
+      refetchProducts();
+    } catch (err: any) {
+      setAddError(err.message ?? 'Failed to create product.');
+    } finally {
+      setProcessing(false);
+    }
   };
 
-  const handleEditClick = () => {
-    if (!selectedProduct) return;
+  const openEdit = (p: ApiProduct) => {
+    setSelectedProduct(p);
     setEditForm({
-      name: selectedProduct.name,
-      sku: selectedProduct.sku,
-      category: selectedProduct.category,
-      price: selectedProduct.price.toString(),
-      stock: selectedProduct.stock.toString(),
-      expiry: selectedProduct.expiry,
+      product_name: p.name,
+      barcode: p.sku ?? '',
+      category_id: String(p.category_id),
+      supplier_id: String(p.supplier_id),
+      cost_price: String(p.cost_price),
+      selling_price: String(p.selling_price),
+      reorder_level: String(p.reorder_level),
+      expiration_date: p.expiration_date ?? '',
     });
+    setEditError('');
     setShowEditModal(true);
   };
 
   const handleEditProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedProduct) return;
-
-    const { name, sku, category, price, stock, expiry } = editForm;
-
-    if (!name.trim() || !sku.trim() || !price || !stock || !expiry) {
-      setEditError('All fields are required.');
-      return;
-    }
-    if (Number(price) <= 0 || Number(stock) < 0) {
-      setEditError('Price must be greater than 0 and stock must be 0 or greater.');
+    if (!editForm.product_name.trim() || !editForm.category_id || !editForm.supplier_id || !editForm.cost_price || !editForm.selling_price) {
+      setEditError('All required fields must be filled.');
       return;
     }
 
     setEditError('');
     setProcessing(true);
-    await new Promise(r => setTimeout(r, 500));
 
-    const updatedProduct: ProductMock = {
-      ...selectedProduct,
-      name: name.trim(),
-      sku: sku.trim().toUpperCase(),
-      category,
-      price: Number(price),
-      stock: Number(stock),
-      expiry,
-    };
-
-    setProducts(prev =>
-      prev.map(p => (p.id === selectedProduct.id ? updatedProduct : p))
-    );
-    setSelectedProduct(updatedProduct);
-    setProcessing(false);
-    setShowEditModal(false);
-    success(`Product "${updatedProduct.name}" updated successfully.`);
+    try {
+      await productsApi.update(selectedProduct.id, {
+        product_name: editForm.product_name.trim(),
+        barcode: editForm.barcode.trim() || undefined,
+        category_id: Number(editForm.category_id),
+        supplier_id: Number(editForm.supplier_id),
+        cost_price: Number(editForm.cost_price),
+        selling_price: Number(editForm.selling_price),
+        reorder_level: Number(editForm.reorder_level),
+        expiration_date: editForm.expiration_date || undefined,
+      });
+      setShowEditModal(false);
+      setSelectedProduct(null);
+      success(`Product "${editForm.product_name}" updated successfully.`);
+      refetchProducts();
+    } catch (err: any) {
+      setEditError(err.message ?? 'Failed to update product.');
+    } finally {
+      setProcessing(false);
+    }
   };
 
-  const handleEditCancel = () => {
-    setShowEditModal(false);
-    setEditError('');
+  const handleArchive = async (id: number, name: string, status?: string) => {
+    const action = status === 'Discontinued' ? 're-activate' : 'discontinue/archive';
+    if (!confirm(`Are you sure you want to ${action} "${name}"? Historical sales, wastage logs, and forecast records for this item will be safely preserved for audit compliance.`)) return;
+    try {
+      await productsApi.delete(id);
+      success(`Product "${name}" status updated.`);
+      refetchProducts();
+    } catch (err: any) {
+      toastError(err.message ?? 'Failed to update product status.');
+    }
   };
 
-  const filteredProducts = products.filter(product => {
-    const matchesCategory = categoryFilter === 'All' || product.category === categoryFilter;
-    const matchesSearch = product.name.toLowerCase().includes(search.toLowerCase()) || 
-                          product.sku.toLowerCase().includes(search.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
+  if (pLoading) return (
+    <div className="flex items-center justify-center h-64">
+      <Loader2 className="h-8 w-8 animate-spin text-[#006a61]" />
+      <span className="ml-3 text-slate-600 dark:text-slate-400">Loading product catalogue...</span>
+    </div>
+  );
+
+  if (pError) return (
+    <div className="p-6 bg-red-50 dark:bg-red-900/20 rounded-xl text-red-600 dark:text-red-400">
+      Failed to load products: {pError}
+    </div>
+  );
 
   return (
     <div className="space-y-6 w-full font-sans">
@@ -175,12 +192,15 @@ export function ManageProducts() {
                 <Info className="h-5 w-5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
               </TooltipTrigger>
               <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
-                Manage product details and baseline tracking limits.
+                Maintain product specifications, cost structures, and SKUs.
               </TooltipContent>
             </UITooltip>
           </div>
         </div>
-        <button onClick={() => setShowAddModal(true)} className="inline-flex items-center gap-2 rounded-lg bg-[#006a61] text-white px-4 py-2 text-sm font-semibold hover:bg-[#00574f] transition-all">
+        <button
+          onClick={() => { setAddError(''); setShowAddModal(true); }}
+          className="inline-flex items-center gap-2 rounded-lg bg-[#006a61] text-white px-4 py-2 text-sm font-semibold hover:bg-[#00574f] transition-all"
+        >
           <Plus className="h-4 w-4" />
           Add Product
         </button>
@@ -188,18 +208,28 @@ export function ManageProducts() {
 
       <div className="bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden">
         <div className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 dark:border-white/10">
-          <div className="flex flex-wrap gap-2 bg-slate-100 dark:bg-slate-900 p-1 rounded-lg">
-            {(['All', 'Food', 'Medicine', 'Beverages', 'Personal Care'] as const).map((cat) => (
+          <div className="flex gap-2 overflow-x-auto pb-1 sm:pb-0">
+            <button
+              onClick={() => setCategoryFilter('All')}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                categoryFilter === 'All'
+                  ? 'bg-[#006a61] text-white'
+                  : 'bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
+              }`}
+            >
+              All Categories
+            </button>
+            {categories.map(c => (
               <button
-                key={cat}
-                onClick={() => setCategoryFilter(cat)}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
-                  categoryFilter === cat
-                    ? 'bg-white dark:bg-slate-950 text-[#006a61] dark:text-[#7ef0cf] shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                key={c.id}
+                onClick={() => setCategoryFilter(String(c.id))}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-md whitespace-nowrap transition-all ${
+                  categoryFilter === String(c.id)
+                    ? 'bg-[#006a61] text-white'
+                    : 'bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
                 }`}
               >
-                {cat}
+                {c.name}
               </button>
             ))}
           </div>
@@ -208,278 +238,203 @@ export function ManageProducts() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <input
               type="text"
-              placeholder="Search by SKU or name..."
+              placeholder="Search by product name or SKU..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={e => setSearch(e.target.value)}
               className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-white/10 pl-9 pr-3 py-2 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-700 dark:text-slate-250"
             />
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs text-left">
-            <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-450 border-b border-slate-200 dark:border-white/10 font-bold">
+        <table className="w-full text-xs text-left">
+          <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-450 border-b border-slate-200 dark:border-white/10 font-bold">
+            <tr>
+              <th className="px-6 py-3">Product Name</th>
+              <th className="px-6 py-3">SKU / Barcode</th>
+              <th className="px-6 py-3">Category</th>
+              <th className="px-6 py-3">Supplier</th>
+              <th className="px-6 py-3">Cost Price</th>
+              <th className="px-6 py-3">Selling Price</th>
+              <th className="px-6 py-3">Stock Level</th>
+              <th className="px-6 py-3">Status</th>
+              <th className="px-6 py-3 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-200 dark:divide-white/5">
+            {filteredProducts.length === 0 ? (
               <tr>
-                <th className="px-6 py-3">Product Name</th>
-                <th className="px-6 py-3">SKU</th>
-                <th className="px-6 py-3">Category</th>
-                <th className="px-6 py-3">Unit Price</th>
-                <th className="px-6 py-3">Stock Level</th>
-                <th className="px-6 py-3">Expiry Date</th>
+                <td colSpan={9} className="px-6 py-10 text-center text-slate-400">No products found.</td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200 dark:divide-white/5">
-              {filteredProducts.map((p) => (
-                <tr
-                  key={p.id}
-                  className="hover:bg-slate-55/20 dark:hover:bg-white/5 cursor-pointer"
-                  onClick={() => setSelectedProduct(p)}
-                >
+            ) : (
+              filteredProducts.map(p => (
+                <tr key={p.id} className={`hover:bg-slate-50/20 dark:hover:bg-white/5 ${p.status === 'Discontinued' ? 'opacity-60 bg-slate-50/40 dark:bg-slate-900/30' : ''}`}>
                   <td className="px-6 py-4 font-medium text-slate-900 dark:text-slate-100">{p.name}</td>
-                  <td className="px-6 py-4 text-slate-500 dark:text-slate-400 font-mono">{p.sku}</td>
+                  <td className="px-6 py-4 font-mono text-slate-600 dark:text-slate-400">{p.sku ?? '—'}</td>
                   <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{p.category}</td>
-                  <td className="px-6 py-4 text-slate-700 dark:text-slate-300">{currencyFormatter.format(p.price)}</td>
-                  <td className="px-6 py-4 text-slate-700 dark:text-slate-300">{p.stock} units</td>
-                  <td className="px-6 py-4 text-slate-500 dark:text-slate-400">{p.expiry}</td>
+                  <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{p.supplier ?? '—'}</td>
+                  <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{currencyFormatter.format(p.cost_price)}</td>
+                  <td className="px-6 py-4 font-semibold text-emerald-700 dark:text-emerald-400">{currencyFormatter.format(p.selling_price)}</td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                      p.stock <= 0
+                        ? 'bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-400'
+                        : p.stock <= p.reorder_level
+                        ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400'
+                        : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400'
+                    }`}>
+                      {p.stock} units ({p.stock_status})
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                      p.status === 'Discontinued'
+                        ? 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-400'
+                        : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400'
+                    }`}>
+                      {p.status ?? 'Active'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-right flex items-center justify-end gap-3">
+                    <button
+                      onClick={() => openEdit(p)}
+                      className="text-xs font-bold text-[#006a61] dark:text-[#7ef0cf] hover:underline"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleArchive(p.id, p.name, p.status)}
+                      className={`text-xs font-bold hover:underline ${
+                        p.status === 'Discontinued' ? 'text-emerald-600' : 'text-slate-500 hover:text-slate-700'
+                      }`}
+                    >
+                      {p.status === 'Discontinued' ? 'Re-activate' : 'Archive'}
+                    </button>
+                  </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
 
       {/* Add Product Modal */}
       {showAddModal && (
-        <Modal title="Add New Product" onClose={() => setShowAddModal(false)} size="lg">
+        <Modal title="Add New Product" onClose={() => setShowAddModal(false)}>
           <form onSubmit={handleAddProduct} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <FormField label="Product Name">
-                <input
-                  type="text"
-                  className={inputCls}
-                  value={addForm.name}
-                  onChange={e => setAddForm({...addForm, name: e.target.value})}
-                  placeholder="e.g. Del Monte Tomato Sauce 250g"
-                  required
-                />
-              </FormField>
-              <FormField label="SKU">
-                <input
-                  type="text"
-                  className={inputCls}
-                  value={addForm.sku}
-                  onChange={e => setAddForm({...addForm, sku: e.target.value})}
-                  placeholder="e.g. DM-TS-250"
-                  required
-                />
-              </FormField>
+            <FormField label="Product Name">
+              <input type="text" required placeholder="e.g. Biogesic Paracetamol 500mg" value={addForm.product_name}
+                onChange={e => setAddForm(f => ({ ...f, product_name: e.target.value }))} className={inputCls} />
+            </FormField>
+            <FormField label="SKU / Barcode (Leave blank for automatic SKU generation)">
+              <input type="text" placeholder="Auto-generated if empty" value={addForm.barcode}
+                onChange={e => setAddForm(f => ({ ...f, barcode: e.target.value }))} className={inputCls} />
+            </FormField>
+            <div className="grid grid-cols-2 gap-3">
               <FormField label="Category">
-                <select
-                  className={inputCls}
-                  value={addForm.category}
-                  onChange={e => setAddForm({...addForm, category: e.target.value as any})}
-                  required
-                >
-                  <option value="Food">Food</option>
-                  <option value="Medicine">Medicine</option>
-                  <option value="Beverages">Beverages</option>
-                  <option value="Personal Care">Personal Care</option>
+                <select required value={addForm.category_id} onChange={e => setAddForm(f => ({ ...f, category_id: e.target.value }))} className={inputCls}>
+                  <option value="">Select Category</option>
+                  {categories.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
                 </select>
               </FormField>
-              <FormField label="Unit Price (₱)">
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  className={inputCls}
-                  value={addForm.price}
-                  onChange={e => setAddForm({...addForm, price: e.target.value})}
-                  placeholder="e.g. 32.50"
-                  required
-                />
+              <FormField label="Supplier">
+                <select required value={addForm.supplier_id} onChange={e => setAddForm(f => ({ ...f, supplier_id: e.target.value }))} className={inputCls}>
+                  <option value="">Select Supplier</option>
+                  {suppliers.map(s => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </FormField>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <FormField label="Cost Price (₱)">
+                <input type="number" step="0.01" required min="0" placeholder="0.00" value={addForm.cost_price}
+                  onChange={e => setAddForm(f => ({ ...f, cost_price: e.target.value }))} className={inputCls} />
+              </FormField>
+              <FormField label="Selling Price (₱)">
+                <input type="number" step="0.01" required min="0" placeholder="0.00" value={addForm.selling_price}
+                  onChange={e => setAddForm(f => ({ ...f, selling_price: e.target.value }))} className={inputCls} />
+              </FormField>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <FormField label="Reorder Level">
+                <input type="number" required min="0" value={addForm.reorder_level}
+                  onChange={e => setAddForm(f => ({ ...f, reorder_level: e.target.value }))} className={inputCls} />
               </FormField>
               <FormField label="Initial Stock">
-                <input
-                  type="number"
-                  min="0"
-                  className={inputCls}
-                  value={addForm.stock}
-                  onChange={e => setAddForm({...addForm, stock: e.target.value})}
-                  placeholder="e.g. 100"
-                  required
-                />
+                <input type="number" min="0" value={addForm.initial_stock}
+                  onChange={e => setAddForm(f => ({ ...f, initial_stock: e.target.value }))} className={inputCls} />
               </FormField>
-              <FormField label="Expiry Date">
-                <input
-                  type="date"
-                  className={inputCls}
-                  value={addForm.expiry}
-                  onChange={e => setAddForm({...addForm, expiry: e.target.value})}
-                  required
-                />
+              <FormField label="Expiration Date">
+                <input type="date" value={addForm.expiration_date}
+                  onChange={e => setAddForm(f => ({ ...f, expiration_date: e.target.value }))} className={inputCls} />
               </FormField>
             </div>
-
-            {addError && (
-              <p className="text-xs text-rose-600 dark:text-rose-400 font-medium">{addError}</p>
-            )}
-
-            <div className="flex gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowAddModal(false)}
-                className="flex-1 rounded-lg border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-600 dark:text-slate-300 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={processing}
-                className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-[#006a61] hover:bg-[#00574f] disabled:opacity-60 text-white text-xs font-semibold py-2 transition-colors"
-              >
-                {processing ? 'Adding...' : 'Add Product'}
-              </button>
-            </div>
+            {addError && <p className="text-red-600 text-xs">{addError}</p>}
+            <button type="submit" disabled={processing}
+              className="w-full bg-[#006a61] hover:bg-[#00574f] text-white py-2.5 rounded-lg text-sm font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+              {processing ? <><Loader2 className="h-4 w-4 animate-spin" />Creating Product…</> : 'Create Product'}
+            </button>
           </form>
         </Modal>
       )}
 
-      {/* Product Details Modal */}
-      {selectedProduct && (
-        <Modal title={selectedProduct.name} onClose={() => setSelectedProduct(null)} size="lg">
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs font-semibold text-slate-500">SKU</label>
-                <div className="text-sm font-mono">{selectedProduct.sku}</div>
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-slate-500">Category</label>
-                <div className="text-sm">{selectedProduct.category}</div>
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-slate-500">Unit Price</label>
-                <div className="text-sm font-bold">{currencyFormatter.format(selectedProduct.price)}</div>
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-slate-500">Stock Level</label>
-                <div className="text-sm font-bold">{selectedProduct.stock} units</div>
-              </div>
-              <div className="col-span-2">
-                <label className="text-xs font-semibold text-slate-500">Expiry Date</label>
-                <div className="text-sm">{selectedProduct.expiry}</div>
-              </div>
-            </div>
-            <div className="flex gap-3 pt-4 border-t border-slate-200 dark:border-white/10">
-              <button
-                onClick={() => setSelectedProduct(null)}
-                className="flex-1 rounded-lg border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-600 dark:text-slate-300 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-              >
-                Close
-              </button>
-              <button
-                onClick={handleEditClick}
-                className="flex-1 rounded-lg bg-[#006a61] hover:bg-[#00574f] text-white text-xs font-semibold py-2 transition-colors"
-              >
-                Edit Product
-              </button>
-            </div>
-          </div>
-        </Modal>
-      )}
-
       {/* Edit Product Modal */}
-      {showEditModal && (
-        <Modal title="Edit Product" onClose={handleEditCancel} size="lg">
+      {showEditModal && selectedProduct && (
+        <Modal title="Edit Product" onClose={() => setShowEditModal(false)}>
           <form onSubmit={handleEditProduct} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <FormField label="Product Name">
-                <input
-                  type="text"
-                  className={inputCls}
-                  value={editForm.name}
-                  onChange={e => setEditForm({...editForm, name: e.target.value})}
-                  placeholder="e.g. Del Monte Tomato Sauce 250g"
-                  required
-                />
-              </FormField>
-              <FormField label="SKU">
-                <input
-                  type="text"
-                  className={inputCls}
-                  value={editForm.sku}
-                  onChange={e => setEditForm({...editForm, sku: e.target.value})}
-                  placeholder="e.g. DM-TS-250"
-                  required
-                />
-              </FormField>
+            <FormField label="Product Name">
+              <input type="text" required placeholder="Product Name" value={editForm.product_name}
+                onChange={e => setEditForm(f => ({ ...f, product_name: e.target.value }))} className={inputCls} />
+            </FormField>
+            <FormField label="SKU / Barcode">
+              <input type="text" placeholder="Barcode" value={editForm.barcode}
+                onChange={e => setEditForm(f => ({ ...f, barcode: e.target.value }))} className={inputCls} />
+            </FormField>
+            <div className="grid grid-cols-2 gap-3">
               <FormField label="Category">
-                <select
-                  className={inputCls}
-                  value={editForm.category}
-                  onChange={e => setEditForm({...editForm, category: e.target.value as any})}
-                  required
-                >
-                  <option value="Food">Food</option>
-                  <option value="Medicine">Medicine</option>
-                  <option value="Beverages">Beverages</option>
-                  <option value="Personal Care">Personal Care</option>
+                <select required value={editForm.category_id} onChange={e => setEditForm(f => ({ ...f, category_id: e.target.value }))} className={inputCls}>
+                  <option value="">Select Category</option>
+                  {categories.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
                 </select>
               </FormField>
-              <FormField label="Unit Price (₱)">
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  className={inputCls}
-                  value={editForm.price}
-                  onChange={e => setEditForm({...editForm, price: e.target.value})}
-                  placeholder="e.g. 32.50"
-                  required
-                />
-              </FormField>
-              <FormField label="Stock Level">
-                <input
-                  type="number"
-                  min="0"
-                  className={inputCls}
-                  value={editForm.stock}
-                  onChange={e => setEditForm({...editForm, stock: e.target.value})}
-                  placeholder="e.g. 100"
-                  required
-                />
-              </FormField>
-              <FormField label="Expiry Date">
-                <input
-                  type="date"
-                  className={inputCls}
-                  value={editForm.expiry}
-                  onChange={e => setEditForm({...editForm, expiry: e.target.value})}
-                  required
-                />
+              <FormField label="Supplier">
+                <select required value={editForm.supplier_id} onChange={e => setEditForm(f => ({ ...f, supplier_id: e.target.value }))} className={inputCls}>
+                  <option value="">Select Supplier</option>
+                  {suppliers.map(s => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
               </FormField>
             </div>
-
-            {editError && (
-              <p className="text-xs text-rose-600 dark:text-rose-400 font-medium">{editError}</p>
-            )}
-
-            <div className="flex gap-3 pt-2">
-              <button
-                type="button"
-                onClick={handleEditCancel}
-                className="flex-1 rounded-lg border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-600 dark:text-slate-300 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={processing}
-                className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-[#006a61] hover:bg-[#00574f] disabled:opacity-60 text-white text-xs font-semibold py-2 transition-colors"
-              >
-                {processing ? 'Saving...' : 'Save Changes'}
-              </button>
+            <div className="grid grid-cols-2 gap-3">
+              <FormField label="Cost Price (₱)">
+                <input type="number" step="0.01" required min="0" value={editForm.cost_price}
+                  onChange={e => setEditForm(f => ({ ...f, cost_price: e.target.value }))} className={inputCls} />
+              </FormField>
+              <FormField label="Selling Price (₱)">
+                <input type="number" step="0.01" required min="0" value={editForm.selling_price}
+                  onChange={e => setEditForm(f => ({ ...f, selling_price: e.target.value }))} className={inputCls} />
+              </FormField>
             </div>
+            <div className="grid grid-cols-2 gap-3">
+              <FormField label="Reorder Level">
+                <input type="number" required min="0" value={editForm.reorder_level}
+                  onChange={e => setEditForm(f => ({ ...f, reorder_level: e.target.value }))} className={inputCls} />
+              </FormField>
+              <FormField label="Expiration Date">
+                <input type="date" value={editForm.expiration_date}
+                  onChange={e => setEditForm(f => ({ ...f, expiration_date: e.target.value }))} className={inputCls} />
+              </FormField>
+            </div>
+            {editError && <p className="text-red-600 text-xs">{editError}</p>}
+            <button type="submit" disabled={processing}
+              className="w-full bg-[#006a61] hover:bg-[#00574f] text-white py-2.5 rounded-lg text-sm font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+              {processing ? <><Loader2 className="h-4 w-4 animate-spin" />Saving Changes…</> : 'Save Changes'}
+            </button>
           </form>
         </Modal>
       )}

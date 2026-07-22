@@ -154,8 +154,10 @@ export function ManageUsers() {
               <th className="px-6 py-3 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-200 dark:divide-white/5">
-            {filteredUsers.map(u => (
+           <tbody className="divide-y divide-slate-200 dark:divide-white/5">
+             {filteredUsers.length === 0 ? (
+               <tr><td colSpan={6} className="px-6 py-12 text-center text-slate-400">No users found.</td></tr>
+             ) : filteredUsers.map(u => (
               <tr key={u.id} className="hover:bg-slate-50/20 dark:hover:bg-white/5">
                 <td className="px-6 py-4 font-medium text-slate-900 dark:text-slate-100">{u.name}</td>
                 <td className="px-6 py-4 text-slate-500 dark:text-slate-400 font-mono">{u.username}</td>

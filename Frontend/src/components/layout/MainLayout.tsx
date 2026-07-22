@@ -1,5 +1,6 @@
 import { Outlet, Link, useLocation } from "react-router";
 import { ThemeToggle } from "../ThemeToggle";
+import { ErrorBoundary } from "../ui/ErrorBoundary";
 
 const BRAND_WORDMARK = '/images/Logo_full.PNG';
 
@@ -8,7 +9,7 @@ export function MainLayout() {
     const location = useLocation();
 
     return (
-        <div className="min-h-screen flex flex-col font-['Inter',sans-serif] bg-[#fcf8fa] text-[#1b1b1d] transition-colors dark:bg-slate-950 dark:text-slate-100">
+        <ErrorBoundary><div className="min-h-screen flex flex-col font-['Inter',sans-serif] bg-[#fcf8fa] text-[#1b1b1d] transition-colors dark:bg-slate-950 dark:text-slate-100">
             <header className="sticky top-0 z-50 backdrop-blur-md bg-white/85 border-b border-[#c6c6cd] transition-colors dark:border-white/10 dark:bg-slate-950/85">
                 <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
                     <Link to="/" className="flex items-center gap-2">
@@ -98,6 +99,6 @@ export function MainLayout() {
                     </div>
                 </div>
             </footer>
-        </div>
+        </div></ErrorBoundary>
     );
 }

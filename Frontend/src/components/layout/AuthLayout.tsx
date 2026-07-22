@@ -1,6 +1,7 @@
 import { Outlet, Link } from 'react-router';
 import { ThemeToggle } from '../ThemeToggle';
 import { getStoredSession } from '../../utils/mockAuthAndFeatures';
+import { ErrorBoundary } from '../ui/ErrorBoundary';
 
 const BRAND_WORDMARK = '/images/Logo_full.PNG';
 
@@ -12,7 +13,7 @@ export function AuthLayout() {
   const isAuthed = Boolean(getStoredSession());
 
   return (
-    <div className="min-h-screen bg-[#f4f7fb] text-[#1b1b1d] font-['Inter',sans-serif] transition-colors dark:bg-slate-950 dark:text-slate-100">
+    <ErrorBoundary><div className="min-h-screen bg-[#f4f7fb] text-[#1b1b1d] font-['Inter',sans-serif] transition-colors dark:bg-slate-950 dark:text-slate-100">
       <header className="sticky top-0 z-40 border-b border-white/70 bg-white/85 backdrop-blur-md transition-colors dark:border-white/10 dark:bg-slate-950/85">
         <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
           <Link to={isAuthed ? '/dashboard' : '/'} className="flex items-center gap-3">
@@ -39,6 +40,6 @@ export function AuthLayout() {
       <main className="theme-content px-4 sm:px-6 lg:px-8 py-10">
         <Outlet />
       </main>
-    </div>
+    </div></ErrorBoundary>
   );
 }

@@ -121,7 +121,9 @@ export function ManageCategories() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-white/5">
-              {categories.map((cat) => (
+              {categories.length === 0 ? (
+                <tr><td colSpan={3} className="px-6 py-12 text-center text-slate-400">No categories found.</td></tr>
+              ) : categories.map((cat) => (
                 <tr key={cat.id} className="hover:bg-slate-50/20 dark:hover:bg-white/5">
                   <td className="px-6 py-4 font-medium text-slate-900 dark:text-slate-100">{cat.name}</td>
                   <td className="px-6 py-4 text-slate-700 dark:text-slate-300">{cat.product_count ?? 0} SKUs</td>

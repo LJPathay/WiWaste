@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { HeaderLabelProvider } from './HeaderLabelProvider';
 import { Navigate, Outlet, Link, useLocation, useNavigate } from 'react-router';
 import {
@@ -27,6 +27,8 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { ThemeToggle } from '../ThemeToggle';
+import { ErrorBoundary } from '../ui/ErrorBoundary';
+import { Breadcrumb } from '../ui/Breadcrumb';
 import { clearStoredSession, getRoleDisplayName, getStoredSession, type UserRole } from '../../utils/mockAuthAndFeatures';
 
 const BRAND_ICON = '/images/logo.PNG';
@@ -241,8 +243,27 @@ if (!session) {
     </div>
   );
 
+  // Mobile sidebar focus trap
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!mobileOpen || !sidebarRef.current) return;
+    const firstFocusable = sidebarRef.current.querySelector<HTMLElement>('a, button, input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    firstFocusable?.focus();
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMobileOpen(false);
+      if (e.key !== 'Tab' || !sidebarRef.current) return;
+      const focusable = sidebarRef.current.querySelectorAll<HTMLElement>('a, button, input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      if (focusable.length === 0) return;
+      const first = focusable[0], last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [mobileOpen]);
+
   return (
-    <div className="min-h-screen bg-[#f4f7fb] text-[#1b1b1d] font-['Inter',sans-serif] transition-colors dark:bg-slate-950 dark:text-slate-100">
+    <ErrorBoundary><div className="min-h-screen bg-[#f4f7fb] text-[#1b1b1d] font-['Inter',sans-serif] transition-colors dark:bg-slate-950 dark:text-slate-100">
       <div className="flex min-h-screen w-full">
 
         {/* ── Desktop Sidebar ── */}
@@ -259,7 +280,7 @@ if (!session) {
               className="fixed inset-0 z-40 bg-black/40 md:hidden"
               onClick={() => setMobileOpen(false)}
             />
-            <aside className="fixed inset-y-0 left-0 z-50 w-[248px] flex flex-col overflow-hidden border-r border-gray-200 bg-[#f5f5f5] md:hidden">
+            <aside ref={sidebarRef} className="fixed inset-y-0 left-0 z-50 w-[248px] flex flex-col overflow-hidden border-r border-gray-200 bg-[#f5f5f5] md:hidden">
               <SidebarInner onClose={() => setMobileOpen(false)} />
             </aside>
           </>
@@ -321,6 +342,7 @@ if (!session) {
 
                 {/* Page content */}
                 <div className="theme-content min-w-0 flex-1 overflow-hidden relative px-4 py-6 sm:px-6 lg:pl-6 lg:pr-8 lg:py-8">
+                  <Breadcrumb />
                   <Outlet />
                 </div>
               </>
@@ -328,6 +350,6 @@ if (!session) {
           </HeaderLabelProvider>
         </div>
       </div>
-    </div>
+    </div></ErrorBoundary>
   );
 }

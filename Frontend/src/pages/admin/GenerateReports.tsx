@@ -219,7 +219,9 @@ export function GenerateReports() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-                {filteredSales.map(transaction => (
+                {filteredSales.length === 0 ? (
+                  <tr><td colSpan={4} className="px-4 py-12 text-center text-slate-400">No sales transactions found.</td></tr>
+                ) : filteredSales.map(transaction => (
                   <tr key={transaction.transaction_id}>
                     <td className="px-4 py-3 font-mono text-slate-600 dark:text-slate-300">{transaction.transaction_id}</td>
                     <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{transaction.cashier_name}</td>
@@ -250,7 +252,9 @@ export function GenerateReports() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-                {compilations.map(comp => {
+                {compilations.length === 0 ? (
+                  <tr><td colSpan={6} className="px-6 py-12 text-center text-slate-400">No compilations found.</td></tr>
+                ) : compilations.map(comp => {
                   const isDownloading = downloadingIds.has(comp.id);
                   return (
                     <tr key={comp.id} className="hover:bg-slate-50/60 dark:hover:bg-white/5 transition-colors">

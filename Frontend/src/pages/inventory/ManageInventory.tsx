@@ -1,6 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import {
-  Info,
   Search,
   ArrowUpRight,
   ArrowDownRight,
@@ -20,6 +19,10 @@ import {
 import { Toast, useToast, Modal, FormField, inputCls } from '../../components/ui/Toast';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { useNavigate } from 'react-router';
+import { inventory as inventoryApi, products as productsApi } from '../../services/api';
+import { useOptimisticList } from '../../hooks/useOptimisticList';
+import { useDebounce } from '../../hooks/useDebounce';
+import type { ApiInventory } from '../../services/api';
 
 interface StockMovement {
   id: string;
@@ -45,92 +48,22 @@ interface InventoryItem {
   supplier: string;
   recentMovements: StockMovement[];
 }
-
-const INITIAL_ITEMS: InventoryItem[] = [
-  {
-    id: '1',
-    itemName: 'Lucky Me! Pancit Canton',
-    sku: 'LM-PC-80',
-    qty: 320,
-    location: 'Shelf A-3',
-    category: 'Instant Noodles',
-    lastUpdated: '2026-07-08',
-    stockStatus: 'Normal',
-    costPrice: 8.50,
-    sellingPrice: 12.00,
-    supplier: 'Nestle Philippines',
-    recentMovements: [
-      { id: '1', type: 'Stock In', quantity: 100, date: '2026-07-08 10:30', user: 'John Doe', remarks: 'Regular restock', source: 'Manual Adjustment' },
-      { id: '2', type: 'Stock Out', quantity: 25, date: '2026-07-07 14:20', user: 'Jane Smith', remarks: 'Customer purchase', source: 'Sale #SALE-20260707-004' },
-    ],
-  },
-  {
-    id: '2',
-    itemName: 'Biogesic Paracetamol 500mg',
-    sku: 'BG-P-500',
-    qty: 7,
-    location: 'Cabinet B-1',
-    category: 'Pharmaceuticals',
-    lastUpdated: '2026-07-07',
-    stockStatus: 'Low Stock',
-    costPrice: 15.00,
-    sellingPrice: 25.00,
-    supplier: 'Unilab',
-    recentMovements: [
-      { id: '3', type: 'Stock Out', quantity: 15, date: '2026-07-07 09:15', user: 'John Doe', remarks: 'Bulk purchase', source: 'Sale #SALE-20260707-002' },
-    ],
-  },
-  {
-    id: '3',
-    itemName: 'Nescafé 3-in-1 Original',
-    sku: 'NC-3O-28',
-    qty: 180,
-    location: 'Shelf C-2',
-    category: 'Beverages',
-    lastUpdated: '2026-07-07',
-    stockStatus: 'Normal',
-    costPrice: 6.50,
-    sellingPrice: 10.00,
-    supplier: 'Nestle Philippines',
-    recentMovements: [
-      { id: '4', type: 'Stock In', quantity: 50, date: '2026-07-07 11:00', user: 'Jane Smith', remarks: 'Weekly delivery', source: 'Manual Adjustment' },
-      { id: '5', type: 'Stock Out', quantity: 30, date: '2026-07-06 16:45', user: 'John Doe', source: 'Sale #SALE-20260706-008' },
-    ],
-  },
-  {
-    id: '4',
-    itemName: 'Tide Powder Detergent Sachet',
-    sku: 'TD-PD-60',
-    qty: 5,
-    location: 'Stockroom D-4',
-    category: 'Household',
-    lastUpdated: '2026-07-06',
-    stockStatus: 'Low Stock',
-    costPrice: 3.00,
-    sellingPrice: 5.50,
-    supplier: 'P&G Philippines',
-    recentMovements: [
-      { id: '6', type: 'Stock Out', quantity: 20, date: '2026-07-06 13:30', user: 'Jane Smith', remarks: 'Promotion sale', source: 'Sale #SALE-20260706-005' },
-    ],
-  },
-  {
-    id: '5',
-    itemName: 'Purefoods Tender Juicy Hotdog',
-    sku: 'PF-TJ-500',
-    qty: 42,
-    location: 'Chiller E-1',
-    category: 'Frozen / Chilled',
-    lastUpdated: '2026-07-08',
-    stockStatus: 'Normal',
-    costPrice: 120.00,
-    sellingPrice: 180.00,
-    supplier: 'San Miguel Foods',
-    recentMovements: [
-      { id: '7', type: 'Stock In', quantity: 30, date: '2026-07-08 08:00', user: 'John Doe', remarks: 'Fresh delivery', source: 'Manual Adjustment' },
-      { id: '8', type: 'Stock Out', quantity: 8, date: '2026-07-07 18:00', user: 'Jane Smith', source: 'Sale #SALE-20260707-009' },
-    ],
-  },
-];
+function mapApiItem(i: ApiInventory): InventoryItem {
+  return {
+    id: String(i.id),
+    itemName: i.product_name,
+    sku: i.sku,
+    qty: i.current_stock,
+    location: '',
+    category: i.category,
+    lastUpdated: i.last_updated?.slice(0, 10) ?? '',
+    stockStatus: i.stock_status,
+    costPrice: i.cost_price,
+    sellingPrice: i.selling_price,
+    supplier: i.supplier,
+    recentMovements: [],
+  };
+}
 
 function getExpiryDate(lastUpdated: string): string {
   const d = new Date(lastUpdated);
@@ -238,11 +171,22 @@ function ActionsDropdown({ item, onView, onAdjust, onHistory }: ActionsDropdownP
 }
 
 export function ManageInventory() {
-  const { toasts, dismiss, success } = useToast();
+  const { toasts, dismiss, success, error: showError } = useToast();
   const navigate = useNavigate();
 
-  const [items, setItems] = useState<InventoryItem[]>(INITIAL_ITEMS);
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
+  const [statusFilter, setStatusFilter] = useState('');
+
+  const fetchList = useMemo(
+    () => () => inventoryApi.list({ search: debouncedSearch, status: statusFilter || undefined }),
+    [debouncedSearch, statusFilter]
+  );
+
+  const { data: apiData, loading, error: fetchError, refetch, addItem, updateItem } = useOptimisticList(fetchList);
+
+  const items = useMemo(() => (apiData ?? []).map(mapApiItem), [apiData]);
+
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [activeTab, setActiveTab] = useState<'details' | 'stockin' | 'stockout' | 'history'>('details');
   const [stockQty, setStockQty] = useState('');
@@ -261,9 +205,7 @@ export function ManageInventory() {
   });
   const [addError, setAddError] = useState('');
 
-  // New state for category/status filters and adjust stock / history modals
   const [categoryFilter, setCategoryFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
   const [adjustItem, setAdjustItem] = useState<InventoryItem | null>(null);
   const [adjustType, setAdjustType] = useState<'Stock In' | 'Stock Out'>('Stock In');
   const [adjustQty, setAdjustQty] = useState('');
@@ -272,133 +214,84 @@ export function ManageInventory() {
 
   const handleStockMovement = async (type: 'Stock In' | 'Stock Out') => {
     if (!selectedItem || !stockQty || Number(stockQty) <= 0) return;
-
     setProcessing(true);
-    await new Promise(r => setTimeout(r, 500));
-
-    const newQty = type === 'Stock In'
-      ? selectedItem.qty + Number(stockQty)
-      : selectedItem.qty - Number(stockQty);
-
-    const newMovement: StockMovement = {
-      id: Date.now().toString(),
-      type,
-      quantity: Number(stockQty),
-      date: new Date().toLocaleString(),
-      user: 'Current User',
-      remarks: stockRemarks || undefined,
-      source: 'Manual Adjustment',
-    };
-
-    setItems(prev =>
-      prev.map(item =>
-        item.id === selectedItem.id
-          ? {
-              ...item,
-              qty: newQty,
-              lastUpdated: new Date().toISOString().slice(0, 10),
-              stockStatus: newQty < 10 ? 'Low Stock' : newQty > 300 ? 'Overstock' : 'Normal',
-              recentMovements: [newMovement, ...item.recentMovements].slice(0, 10),
-            }
-          : item
-      )
-    );
-
+    try {
+      await inventoryApi[type === 'Stock In' ? 'stockIn' : 'stockOut']({
+        product_id: Number(selectedItem.id),
+        quantity: Number(stockQty),
+        remarks: stockRemarks || undefined,
+      });
+      const newQty = type === 'Stock In'
+        ? selectedItem.qty + Number(stockQty)
+        : selectedItem.qty - Number(stockQty);
+      updateItem(Number(selectedItem.id), {
+        current_stock: newQty,
+        stock_status: newQty < 10 ? 'Low Stock' : newQty > 300 ? 'Overstock' : 'Normal',
+      } as any);
+      success(`${type} recorded successfully for "${selectedItem.itemName}"`);
+    } catch (e: any) {
+      showError(e.message ?? 'Operation failed');
+    }
     setProcessing(false);
     setStockQty('');
     setStockRemarks('');
-    success(`${type} recorded successfully for "${selectedItem.itemName}"`);
   };
 
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { itemName, sku, qty, location, category, costPrice, sellingPrice, supplier } = addForm;
-
-    if (!itemName.trim() || !qty || !location.trim() || !category.trim() || !costPrice || !sellingPrice || !supplier.trim()) {
-      setAddError('All fields are required.');
+    const { itemName, qty, costPrice, sellingPrice } = addForm;
+    if (!itemName.trim() || !qty || !costPrice || !sellingPrice) {
+      setAddError('Item name, quantity, cost price, and selling price are required.');
       return;
     }
-    if (Number(qty) < 0) {
-      setAddError('Quantity must be 0 or greater.');
-      return;
-    }
-    if (Number(costPrice) < 0 || Number(sellingPrice) < 0) {
-      setAddError('Prices must be greater than 0.');
-      return;
-    }
-
+    if (Number(qty) < 0) { setAddError('Quantity must be 0 or greater.'); return; }
+    if (Number(costPrice) < 0 || Number(sellingPrice) < 0) { setAddError('Prices must be greater than 0.'); return; }
     setAddError('');
     setProcessing(true);
-    await new Promise(r => setTimeout(r, 500));
-
-    const generatedSku = sku.trim() ? sku.trim().toUpperCase() : `SKU-AUTO-${Math.floor(100000 + Math.random() * 900000)}`;
-
-    const newItem: InventoryItem = {
-      id: Date.now().toString(),
-      itemName: itemName.trim(),
-      sku: generatedSku,
-      qty: Number(qty),
-      location: location.trim(),
-      category: category.trim(),
-      lastUpdated: new Date().toISOString().slice(0, 10),
-      stockStatus: Number(qty) < 10 ? 'Low Stock' : Number(qty) > 300 ? 'Overstock' : 'Normal',
-      costPrice: Number(costPrice),
-      sellingPrice: Number(sellingPrice),
-      supplier: supplier.trim(),
-      recentMovements: [],
-    };
-
-    setItems(prev => [newItem, ...prev]);
+    try {
+      const catId = Number(addForm.category) || 1;
+      const supId = Number(addForm.supplier) || 1;
+      await productsApi.create({
+        category_id: catId,
+        supplier_id: supId,
+        product_name: itemName.trim(),
+        cost_price: Number(costPrice),
+        selling_price: Number(sellingPrice),
+        reorder_level: 10,
+        initial_stock: Number(qty) || 0,
+      });
+      refetch();
+      success(`Product "${itemName.trim()}" added successfully.`);
+    } catch (e: any) {
+      showError(e.message ?? 'Failed to add product');
+    }
     setProcessing(false);
     setShowAddModal(false);
-    setAddForm({
-      itemName: '',
-      sku: '',
-      qty: '',
-      location: '',
-      category: '',
-      costPrice: '',
-      sellingPrice: '',
-      supplier: '',
-    });
-    success(`Product "${newItem.itemName}" added successfully.`);
+    setAddForm({ itemName: '', sku: '', qty: '', location: '', category: '', costPrice: '', sellingPrice: '', supplier: '' });
   };
 
   const handleConfirmAdjust = async () => {
     if (!adjustItem || !adjustQty || Number(adjustQty) <= 0) return;
     setProcessing(true);
-    await new Promise(r => setTimeout(r, 500));
-
-    const newQty = adjustType === 'Stock In'
-      ? adjustItem.qty + Number(adjustQty)
-      : adjustItem.qty - Number(adjustQty);
-
-    const newMovement: StockMovement = {
-      id: Date.now().toString(),
-      type: adjustType,
-      quantity: Number(adjustQty),
-      date: new Date().toLocaleString(),
-      user: 'Current User',
-      remarks: adjustRemarks || undefined,
-      source: 'Manual Adjustment',
-    };
-
-    setItems(prev =>
-      prev.map(item =>
-        item.id === adjustItem.id
-          ? {
-              ...item,
-              qty: newQty,
-              lastUpdated: new Date().toISOString().slice(0, 10),
-              stockStatus: newQty < 10 ? 'Low Stock' : newQty > 300 ? 'Overstock' : 'Normal',
-              recentMovements: [newMovement, ...item.recentMovements].slice(0, 10),
-            }
-          : item
-      )
-    );
-
+    try {
+      const apiCall = adjustType === 'Stock In' ? inventoryApi.stockIn : inventoryApi.stockOut;
+      await apiCall({
+        product_id: Number(adjustItem.id),
+        quantity: Number(adjustQty),
+        remarks: adjustRemarks || undefined,
+      });
+      const newQty = adjustType === 'Stock In'
+        ? adjustItem.qty + Number(adjustQty)
+        : adjustItem.qty - Number(adjustQty);
+      updateItem(Number(adjustItem.id), {
+        current_stock: newQty,
+        stock_status: newQty < 10 ? 'Low Stock' : newQty > 300 ? 'Overstock' : 'Normal',
+      } as any);
+      success(`${adjustType} of ${adjustQty} units recorded for "${adjustItem.itemName}"`);
+    } catch (e: any) {
+      showError(e.message ?? 'Operation failed');
+    }
     setProcessing(false);
-    success(`${adjustType} of ${adjustQty} units recorded for "${adjustItem.itemName}"`);
     setAdjustItem(null);
     setAdjustQty('');
     setAdjustRemarks('');
@@ -406,7 +299,7 @@ export function ManageInventory() {
 
   const handleExportCSV = () => {
     const headers = ['Item Name', 'SKU', 'Category', 'Location', 'Stock Qty', 'Status', 'Cost Price', 'Selling Price', 'Supplier', 'Last Updated'];
-    const rows = filtered.map(item => [
+    const rows = items.map(item => [
       item.itemName, item.sku, item.category, item.location, item.qty,
       item.stockStatus, item.costPrice, item.sellingPrice, item.supplier, item.lastUpdated,
     ]);
@@ -421,7 +314,7 @@ export function ManageInventory() {
     success('Inventory exported as CSV.');
   };
 
-  const uniqueCategories = Array.from(new Set(INITIAL_ITEMS.map(i => i.category)));
+  const uniqueCategories = Array.from(new Set(items.map(i => i.category)));
 
   const filtered = items.filter(it => {
     const q = search.toLowerCase();

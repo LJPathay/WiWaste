@@ -1,7 +1,9 @@
+import { useState, useEffect } from 'react';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis, LabelList } from 'recharts';
 import { AlertCircle, ArrowLeft, Info, ShieldAlert, TrendingDown } from 'lucide-react';
 import { Link } from 'react-router';
 import { useDashboardData } from '../../hooks/useDashboardData';
+import { wastage as wastageApi, sales as salesApi } from '../../services/api';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 
 const currencyFormatter = new Intl.NumberFormat('en-PH', {
@@ -11,7 +13,22 @@ const currencyFormatter = new Intl.NumberFormat('en-PH', {
 });
 
 export function LeakageDetectionPage() {
-  const { data, loading } = useDashboardData();
+  const { data, loading: dashLoading } = useDashboardData();
+  const [wastageData, setWastageData] = useState<any[]>([]);
+  const [salesData, setSalesData] = useState<any[]>([]);
+  const [dataLoading, setDataLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      wastageApi.list().catch(() => [] as any),
+      salesApi.list().catch(() => [] as any),
+    ]).then(([w, s]) => {
+      setWastageData(w);
+      setSalesData(s);
+    }).finally(() => setDataLoading(false));
+  }, []);
+
+  const loading = dashLoading || dataLoading;
 
   if (loading) {
     return (
@@ -26,21 +43,35 @@ export function LeakageDetectionPage() {
       </div>
     );
   }
-  if (!data) return <div className="p-8">No data</div>;
 
-  const leakageChart = [...data.profitLeakage]
+  const realLeakage = wastageData.length > 0
+    ? Object.entries(
+        wastageData.reduce((acc: Record<string, number>, w: any) => {
+          const cat = w.product_name ?? 'Uncategorized';
+          acc[cat] = (acc[cat] ?? 0) + (w.estimated_loss ?? 0);
+          return acc;
+        }, {})
+      ).map(([name, amount]) => ({
+        category: name,
+        leakageAmount: amount as number,
+        percentage: 0,
+        source: `Wastage loss from ${name}`,
+      }))
+    : (data?.profitLeakage ?? []);
+
+  const leakageChart = [...realLeakage]
     .sort((firstItem, secondItem) => secondItem.leakageAmount - firstItem.leakageAmount)
     .map((item) => ({
       name: item.category,
       amount: item.leakageAmount,
       percentage: item.percentage,
     }));
-  const totalLeakage = data.profitLeakage.reduce((sum, item) => sum + item.leakageAmount, 0);
-  const highestLeak = leakageChart[0];
-  const leakageDetections = data.profitLeakage.map((item) => ({
+  const totalLeakage = realLeakage.reduce((sum, item) => sum + item.leakageAmount, 0);
+  const highestLeak = leakageChart[0] ?? { name: 'N/A', amount: 0 };
+  const leakageDetections = realLeakage.map((item) => ({
     ...item,
     severity: item.leakageAmount >= 10000 ? 'Critical' : item.leakageAmount >= 7000 ? 'High' : 'Medium',
-    share: Math.round((item.leakageAmount / totalLeakage) * 100),
+    share: totalLeakage > 0 ? Math.round((item.leakageAmount / totalLeakage) * 100) : 0,
   }));
 
   function getSeverityStyle(severity: string) {

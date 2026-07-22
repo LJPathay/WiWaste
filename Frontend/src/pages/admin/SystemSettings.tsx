@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Save, Download, Trash2, Upload, Loader2, Info } from 'lucide-react';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { Toast, useToast, FormField, inputCls } from '../../components/ui/Toast';
+import { settings as settingsApi } from '../../services/api';
 
 /* ── Toggle Switch ── */
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
@@ -72,6 +73,7 @@ export function SystemSettings() {
     timezone: 'Asia/Manila',
   });
   const [saveLoading, setSaveLoading] = useState(false);
+  const [loadingSettings, setLoadingSettings] = useState(true);
 
   /* ── Smart Alerts ── */
   const [alerts, setAlerts] = useState({
@@ -82,6 +84,23 @@ export function SystemSettings() {
     dailyDigest: true,
     criticalAlerts: true,
   });
+
+  useEffect(() => {
+    settingsApi.get().then(s => {
+      if (s.storeName) setProfile(p => ({ ...p, storeName: s.storeName }));
+      if (s.storeEmail) setProfile(p => ({ ...p, storeEmail: s.storeEmail }));
+      if (s.storePhone) setProfile(p => ({ ...p, storePhone: s.storePhone }));
+      if (s.storeAddress) setProfile(p => ({ ...p, storeAddress: s.storeAddress }));
+      if (s.currency) setProfile(p => ({ ...p, currency: s.currency }));
+      if (s.timezone) setProfile(p => ({ ...p, timezone: s.timezone }));
+      if (s.expiryAlerts) setAlerts(a => ({ ...a, expiryAlerts: s.expiryAlerts === 'true' }));
+      if (s.lowStockAlerts) setAlerts(a => ({ ...a, lowStockAlerts: s.lowStockAlerts === 'true' }));
+      if (s.wasteThreshold) setAlerts(a => ({ ...a, wasteThreshold: s.wasteThreshold === 'true' }));
+      if (s.supplierDelay) setAlerts(a => ({ ...a, supplierDelay: s.supplierDelay === 'true' }));
+      if (s.dailyDigest) setAlerts(a => ({ ...a, dailyDigest: s.dailyDigest === 'true' }));
+      if (s.criticalAlerts) setAlerts(a => ({ ...a, criticalAlerts: s.criticalAlerts === 'true' }));
+    }).catch(() => {}).finally(() => setLoadingSettings(false));
+  }, []);
 
   const setAlert = (key: keyof typeof alerts) => (v: boolean) =>
     setAlerts(prev => ({ ...prev, [key]: v }));
@@ -98,9 +117,16 @@ export function SystemSettings() {
       return;
     }
     setSaveLoading(true);
-    await new Promise(r => setTimeout(r, 1000));
+    try {
+      await settingsApi.update({
+        ...profile,
+        ...Object.fromEntries(Object.entries(alerts).map(([k, v]) => [k, String(v)])),
+      });
+      success('System configuration saved successfully.');
+    } catch (e: any) {
+      error(e.message ?? 'Failed to save settings.');
+    }
     setSaveLoading(false);
-    success('System configuration saved successfully.');
   };
 
   const handleExport = async () => {

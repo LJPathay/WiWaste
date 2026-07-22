@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import {
   ComposedChart,
   Area,
@@ -11,11 +12,20 @@ import {
 import { AlertTriangle, ArrowLeft, Brain, Info, TrendingUp, Zap } from 'lucide-react';
 import { Link } from 'react-router';
 import { useDashboardData } from '../../hooks/useDashboardData';
+import { sales as salesApi } from '../../services/api';
 import { retailExamples } from '../../utils/mockAuthAndFeatures';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 
 export function PredictiveAnalyticsPage() {
-  const { data, loading } = useDashboardData();
+  const { data, loading: dashLoading } = useDashboardData();
+  const [salesHistory, setSalesHistory] = useState<any[]>([]);
+  const [histLoading, setHistLoading] = useState(true);
+
+  useEffect(() => {
+    salesApi.list().then(setSalesHistory).catch(() => {}).finally(() => setHistLoading(false));
+  }, []);
+
+  const loading = dashLoading || histLoading;
 
   if (loading) {
     return (
@@ -30,9 +40,8 @@ export function PredictiveAnalyticsPage() {
       </div>
     );
   }
-  if (!data) return <div className="p-8">No data</div>;
 
-  const forecastChart = data.predictiveAnalytics.wasteVolumeForecast.map((item) => ({
+  const forecastChart = (data?.predictiveAnalytics.wasteVolumeForecast ?? []).map((item) => ({
     month: item.month.replace(' 2026', ''),
     forecast: item.predicted,
     confidence: Math.round(item.confidence * 100),

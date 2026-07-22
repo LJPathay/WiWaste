@@ -80,7 +80,13 @@ export const products = {
 
 // ─── Inventory ──────────────────────────────────────────
 export const inventory = {
-  list: () => request<ApiInventory[]>('/inventory'),
+  list: (params?: { search?: string; status?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.search) qs.set('search', params.search);
+    if (params?.status) qs.set('status', params.status);
+    const q = qs.toString();
+    return request<ApiInventory[]>(`/inventory${q ? '?' + q : ''}`);
+  },
   stockIn: (data: { product_id: number; quantity: number; remarks?: string }) =>
     request('/inventory/stock-in', { method: 'POST', body: JSON.stringify(data) }),
   stockOut: (data: { product_id: number; quantity: number; remarks?: string }) =>
@@ -106,6 +112,40 @@ export const returns = {
   list: () => request<ApiReturn[]>('/returns'),
   create: (data: CreateReturnPayload) =>
     request('/returns', { method: 'POST', body: JSON.stringify(data) }),
+};
+
+// ─── Reports ────────────────────────────────────────────
+export const reports = {
+  wasteSummary: (params?: { from?: string; to?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.from) qs.set('from', params.from);
+    if (params?.to) qs.set('to', params.to);
+    const q = qs.toString();
+    return request<ApiReport[]>('/reports/waste-summary' + (q ? '?' + q : ''));
+  },
+  inventoryMovement: (params?: { from?: string; to?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.from) qs.set('from', params.from);
+    if (params?.to) qs.set('to', params.to);
+    const q = qs.toString();
+    return request<ApiReport[]>('/reports/inventory-movement' + (q ? '?' + q : ''));
+  },
+  supplierPerformance: () => request<ApiReport[]>('/reports/supplier-performance'),
+  expiryAnalysis: (days?: number) => request<ApiReport[]>(`/reports/expiry-analysis${days ? '?days=' + days : ''}`),
+  categoryAnalysis: () => request<ApiReport[]>('/reports/category-analysis'),
+  costImpact: () => request<ApiReport[]>('/reports/cost-impact'),
+};
+
+// ─── Settings ───────────────────────────────────────────
+export const settings = {
+  get: () => request<Record<string, string>>('/settings'),
+  update: (data: Record<string, string>) =>
+    request('/settings', { method: 'PUT', body: JSON.stringify(data) }),
+};
+
+// ─── Dashboard ──────────────────────────────────────────
+export const dashboard = {
+  overview: () => request<ApiDashboard>('/dashboard/overview'),
 };
 
 // ─── Types ──────────────────────────────────────────────
@@ -157,9 +197,16 @@ export interface ApiInventory {
   product_id: number;
   product_name: string;
   sku: string;
+  category: string;
+  category_id?: number;
+  cost_price: number;
+  selling_price: number;
+  supplier: string;
+  supplier_id?: number;
   current_stock: number;
   stock_status: 'Normal' | 'Low Stock' | 'Overstock';
   reorder_level: number;
+  expiration_date: string | null;
   last_updated: string;
 }
 
@@ -263,4 +310,16 @@ export interface CreateReturnPayload {
   reason?: string;
   refund_amount: number;
   return_date: string;
+}
+
+export interface ApiReport {
+  [key: string]: unknown;
+}
+
+export interface ApiDashboard {
+  active_skus: number;
+  total_users: number;
+  active_suppliers: number;
+  today_sales: number;
+  recent_wastage: number;
 }

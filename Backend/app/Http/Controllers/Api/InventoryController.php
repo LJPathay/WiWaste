@@ -11,7 +11,7 @@ class InventoryController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Inventory::with('product');
+        $query = Inventory::with('product.category');
 
         if ($search = $request->input('search')) {
             $query->whereHas('product', function ($q) use ($search) {
@@ -27,14 +27,21 @@ class InventoryController extends Controller
         $limit = min((int) $request->input('per_page', 200), 1000);
         return response()->json(
             $query->take($limit)->get()->map(fn ($i) => [
-                'id'            => $i->inventory_id,
-                'product_id'    => $i->product_id,
-                'product_name'  => $i->product?->product_name,
-                'sku'           => $i->product?->barcode,
-                'current_stock' => $i->current_stock,
-                'stock_status'  => $i->stock_status,
-                'reorder_level' => $i->product?->reorder_level,
-                'last_updated'  => $i->last_updated,
+                'id'             => $i->inventory_id,
+                'product_id'     => $i->product_id,
+                'product_name'   => $i->product?->product_name,
+                'sku'            => $i->product?->barcode,
+                'category'       => $i->product?->category?->Category_name ?? '',
+                'category_id'    => $i->product?->category_id,
+                'cost_price'     => (float) ($i->product?->cost_price ?? 0),
+                'selling_price'  => (float) ($i->product?->selling_price ?? 0),
+                'supplier'       => $i->product?->supplier?->supplier_name ?? '',
+                'supplier_id'    => $i->product?->supplier_id,
+                'current_stock'  => $i->current_stock,
+                'stock_status'   => $i->stock_status,
+                'reorder_level'  => $i->product?->reorder_level,
+                'expiration_date'=> $i->product?->expiration_date,
+                'last_updated'   => $i->last_updated,
             ])
         );
     }

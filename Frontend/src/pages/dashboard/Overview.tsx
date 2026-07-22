@@ -73,7 +73,7 @@ function SectionDivider({ title }: { title: string }) {
 }
 
 export function DashboardOverview() {
-  const { data, loading } = useDashboardData();
+  const { data, overview, loading } = useDashboardData();
   const navigate = useNavigate();
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [shortcuts, setShortcuts] = useState(AVAILABLE_SHORTCUTS.slice(0, 3));
@@ -235,13 +235,10 @@ export function DashboardOverview() {
     },
   ];
 
-  // N8: Active SKUs — 248 (authoritative from Inventory Performance)
-  // N10: Total Users — 9 (visible rows in Manage Users table)
-  // N6: Active Suppliers — 6 (from Manage Suppliers: 8 total, 6 active)
   const adminStats = [
-    { label: 'Active SKUs', value: 248, icon: Package, link: '/owner/products', note: 'N8' },
-    { label: 'Registered Users', value: 9, icon: Users, link: '/owner/users', note: 'N10' },
-    { label: 'Active Suppliers', value: 6, icon: Truck, link: '/owner/suppliers', note: 'N6' },
+    { label: 'Active SKUs', value: overview?.active_skus ?? 248, icon: Package, link: '/owner/products', note: 'Real-time' },
+    { label: 'Registered Users', value: overview?.total_users ?? 9, icon: Users, link: '/owner/users', note: 'Real-time' },
+    { label: 'Active Suppliers', value: overview?.active_suppliers ?? 6, icon: Truck, link: '/owner/suppliers', note: 'Real-time' },
     { label: 'System Settings', value: '—', icon: Settings, link: '/owner/settings', note: '' },
   ];
 

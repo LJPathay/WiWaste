@@ -10,9 +10,11 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { useState, useEffect } from 'react';
 import { AlertTriangle, ArrowLeft, Clock3, Info, Package, PackageSearch, RotateCcw, Tag } from 'lucide-react';
 import { Link } from 'react-router';
 import { useDashboardData } from '../../hooks/useDashboardData';
+import { products as productsApi } from '../../services/api';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 
 const currencyFormatter = new Intl.NumberFormat('en-PH', {
@@ -28,7 +30,31 @@ function getRisk(daysToExpiry: number) {
 }
 
 export function FefoTrackingPage() {
-  const { data, loading } = useDashboardData();
+  const { data: dashboardData, loading: dashLoading } = useDashboardData();
+  const [products, setProducts] = useState<any[]>([]);
+  const [prodsLoading, setProdsLoading] = useState(true);
+
+  useEffect(() => {
+    productsApi.list().then(all => {
+      const withExpiry = all
+        .filter(p => p.expiration_date)
+        .sort((a, b) => new Date(a.expiration_date!).getTime() - new Date(b.expiration_date!).getTime());
+      setProducts(withExpiry);
+    }).catch(() => {}).finally(() => setProdsLoading(false));
+  }, []);
+
+  const loading = dashLoading || prodsLoading;
+
+  const batchFEFO = products.length > 0
+    ? products.map((p, i) => ({
+        batchId: `BATCH-${String(i + 1).padStart(3, '0')}`,
+        expiryDate: new Date(p.expiration_date!),
+        currentPrice: p.selling_price,
+        decayRate: 0.1,
+        recommendedPrice: +(p.selling_price * 0.85).toFixed(2),
+        daysToExpiry: Math.max(0, Math.ceil((new Date(p.expiration_date!).getTime() - Date.now()) / (24 * 60 * 60 * 1000))),
+      }))
+    : (dashboardData?.batchFEFO ?? []);
 
   if (loading) {
     return (
@@ -43,23 +69,22 @@ export function FefoTrackingPage() {
       </div>
     );
   }
-  if (!data) return <div className="p-8">No data</div>;
 
-  const fefoChart = data.batchFEFO.map((item) => ({
+  const fefoChart = batchFEFO.map((item) => ({
     name: item.batchId.replace('-2026-', ' '),
     daysToExpiry: item.daysToExpiry,
     priceDrop: Number(((item.currentPrice - item.recommendedPrice) / item.currentPrice * 100).toFixed(1)),
     risk: getRisk(item.daysToExpiry),
   }));
-  const criticalBatches = data.batchFEFO.filter((item) => item.daysToExpiry <= 3);
-  const highRiskBatches = data.batchFEFO.filter((item) => item.daysToExpiry > 3 && item.daysToExpiry <= 7);
-  const stableBatches = data.batchFEFO.filter((item) => item.daysToExpiry > 7);
-  const nearestBatch = [...data.batchFEFO].sort(
+  const criticalBatches = batchFEFO.filter((item) => item.daysToExpiry <= 3);
+  const highRiskBatches = batchFEFO.filter((item) => item.daysToExpiry > 3 && item.daysToExpiry <= 7);
+  const stableBatches = batchFEFO.filter((item) => item.daysToExpiry > 7);
+  const nearestBatch = [...batchFEFO].sort(
     (firstBatch, secondBatch) => firstBatch.daysToExpiry - secondBatch.daysToExpiry
   )[0];
 
   const statCards = [
-    { label: 'Total Batches', value: data.batchFEFO.length, icon: Package, color: 'text-slate-700 dark:text-slate-200', bg: 'bg-slate-50 dark:bg-slate-800', border: 'border-slate-200 dark:border-white/10' },
+    { label: 'Total Batches', value: batchFEFO.length, icon: Package, color: 'text-slate-700 dark:text-slate-200', bg: 'bg-slate-50 dark:bg-slate-800', border: 'border-slate-200 dark:border-white/10' },
     { label: 'Critical', value: criticalBatches.length, icon: AlertTriangle, color: 'text-rose-700 dark:text-rose-300', bg: 'bg-rose-50 dark:bg-rose-500/10', border: 'border-rose-100 dark:border-rose-500/20' },
     { label: 'High Risk', value: highRiskBatches.length, icon: Clock3, color: 'text-amber-700 dark:text-amber-300', bg: 'bg-amber-50 dark:bg-amber-500/10', border: 'border-amber-100 dark:border-amber-500/20' },
     { label: 'Stable', value: stableBatches.length, icon: Package, color: 'text-teal-700 dark:text-teal-300', bg: 'bg-teal-50 dark:bg-teal-500/10', border: 'border-teal-100 dark:border-teal-500/20' },
@@ -182,7 +207,7 @@ export function FefoTrackingPage() {
               </tr>
             </thead>
             <tbody>
-              {data.batchFEFO.map((batch) => {
+              {batchFEFO.map((batch) => {
                 const risk = getRisk(batch.daysToExpiry);
                 const action = batch.daysToExpiry <= 3
                   ? { label: 'Rotate Now', icon: RotateCcw, color: 'text-rose-700 bg-rose-100 dark:bg-rose-500/20 dark:text-rose-300' }

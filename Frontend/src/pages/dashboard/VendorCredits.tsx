@@ -1,7 +1,9 @@
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis, LabelList } from 'recharts';
 import { AlertTriangle, ArrowLeft, PhilippinePeso, FileCheck, Info, TimerReset, XCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router';
 import { useDashboardData } from '../../hooks/useDashboardData';
+import { suppliers as suppliersApi, returns as returnsApi } from '../../services/api';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 
 const currencyFormatter = new Intl.NumberFormat('en-PH', {
@@ -21,7 +23,22 @@ function getDeadlineRisk(daysUntilDeadline: number) {
 }
 
 export function VendorCreditsPage() {
-  const { data, loading } = useDashboardData();
+  const { data, loading: dashLoading } = useDashboardData();
+  const [suppliersList, setSuppliersList] = useState<any[]>([]);
+  const [returnsList, setReturnsList] = useState<any[]>([]);
+  const [dataLoading, setDataLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      suppliersApi.list().catch(() => [] as any),
+      returnsApi.list().catch(() => [] as any),
+    ]).then(([s, r]) => {
+      setSuppliersList(s);
+      setReturnsList(r);
+    }).finally(() => setDataLoading(false));
+  }, []);
+
+  const loading = dashLoading || dataLoading;
 
   if (loading) {
     return (
@@ -36,9 +53,19 @@ export function VendorCreditsPage() {
       </div>
     );
   }
-  if (!data) return <div className="p-8">No data</div>;
 
-  const vendorChart = data.vendorReturns.map((item) => {
+  const vendorReturns = (data?.vendorReturns ?? []).length > 0
+    ? data!.vendorReturns
+    : suppliersList.map((s: any, i) => ({
+        vendorId: `VENDOR-${s.id ?? i}`,
+        vendorName: s.name ?? s.supplier_name ?? `Supplier ${i + 1}`,
+        returnWindowDays: 30,
+        eligibleCredit: 0,
+        returnDeadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        status: 'pending' as const,
+      }));
+
+  const vendorChart = vendorReturns.map((item) => {
     const daysUntilDeadline = getDaysUntil(item.returnDeadline);
     return {
       name: item.vendorName,
@@ -47,7 +74,7 @@ export function VendorCreditsPage() {
       daysUntilDeadline,
     };
   });
-  const totalCredits = data.vendorReturns.reduce((sum, item) => sum + item.eligibleCredit, 0);
+  const totalCredits = vendorReturns.reduce((sum, item) => sum + item.eligibleCredit, 0);
   const missedWindows = vendorChart.filter((item) => item.daysUntilDeadline < 0);
   const urgentWindows = vendorChart.filter((item) => item.daysUntilDeadline >= 0 && item.daysUntilDeadline <= 10);
 
@@ -76,7 +103,7 @@ export function VendorCreditsPage() {
             <PhilippinePeso className="h-4 w-4 text-emerald-500" />
           </div>
           <div className="mt-2 text-2xl font-bold text-emerald-700 dark:text-emerald-300">{currencyFormatter.format(totalCredits)}</div>
-          <div className="mt-1 text-xs text-emerald-600/70">eligible across {data.vendorReturns.length} suppliers</div>
+          <div className="mt-1 text-xs text-emerald-600/70">eligible across {vendorReturns.length} suppliers</div>
         </div>
         <div className="rounded-3xl border border-rose-100 bg-rose-50 p-5 dark:border-rose-500/20 dark:bg-rose-500/5">
           <div className="flex items-center justify-between">
@@ -174,7 +201,7 @@ export function VendorCreditsPage() {
               </tr>
             </thead>
             <tbody>
-              {data.vendorReturns.map((vendor) => {
+              {vendorReturns.map((vendor) => {
                 const daysUntilDeadline = getDaysUntil(vendor.returnDeadline);
                 const risk = getDeadlineRisk(daysUntilDeadline);
                 const actionLabel = daysUntilDeadline < 0

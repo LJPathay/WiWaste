@@ -124,6 +124,31 @@ class InventoryController extends Controller
         return response()->json(['message' => 'Stock removed.', 'new_stock' => $inventory->current_stock]);
     }
 
+    public function movements($id)
+    {
+        $inventory = Inventory::with('product')->findOrFail($id);
+
+        $movements = StockMovement::where('product_id', $inventory->product_id)
+            ->with('user')
+            ->orderByDesc('movement_date')
+            ->get()
+            ->map(fn ($m) => [
+                'movement_id' => $m->movement_id,
+                'type'        => $m->movement_type,
+                'quantity'    => $m->quantity,
+                'remarks'     => $m->remarks,
+                'recorded_by' => $m->user?->Full_name ?? 'System',
+                'date'        => $m->movement_date,
+            ]);
+
+        return response()->json([
+            'product_id'    => $inventory->product_id,
+            'product_name'  => $inventory->product?->product_name,
+            'current_stock' => $inventory->current_stock,
+            'movements'     => $movements,
+        ]);
+    }
+
     private function calcStatus(int $stock, int $reorderLevel): string
     {
         if ($stock <= 0) return 'Low Stock';

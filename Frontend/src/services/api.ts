@@ -91,6 +91,8 @@ export const inventory = {
     request('/inventory/stock-in', { method: 'POST', body: JSON.stringify(data) }),
   stockOut: (data: { product_id: number; quantity: number; remarks?: string }) =>
     request('/inventory/stock-out', { method: 'POST', body: JSON.stringify(data) }),
+  movements: (id: number) =>
+    request<ApiInventoryMovements>(`/inventory/${id}/movements`),
 };
 
 // ─── Wastage ────────────────────────────────────────────
@@ -324,6 +326,85 @@ export interface ApiDashboard {
   recent_wastage: number;
 }
 
+export interface ApiDashboardSummary {
+  low_stock_count: number;
+  expiring_soon_count: number;
+  today_movements: number;
+  pending_wastage_count: number;
+  critical_fefo_count: number;
+}
+
+export interface ApiFefoBatch {
+  batch_id: number;
+  product_id: number;
+  product_name: string;
+  sku: string;
+  category: string;
+  batch_number: string | null;
+  quantity: number;
+  expiry_date: string;
+  days_left: number;
+  status: string;
+  directive_notes: string | null;
+}
+
+export interface ApiFefoList {
+  batches: ApiFefoBatch[];
+  total_batches: number;
+  critical_count: number;
+  expiring_soon_count: number;
+}
+
+export interface ApiFefoMovement {
+  movement_id: number;
+  type: string;
+  quantity: number;
+  remarks: string | null;
+  recorded_by: string;
+  date: string;
+}
+
+export interface ApiFefoBatchDetail extends ApiFefoBatch {
+  created_by: string;
+  created_at: string;
+  movements: ApiFefoMovement[];
+}
+
+export interface ApiRecommendation {
+  recommendation_id: number;
+  product_id: number;
+  product_name: string;
+  sku: string;
+  category: string;
+  current_stock: number;
+  recommended_stock: number;
+  recommendation_type: string;
+  confidence_score: number;
+  status: string;
+  rejection_reason: string | null;
+  reviewed_by: string | null;
+  created_at: string;
+  reviewed_at: string | null;
+}
+
+export interface ApiRecommendationDetail extends ApiRecommendation {}
+
+export interface ApiMovement {
+  movement_id: number;
+  type: string;
+  quantity: number;
+  remarks: string | null;
+  recorded_by: string;
+  date: string;
+}
+
+export interface ApiInventoryMovements {
+  product_id: number;
+  product_name: string;
+  current_stock: number;
+  movements: ApiMovement[];
+}
+
 // ─── Purchase Orders ──────────────────────────────────────
 export const purchaseOrders = {
   list: (params?: { status?: string; search?: string; page?: number }) => {
@@ -368,4 +449,26 @@ export const inventoryAnalytics = {
   turnover: () => request<any>('/analytics/turnover'),
   overstock: () => request<any>('/analytics/overstock'),
   deadStock: () => request<any>('/analytics/dead-stock'),
+  dashboardSummary: () => request<ApiDashboardSummary>('/analytics/dashboard-summary'),
+};
+
+// ─── FEFO Tracking ────────────────────────────────────────
+export const fefo = {
+  batches: () => request<ApiFefoList>('/fefo/batches'),
+  show: (id: number) => request<ApiFefoBatchDetail>(`/fefo/batches/${id}`),
+  apply: (data: { batch_id: number; action: 'flag' | 'clear' | 'notify'; directive_notes?: string }) =>
+    request('/fefo/apply', { method: 'POST', body: JSON.stringify(data) }),
+};
+
+// ─── Recommendations ─────────────────────────────────────
+export const recommendations = {
+  list: (status?: string) => {
+    const qs = status ? `?status=${status}` : '';
+    return request<ApiRecommendation[]>(`/recommendations${qs}`);
+  },
+  show: (id: number) => request<ApiRecommendationDetail>(`/recommendations/${id}`),
+  approve: (id: number) =>
+    request(`/recommendations/${id}/approve`, { method: 'POST' }),
+  reject: (id: number, rejection_reason: string) =>
+    request(`/recommendations/${id}/reject`, { method: 'POST', body: JSON.stringify({ rejection_reason }) }),
 };

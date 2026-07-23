@@ -1,42 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { AlertTriangle, Trash2, Search, Loader2, Info, TrendingDown, BarChart2, PackageX, CheckCircle, ChevronDown } from 'lucide-react';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { Toast, useToast, ConfirmDialog } from '../../components/ui/Toast';
 import { useApi } from '../../hooks/useApi';
-import { products as productsApi, wastage as wastageApi, type ApiProduct } from '../../services/api';
-
-interface WastageMock {
-  id: string;
-  name: string;
-  sku?: string;
-  qty: number;
-  reason: string;
-  cost: number;
-  recordedAt: string;
-}
-
-const INITIAL_WASTAGE: WastageMock[] = [
-  { id: '1', name: 'Anchor Salted Butter 225g', sku: 'AS-B-225', qty: 15, reason: 'Expired on Shelf', cost: 1875, recordedAt: '2026-07-08 08:24' },
-  { id: '2', name: 'Del Monte Tomato Sauce 250g', sku: 'DM-TS-250', qty: 8, reason: 'Expired on Shelf', cost: 260, recordedAt: '2026-07-08 07:10' },
-  { id: '3', name: 'Gardenia Classic White Bread', sku: 'GC-WB-600', qty: 6, reason: 'Mould/Spoilage', cost: 420, recordedAt: '2026-07-07 16:50' },
-  { id: '4', name: 'Selecta Fortified Milk 1L', sku: 'SF-M-1000', qty: 12, reason: 'Damaged Pack Leakage', cost: 1080, recordedAt: '2026-07-06 11:15' },
-];
-
-const MOCK_CATALOG = [
-  { id: 1, name: 'Del Monte Tomato Sauce 250g', sku: 'DM-TS-250', cost: 32.50 },
-  { id: 2, name: 'Biogesic Paracetamol 500mg', sku: 'BG-P-500', cost: 7.50 },
-  { id: 3, name: 'Coca-Cola 1.5L', sku: 'CC-15L', cost: 68.00 },
-  { id: 4, name: 'Safeguard White Soap 130g', sku: 'SG-WS-130', cost: 54.00 },
-  { id: 5, name: 'Century Tuna Flakes in Oil 180g', sku: 'CT-FO-180', cost: 42.00 },
-  { id: 6, name: 'Neozep Forte (Tablet)', sku: 'NZ-F-TAB', cost: 8.50 },
-  { id: 7, name: 'C2 Green Tea 500ml', sku: 'C2-GT-500', cost: 22.00 },
-  { id: 8, name: 'Colgate Triple Action 150g', sku: 'CG-TA-150', cost: 115.00 },
-  { id: 9, name: 'San Miguel Pale Pilsen Can', sku: 'SM-PP-CAN', cost: 72.00 },
-  { id: 10, name: 'Gatorade Blue Bolt 500ml', sku: 'GT-BB-500', cost: 45.00 },
-  { id: 11, name: 'Anchor Salted Butter 225g', sku: 'AS-B-225', cost: 125.00 },
-  { id: 12, name: 'Gardenia Classic White Bread', sku: 'GC-WB-600', cost: 70.00 },
-  { id: 13, name: 'Selecta Fortified Milk 1L', sku: 'SF-M-1000', cost: 90.00 },
-];
+import { products as productsApi, wastage as wastageApi, type ApiWastage } from '../../services/api';
 
 const currencyFormatter = new Intl.NumberFormat('en-PH', {
   style: 'currency',
@@ -54,12 +21,11 @@ function getReasonBadge(reason: string): string {
 
 export function RecordWastage() {
   const { toasts, dismiss, success, error } = useToast();
-  const { data: apiProducts } = useApi<ApiProduct[]>(productsApi.list);
+  const { data: apiProducts } = useApi(productsApi.list);
+  const { data: wastageRecords, loading, refetch } = useApi<ApiWastage[]>(wastageApi.list);
 
-  const [records, setRecords] = useState<WastageMock[]>(INITIAL_WASTAGE);
   const [search, setSearch] = useState('');
   
-  // Product Search Dropdown Autocomplete state
   const [itemQuery, setItemQuery] = useState('');
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
   const [unitCost, setUnitCost] = useState<number>(0);
@@ -71,12 +37,18 @@ export function RecordWastage() {
   const [submitting, setSubmitting] = useState(false);
   const [confirmData, setConfirmData] = useState<{ productId?: number; name: string; qty: number; unitCost: number; totalCost: number; reason: string } | null>(null);
 
-  // Combine API products & mock catalog for search dropdown
-  const catalogOptions = (apiProducts && apiProducts.length > 0)
-    ? apiProducts.map(p => ({ id: p.id, name: p.name, sku: p.sku, cost: p.cost_price }))
-    : MOCK_CATALOG;
+  const catalogOptions = (apiProducts ?? []).map(p => ({ id: p.id, name: p.name, sku: p.sku, cost: p.cost_price }));
 
-  // Filter matching products based on what user types
+  const records = useMemo(() => (wastageRecords ?? []).map(r => ({
+    id: String(r.id),
+    name: r.product_name,
+    sku: r.sku,
+    qty: r.quantity,
+    reason: r.wastage_type,
+    cost: r.estimated_loss,
+    recordedAt: r.date_recorded,
+  })), [wastageRecords]);
+
   const matchingProducts = itemQuery.trim() === '' 
     ? catalogOptions 
     : catalogOptions.filter(p => 
@@ -84,7 +56,6 @@ export function RecordWastage() {
         (p.sku && p.sku.toLowerCase().includes(itemQuery.toLowerCase()))
       );
 
-  // Close dropdown on outside click
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -139,19 +110,13 @@ export function RecordWastage() {
         });
       }
     } catch (err: any) {
-      // Graceful fallback for offline demo
+      setSubmitting(false);
+      setConfirmData(null);
+      error(err.message ?? 'Failed to record wastage. Please try again.');
+      return;
     }
 
-    const newRecord: WastageMock = {
-      id: String(Date.now()),
-      name: confirmData.name,
-      qty: confirmData.qty,
-      reason: confirmData.reason,
-      cost: confirmData.totalCost,
-      recordedAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
-    };
-
-    setRecords([newRecord, ...records]);
+    await refetch();
     setItemQuery('');
     setSelectedProductId(null);
     setUnitCost(0);
@@ -159,8 +124,21 @@ export function RecordWastage() {
     setReason('Expired on Shelf');
     setConfirmData(null);
     setSubmitting(false);
-    success(`Loss record committed successfully for "${newRecord.name}".`);
+    success('Loss record committed successfully.');
   };
+
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0, 10);
+  const weekAgo = new Date(now);
+  weekAgo.setDate(weekAgo.getDate() - 7);
+  const weekAgoStr = weekAgo.toISOString().slice(0, 10);
+  const monthAgo = new Date(now);
+  monthAgo.setMonth(monthAgo.getMonth() - 1);
+  const monthAgoStr = monthAgo.toISOString().slice(0, 10);
+
+  const todayLoss = wastageRecords?.filter(r => r.date_recorded >= todayStr).reduce((s, r) => s + r.estimated_loss, 0) ?? 0;
+  const weeklyLoss = wastageRecords?.filter(r => r.date_recorded >= weekAgoStr).reduce((s, r) => s + r.estimated_loss, 0) ?? 0;
+  const monthlyLoss = wastageRecords?.filter(r => r.date_recorded >= monthAgoStr).reduce((s, r) => s + r.estimated_loss, 0) ?? 0;
 
   const filteredRecords = records.filter(r =>
     r.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -170,7 +148,7 @@ export function RecordWastage() {
   const totalCost = filteredRecords.reduce((sum, r) => sum + r.cost, 0);
 
   return (
-    <div className="space-y-6 w-full bg-[#F8FAFC] min-h-full font-sans">
+    <div className="space-y-6 w-full bg-[#F8FAFC] dark:bg-slate-950 min-h-full font-sans">
       <Toast toasts={toasts} onDismiss={dismiss} />
 
       {confirmData && (
@@ -185,7 +163,7 @@ export function RecordWastage() {
       {/* Page Header */}
       <div className="flex flex-col gap-1">
         <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-bold text-[#0F172A]">Record Wastage</h1>
+          <h1 className="text-2xl font-bold text-[#0F172A] dark:text-slate-100">Record Wastage</h1>
           <UITooltip>
             <TooltipTrigger asChild>
               <Info className="h-4 w-4 text-slate-400 hover:text-slate-600 cursor-help" />
@@ -195,58 +173,58 @@ export function RecordWastage() {
             </TooltipContent>
           </UITooltip>
         </div>
-        <p className="text-sm text-[#64748B]">
+        <p className="text-sm text-[#64748B] dark:text-slate-400">
           Log inventory losses for audit, analytics, and cost recovery tracking
         </p>
       </div>
 
       {/* Loss Summary Strip */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="rounded-xl border border-red-100 bg-red-50 p-4 flex items-center gap-4 shadow-sm">
-          <div className="rounded-lg p-2.5 bg-red-100 flex-shrink-0">
-            <TrendingDown className="h-5 w-5 text-red-600" />
+        <div className="rounded-xl border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-950/20 p-4 flex items-center gap-4 shadow-sm">
+          <div className="rounded-lg p-2.5 bg-red-100 dark:bg-red-900/30 flex-shrink-0">
+            <TrendingDown className="h-5 w-5 text-red-600 dark:text-red-400" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-red-500 uppercase tracking-wider">Today's Loss</p>
-            <p className="text-xl font-black text-red-700 mt-0.5">&#8369;3,635</p>
+            <p className="text-xs font-semibold text-red-500 dark:text-red-400 uppercase tracking-wider">Today's Loss</p>
+            <p className="text-xl font-black text-red-700 dark:text-red-300 mt-0.5">{currencyFormatter.format(todayLoss)}</p>
           </div>
         </div>
-        <div className="rounded-xl border border-orange-100 bg-orange-50 p-4 flex items-center gap-4 shadow-sm">
-          <div className="rounded-lg p-2.5 bg-orange-100 flex-shrink-0">
-            <BarChart2 className="h-5 w-5 text-orange-600" />
+        <div className="rounded-xl border border-orange-100 dark:border-orange-900/30 bg-orange-50 dark:bg-orange-950/20 p-4 flex items-center gap-4 shadow-sm">
+          <div className="rounded-lg p-2.5 bg-orange-100 dark:bg-orange-900/30 flex-shrink-0">
+            <BarChart2 className="h-5 w-5 text-orange-600 dark:text-orange-400" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-orange-500 uppercase tracking-wider">Weekly Loss</p>
-            <p className="text-xl font-black text-orange-700 mt-0.5">&#8369;12,450</p>
+            <p className="text-xs font-semibold text-orange-500 dark:text-orange-400 uppercase tracking-wider">Weekly Loss</p>
+            <p className="text-xl font-black text-orange-700 dark:text-orange-300 mt-0.5">{currencyFormatter.format(weeklyLoss)}</p>
           </div>
         </div>
-        <div className="rounded-xl border border-amber-100 bg-amber-50 p-4 flex items-center gap-4 shadow-sm">
-          <div className="rounded-lg p-2.5 bg-amber-100 flex-shrink-0">
-            <AlertTriangle className="h-5 w-5 text-amber-600" />
+        <div className="rounded-xl border border-amber-100 dark:border-amber-900/30 bg-amber-50 dark:bg-amber-950/20 p-4 flex items-center gap-4 shadow-sm">
+          <div className="rounded-lg p-2.5 bg-amber-100 dark:bg-amber-900/30 flex-shrink-0">
+            <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-amber-600 uppercase tracking-wider">Monthly Loss</p>
-            <p className="text-xl font-black text-amber-700 mt-0.5">&#8369;48,200</p>
+            <p className="text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider">Monthly Loss</p>
+            <p className="text-xl font-black text-amber-700 dark:text-amber-300 mt-0.5">{currencyFormatter.format(monthlyLoss)}</p>
           </div>
         </div>
       </div>
 
       {/* Two-Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-6 items-start">
+      <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-[400px_1fr] gap-6 items-start">
 
         {/* LEFT: Form Card with Live Search Autocomplete */}
-        <div className="bg-white rounded-xl border border-[#E5E7EB] shadow-sm p-6 h-fit">
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-[#E5E7EB] dark:border-white/10 shadow-sm p-6 h-fit">
           <div className="flex items-center gap-2 mb-5">
             <div className="rounded-lg p-1.5 bg-red-50">
               <Trash2 className="h-4 w-4 text-red-600" />
             </div>
-            <h2 className="text-sm font-bold text-[#0F172A]">Log Wastage Record</h2>
+            <h2 className="text-sm font-bold text-[#0F172A] dark:text-slate-100">Log Wastage Record</h2>
           </div>
 
           <form onSubmit={handleRecord} className="space-y-4">
             {/* Interactive Product Search Dropdown */}
             <div className="relative" ref={dropdownRef}>
-              <label className="block text-xs font-semibold text-[#374151] mb-1.5">
+              <label className="block text-xs font-semibold text-[#374151] dark:text-slate-300 mb-1.5">
                 Search Registered Product Catalog
               </label>
               <div className="relative">
@@ -261,7 +239,7 @@ export function RecordWastage() {
                     setSelectedProductId(null);
                     setShowDropdown(true);
                   }}
-                  className="w-full pl-9 pr-8 py-2.5 rounded-lg border border-[#E5E7EB] text-sm text-[#0F172A] bg-white focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all"
+                  className="w-full pl-9 pr-8 py-2.5 rounded-lg border border-[#E5E7EB] dark:border-white/10 text-sm text-[#0F172A] dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all"
                   required
                 />
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
@@ -298,35 +276,35 @@ export function RecordWastage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-[#374151] mb-1.5">Quantity</label>
+                <label className="block text-xs font-semibold text-[#374151] dark:text-slate-300 mb-1.5">Quantity</label>
                 <input
                   type="number"
                   min="1"
                   placeholder="e.g. 5"
                   value={qty}
                   onChange={(e) => setQty(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-lg border border-[#E5E7EB] text-sm text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all"
+                  className="w-full px-3 py-2.5 rounded-lg border border-[#E5E7EB] dark:border-white/10 text-sm text-[#0F172A] dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all"
                   required
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[#374151] mb-1.5">Unit Cost (&#8369;)</label>
+                <label className="block text-xs font-semibold text-[#374151] dark:text-slate-300 mb-1.5">Unit Cost (&#8369;)</label>
                 <input
                   type="number"
                   placeholder="Auto-filled"
                   value={unitCost || ''}
                   onChange={(e) => setUnitCost(Number(e.target.value))}
-                  className="w-full px-3 py-2.5 rounded-lg border border-[#E5E7EB] text-sm text-[#0F172A] bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all"
+                  className="w-full px-3 py-2.5 rounded-lg border border-[#E5E7EB] dark:border-white/10 text-sm text-[#0F172A] dark:text-slate-100 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[#374151] mb-1.5">Wastage Reason</label>
+              <label className="block text-xs font-semibold text-[#374151] dark:text-slate-300 mb-1.5">Wastage Reason</label>
               <select
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-lg border border-[#E5E7EB] text-sm text-[#0F172A] bg-white focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all"
+                className="w-full px-3 py-2.5 rounded-lg border border-[#E5E7EB] dark:border-white/10 text-sm text-[#0F172A] dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all"
               >
                 <option value="Expired on Shelf">Expired on Shelf</option>
                 <option value="Damaged / Broken">Damaged / Broken</option>
@@ -339,9 +317,9 @@ export function RecordWastage() {
             </div>
 
             {calculatedTotalLoss > 0 && (
-              <div className="rounded-lg border border-red-100 bg-red-50 px-4 py-3 flex items-center justify-between">
-                <span className="text-xs font-semibold text-red-600">Calculated Total Loss</span>
-                <span className="text-sm font-black text-red-700">
+              <div className="rounded-lg border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-950/20 px-4 py-3 flex items-center justify-between">
+                <span className="text-xs font-semibold text-red-600 dark:text-red-400">Calculated Total Loss</span>
+                <span className="text-sm font-black text-red-700 dark:text-red-300">
                   {currencyFormatter.format(calculatedTotalLoss)}
                 </span>
               </div>
@@ -360,11 +338,11 @@ export function RecordWastage() {
         </div>
 
         {/* RIGHT: Wastage Logs */}
-        <div className="bg-white rounded-xl border border-[#E5E7EB] shadow-sm overflow-hidden flex flex-col">
-          <div className="px-5 py-4 border-b border-[#E5E7EB] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-[#E5E7EB] dark:border-white/10 shadow-sm overflow-hidden flex flex-col">
+          <div className="px-5 py-4 border-b border-[#E5E7EB] dark:border-white/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-              <h3 className="text-sm font-bold text-[#0F172A]">Wastage Logs</h3>
-              <p className="text-xs text-[#64748B] mt-0.5">
+              <h3 className="text-sm font-bold text-[#0F172A] dark:text-slate-100">Wastage Logs</h3>
+              <p className="text-xs text-[#64748B] dark:text-slate-400 mt-0.5">
                 {filteredRecords.length} record{filteredRecords.length !== 1 ? 's' : ''} found
               </p>
             </div>
@@ -375,14 +353,14 @@ export function RecordWastage() {
                 placeholder="Search logs..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 rounded-lg border border-[#E5E7EB] text-xs text-[#374151] bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all"
+                className="w-full pl-9 pr-3 py-2 rounded-lg border border-[#E5E7EB] dark:border-white/10 text-xs text-[#374151] dark:text-slate-300 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all"
               />
             </div>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-xs text-left">
-              <thead className="bg-[#F8FAFC] border-b border-[#E5E7EB]">
+              <thead className="bg-[#F8FAFC] dark:bg-slate-800 border-b border-[#E5E7EB] dark:border-white/10">
                 <tr>
                   <th className="px-5 py-3 font-semibold text-[10px] uppercase tracking-wider text-[#64748B]">Item</th>
                   <th className="px-5 py-3 font-semibold text-[10px] uppercase tracking-wider text-[#64748B]">Qty</th>
@@ -391,7 +369,7 @@ export function RecordWastage() {
                   <th className="px-5 py-3 font-semibold text-[10px] uppercase tracking-wider text-[#64748B]">Recorded At</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#F1F5F9]">
+              <tbody className="divide-y divide-[#F1F5F9] dark:divide-white/5">
                 {filteredRecords.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="text-center py-16">
@@ -408,8 +386,8 @@ export function RecordWastage() {
                   </tr>
                 ) : (
                   filteredRecords.map((r) => (
-                    <tr key={r.id} className="hover:bg-[#F8FAFC] transition-colors">
-                      <td className="px-5 py-4 font-semibold text-[#0F172A]">{r.name}</td>
+                    <tr key={r.id} className="hover:bg-[#F8FAFC] dark:hover:bg-slate-800/50 transition-colors">
+                      <td className="px-5 py-4 font-semibold text-[#0F172A] dark:text-slate-100">{r.name}</td>
                       <td className="px-5 py-4">
                         <span className="font-semibold text-[#DC2626]">-{r.qty}</span>
                         <span className="ml-1 text-[#64748B]">units</span>
@@ -420,7 +398,7 @@ export function RecordWastage() {
                           {r.reason}
                         </span>
                       </td>
-                      <td className="px-5 py-4 text-[#64748B]">{r.recordedAt}</td>
+                      <td className="px-5 py-4 text-[#64748B] dark:text-slate-400">{r.recordedAt}</td>
                     </tr>
                   ))
                 )}
@@ -429,8 +407,8 @@ export function RecordWastage() {
           </div>
 
           {filteredRecords.length > 0 && (
-            <div className="px-5 py-3 border-t border-[#E5E7EB] bg-slate-50 flex items-center justify-between">
-              <span className="text-xs font-semibold text-[#64748B]">
+            <div className="px-5 py-3 border-t border-[#E5E7EB] dark:border-white/10 bg-slate-50 dark:bg-slate-800 flex items-center justify-between">
+              <span className="text-xs font-semibold text-[#64748B] dark:text-slate-400">
                 Total Loss ({filteredRecords.length} items)
               </span>
               <span className="text-sm font-black text-[#DC2626]">

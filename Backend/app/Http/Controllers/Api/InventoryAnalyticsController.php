@@ -6,6 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\Inventory;
 use App\Models\SalesItem;
+use App\Models\StockMovement;
+use App\Models\WastageRecord;
+use App\Models\FEFOBatch;
 use Illuminate\Http\Request;
 
 class InventoryAnalyticsController extends Controller
@@ -72,6 +75,33 @@ class InventoryAnalyticsController extends Controller
             'items' => $overstockItems,
             'total_exposure' => round($overstockItems->sum('exposure'), 2),
             'total_items' => $overstockItems->count(),
+        ]);
+    }
+
+    public function dashboardSummary()
+    {
+        $lowStockCount = Inventory::where('stock_status', 'Low Stock')->count();
+
+        $expiringSoonCount = Product::whereNotNull('expiration_date')
+            ->where('expiration_date', '>=', now())
+            ->where('expiration_date', '<=', now()->addDays(30))
+            ->count();
+
+        $todayMovements = StockMovement::whereDate('movement_date', today())->count();
+
+        $pendingWastageCount = WastageRecord::whereDate('date_recorded', today())->count();
+
+        $criticalFefoCount = FEFOBatch::where('status', 'active')
+            ->where('expiry_date', '>=', now())
+            ->where('expiry_date', '<=', now()->addDays(7))
+            ->count();
+
+        return response()->json([
+            'low_stock_count'       => $lowStockCount,
+            'expiring_soon_count'   => $expiringSoonCount,
+            'today_movements'       => $todayMovements,
+            'pending_wastage_count' => $pendingWastageCount,
+            'critical_fefo_count'   => $criticalFefoCount,
         ]);
     }
 

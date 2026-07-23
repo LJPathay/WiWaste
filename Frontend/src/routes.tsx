@@ -22,8 +22,6 @@ import { GenerateReports } from "./pages/admin/GenerateReports";
 import { AuditLogs } from "./pages/admin/AuditLogs";
 import { PurchaseOrders } from "./pages/admin/PurchaseOrders";
 // Inventory pages
-import { StockIn } from "./pages/inventory/StockIn";
-import { StockOut } from "./pages/inventory/StockOut";
 import { RecordWastage } from "./pages/inventory/RecordWastage";
 import { ManageInventory } from "./pages/inventory/ManageInventory";
 import { FEFOTracking } from "./pages/inventory/FEFOTracking";
@@ -94,8 +92,6 @@ export const router = createBrowserRouter([
             { path: "admin/audit-logs", element: <Navigate to="/owner/audit-logs" replace /> },
             { path: "admin/purchase-orders", element: <Navigate to="/owner/purchase-orders" replace /> },
             // Inventory routes
-            { path: "inventory/stock-in", Component: StockIn },
-            { path: "inventory/stock-out", Component: StockOut },
             { path: "inventory/wastage", Component: RecordWastage },
             { path: "inventory/manage", Component: ManageInventory },
             { path: "inventory/fefo", Component: FEFOTracking },

@@ -25,7 +25,7 @@ import {
   Activity,
   Receipt,
   RotateCcw,
-} from 'lucide-react';
+  } from 'lucide-react';
 import { ThemeToggle } from '../ThemeToggle';
 import { ErrorBoundary } from '../ui/ErrorBoundary';
 import { Breadcrumb } from '../ui/Breadcrumb';
@@ -77,14 +77,19 @@ const sidebarGroupsByRole: Record<UserRole, SidebarGroup[]> = {
     {
       group: 'Overview',
       items: [
-        { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+        { to: '/dashboard/inventory', label: 'Inventory Dashboard', icon: BarChart3 },
       ],
     },
     {
-      group: 'Inventory',
+      group: 'Operations',
       items: [
         { to: '/inventory/manage', label: 'Manage Inventory', icon: Package },
         { to: '/inventory/wastage', label: 'Record Wastage', icon: AlertTriangle },
+      ],
+    },
+    {
+      group: 'Monitoring',
+      items: [
         { to: '/inventory/fefo', label: 'FEFO Tracking', icon: CheckCircle },
         { to: '/inventory/recommendations', label: 'Recommendations', icon: Eye },
       ],

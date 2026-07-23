@@ -17,6 +17,8 @@ use App\Http\Controllers\Api\PurchaseOrderController;
 use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\ProfitLossController;
 use App\Http\Controllers\Api\InventoryAnalyticsController;
+use App\Http\Controllers\Api\FEFOController;
+use App\Http\Controllers\Api\RecommendationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -93,6 +95,21 @@ Route::prefix('/profit-loss')->group(function () {
 });
 
 // Inventory Analytics
-Route::get('/analytics/turnover',  [InventoryAnalyticsController::class, 'turnover']);
-Route::get('/analytics/overstock', [InventoryAnalyticsController::class, 'overstock']);
-Route::get('/analytics/dead-stock',[InventoryAnalyticsController::class, 'deadStock']);
+Route::get('/analytics/turnover',         [InventoryAnalyticsController::class, 'turnover']);
+Route::get('/analytics/overstock',        [InventoryAnalyticsController::class, 'overstock']);
+Route::get('/analytics/dead-stock',       [InventoryAnalyticsController::class, 'deadStock']);
+Route::get('/analytics/dashboard-summary',[InventoryAnalyticsController::class, 'dashboardSummary']);
+
+// FEFO Tracking
+Route::get('/fefo/batches',       [FEFOController::class, 'batches']);
+Route::get('/fefo/batches/{id}',  [FEFOController::class, 'show']);
+Route::post('/fefo/apply',        [FEFOController::class, 'apply']);
+
+// Recommendations
+Route::get('/recommendations',                [RecommendationController::class, 'index']);
+Route::get('/recommendations/{id}',           [RecommendationController::class, 'show']);
+Route::post('/recommendations/{id}/approve',  [RecommendationController::class, 'approve']);
+Route::post('/recommendations/{id}/reject',   [RecommendationController::class, 'reject']);
+
+// Single-inventory movement history
+Route::get('/inventory/{id}/movements', [InventoryController::class, 'movements']);

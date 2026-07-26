@@ -12,6 +12,9 @@ use App\Models\SalesItem;
 use App\Models\WastageRecord;
 use App\Models\StockMovement;
 use App\Models\ReturnTransaction;
+use App\Models\ForecastResult;
+use App\Models\ProfitLossAnalysis;
+use App\Models\InventoryRecommendation;
 use App\Models\Setting;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
@@ -44,6 +47,9 @@ class DatabaseSeeder extends Seeder
         Product::truncate();
         Supplier::truncate();
         Category::truncate();
+        InventoryRecommendation::truncate();
+        ProfitLossAnalysis::truncate();
+        ForecastResult::truncate();
         Setting::truncate();
         User::whereNotIn('username', ['admin', 'inventory', 'cashier'])->delete();
 
@@ -61,6 +67,9 @@ class DatabaseSeeder extends Seeder
         $this->seedPurchaseOrders();
         $this->seedSettings();
         $this->seedAuditLogs();
+        $this->seedForecastResults();
+        $this->seedProfitLossAnalysis();
+        $this->seedInventoryRecommendations();
     }
 
     private function seedUsers(): void
@@ -320,38 +329,137 @@ class DatabaseSeeder extends Seeder
     {
         $adminId = $this->userMap['admin'];
 
+        // ── Initial stock-in for all products ──
+        $stockInData = [
+            'Biogesic Paracetamol 500mg'  => 200,
+            'Neozep Forte 10s'            => 100,
+            'Coca-Cola 1.5L'              => 100,
+            'C2 Green Tea 500ml'          => 150,
+            'Safeguard White Soap 130g'   => 80,
+            'Tide Original Powder 1kg'    => 50,
+            'Del Monte Tomato Sauce 250g' => 200,
+            'Del Monte Pineapple Tidbits' => 60,
+            'Nestlé Bear Brand 800g'      => 40,
+            'Nestlé Coffee Creamer 200g'  => 50,
+            'San Miguel Pale Pilsen 6-pack'=> 30,
+            'Gardenia Classic White Bread'=> 50,
+            'Alaska Evaporada 370ml'      => 80,
+            'Milo Energy Pack 200g'       => 60,
+            'Head & Shoulders 200ml'      => 25,
+        ];
+
+        foreach ($stockInData as $name => $qty) {
+            StockMovement::create([
+                'product_id'    => $this->productMap[$name],
+                'user_id'       => $adminId,
+                'movement_type' => 'Stock In',
+                'quantity'      => $qty,
+                'remarks'       => 'Initial stock',
+                'movement_date' => now()->subDays(10),
+            ]);
+        }
+
+        // ── Stock-out movements tied to seeded sales ──
+        $txn1 = SalesTransaction::orderBy('transaction_id')->first();
+        $txn1Items = SalesItem::where('transaction_id', $txn1->transaction_id)->get();
+        foreach ($txn1Items as $item) {
+            StockMovement::create([
+                'product_id'    => $item->product_id,
+                'user_id'       => $adminId,
+                'movement_type' => 'Stock Out',
+                'quantity'      => $item->quantity,
+                'remarks'       => 'POS sale #' . $txn1->transaction_id,
+                'movement_date' => $txn1->transaction_date,
+                'sale_item_id'  => $item->sales_item_id,
+            ]);
+        }
+
+        $txn2 = SalesTransaction::skip(1)->first();
+        $txn2Items = SalesItem::where('transaction_id', $txn2->transaction_id)->get();
+        foreach ($txn2Items as $item) {
+            StockMovement::create([
+                'product_id'    => $item->product_id,
+                'user_id'       => $adminId,
+                'movement_type' => 'Stock Out',
+                'quantity'      => $item->quantity,
+                'remarks'       => 'POS sale #' . $txn2->transaction_id,
+                'movement_date' => $txn2->transaction_date,
+                'sale_item_id'  => $item->sales_item_id,
+            ]);
+        }
+
+        // ── Stock-out movements tied to wastage ──
+        $wastage1 = WastageRecord::where('wastage_type', 'Expired')->first();
         StockMovement::create([
-            'product_id'    => $this->productMap['Biogesic Paracetamol 500mg'],
+            'product_id'    => $wastage1->product_id,
             'user_id'       => $adminId,
-            'movement_type' => 'Stock In',
-            'quantity'      => 200,
-            'remarks'       => 'Initial stock',
-            'movement_date' => now()->subDays(10),
+            'movement_type' => 'Stock Out',
+            'quantity'      => $wastage1->quantity,
+            'remarks'       => 'Expired items discarded',
+            'movement_date' => $wastage1->date_recorded,
+            'wastage_id'    => $wastage1->wastage_id,
         ]);
 
+        $wastage2 = WastageRecord::where('wastage_type', 'Damaged')->first();
         StockMovement::create([
-            'product_id'    => $this->productMap['Coca-Cola 1.5L'],
+            'product_id'    => $wastage2->product_id,
             'user_id'       => $adminId,
-            'movement_type' => 'Stock In',
-            'quantity'      => 100,
-            'remarks'       => 'Initial stock',
-            'movement_date' => now()->subDays(10),
+            'movement_type' => 'Stock Out',
+            'quantity'      => $wastage2->quantity,
+            'remarks'       => 'Damaged items removed',
+            'movement_date' => $wastage2->date_recorded,
+            'wastage_id'    => $wastage2->wastage_id,
         ]);
     }
 
     private function seedReturns(): void
     {
         $adminId = $this->userMap['admin'];
-        $saleItem = SalesItem::first();
 
-        if ($saleItem) {
-            ReturnTransaction::create([
-                'sale_item_id'     => $saleItem->sales_item_id,
+        // Return from first sale — customer changed mind on 1 item
+        $saleItem1 = SalesItem::orderBy('sales_item_id')->first();
+        if ($saleItem1) {
+            $ret1 = ReturnTransaction::create([
+                'sale_item_id'     => $saleItem1->sales_item_id,
                 'user_id'          => $adminId,
                 'quantity_returned'=> 1,
                 'reason'           => 'Customer changed mind',
-                'refund_amount'    => $saleItem->unit_price,
+                'refund_amount'    => $saleItem1->unit_price,
                 'return_date'      => now()->subDay(),
+            ]);
+
+            // Stock-in movement for the return
+            StockMovement::create([
+                'product_id'    => $saleItem1->product_id,
+                'user_id'       => $adminId,
+                'movement_type' => 'Stock In',
+                'quantity'      => 1,
+                'remarks'       => 'Return restock',
+                'movement_date' => $ret1->return_date,
+                'sale_item_id'  => $saleItem1->sales_item_id,
+            ]);
+        }
+
+        // Second return — defective item
+        $saleItem2 = SalesItem::skip(4)->first();
+        if ($saleItem2) {
+            $ret2 = ReturnTransaction::create([
+                'sale_item_id'     => $saleItem2->sales_item_id,
+                'user_id'          => $adminId,
+                'quantity_returned'=> 1,
+                'reason'           => 'Defective product — damaged packaging',
+                'refund_amount'    => $saleItem2->unit_price,
+                'return_date'      => now(),
+            ]);
+
+            StockMovement::create([
+                'product_id'    => $saleItem2->product_id,
+                'user_id'       => $adminId,
+                'movement_type' => 'Stock In',
+                'quantity'      => 1,
+                'remarks'       => 'Return restock — defective',
+                'movement_date' => $ret2->return_date,
+                'sale_item_id'  => $saleItem2->sales_item_id,
             ]);
         }
     }
@@ -411,5 +519,92 @@ class DatabaseSeeder extends Seeder
             'new_values'  => null,
             'created_at'  => now(),
         ]);
+    }
+
+    private function seedForecastResults(): void
+    {
+        $forecasts = [
+            ['name' => 'Biogesic Paracetamol 500mg',  'period' => '2026-07', 'demand' => 320, 'risk' => 'Low'],
+            ['name' => 'Biogesic Paracetamol 500mg',  'period' => '2026-08', 'demand' => 280, 'risk' => 'Low'],
+            ['name' => 'Biogesic Paracetamol 500mg',  'period' => '2026-09', 'demand' => 150, 'risk' => 'Medium'],
+            ['name' => 'Coca-Cola 1.5L',              'period' => '2026-07', 'demand' => 180, 'risk' => 'Low'],
+            ['name' => 'Coca-Cola 1.5L',              'period' => '2026-08', 'demand' => 220, 'risk' => 'Low'],
+            ['name' => 'Coca-Cola 1.5L',              'period' => '2026-09', 'demand' => 95,  'risk' => 'Medium'],
+            ['name' => 'San Miguel Pale Pilsen 6-pack','period' => '2026-07', 'demand' => 50,  'risk' => 'High'],
+            ['name' => 'San Miguel Pale Pilsen 6-pack','period' => '2026-08', 'demand' => 65,  'risk' => 'Medium'],
+            ['name' => 'San Miguel Pale Pilsen 6-pack','period' => '2026-09', 'demand' => 30,  'risk' => 'High'],
+            ['name' => 'Nestlé Bear Brand 800g',      'period' => '2026-07', 'demand' => 120, 'risk' => 'Low'],
+        ];
+
+        foreach ($forecasts as $f) {
+            ForecastResult::create([
+                'product_id'      => $this->productMap[$f['name']],
+                'forecast_period' => $f['period'],
+                'predicted_demand'=> $f['demand'],
+                'overstock_risk'  => $f['risk'],
+                'generated_date'  => now(),
+            ]);
+        }
+    }
+
+    private function seedProfitLossAnalysis(): void
+    {
+        $analyses = [
+            ['name' => 'Biogesic Paracetamol 500mg',  'sales' => 8250.00, 'loss' => 0.00,    'risk' => 'Low',   'leakage' => 120.50],
+            ['name' => 'Neozep Forte 10s',            'sales' => 4800.00, 'loss' => 0.00,    'risk' => 'Low',   'leakage' => 85.00],
+            ['name' => 'Coca-Cola 1.5L',              'sales' => 12960.00,'loss' => 0.00,    'risk' => 'Low',   'leakage' => 210.00],
+            ['name' => 'C2 Green Tea 500ml',           'sales' => 7500.00, 'loss' => 0.00,    'risk' => 'Low',   'leakage' => 95.00],
+            ['name' => 'Safeguard White Soap 130g',    'sales' => 6600.00, 'loss' => 0.00,    'risk' => 'Low',   'leakage' => 130.00],
+            ['name' => 'Tide Original Powder 1kg',     'sales' => 5500.00, 'loss' => 0.00,    'risk' => 'Medium','leakage' => 320.00],
+            ['name' => 'Gardenia Classic White Bread', 'sales' => 2600.00, 'loss' => 325.00,  'risk' => 'High',  'leakage' => 780.00],
+            ['name' => 'San Miguel Pale Pilsen 6-pack','sales' => 3600.00, 'loss' => 0.00,    'risk' => 'Medium','leakage' => 450.00],
+        ];
+
+        foreach ($analyses as $a) {
+            ProfitLossAnalysis::create([
+                'product_id'              => $this->productMap[$a['name']],
+                'total_sales'             => $a['sales'],
+                'total_wastage_loss'      => $a['loss'],
+                'risk_level'              => $a['risk'],
+                'predicted_profit_leakage'=> $a['leakage'],
+                'analysis_date'           => now(),
+            ]);
+        }
+    }
+
+    private function seedInventoryRecommendations(): void
+    {
+        $inventoryRecs = [
+            ['name' => 'Biogesic Paracetamol 500mg',  'current' => 200, 'recommended' => 150, 'type' => 'Reduce Stock', 'confidence' => 0.85, 'status' => 'approved',  'reviewed_by' => 'inventory', 'rejection_reason' => null],
+            ['name' => 'Gardenia Classic White Bread', 'current' => 0,   'recommended' => 60,  'type' => 'Restock',      'confidence' => 0.93, 'status' => 'pending',   'reviewed_by' => null,       'rejection_reason' => null],
+            ['name' => 'Coca-Cola 1.5L',              'current' => 45,  'recommended' => 80,  'type' => 'Restock',      'confidence' => 0.88, 'status' => 'pending',   'reviewed_by' => null,       'rejection_reason' => null],
+            ['name' => 'San Miguel Pale Pilsen 6-pack','current' => 20,  'recommended' => 35,  'type' => 'Restock',      'confidence' => 0.82, 'status' => 'pending',   'reviewed_by' => null,       'rejection_reason' => null],
+            ['name' => 'Head & Shoulders 200ml',       'current' => 15,  'recommended' => 30,  'type' => 'Restock',      'confidence' => 0.76, 'status' => 'pending',   'reviewed_by' => null,       'rejection_reason' => null],
+            ['name' => 'Del Monte Pineapple Tidbits',  'current' => 40,  'recommended' => 25,  'type' => 'Reduce Stock', 'confidence' => 0.79, 'status' => 'rejected',  'reviewed_by' => 'inventory', 'rejection_reason' => 'Stock level is sufficient for current demand.'],
+            ['name' => 'Nestlé Coffee Creamer 200g',   'current' => 35,  'recommended' => 35,  'type' => 'Maintain',     'confidence' => 0.91, 'status' => 'approved',  'reviewed_by' => 'inventory', 'rejection_reason' => null],
+            ['name' => 'Milo Energy Pack 200g',        'current' => 45,  'recommended' => 40,  'type' => 'Maintain',     'confidence' => 0.87, 'status' => 'pending',   'reviewed_by' => null,       'rejection_reason' => null],
+        ];
+
+        foreach ($inventoryRecs as $r) {
+            $rec = InventoryRecommendation::create([
+                'product_id'          => $this->productMap[$r['name']],
+                'current_stock'       => $r['current'],
+                'recommended_stock'   => $r['recommended'],
+                'recommendation_type' => $r['type'],
+                'confidence_score'    => $r['confidence'],
+                'status'              => $r['status'],
+                'created_at'          => now()->subDays(2),
+            ]);
+
+            if ($r['reviewed_by'] && $r['status'] !== 'pending') {
+                $reviewerId = $this->userMap[$r['reviewed_by']] ?? $this->userMap['admin'];
+                $rec->reviewed_by = $reviewerId;
+                $rec->reviewed_at = now()->subDay();
+                if ($r['rejection_reason']) {
+                    $rec->rejection_reason = $r['rejection_reason'];
+                }
+                $rec->save();
+            }
+        }
     }
 }

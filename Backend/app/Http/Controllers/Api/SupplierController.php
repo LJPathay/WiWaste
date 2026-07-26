@@ -31,7 +31,14 @@ class SupplierController extends Controller
             'address'        => 'nullable|string|max:255',
         ]);
         $supplier = Supplier::create($data);
-        return response()->json(['message' => 'Supplier created.', 'id' => $supplier->supplier_id], 201);
+        return response()->json([
+            'id'             => $supplier->supplier_id,
+            'name'           => $supplier->supplier_name,
+            'contact_person' => $supplier->contact_person,
+            'contact_number' => $supplier->contact_number,
+            'address'        => $supplier->address,
+            'product_count'  => 0,
+        ], 201);
     }
 
     public function show($id)
@@ -57,7 +64,14 @@ class SupplierController extends Controller
             'address'        => 'nullable|string|max:255',
         ]);
         $supplier->update($data);
-        return response()->json(['message' => 'Supplier updated.']);
+        return response()->json([
+            'id'             => $supplier->supplier_id,
+            'name'           => $supplier->supplier_name,
+            'contact_person' => $supplier->contact_person,
+            'contact_number' => $supplier->contact_number,
+            'address'        => $supplier->address,
+            'product_count'  => $supplier->products()->count(),
+        ]);
     }
 
     public function destroy($id)

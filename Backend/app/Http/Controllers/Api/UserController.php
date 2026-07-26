@@ -25,12 +25,16 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'Full_name' => 'required|string|max:100',
+            'Full_name' => 'required|string|max:100|unique:User,Full_name',
             'username'  => 'required|string|max:50|unique:User,username',
-            'password'  => 'required|string|min:6',
+            'password'  => 'required|string|min:8|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).+$/',
             'email'     => 'nullable|email|max:100|unique:User,email',
             'role'      => 'required|in:Admin,Inventory,Business Owner',
-            'status'    => 'required|in:Active,Inactive',
+            'status'    => 'required|in:Active,Inactive,Quarantined',
+        ], [
+            'Full_name.unique' => 'A user with this full name already exists.',
+            'username.unique'  => 'This username is already taken.',
+            'password.regex'   => 'Password must contain uppercase, lowercase, number, and special character.',
         ]);
 
         $data['password']   = Hash::make($data['password']);
@@ -62,7 +66,7 @@ class UserController extends Controller
             'Full_name' => 'sometimes|string|max:100',
             'email'     => 'sometimes|nullable|email|max:100|unique:User,email,' . $id . ',User_id',
             'role'      => 'sometimes|in:Admin,Inventory,Business Owner',
-            'status'    => 'sometimes|in:Active,Inactive',
+            'status'    => 'sometimes|in:Active,Inactive,Quarantined',
         ]);
 
         if ($request->filled('password')) {
@@ -78,5 +82,19 @@ class UserController extends Controller
     {
         User::findOrFail($id)->delete();
         return response()->json(['message' => 'User deleted.']);
+    }
+
+    public function quarantine($id)
+    {
+        $user = User::findOrFail($id);
+        $user->update(['status' => 'Quarantined']);
+        return response()->json(['message' => 'User quarantined.']);
+    }
+
+    public function reactivate($id)
+    {
+        $user = User::findOrFail($id);
+        $user->update(['status' => 'Active']);
+        return response()->json(['message' => 'User reactivated.']);
     }
 }

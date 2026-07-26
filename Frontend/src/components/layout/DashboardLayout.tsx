@@ -28,7 +28,7 @@ import {
   } from 'lucide-react';
 import { ThemeToggle } from '../ThemeToggle';
 import { ErrorBoundary } from '../ui/ErrorBoundary';
-import { Breadcrumb } from '../ui/Breadcrumb';
+import { Breadcrumb } from '../ui/breadcrumb';
 import { clearStoredSession, getRoleDisplayName, getStoredSession, type UserRole } from '../../utils/mockAuthAndFeatures';
 
 const BRAND_ICON = '/images/logo.PNG';
@@ -127,6 +127,42 @@ if (!session) {
 
   const sidebarGroups = sidebarGroupsByRole[session.role] ?? [];
   const sidebarWidth = collapsed ? 'w-[76px]' : 'w-[248px]';
+
+  // Dynamic Most Visited Pages & Header Style tracking
+  const [visitedPages, setVisitedPages] = useState<SidebarItem[]>([]);
+  const [headerStyle, setHeaderStyle] = useState<'quick-access' | 'action-text' | 'welcome-text'>('quick-access');
+
+  useEffect(() => {
+    const readHeaderStyle = () => {
+      const saved = localStorage.getItem('wiwaste_header_style') as any;
+      if (saved === 'quick-access' || saved === 'action-text' || saved === 'welcome-text') {
+        setHeaderStyle(saved);
+      }
+    };
+    readHeaderStyle();
+
+    window.addEventListener('wiwaste_header_style_change', readHeaderStyle);
+    return () => window.removeEventListener('wiwaste_header_style_change', readHeaderStyle);
+  }, []);
+
+  useEffect(() => {
+    if (!session || !location.pathname) return;
+    try {
+      const raw = localStorage.getItem('wiwaste_page_visits_v1') || '{}';
+      const visits: Record<string, number> = JSON.parse(raw);
+      visits[location.pathname] = (visits[location.pathname] || 0) + 1;
+      localStorage.setItem('wiwaste_page_visits_v1', JSON.stringify(visits));
+
+      const allItems = sidebarGroups.flatMap(g => g.items);
+      const sorted = [...allItems]
+        .map(item => ({ ...item, count: visits[item.to] || 0 }))
+        .sort((a, b) => b.count - a.count);
+
+      setVisitedPages(sorted.slice(0, 4));
+    } catch (e) {
+      // fallback
+    }
+  }, [location.pathname, session?.role]);
 
   const NavItems = ({ compact = false, onClose }: { compact?: boolean; onClose?: () => void }) => (
     <nav className={`flex-1 overflow-y-auto scrollbar-modern ${compact ? 'px-2 py-3' : 'px-3 py-4'}`}>
@@ -313,36 +349,81 @@ if (!session) {
           >
             {(state) => (
               <>
-                <header className="hidden md:flex sticky top-0 z-30 h-14 items-center border-b border-gray-200/50 dark:border-white/10 bg-white/60 dark:bg-slate-950/60 backdrop-blur-md px-6 gap-3 overflow-hidden">
-                  {/* Logo — fades in after welcome */}
-                  <img
-                    src={BRAND_ICON}
-                    alt="WiWaste"
-                    className="h-7 w-7 object-contain shrink-0"
-                    style={{
-                      opacity: state.logoVisible ? 1 : 0,
-                      transition: 'opacity 400ms ease',
-                    }}
-                  />
-                  {/* Divider */}
-                  <span
-                    className="h-5 w-px bg-gray-300 dark:bg-white/20 shrink-0"
-                    style={{
-                      opacity: state.logoVisible && state.textVisible ? 1 : 0,
-                      transition: 'opacity 300ms ease',
-                    }}
-                  />
-                  {/* Sliding text */}
-                  <span
-                    className="text-sm font-semibold text-gray-700 dark:text-slate-200 whitespace-nowrap"
-                    style={{
-                      opacity: state.textVisible ? 1 : 0,
-                      transform: state.textVisible ? 'translateX(0)' : 'translateX(-14px)',
-                      transition: 'opacity 350ms ease, transform 350ms ease',
-                    }}
-                  >
-                    {state.text}
-                  </span>
+                <header className="hidden md:flex sticky top-0 z-30 h-14 items-center justify-between border-b border-gray-200/50 dark:border-white/10 bg-white/60 dark:bg-slate-950/60 backdrop-blur-md px-6 gap-3 overflow-hidden">
+                  {/* ── Mode 1: Quick Access Bar ── */}
+                  {headerStyle === 'quick-access' && (
+                    <>
+                      <div className="flex items-center gap-2 overflow-x-auto py-1 scrollbar-none min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#006a61]/10 dark:bg-[#006a61]/20 text-[#006a61] dark:text-[#7ef0cf] text-xs font-bold shrink-0 border border-[#006a61]/20">
+                          <TrendingUp className="h-3.5 w-3.5" />
+                          <span>Most Visited:</span>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
+                          {visitedPages.map(page => {
+                            const PageIcon = page.icon;
+                            const isActive = location.pathname === page.to;
+                            return (
+                              <Link
+                                key={page.to}
+                                to={page.to}
+                                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all shrink-0 border ${
+                                  isActive
+                                    ? 'bg-[#006a61] text-white border-[#006a61] shadow-xs font-semibold'
+                                    : 'bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                }`}
+                              >
+                                <PageIcon className="h-3.5 w-3.5" />
+                                <span>{page.label}</span>
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {state.textVisible && (
+                        <span
+                          className="text-xs font-semibold text-gray-500 dark:text-slate-400 whitespace-nowrap shrink-0"
+                          style={{
+                            opacity: state.textVisible ? 1 : 0,
+                            transform: state.textVisible ? 'translateX(0)' : 'translateX(14px)',
+                            transition: 'opacity 350ms ease, transform 350ms ease',
+                          }}
+                        >
+                          {state.text}
+                        </span>
+                      )}
+                    </>
+                  )}
+
+                  {/* ── Mode 2: Backup Text / Actions Notification Log ── */}
+                  {headerStyle === 'action-text' && (
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-xs font-bold border border-indigo-500/20">
+                          <Activity className="h-3.5 w-3.5 animate-pulse" />
+                          <span>Action Log:</span>
+                        </div>
+                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate">
+                          {state.text || `Active Module: ${sidebarGroups.flatMap(g=>g.items).find(i=>i.to===location.pathname)?.label ?? 'System Management'} — Changes saved & sync active.`}
+                        </span>
+                      </div>
+                      <span className="text-[11px] font-medium text-slate-400">Real-time audit log</span>
+                    </div>
+                  )}
+
+                  {/* ── Mode 3: Welcome Text ── */}
+                  {headerStyle === 'welcome-text' && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                        Welcome back, {session.name}
+                      </span>
+                      <span className="h-4 w-px bg-slate-300 dark:bg-white/20" />
+                      <span className="text-xs font-semibold text-[#006a61] dark:text-[#7ef0cf]">
+                        Enterprise Retail Solution
+                      </span>
+                    </div>
+                  )}
                 </header>
 
                 {/* Page content */}

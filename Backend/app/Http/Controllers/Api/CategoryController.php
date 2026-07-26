@@ -25,7 +25,11 @@ class CategoryController extends Controller
             'Category_name' => 'required|string|max:100|unique:Category,Category_name',
         ]);
         $cat = Category::create($data);
-        return response()->json(['message' => 'Category created.', 'id' => $cat->Category_id], 201);
+        return response()->json([
+            'id'            => $cat->Category_id,
+            'name'          => $cat->Category_name,
+            'product_count' => 0,
+        ], 201);
     }
 
     public function show($id)
@@ -41,7 +45,11 @@ class CategoryController extends Controller
             'Category_name' => 'required|string|max:100|unique:Category,Category_name,' . $id . ',Category_id',
         ]);
         $cat->update($data);
-        return response()->json(['message' => 'Category updated.']);
+        return response()->json([
+            'id'            => $cat->Category_id,
+            'name'          => $cat->Category_name,
+            'product_count' => $cat->products()->count(),
+        ]);
     }
 
     public function destroy($id)

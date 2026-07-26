@@ -45,6 +45,8 @@ export const users = {
   update: (id: number, data: Partial<CreateUserPayload>) =>
     request(`/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: number) => request(`/users/${id}`, { method: 'DELETE' }),
+  quarantine: (id: number) => request(`/users/${id}/quarantine`, { method: 'POST' }),
+  reactivate: (id: number) => request(`/users/${id}/reactivate`, { method: 'POST' }),
 };
 
 // ─── Categories ─────────────────────────────────────────
@@ -157,7 +159,7 @@ export interface ApiUser {
   username: string;
   email: string;
   role: 'Admin' | 'Inventory' | 'Business Owner';
-  status: 'Active' | 'Inactive';
+  status: 'Active' | 'Inactive' | 'Quarantined';
   created_at?: string;
 }
 
@@ -261,7 +263,7 @@ export interface CreateUserPayload {
   password: string;
   email?: string;
   role: 'Admin' | 'Inventory' | 'Business Owner';
-  status: 'Active' | 'Inactive';
+  status: 'Active' | 'Inactive' | 'Quarantined';
 }
 
 export interface CreateSupplierPayload {

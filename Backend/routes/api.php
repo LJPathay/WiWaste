@@ -34,6 +34,8 @@ Route::get('/me',      [AuthController::class, 'me']);
 
 // User management
 Route::apiResource('/users', UserController::class);
+Route::post('/users/{id}/quarantine',  [UserController::class, 'quarantine']);
+Route::post('/users/{id}/reactivate',  [UserController::class, 'reactivate']);
 
 // Lookup tables
 Route::apiResource('/categories', CategoryController::class);

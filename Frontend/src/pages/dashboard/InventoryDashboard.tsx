@@ -293,18 +293,13 @@ export function InventoryDashboard() {
 
       {/* Page Header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="flex items-start gap-3">
-          <div>
-            <h1 className="text-2xl font-bold text-[#0F172A] dark:text-slate-100 tracking-tight">
-              Inventory Dashboard
-            </h1>
-            <p className="mt-0.5 text-sm text-[#64748B] dark:text-slate-400 dark:text-slate-500">
-              Real-time overview of your stock health and alerts
-            </p>
-          </div>
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-[#0F172A] dark:text-slate-100 tracking-tight">
+            Inventory Dashboard
+          </h1>
           <UITooltip>
             <TooltipTrigger asChild>
-              <Info className="mt-1 h-4 w-4 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 cursor-help shrink-0" />
+              <Info className="h-4 w-4 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 cursor-help shrink-0" />
             </TooltipTrigger>
             <TooltipContent className="bg-slate-900 text-white max-w-xs">
               Real-time inventory overview for operational staff

@@ -279,13 +279,10 @@ export function DashboardOverview() {
     <div className="space-y-10">
       {/* Page Header */}
       <div className="flex items-center gap-2">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Dashboard Overview</h1>
-          <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">Unified view of Business Health · Predictive Analytics · System Administration</p>
-        </div>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Dashboard Overview</h1>
         <UITooltip>
           <TooltipTrigger asChild>
-            <Info className="h-5 w-5 ml-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help self-start mt-1" />
+            <Info className="h-5 w-5 ml-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help self-center" />
           </TooltipTrigger>
           <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
             All metrics draw from a single data source. Numbers displayed here match the values shown on each sub-page.

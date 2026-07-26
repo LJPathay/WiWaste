@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Download, Trash2, Upload, Loader2, Info } from 'lucide-react';
+import { Save, Download, Trash2, Upload, Loader2, Info, TrendingUp, Activity, Sparkles, Check } from 'lucide-react';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { Toast, useToast, FormField, inputCls } from '../../components/ui/Toast';
 import { settings as settingsApi } from '../../services/api';
@@ -84,6 +84,24 @@ export function SystemSettings() {
     dailyDigest: true,
     criticalAlerts: true,
   });
+
+  /* ── Header Element Customization State ── */
+  const [headerStyle, setHeaderStyle] = useState<'quick-access' | 'action-text' | 'welcome-text'>('quick-access');
+
+  useEffect(() => {
+    const savedHeader = localStorage.getItem('wiwaste_header_style') as any;
+    if (savedHeader === 'quick-access' || savedHeader === 'action-text' || savedHeader === 'welcome-text') {
+      setHeaderStyle(savedHeader);
+    }
+  }, []);
+
+  const handleSelectHeaderStyle = (style: 'quick-access' | 'action-text' | 'welcome-text') => {
+    setHeaderStyle(style);
+    localStorage.setItem('wiwaste_header_style', style);
+    window.dispatchEvent(new Event('wiwaste_header_style_change'));
+    const label = style === 'quick-access' ? 'Quick Access Bar' : style === 'action-text' ? 'Action Notifications' : 'Welcome Text';
+    success(`Header element set to "${label}".`);
+  };
 
   useEffect(() => {
     settingsApi.get().then(s => {
@@ -249,6 +267,99 @@ export function SystemSettings() {
               <option value="UTC">UTC (UTC+0)</option>
             </select>
           </FormField>
+        </div>
+      </SectionCard>
+
+      {/* ── Header Element Customization ── */}
+      <SectionCard title="Header Element & Navigation Customization">
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+          Choose which element is displayed on the main top navigation header bar across all pages.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* Quick Access Bar */}
+          <button
+            type="button"
+            onClick={() => handleSelectHeaderStyle('quick-access')}
+            className={`p-4 rounded-xl border text-left flex flex-col justify-between gap-3 transition-all cursor-pointer ${
+              headerStyle === 'quick-access'
+                ? 'border-[#006a61] bg-[#006a61]/10 dark:bg-[#006a61]/20 ring-2 ring-[#006a61]/30 shadow-sm'
+                : 'border-slate-200 dark:border-white/10 bg-slate-50/60 dark:bg-slate-900/60 hover:border-[#006a61] hover:bg-slate-100 dark:hover:bg-slate-800'
+            }`}
+          >
+            <div className="flex items-center justify-between w-full">
+              <span className="p-2 rounded-lg bg-teal-500/10 text-[#006a61] dark:text-[#7ef0cf]">
+                <TrendingUp className="h-5 w-5" />
+              </span>
+              {headerStyle === 'quick-access' && (
+                <div className="p-0.5 rounded-full bg-[#006a61] text-white">
+                  <Check className="h-3.5 w-3.5" />
+                </div>
+              )}
+            </div>
+            <div>
+              <h4 className="font-bold text-xs text-slate-900 dark:text-slate-100">Quick Access Bar</h4>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-normal">
+                Displays shortcut pills for your top most visited pages with icons.
+              </p>
+            </div>
+          </button>
+
+          {/* Action Notifications Text */}
+          <button
+            type="button"
+            onClick={() => handleSelectHeaderStyle('action-text')}
+            className={`p-4 rounded-xl border text-left flex flex-col justify-between gap-3 transition-all cursor-pointer ${
+              headerStyle === 'action-text'
+                ? 'border-[#006a61] bg-[#006a61]/10 dark:bg-[#006a61]/20 ring-2 ring-[#006a61]/30 shadow-sm'
+                : 'border-slate-200 dark:border-white/10 bg-slate-50/60 dark:bg-slate-900/60 hover:border-[#006a61] hover:bg-slate-100 dark:hover:bg-slate-800'
+            }`}
+          >
+            <div className="flex items-center justify-between w-full">
+              <span className="p-2 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+                <Activity className="h-5 w-5" />
+              </span>
+              {headerStyle === 'action-text' && (
+                <div className="p-0.5 rounded-full bg-[#006a61] text-white">
+                  <Check className="h-3.5 w-3.5" />
+                </div>
+              )}
+            </div>
+            <div>
+              <h4 className="font-bold text-xs text-slate-900 dark:text-slate-100">Backup Text / Actions</h4>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-normal">
+                Displays real-time action logs (e.g. Added product, user, supplier or saved changes).
+              </p>
+            </div>
+          </button>
+
+          {/* Default Welcome Text */}
+          <button
+            type="button"
+            onClick={() => handleSelectHeaderStyle('welcome-text')}
+            className={`p-4 rounded-xl border text-left flex flex-col justify-between gap-3 transition-all cursor-pointer ${
+              headerStyle === 'welcome-text'
+                ? 'border-[#006a61] bg-[#006a61]/10 dark:bg-[#006a61]/20 ring-2 ring-[#006a61]/30 shadow-sm'
+                : 'border-slate-200 dark:border-white/10 bg-slate-50/60 dark:bg-slate-900/60 hover:border-[#006a61] hover:bg-slate-100 dark:hover:bg-slate-800'
+            }`}
+          >
+            <div className="flex items-center justify-between w-full">
+              <span className="p-2 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                <Sparkles className="h-5 w-5" />
+              </span>
+              {headerStyle === 'welcome-text' && (
+                <div className="p-0.5 rounded-full bg-[#006a61] text-white">
+                  <Check className="h-3.5 w-3.5" />
+                </div>
+              )}
+            </div>
+            <div>
+              <h4 className="font-bold text-xs text-slate-900 dark:text-slate-100">Welcome Text</h4>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-normal">
+                Displays the default user welcome greeting and system tagline.
+              </p>
+            </div>
+          </button>
         </div>
       </SectionCard>
 

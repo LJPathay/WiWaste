@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { Search, Plus, Info, Loader2, ChevronLeft, ChevronRight, Package, AlertCircle } from 'lucide-react';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { Tutorial } from '../../components/ui/Tutorial';
@@ -21,6 +21,71 @@ const currencyFormatter = new Intl.NumberFormat('en-PH', {
 });
 
 const ITEMS_PER_PAGE = 5;
+
+const ProductRow = memo(function ProductRow({
+  p, isSelected, onToggleSelect, onEdit, onArchive
+}: {
+  p: ApiProduct;
+  isSelected: boolean;
+  onToggleSelect: (id: number) => void;
+  onEdit: (p: ApiProduct) => void;
+  onArchive: (p: ApiProduct) => void;
+}) {
+  return (
+    <tr className={`hover:bg-slate-50/20 dark:hover:bg-white/5 transition-colors ${isSelected ? 'bg-teal-50/30 dark:bg-teal-900/10' : ''} ${p.status === 'Discontinued' ? 'opacity-60 bg-slate-50/40 dark:bg-slate-900/30' : ''}`}>
+      <td className="w-10 px-4 py-4 text-center">
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={() => onToggleSelect(p.id)}
+          className="rounded border-slate-300 dark:border-slate-700 text-[#006a61] focus:ring-[#006a61] cursor-pointer"
+        />
+      </td>
+      <td className="px-6 py-4 font-medium text-slate-900 dark:text-slate-100">{p.name}</td>
+      <td className="px-6 py-4 font-mono text-slate-600 dark:text-slate-400">{p.sku ?? '—'}</td>
+      <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{p.category}</td>
+      <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{p.supplier ?? '—'}</td>
+      <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{currencyFormatter.format(p.cost_price)}</td>
+      <td className="px-6 py-4 font-semibold text-emerald-700 dark:text-emerald-400">{currencyFormatter.format(p.selling_price)}</td>
+      <td className="px-6 py-4">
+        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+          p.stock <= 0
+            ? 'bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-400'
+            : p.stock <= p.reorder_level
+            ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400'
+            : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400'
+        }`}>
+          {p.stock} units ({p.stock_status})
+        </span>
+      </td>
+      <td className="px-6 py-4">
+        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+          p.status === 'Discontinued'
+            ? 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-400'
+            : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400'
+        }`}>
+          {p.status ?? 'Active'}
+        </span>
+      </td>
+      <td className="px-6 py-4 text-right flex items-center justify-end gap-3">
+        <button
+          onClick={() => onEdit(p)}
+          className="text-xs font-bold text-[#006a61] dark:text-[#7ef0cf] hover:underline"
+        >
+          Edit
+        </button>
+        <button
+          onClick={() => onArchive(p)}
+          className={`text-xs font-bold hover:underline ${
+            p.status === 'Discontinued' ? 'text-emerald-600' : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          {p.status === 'Discontinued' ? 'Re-activate' : 'Archive'}
+        </button>
+      </td>
+    </tr>
+  );
+});
 
 export function ManageProducts() {
   const { toasts, dismiss, success, error: toastError } = useToast();
@@ -543,63 +608,16 @@ export function ManageProducts() {
                 <td colSpan={10} className="px-6 py-10 text-center text-slate-400">No products found.</td>
               </tr>
             ) : (
-              paginatedProducts.map(p => {
-                const isSelected = selectedIds.includes(p.id);
-                return (
-                  <tr key={p.id} className={`hover:bg-slate-50/20 dark:hover:bg-white/5 transition-colors ${isSelected ? 'bg-teal-50/30 dark:bg-teal-900/10' : ''} ${p.status === 'Discontinued' ? 'opacity-60 bg-slate-50/40 dark:bg-slate-900/30' : ''}`}>
-                    <td className="w-10 px-4 py-4 text-center">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => toggleSelectRow(p.id)}
-                        className="rounded border-slate-300 dark:border-slate-700 text-[#006a61] focus:ring-[#006a61] cursor-pointer"
-                      />
-                    </td>
-                    <td className="px-6 py-4 font-medium text-slate-900 dark:text-slate-100">{p.name}</td>
-                    <td className="px-6 py-4 font-mono text-slate-600 dark:text-slate-400">{p.sku ?? '—'}</td>
-                    <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{p.category}</td>
-                    <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{p.supplier ?? '—'}</td>
-                    <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{currencyFormatter.format(p.cost_price)}</td>
-                    <td className="px-6 py-4 font-semibold text-emerald-700 dark:text-emerald-400">{currencyFormatter.format(p.selling_price)}</td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        p.stock <= 0
-                          ? 'bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-400'
-                          : p.stock <= p.reorder_level
-                          ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400'
-                          : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400'
-                      }`}>
-                        {p.stock} units ({p.stock_status})
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        p.status === 'Discontinued'
-                          ? 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-400'
-                          : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400'
-                      }`}>
-                        {p.status ?? 'Active'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right flex items-center justify-end gap-3">
-                      <button
-                        onClick={() => openEdit(p)}
-                        className="text-xs font-bold text-[#006a61] dark:text-[#7ef0cf] hover:underline"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => setArchiving({ id: p.id, name: p.name, status: p.status })}
-                        className={`text-xs font-bold hover:underline ${
-                          p.status === 'Discontinued' ? 'text-emerald-600' : 'text-slate-500 hover:text-slate-700'
-                        }`}
-                      >
-                        {p.status === 'Discontinued' ? 'Re-activate' : 'Archive'}
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })
+              paginatedProducts.map(p => (
+                <ProductRow
+                  key={p.id}
+                  p={p}
+                  isSelected={selectedIds.includes(p.id)}
+                  onToggleSelect={toggleSelectRow}
+                  onEdit={openEdit}
+                  onArchive={(product) => setArchiving({ id: product.id, name: product.name, status: product.status })}
+                />
+              ))
             )}
           </tbody>
         </table>

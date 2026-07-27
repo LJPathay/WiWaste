@@ -5,13 +5,15 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class SettingsController extends Controller
 {
     public function index()
     {
-        $all = Setting::pluck('value', 'key');
-        return response()->json($all);
+        return response()->json(Cache::remember('settings.all', 3600, function () {
+            return Setting::pluck('value', 'key');
+        }));
     }
 
     public function update(Request $request)
@@ -26,6 +28,8 @@ class SettingsController extends Controller
                 );
             }
         }
+
+        Cache::forget('settings.all');
 
         return response()->json(['message' => 'Settings updated.']);
     }

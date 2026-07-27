@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import {
   Users, Search, Plus, Edit2, X, Info, Loader2, Shield, Package,
   Briefcase, AlertTriangle, CheckCircle2, Circle, RotateCcw, Trash2,
@@ -44,6 +44,107 @@ const maskEmail = (email: string) => {
   const maskedName = `${name[0]}${'*'.repeat(Math.min(name.length - 2, 5))}${name[name.length - 1]}`;
   return `${maskedName}@${domain}`;
 };
+
+const UserRow = memo(function UserRow({
+  u, isEmailUnmasked, onView, onEdit, onQuarantine, onReactivate, onDelete, onToggleEmailMask
+}: {
+  u: ApiUser;
+  isEmailUnmasked: boolean;
+  onView: (u: ApiUser) => void;
+  onEdit: (u: ApiUser) => void;
+  onQuarantine: (u: ApiUser) => void;
+  onReactivate: (u: ApiUser) => void;
+  onDelete: (u: ApiUser) => void;
+  onToggleEmailMask: (id: number) => void;
+}) {
+  const RoleIcon = ROLE_CONFIG[u.role as keyof typeof ROLE_CONFIG]?.icon ?? Users;
+  const roleConfig = ROLE_CONFIG[u.role as keyof typeof ROLE_CONFIG];
+
+  return (
+    <tr className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors cursor-pointer" onClick={() => onView(u)}>
+      <td className="px-6 py-4">
+        <div className="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">{u.name}</div>
+      </td>
+      <td className="px-6 py-4 text-slate-600 dark:text-slate-400 font-mono text-xs">@{u.username}</td>
+      <td className="px-6 py-4 text-slate-600 dark:text-slate-400">
+        {u.email ? (
+          <div className="flex items-center gap-1.5 group">
+            <span className="font-mono text-xs">{isEmailUnmasked ? u.email : maskEmail(u.email)}</span>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onToggleEmailMask(u.id); }}
+              className="text-slate-400 opacity-60 group-hover:opacity-100 hover:text-slate-600 dark:hover:text-slate-200 transition-all p-0.5 rounded"
+              title={isEmailUnmasked ? "Mask Email" : "Unmask Email"}
+            >
+              {isEmailUnmasked ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+            </button>
+          </div>
+        ) : (
+          <span className="text-slate-400 italic">No email</span>
+        )}
+      </td>
+      <td className="px-6 py-4">
+        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-xs">
+          <RoleIcon className={`h-3.5 w-3.5 ${roleConfig?.iconColor ?? 'text-slate-500'}`} />
+          <span>{u.role}</span>
+        </div>
+      </td>
+      <td className="px-6 py-4">
+        {u.status === 'Active' && (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/40">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Active
+          </span>
+        )}
+        {u.status === 'Inactive' && (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700/50">
+            <span className="w-1.5 h-1.5 rounded-full bg-slate-400" /> Inactive
+          </span>
+        )}
+        {u.status === 'Quarantined' && (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 shadow-sm">
+            <ShieldOff className="h-3 w-3 text-amber-600 dark:text-amber-400" /> Quarantined
+          </span>
+        )}
+      </td>
+      <td className="px-6 py-4 text-right">
+        <div className="flex items-center justify-end gap-2">
+          {u.status !== 'Quarantined' && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onEdit(u); }}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold text-[#006a61] dark:text-[#7ef0cf] hover:bg-[#006a61]/10 transition-all"
+            >
+              <Edit2 className="h-3.5 w-3.5" /> Edit
+            </button>
+          )}
+          {u.status === 'Inactive' && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onQuarantine(u); }}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/50 border border-amber-200 dark:border-amber-800/50 transition-all"
+            >
+              <Lock className="h-3.5 w-3.5" /> Quarantine
+            </button>
+          )}
+          {u.status === 'Quarantined' && (
+            <>
+              <button
+                onClick={(e) => { e.stopPropagation(); onReactivate(u); }}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200 dark:border-emerald-800/50 transition-all"
+              >
+                <RotateCcw className="h-3.5 w-3.5" /> Reactivate
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onDelete(u); }}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 border border-rose-200 dark:border-rose-800/50 transition-all"
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Delete
+              </button>
+            </>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+});
 
 export function ManageUsers() {
   const { data: userList, loading, error, addItem, updateItem, removeItem, refetch } = useOptimisticList(usersApi.list);
@@ -536,125 +637,19 @@ export function ManageUsers() {
                     No matching users found.
                   </td>
                 </tr>
-              ) : paginatedUsers.map(u => {
-                const RoleIcon = ROLE_CONFIG[u.role as keyof typeof ROLE_CONFIG]?.icon ?? Users;
-                const roleConfig = ROLE_CONFIG[u.role as keyof typeof ROLE_CONFIG];
-                const isEmailUnmasked = isAllEmailsUnmasked || unmaskedEmailIds.has(u.id);
-
-                return (
-                  <tr key={u.id} className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors cursor-pointer" onClick={() => setViewingUser(u)}>
-                    {/* User Name */}
-                    <td className="px-6 py-4">
-                      <div className="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                        {u.name}
-                      </div>
-                    </td>
-
-                    {/* Username */}
-                    <td className="px-6 py-4 text-slate-600 dark:text-slate-400 font-mono text-xs">
-                      @{u.username}
-                    </td>
-
-                    {/* Email */}
-                    <td className="px-6 py-4 text-slate-600 dark:text-slate-400">
-                      {u.email ? (
-                        <div className="flex items-center gap-1.5 group">
-                          <span className="font-mono text-xs">
-                            {isEmailUnmasked ? u.email : maskEmail(u.email)}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => toggleSingleEmailMask(u.id)}
-                            className="text-slate-400 opacity-60 group-hover:opacity-100 hover:text-slate-600 dark:hover:text-slate-200 transition-all p-0.5 rounded"
-                            title={isEmailUnmasked ? "Mask Email" : "Unmask Email"}
-                          >
-                            {isEmailUnmasked ? (
-                              <EyeOff className="h-3.5 w-3.5" />
-                            ) : (
-                              <Eye className="h-3.5 w-3.5" />
-                            )}
-                          </button>
-                        </div>
-                      ) : (
-                        <span className="text-slate-400 italic">No email</span>
-                      )}
-                    </td>
-
-                    {/* Role with Icon */}
-                    <td className="px-6 py-4">
-                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-xs">
-                        <RoleIcon className={`h-3.5 w-3.5 ${roleConfig?.iconColor ?? 'text-slate-500'}`} />
-                        <span>{u.role}</span>
-                      </div>
-                    </td>
-
-                    {/* Status Badge */}
-                    <td className="px-6 py-4">
-                      {u.status === 'Active' && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/40">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                          Active
-                        </span>
-                      )}
-                      {u.status === 'Inactive' && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700/50">
-                          <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
-                          Inactive
-                        </span>
-                      )}
-                      {u.status === 'Quarantined' && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 shadow-sm">
-                          <ShieldOff className="h-3 w-3 text-amber-600 dark:text-amber-400" />
-                          Quarantined
-                        </span>
-                      )}
-                    </td>
-
-                    {/* Action Buttons */}
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        {/* Standard Edit for non-quarantined users */}
-                        {u.status !== 'Quarantined' && (
-                          <button
-                            onClick={() => openEdit(u)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold text-[#006a61] dark:text-[#7ef0cf] hover:bg-[#006a61]/10 transition-all"
-                          >
-                            <Edit2 className="h-3.5 w-3.5" /> Edit
-                          </button>
-                        )}
-
-                        {/* Inactive User -> Quarantine Action */}
-                        {u.status === 'Inactive' && (
-                          <button
-                            onClick={() => setQuarantineModalUser(u)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/50 border border-amber-200 dark:border-amber-800/50 transition-all"
-                          >
-                            <Lock className="h-3.5 w-3.5" /> Quarantine
-                          </button>
-                        )}
-
-                        {/* Quarantined User Actions -> Reactivate or Permanent Delete */}
-                        {u.status === 'Quarantined' && (
-                          <>
-                            <button
-                              onClick={() => setReactivateModalUser(u)}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200 dark:border-emerald-800/50 transition-all"
-                            >
-                              <RotateCcw className="h-3.5 w-3.5" /> Reactivate
-                            </button>
-                            <button
-                              onClick={() => setDeleteModalUser(u)}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 border border-rose-200 dark:border-rose-800/50 transition-all"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" /> Delete
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+              ) : paginatedUsers.map(u => (
+                <UserRow
+                  key={u.id}
+                  u={u}
+                  isEmailUnmasked={isAllEmailsUnmasked || unmaskedEmailIds.has(u.id)}
+                  onView={setViewingUser}
+                  onEdit={openEdit}
+                  onQuarantine={setQuarantineModalUser}
+                  onReactivate={setReactivateModalUser}
+                  onDelete={setDeleteModalUser}
+                  onToggleEmailMask={toggleSingleEmailMask}
+                />
+              ))}
             </tbody>
           </table>
         </div>

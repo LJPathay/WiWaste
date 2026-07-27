@@ -8,6 +8,7 @@ use App\Models\SalesItem;
 use App\Models\Inventory;
 use App\Models\StockMovement;
 use App\Models\AuditLog;
+use App\Jobs\WarmAnalyticsCache;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -15,9 +16,9 @@ class SalesTransactionController extends Controller
 {
     public function index(Request $request)
     {
-        $limit = min((int) $request->input('per_page', 200), 1000);
+        $perPage = min((int) $request->input('per_page', 20), 100);
         return response()->json(
-            SalesTransaction::with(['user', 'items.product'])->orderByDesc('transaction_date')->take($limit)->get()->map(fn ($t) => [
+            SalesTransaction::with(['user', 'items.product'])->orderByDesc('transaction_date')->paginate($perPage)->through(fn ($t) => [
                 'id'               => $t->transaction_id,
                 'cashier'          => $t->user?->Full_name ?? 'Cashier',
                 'total_amount'     => $t->total_amount,
@@ -135,6 +136,8 @@ class SalesTransactionController extends Controller
                 'new_values'    => json_encode(['total' => $total, 'items' => count($data['items'])]),
                 'created_at'    => now(),
             ]);
+
+            WarmAnalyticsCache::dispatch();
 
             return response()->json([
                 'message'        => 'Transaction completed.',

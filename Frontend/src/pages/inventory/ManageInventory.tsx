@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, memo } from 'react';
 import {
   Search,
   ArrowUpRight,
@@ -65,7 +65,7 @@ function getExpiryDate(item: InventoryItem): string {
   return item.expirationDate ?? '—';
 }
 
-function StatusBadge({ status, qty }: { status: InventoryItem['stockStatus']; qty: number }) {
+const StatusBadge = memo(function StatusBadge({ status, qty }: { status: InventoryItem['stockStatus']; qty: number }) {
   if (qty < 5) {
     return (
       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 border border-red-100 dark:border-red-900/30">
@@ -102,10 +102,15 @@ export function ManageInventory() {
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
   const [statusFilter, setStatusFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+
+  useEffect(() => { setPage(1); }, [search, statusFilter, categoryFilter]);
 
   const fetchList = useMemo(
-    () => () => inventoryApi.list({ search: debouncedSearch, status: statusFilter || undefined }),
-    [debouncedSearch, statusFilter]
+    () => () => inventoryApi.list({ search: debouncedSearch, status: statusFilter || undefined, page }),
+    [debouncedSearch, statusFilter, page]
   );
 
   const { data: apiData, loading, error: fetchError, refetch, addItem, updateItem } = useOptimisticList(fetchList);
@@ -128,12 +133,6 @@ export function ManageInventory() {
   const [addSearch, setAddSearch] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
   const [addError, setAddError] = useState('');
-
-  const [categoryFilter, setCategoryFilter] = useState('');
-  const [page, setPage] = useState(1);
-  const pageSize = 10;
-
-  useEffect(() => { setPage(1); }, [search, statusFilter, categoryFilter]);
 
   const [adjustItem, setAdjustItem] = useState<InventoryItem | null>(null);
   const [adjustType, setAdjustType] = useState<'Stock In' | 'Stock Out'>('Stock In');

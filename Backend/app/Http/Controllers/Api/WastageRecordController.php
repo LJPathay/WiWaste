@@ -7,15 +7,16 @@ use App\Models\WastageRecord;
 use App\Models\Inventory;
 use App\Models\StockMovement;
 use App\Models\AuditLog;
+use App\Jobs\WarmAnalyticsCache;
 use Illuminate\Http\Request;
 
 class WastageRecordController extends Controller
 {
     public function index(Request $request)
     {
-        $limit = min((int) $request->input('per_page', 200), 1000);
+        $perPage = min((int) $request->input('per_page', 20), 100);
         return response()->json(
-            WastageRecord::with(['product', 'user'])->orderByDesc('date_recorded')->take($limit)->get()->map(fn ($w) => [
+            WastageRecord::with(['product', 'user'])->orderByDesc('date_recorded')->paginate($perPage)->through(fn ($w) => [
                 'id'             => $w->wastage_id,
                 'product_id'     => $w->product_id,
                 'product_name'   => $w->product?->product_name,
@@ -73,6 +74,8 @@ class WastageRecordController extends Controller
             'new_values'    => json_encode($data),
             'created_at'    => now(),
         ]);
+
+        WarmAnalyticsCache::dispatch();
 
         return response()->json(['message' => 'Wastage recorded.'], 201);
     }

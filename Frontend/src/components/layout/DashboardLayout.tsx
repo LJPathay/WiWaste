@@ -1,11 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, memo } from 'react';
 import { HeaderLabelProvider } from './HeaderLabelProvider';
 import { Navigate, Outlet, Link, useLocation, useNavigate } from 'react-router';
 import {
   LogOut,
   LayoutDashboard,
   BarChart3,
-  LineChart,
   Users,
   ChevronLeft,
   ChevronRight,
@@ -18,10 +17,8 @@ import {
   Eye,
   Menu,
   X,
-  Brain,
   Layers,
   PhilippinePeso,
-  FlaskConical,
   Activity,
   Receipt,
   RotateCcw,
@@ -107,68 +104,18 @@ const sidebarGroupsByRole: Record<UserRole, SidebarGroup[]> = {
   ],
 };
 
-export function DashboardLayout() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [collapsed, setCollapsed] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
-
-  // Read session synchronously — no async effect needed since localStorage is sync
-  const session = getStoredSession(); // localStorage is synchronous
-  
-if (!session) {
-  return <Navigate to="/login" replace />;
-}
-
-  function handleLogout() {
-    clearStoredSession();
-    navigate('/');
-  }
-
-  const sidebarGroups = sidebarGroupsByRole[session.role] ?? [];
-  const sidebarWidth = collapsed ? 'w-[76px]' : 'w-[248px]';
-
-  // Dynamic Most Visited Pages & Header Style tracking
-  const [visitedPages, setVisitedPages] = useState<SidebarItem[]>([]);
-  const [headerStyle, setHeaderStyle] = useState<'quick-access' | 'action-text' | 'welcome-text'>('quick-access');
-
-  useEffect(() => {
-    const readHeaderStyle = () => {
-      const saved = localStorage.getItem('wiwaste_header_style') as any;
-      if (saved === 'quick-access' || saved === 'action-text' || saved === 'welcome-text') {
-        setHeaderStyle(saved);
-      }
-    };
-    readHeaderStyle();
-
-    window.addEventListener('wiwaste_header_style_change', readHeaderStyle);
-    return () => window.removeEventListener('wiwaste_header_style_change', readHeaderStyle);
-  }, []);
-
-  useEffect(() => {
-    if (!session || !location.pathname) return;
-    try {
-      const raw = localStorage.getItem('wiwaste_page_visits_v1') || '{}';
-      const visits: Record<string, number> = JSON.parse(raw);
-      visits[location.pathname] = (visits[location.pathname] || 0) + 1;
-      localStorage.setItem('wiwaste_page_visits_v1', JSON.stringify(visits));
-
-      const allItems = sidebarGroups.flatMap(g => g.items);
-      const sorted = [...allItems]
-        .map(item => ({ ...item, count: visits[item.to] || 0 }))
-        .sort((a, b) => b.count - a.count);
-
-      setVisitedPages(sorted.slice(0, 4));
-    } catch (e) {
-      // fallback
-    }
-  }, [location.pathname, session?.role]);
-
-  const NavItems = ({ compact = false, onClose }: { compact?: boolean; onClose?: () => void }) => (
+const NavItems = memo(function NavItems({
+  compact, onClose, sidebarGroups, currentPath
+}: {
+  compact?: boolean;
+  onClose?: () => void;
+  sidebarGroups: SidebarGroup[];
+  currentPath: string;
+}) {
+  return (
     <nav className={`flex-1 overflow-y-auto scrollbar-modern ${compact ? 'px-2 py-3' : 'px-3 py-4'}`}>
       {sidebarGroups.map((group) => (
         <div key={group.group} className="mb-2">
-          {/* Group label — hidden when collapsed */}
           {!compact && (
             <div className="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-slate-500">
               {group.group}
@@ -177,7 +124,7 @@ if (!session) {
           <div className="space-y-0.5">
             {group.items.map((item) => {
               const Icon = item.icon;
-              const active = location.pathname === item.to;
+              const active = currentPath === item.to;
               return (
                 <Link
                   key={item.to}
@@ -203,13 +150,23 @@ if (!session) {
       ))}
     </nav>
   );
+});
 
-  const SidebarInner = ({ compact = false, onClose }: { compact?: boolean; onClose?: () => void }) => (
+const SidebarInner = memo(function SidebarInner({
+  compact, onClose, session, sidebarGroups, onToggleCollapse, onLogout, currentPath
+}: {
+  compact?: boolean;
+  onClose?: () => void;
+  session: { name: string; role: UserRole };
+  sidebarGroups: SidebarGroup[];
+  onToggleCollapse?: () => void;
+  onLogout: () => void;
+  currentPath: string;
+}) {
+  return (
     <div className="flex h-full flex-col bg-[#f5f5f5] dark:bg-slate-900">
-      {/* Logo + collapse button */}
       <div className="border-b border-gray-200 dark:border-white/10 px-3 py-3 bg-white dark:bg-slate-950">
         <div className="flex items-center justify-between gap-2">
-          {/* Logo — always visible; white bg ensures icon shows in dark mode */}
           <div className={`flex min-w-0 items-center flex-1 ${compact ? 'justify-center' : 'justify-start'}`}>
             <div className={`flex items-center justify-center ${compact ? 'h-10 w-10' : 'h-10 px-2'}`}>
               <img
@@ -219,18 +176,16 @@ if (!session) {
               />
             </div>
           </div>
-          {/* Desktop collapse toggle */}
           {!onClose && (
             <button
               type="button"
-              onClick={() => setCollapsed((prev) => !prev)}
+              onClick={onToggleCollapse}
               className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-gray-500 dark:text-slate-400 transition-colors hover:bg-gray-100 dark:hover:bg-slate-700"
               aria-label={compact ? 'Expand sidebar' : 'Collapse sidebar'}
             >
               {compact ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
             </button>
           )}
-          {/* Mobile close button */}
           {onClose && (
             <button
               type="button"
@@ -244,7 +199,6 @@ if (!session) {
         </div>
       </div>
 
-      {/* User info strip */}
       {!compact && (
         <div className="border-b border-gray-200 dark:border-white/10 px-4 py-3 bg-white dark:bg-slate-950">
           <p className="text-xs font-semibold text-gray-800 dark:text-slate-100 truncate">{session.name}</p>
@@ -252,8 +206,8 @@ if (!session) {
         </div>
       )}
 
-      <NavItems compact={compact} onClose={onClose} />
-      {/* Sidebar footer: theme toggle + sign out */}
+      <NavItems compact={compact} onClose={onClose} sidebarGroups={sidebarGroups} currentPath={currentPath} />
+
       <div className="border-t border-gray-200 dark:border-white/10 p-3 bg-white dark:bg-slate-900 flex items-center gap-2">
         <div className="flex-shrink-0">
           <ThemeToggle compact />
@@ -261,7 +215,7 @@ if (!session) {
         {!compact && (
           <button
             type="button"
-            onClick={handleLogout}
+            onClick={onLogout}
             className="flex-1 flex items-center gap-2 rounded-lg bg-gray-100 dark:bg-white/10 px-3 py-2 text-sm font-medium text-gray-700 dark:text-slate-300 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 dark:hover:text-red-400"
             aria-label="Sign out"
           >
@@ -272,7 +226,7 @@ if (!session) {
         {compact && (
           <button
             type="button"
-            onClick={handleLogout}
+            onClick={onLogout}
             className="flex-1 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-white/10 p-2 text-gray-700 dark:text-slate-300 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 dark:hover:text-red-400"
             aria-label="Sign out"
             title="Sign out"
@@ -283,6 +237,59 @@ if (!session) {
       </div>
     </div>
   );
+});
+
+export function DashboardLayout() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  const session = getStoredSession();
+
+  if (!session) {
+    return <Navigate to="/login" replace />;
+  }
+
+  const handleLogout = () => {
+    clearStoredSession();
+    navigate('/');
+  };
+
+  const sidebarGroups = sidebarGroupsByRole[session.role] ?? [];
+  const sidebarWidth = collapsed ? 'w-[76px]' : 'w-[248px]';
+
+  const [visitedPages, setVisitedPages] = useState<SidebarItem[]>([]);
+  const [headerStyle, setHeaderStyle] = useState<'quick-access' | 'action-text' | 'welcome-text'>('quick-access');
+
+  useEffect(() => {
+    const readHeaderStyle = () => {
+      const saved = localStorage.getItem('wiwaste_header_style') as any;
+      if (saved === 'quick-access' || saved === 'action-text' || saved === 'welcome-text') {
+        setHeaderStyle(saved);
+      }
+    };
+    readHeaderStyle();
+    window.addEventListener('wiwaste_header_style_change', readHeaderStyle);
+    return () => window.removeEventListener('wiwaste_header_style_change', readHeaderStyle);
+  }, []);
+
+  useEffect(() => {
+    if (!location.pathname) return;
+    try {
+      const raw = localStorage.getItem('wiwaste_page_visits_v1') || '{}';
+      const visits: Record<string, number> = JSON.parse(raw);
+      visits[location.pathname] = (visits[location.pathname] || 0) + 1;
+      localStorage.setItem('wiwaste_page_visits_v1', JSON.stringify(visits));
+
+      const allItems = sidebarGroups.flatMap(g => g.items);
+      const sorted = [...allItems]
+        .map(item => ({ ...item, count: visits[item.to] || 0 }))
+        .sort((a, b) => b.count - a.count);
+
+      setVisitedPages(sorted.slice(0, 4));
+    } catch (e) { /* fallback */ }
+  }, [location.pathname, session.role]);
 
   // Mobile sidebar focus trap
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -311,7 +318,14 @@ if (!session) {
         <aside
           className={`hidden md:flex flex-none flex-col overflow-hidden border-r border-gray-200 dark:border-white/10 bg-[#f5f5f5] dark:bg-slate-900 text-gray-700 dark:text-slate-300 transition-all duration-300 h-screen sticky top-0 ${sidebarWidth}`}
         >
-          <SidebarInner compact={collapsed} />
+          <SidebarInner
+            compact={collapsed}
+            session={session}
+            sidebarGroups={sidebarGroups}
+            onToggleCollapse={() => setCollapsed(c => !c)}
+            onLogout={handleLogout}
+            currentPath={location.pathname}
+          />
         </aside>
 
         {/* ── Mobile Sidebar Drawer ── */}
@@ -322,7 +336,14 @@ if (!session) {
               onClick={() => setMobileOpen(false)}
             />
             <aside ref={sidebarRef} className="fixed inset-y-0 left-0 z-50 w-[248px] flex flex-col overflow-hidden border-r border-gray-200 bg-[#f5f5f5] md:hidden">
-              <SidebarInner onClose={() => setMobileOpen(false)} />
+              <SidebarInner
+                onClose={() => setMobileOpen(false)}
+                session={session}
+                sidebarGroups={sidebarGroups}
+                onLogout={handleLogout}
+                currentPath={location.pathname}
+                compact={false}
+              />
             </aside>
           </>
         )}

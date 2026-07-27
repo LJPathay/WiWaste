@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Inventory;
 use App\Models\StockMovement;
 use App\Models\AuditLog;
+use App\Jobs\WarmAnalyticsCache;
 use Illuminate\Http\Request;
 
 class InventoryController extends Controller
@@ -25,9 +26,9 @@ class InventoryController extends Controller
             $query->where('stock_status', $status);
         }
 
-        $limit = min((int) $request->input('per_page', 200), 1000);
+        $perPage = min((int) $request->input('per_page', 20), 100);
         return response()->json(
-            $query->take($limit)->get()->map(fn ($i) => [
+            $query->paginate($perPage)->through(fn ($i) => [
                 'id'             => $i->inventory_id,
                 'product_id'     => $i->product_id,
                 'product_name'   => $i->product?->product_name,
@@ -80,6 +81,8 @@ class InventoryController extends Controller
             'created_at'    => now(),
         ]);
 
+        WarmAnalyticsCache::dispatch();
+
         return response()->json(['message' => 'Stock added.', 'new_stock' => $inventory->current_stock]);
     }
 
@@ -120,6 +123,8 @@ class InventoryController extends Controller
             'new_values'    => json_encode(['current_stock' => $inventory->current_stock]),
             'created_at'    => now(),
         ]);
+
+        WarmAnalyticsCache::dispatch();
 
         return response()->json(['message' => 'Stock removed.', 'new_stock' => $inventory->current_stock]);
     }

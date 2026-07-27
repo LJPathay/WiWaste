@@ -25,9 +25,9 @@ class ProductController extends Controller
             $query->where('category_id', $categoryId);
         }
 
-        $limit = min((int) $request->input('per_page', 500), 1000);
+        $perPage = min((int) $request->input('per_page', 20), 100);
         return response()->json(
-            $query->take($limit)->get()->map(fn ($p) => [
+            $query->paginate($perPage)->through(fn ($p) => [
                 'id'              => $p->product_id,
                 'name'            => $p->product_name,
                 'sku'             => $p->barcode,

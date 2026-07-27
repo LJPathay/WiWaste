@@ -10,12 +10,14 @@ use Illuminate\Http\Request;
 
 class FEFOController extends Controller
 {
-    public function batches()
+    public function batches(Request $request)
     {
+        $perPage = min((int) $request->input('per_page', 20), 100);
+
         $batches = FEFOBatch::with('product.category')
             ->orderBy('expiry_date')
-            ->get()
-            ->map(fn ($b) => [
+            ->paginate($perPage)
+            ->through(fn ($b) => [
                 'batch_id'      => $b->batch_id,
                 'product_id'    => $b->product_id,
                 'product_name'  => $b->product?->product_name,
@@ -29,11 +31,21 @@ class FEFOController extends Controller
                 'directive_notes' => $b->directive_notes,
             ]);
 
+        $totalBatches = FEFOBatch::count();
+        $criticalCount = FEFOBatch::where('status', 'active')
+            ->where('expiry_date', '>=', now())
+            ->where('expiry_date', '<=', now()->addDays(7))
+            ->count();
+        $expiringSoonCount = FEFOBatch::where('status', 'active')
+            ->where('expiry_date', '>', now()->addDays(7))
+            ->where('expiry_date', '<=', now()->addDays(30))
+            ->count();
+
         return response()->json([
-            'batches' => $batches,
-            'total_batches' => $batches->count(),
-            'critical_count' => $batches->filter(fn ($b) => $b['days_left'] >= 0 && $b['days_left'] <= 7)->count(),
-            'expiring_soon_count' => $batches->filter(fn ($b) => $b['days_left'] > 7 && $b['days_left'] <= 30)->count(),
+            'batches'             => $batches,
+            'total_batches'       => $totalBatches,
+            'critical_count'      => $criticalCount,
+            'expiring_soon_count' => $expiringSoonCount,
         ]);
     }
 

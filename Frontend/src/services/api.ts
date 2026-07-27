@@ -26,6 +26,16 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+export interface PaginatedResponse<T> {
+  data: T[];
+  current_page: number;
+  last_page: number;
+  per_page: number;
+  total: number;
+  from: number | null;
+  to: number | null;
+}
+
 // ─── Auth ───────────────────────────────────────────────
 export const auth = {
   login: (username: string, password: string) =>
@@ -39,7 +49,7 @@ export const auth = {
 
 // ─── Users ──────────────────────────────────────────────
 export const users = {
-  list: () => request<ApiUser[]>('/users'),
+  list: (page = 1) => request<ApiUser[]>(`/users?page=${page}`),
   create: (data: CreateUserPayload) =>
     request('/users', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: number, data: Partial<CreateUserPayload>) =>
@@ -71,7 +81,14 @@ export const suppliers = {
 
 // ─── Products ───────────────────────────────────────────
 export const products = {
-  list: () => request<ApiProduct[]>('/products'),
+  list: (params?: { search?: string; category_id?: number; page?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.search) qs.set('search', params.search);
+    if (params?.category_id) qs.set('category_id', String(params.category_id));
+    if (params?.page) qs.set('page', String(params.page));
+    const q = qs.toString();
+    return request<PaginatedResponse<ApiProduct>>(`/products${q ? '?' + q : ''}`);
+  },
   lookup: (code: string) => request<ApiProduct>(`/products/lookup/${encodeURIComponent(code)}`),
   create: (data: CreateProductPayload) =>
     request('/products', { method: 'POST', body: JSON.stringify(data) }),
@@ -82,12 +99,13 @@ export const products = {
 
 // ─── Inventory ──────────────────────────────────────────
 export const inventory = {
-  list: (params?: { search?: string; status?: string }) => {
+  list: (params?: { search?: string; status?: string; page?: number }) => {
     const qs = new URLSearchParams();
     if (params?.search) qs.set('search', params.search);
     if (params?.status) qs.set('status', params.status);
+    if (params?.page) qs.set('page', String(params.page));
     const q = qs.toString();
-    return request<ApiInventory[]>(`/inventory${q ? '?' + q : ''}`);
+    return request<PaginatedResponse<ApiInventory>>(`/inventory${q ? '?' + q : ''}`);
   },
   stockIn: (data: { product_id: number; quantity: number; remarks?: string }) =>
     request('/inventory/stock-in', { method: 'POST', body: JSON.stringify(data) }),
@@ -99,21 +117,21 @@ export const inventory = {
 
 // ─── Wastage ────────────────────────────────────────────
 export const wastage = {
-  list: () => request<ApiWastage[]>('/wastage'),
+  list: (page = 1) => request<PaginatedResponse<ApiWastage>>(`/wastage?page=${page}`),
   record: (data: CreateWastagePayload) =>
     request('/wastage', { method: 'POST', body: JSON.stringify(data) }),
 };
 
 // ─── Sales (POS) ────────────────────────────────────────
 export const sales = {
-  list: () => request<ApiSalesTransaction[]>('/sales'),
+  list: (page = 1) => request<PaginatedResponse<ApiSalesTransaction>>(`/sales?page=${page}`),
   create: (data: CreateSalePayload) =>
     request('/sales', { method: 'POST', body: JSON.stringify(data) }),
 };
 
 // ─── Returns ────────────────────────────────────────────
 export const returns = {
-  list: () => request<ApiReturn[]>('/returns'),
+  list: (page = 1) => request<PaginatedResponse<ApiReturn>>(`/returns?page=${page}`),
   create: (data: CreateReturnPayload) =>
     request('/returns', { method: 'POST', body: JSON.stringify(data) }),
 };
@@ -456,7 +474,7 @@ export const inventoryAnalytics = {
 
 // ─── FEFO Tracking ────────────────────────────────────────
 export const fefo = {
-  batches: () => request<ApiFefoList>('/fefo/batches'),
+  batches: (page = 1) => request<ApiFefoList>(`/fefo/batches?page=${page}`),
   show: (id: number) => request<ApiFefoBatchDetail>(`/fefo/batches/${id}`),
   apply: (data: { batch_id: number; action: 'flag' | 'clear' | 'notify'; directive_notes?: string }) =>
     request('/fefo/apply', { method: 'POST', body: JSON.stringify(data) }),
@@ -464,9 +482,12 @@ export const fefo = {
 
 // ─── Recommendations ─────────────────────────────────────
 export const recommendations = {
-  list: (status?: string) => {
-    const qs = status ? `?status=${status}` : '';
-    return request<ApiRecommendation[]>(`/recommendations${qs}`);
+  list: (params?: { status?: string; page?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.status) qs.set('status', params.status);
+    if (params?.page) qs.set('page', String(params.page));
+    const q = qs.toString();
+    return request<PaginatedResponse<ApiRecommendation>>(`/recommendations${q ? '?' + q : ''}`);
   },
   show: (id: number) => request<ApiRecommendationDetail>(`/recommendations/${id}`),
   approve: (id: number) =>

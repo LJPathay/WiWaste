@@ -9,26 +9,25 @@ use App\Models\Supplier;
 use App\Models\SalesTransaction;
 use App\Models\WastageRecord;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class DashboardController extends Controller
 {
     public function overview()
     {
-        $activeSkus = Product::where('status', 'Active')->count();
-        $totalUsers = User::count();
-        $activeSuppliers = Supplier::count();
-        $todaySales = (float) SalesTransaction::where('status', 'Completed')
-            ->whereDate('transaction_date', today())
-            ->sum('total_amount');
-        $recentWastage = (float) WastageRecord::whereDate('date_recorded', '>=', now()->subDays(7))
-            ->sum('estimated_loss');
+        $data = Cache::remember('dashboard.overview', 300, function () {
+            return [
+                'active_skus' => Product::where('status', 'Active')->count(),
+                'total_users' => User::count(),
+                'active_suppliers' => Supplier::count(),
+                'today_sales' => (float) SalesTransaction::where('status', 'Completed')
+                    ->whereDate('transaction_date', today())
+                    ->sum('total_amount'),
+                'recent_wastage' => (float) WastageRecord::whereDate('date_recorded', '>=', now()->subDays(7))
+                    ->sum('estimated_loss'),
+            ];
+        });
 
-        return response()->json([
-            'active_skus' => $activeSkus,
-            'total_users' => $totalUsers,
-            'active_suppliers' => $activeSuppliers,
-            'today_sales' => $todaySales,
-            'recent_wastage' => $recentWastage,
-        ]);
+        return response()->json($data);
     }
 }

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 
 export function useOptimisticList<T extends { id: number }>(
-  fetcher: () => Promise<T[]>
+  fetcher: () => Promise<T[] | { data: T[] }>
 ) {
   const [data, setData] = useState<T[] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -12,7 +12,8 @@ export function useOptimisticList<T extends { id: number }>(
     setError(null);
     try {
       const result = await fetcher();
-      setData(result);
+      const items = Array.isArray(result) ? result : result.data;
+      setData(items);
     } catch (err: any) {
       setError(err.message ?? 'Failed to load data');
     } finally {

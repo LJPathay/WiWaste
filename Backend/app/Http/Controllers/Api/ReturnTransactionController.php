@@ -13,9 +13,9 @@ class ReturnTransactionController extends Controller
 {
     public function index(Request $request)
     {
-        $limit = min((int) $request->input('per_page', 200), 1000);
+        $perPage = min((int) $request->input('per_page', 20), 100);
         return response()->json(
-            ReturnTransaction::with(['saleItem.product', 'user'])->orderByDesc('return_date')->take($limit)->get()->map(fn ($r) => [
+            ReturnTransaction::with(['saleItem.product', 'user'])->orderByDesc('return_date')->paginate($perPage)->through(fn ($r) => [
                 'id'                => $r->return_id,
                 'product_name'      => $r->saleItem?->product?->product_name,
                 'sku'               => $r->saleItem?->product?->barcode,

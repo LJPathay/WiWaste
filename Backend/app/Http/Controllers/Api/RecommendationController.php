@@ -11,16 +11,16 @@ class RecommendationController extends Controller
 {
     public function index(Request $request)
     {
-        $query = InventoryRecommendation::with('product.category');
+        $query = InventoryRecommendation::with('product.category', 'reviewer');
 
         if ($status = $request->input('status')) {
             $query->where('status', $status);
         }
 
-        $limit = min((int) $request->input('per_page', 200), 1000);
+        $perPage = min((int) $request->input('per_page', 20), 100);
 
         return response()->json(
-            $query->orderByDesc('recommendation_id')->take($limit)->get()->map(fn ($r) => [
+            $query->orderByDesc('recommendation_id')->paginate($perPage)->through(fn ($r) => [
                 'recommendation_id'  => $r->recommendation_id,
                 'product_id'         => $r->product_id,
                 'product_name'       => $r->product?->product_name,

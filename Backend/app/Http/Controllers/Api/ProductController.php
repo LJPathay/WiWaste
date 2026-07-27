@@ -85,10 +85,23 @@ class ProductController extends Controller
             'created_at'    => now(),
         ]);
 
+        $product->load(['category', 'supplier', 'inventory']);
+
         return response()->json([
-            'message' => 'Product created.',
-            'id'      => $product->product_id,
-            'sku'     => $product->barcode,
+            'id'              => $product->product_id,
+            'name'            => $product->product_name,
+            'sku'             => $product->barcode,
+            'category_id'     => $product->category_id,
+            'category'        => $product->category?->Category_name,
+            'supplier_id'     => $product->supplier_id,
+            'supplier'        => $product->supplier?->supplier_name,
+            'cost_price'      => $product->cost_price,
+            'selling_price'   => $product->selling_price,
+            'reorder_level'   => $product->reorder_level,
+            'expiration_date' => $product->expiration_date,
+            'status'          => $product->status ?? 'Active',
+            'stock'           => $product->inventory?->current_stock ?? 0,
+            'stock_status'    => $product->inventory?->stock_status ?? 'Normal',
         ], 201);
     }
 
@@ -143,9 +156,8 @@ class ProductController extends Controller
         return response()->json(['message' => 'Product updated.']);
     }
 
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
-        // Soft archive/discontinue product to preserve historical audit trail & ML data integrity
         $product = Product::findOrFail($id);
         $newStatus = $product->status === 'Discontinued' ? 'Active' : 'Discontinued';
         $product->update(['status' => $newStatus]);

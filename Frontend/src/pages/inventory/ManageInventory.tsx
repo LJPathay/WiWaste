@@ -94,7 +94,7 @@ const StatusBadge = memo(function StatusBadge({ status, qty }: { status: Invento
       Normal
     </span>
   );
-}
+});
 
 export function ManageInventory() {
   const { toasts, dismiss, success, error: showError } = useToast();

@@ -32,6 +32,7 @@ without being confused by unrelated details.
 | [Sprint 3 — Loss Visibility Dashboard (XGBoost)](implementationplan-sprint3.md) | Sprint 3 | ML loss-risk service, loss-risk API, leakage UI | **Not started** |
 | [Sprint 4 — Decision-Support Reports (GA)](implementationplan-sprint4.md) | Sprint 4 | Replenishment optimizer, optimization API, reports UI | **Not started** |
 | [Sprint 5 — Integration](implementationplan-sprint5.md) | Sprint 5 | Barcode loop, payment, dashboard consolidation | **Partially built** |
+| [Sprint 6 — Payment Gateway (PayMongo)](implementationplan-sprint6.md) | Sprint 6 | Real GCash/Maya/card payments via PayMongo | **Not started** |
 | [Testing & Evaluation](implementationplan-testing.md) | — | Automated tests, quality gates, evaluation metrics | **Not started** |
 | [Deployment & Documentation](implementationplan-deployment.md) | — | Build, Docker, env config, README updates | **Not started** |
 
@@ -47,8 +48,11 @@ without being confused by unrelated details.
    - Existing overview/chart pages stay on mock data (`Frontend/src/utils/mockAuthAndFeatures.ts`).
    - **Only the new Sprint 2–4 features** are wired to the real API.
 3. **Payment**
-   - Kept as-is: payment is recorded per transaction (`Cash`, `E-wallet`, `Credit Card`, `Debit Card`).
-   - **No** QR code or real payment gateway integration.
+   - `Cash`, `E-wallet`, `Credit Card`, `Debit Card` keep recording `payment_method` per transaction.
+   - **Sprint 6** adds **PayMongo** gateway integration for real GCash/Maya/card payments using its hosted
+     Checkout Sessions page (WiWaste never touches card numbers). Finalization uses a signature-verified
+     webhook **plus** a poll-based fallback so the demo works on localhost without a tunnel.
+   - Requires PayMongo **sandbox** keys for dev/demo (see Sprint 6).
 4. **Barcode**
    - Uses a **USB scanner in keyboard-wedge mode** (the scanner "types" the code like a keyboard).
    - No camera scanning, no extra libraries.
@@ -87,7 +91,8 @@ WiWaste/
 3. Sprint 3 (XGBoost loss visibility)
 4. Sprint 4 (GA decision support)
 5. Sprint 5 (integration & polish)
-6. Testing & Evaluation
-7. Deployment & Documentation
+6. Sprint 6 (PayMongo payment gateway)
+7. Testing & Evaluation
+8. Deployment & Documentation
 
 Each sprint from 2–4 ships **backend-first**: engine → API endpoint → backend tests → frontend wiring.

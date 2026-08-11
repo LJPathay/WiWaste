@@ -29,7 +29,7 @@ By the end of this sprint:
 
 ### Out of scope
 - Camera barcode scanning (decided: keyboard-wedge only).
-- Payment gateway / QR payment (decided: keep method tracking as-is).
+- Payment gateway / QR payment (decided: real gateway via **PayMongo** in Sprint 6; method tracking stays as-is until then).
 
 ## 4. Backend tasks
 

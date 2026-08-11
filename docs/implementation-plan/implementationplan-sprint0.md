@@ -39,6 +39,8 @@ Record one-line "Definition of Done" per sprint in the sprint's own file. Exampl
 - Sprint 2: "The forecast endpoint returns 30 days of predicted demand per product with confidence."
 - Sprint 3: "The leakage dashboard shows risk-ranked products with expected loss value."
 - Sprint 4: "The optimizer returns a replenishment plan that respects the budget constraint."
+- Sprint 6: "Selecting GCash/Maya/card opens the PayMongo checkout and the sale completes only when
+  payment is confirmed; stock is deducted exactly once."
 
 ### 4.2 API contract (the 3 new endpoint groups)
 
@@ -49,6 +51,7 @@ Document these now so frontend and backend build against the same shape.
 | `GET /forecast/overview`, `GET /forecast/{product_id}`, `POST /forecast/generate` | GET/POST | ARIMA demand forecasts (Sprint 2) |
 | `GET /loss-risk/summary`, `GET /loss-risk/items`, `POST /loss-risk/predict` | GET/POST | XGBoost loss-risk scoring (Sprint 3) |
 | `POST /optimization/replenishment` | POST | GA replenishment plan (Sprint 4) |
+| `POST /sales` (with `payment_method=PayMongo`), `GET /paymongo/status/{id}`, `POST /paymongo/webhook` | POST/GET | PayMongo payment gateway flow (Sprint 6) |
 
 Full payload details are defined inside each sprint file — **do not** invent extra fields on one side
 without updating the other side.
@@ -60,9 +63,23 @@ Add to `Backend/.env.example`:
 ```env
 # Python ML service (Sprint 3). Leave empty to use the PHP fallback.
 ML_SERVICE_URL=http://localhost:8001
+
+# PayMongo payment gateway (Sprint 6). Sandbox keys for dev/demo.
+PAYMONGO_SECRET_KEY=sk_test_...
+PAYMONGO_PUBLIC_KEY=pk_test_...
+PAYMONGO_WEBHOOK_SECRET=whsec_...
+PAYMONGO_SUCCESS_URL=http://localhost:5173/pos/success
+PAYMONGO_CANCEL_URL=http://localhost:5173/pos
 ```
 
-Document in `README.md` that the PHP fallback activates automatically when this is unset/unreachable.
+And to a new `Frontend/.env.example`:
+
+```env
+VITE_PAYMONGO_PUBLIC_KEY=pk_test_...
+```
+
+Document in `README.md` that the PHP fallback activates automatically when `ML_SERVICE_URL` is
+unset/unreachable.
 
 ### 4.4 Roles & permissions (confirm only)
 
@@ -76,9 +93,9 @@ No code change required unless a later sprint contradicts this table.
 
 ## 5. Definition of Done
 
-- [ ] `Backend/.env.example` contains `ML_SERVICE_URL`.
+- [ ] `Backend/.env.example` contains `ML_SERVICE_URL` and the `PAYMONGO_*` keys; `Frontend/.env.example` contains `VITE_PAYMONGO_PUBLIC_KEY`.
 - [ ] One-page acceptance criteria written for each sprint (sections in each sprint MD).
-- [ ] API contract for forecast / loss-risk / optimization is agreed and written down.
+- [ ] API contract for forecast / loss-risk / optimization / paymongo is agreed and written down.
 - [ ] All three roles and their permissions are confirmed.
 
 ## 6. Output

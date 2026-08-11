@@ -32,6 +32,11 @@
    DB_USERNAME=root
    DB_PASSWORD=...
    ML_SERVICE_URL=http://127.0.0.1:8001
+   PAYMONGO_SECRET_KEY=sk_live_...        # use sk_test_... in sandbox
+   PAYMONGO_PUBLIC_KEY=pk_live_...
+   PAYMONGO_WEBHOOK_SECRET=whsec_...
+   PAYMONGO_SUCCESS_URL=https://your-domain/pos/success
+   PAYMONGO_CANCEL_URL=https://your-domain/pos
    ```
 3. `php artisan key:generate`
 4. `php artisan migrate --force` (or `migrate:fresh --seed` for a fresh demo)
@@ -89,9 +94,11 @@ Update the existing `Backend/README.md`-style root `README.md` (the one at the r
 
 1. **Project structure** — add `ml-service/` and `docs/implementation-plan/`.
 2. **ML service setup** — the `uvicorn` commands above + `ML_SERVICE_URL` explanation.
-3. **New environment variables** — `ML_SERVICE_URL`.
-4. **New API endpoints** — link to Sprint 2/3/4 contract sections:
+3. **New environment variables** — `ML_SERVICE_URL`, `PAYMONGO_SECRET_KEY`, `PAYMONGO_PUBLIC_KEY`,
+   `PAYMONGO_WEBHOOK_SECRET`, `PAYMONGO_SUCCESS_URL`, `PAYMONGO_CANCEL_URL`, `VITE_PAYMONGO_PUBLIC_KEY`.
+4. **New API endpoints** — link to Sprint 2/3/4 contract sections plus Sprint 6:
    - `/forecast/*`, `/loss-risk/*`, `/optimization/replenishment`.
+   - `/paymongo/status/{transaction_id}`, `/paymongo/webhook`.
 5. **Production deployment** — the steps in section 3.
 6. **Demo script** — the 7-step walkthrough from the Testing & Evaluation file.
 7. **Sprint roadmap link** — point to `docs/implementation-plan/implementationplan.md`.
@@ -103,6 +110,7 @@ Update the existing `Backend/README.md`-style root `README.md` (the one at the r
 - [ ] Backend boots with `APP_ENV=production`, migrations applied, caches warmed.
 - [ ] `Frontend/dist/` builds and is served; CORS allows the origin.
 - [ ] `ml-service` starts with `uvicorn` and `/health` returns ok.
+- [ ] PayMongo keys configured; webhook URL registered in the PayMongo dashboard (sandbox ok).
 - [ ] Forecast scheduler cron/scheduled task configured.
 - [ ] (Optional) `docker-compose up` starts app + mysql + ml-service.
 - [ ] `README.md` updated per section 5.

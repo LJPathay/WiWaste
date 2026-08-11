@@ -10,7 +10,8 @@
 By the end of this sprint:
 
 1. **Barcode:** a cashier can scan a product at the POS, sell it, and see stock drop in real time.
-2. **Payment:** payment is recorded per transaction (kept as-is — no gateway, no QR).
+2. **Payment:** payment is recorded per transaction (method tracking confirmed — real PayMongo gateway
+   integration is Sprint 6).
 3. **Dashboards:** all feature dashboards (Sprint 2–4) are reachable from the navigation and show live data
    with proper loading/empty/error states.
 
@@ -28,7 +29,8 @@ By the end of this sprint:
 
 ### Out of scope
 - Camera barcode scanning (keyboard-wedge only).
-- Real payment gateway / QR payment (kept as method tracking).
+- Real payment gateway / QR payment — **moved to Sprint 6** (PayMongo: GCash, Maya, card). This sprint
+  only verifies the payment fields are captured and persisted.
 
 ## 4. Backend tasks
 
@@ -37,6 +39,7 @@ By the end of this sprint:
 Confirm the chain: `CreateSalePayload.payment_method` → `SalesTransactionController.store` →
 `Sales_Transaction` table. Payment methods supported: `Cash`, `E-wallet`, `Credit Card`, `Debit Card`.
 No new fields or endpoints needed unless the audit finds the value is not persisted.
+(Adding `PayMongo` as a method and the gateway flow is Sprint 6.)
 
 ### 4.2 API surface review (no new features)
 

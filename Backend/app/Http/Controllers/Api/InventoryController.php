@@ -8,6 +8,7 @@ use App\Models\StockMovement;
 use App\Models\AuditLog;
 use App\Jobs\WarmAnalyticsCache;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class InventoryController extends Controller
 {
@@ -57,33 +58,36 @@ class InventoryController extends Controller
         ]);
 
         $inventory = Inventory::where('product_id', $data['product_id'])->firstOrFail();
-        $inventory->current_stock += $data['quantity'];
-        $inventory->stock_status   = $this->calcStatus($inventory->current_stock, $inventory->product?->reorder_level ?? 10);
-        $inventory->last_updated   = now();
-        $inventory->save();
 
-        StockMovement::create([
-            'product_id'    => $data['product_id'],
-            'user_id'       => $request->user()?->User_id ?? 1,
-            'movement_type' => 'Stock In',
-            'quantity'      => $data['quantity'],
-            'remarks'       => $data['remarks'] ?? null,
-            'movement_date' => now(),
-        ]);
+        return DB::transaction(function () use ($data, $request, $inventory) {
+            $inventory->current_stock += $data['quantity'];
+            $inventory->stock_status   = Inventory::calcStatus($inventory->current_stock, $inventory->product?->reorder_level ?? 10);
+            $inventory->last_updated   = now();
+            $inventory->save();
 
-        AuditLog::create([
-            'user_id'       => $request->user()?->User_id ?? 1,
-            'action'        => "Stock-in: {$data['quantity']} units of {$inventory->product?->product_name}",
-            'entity_type'   => 'Inventory',
-            'entity_id'     => $inventory->inventory_id,
-            'old_values'    => null,
-            'new_values'    => json_encode(['current_stock' => $inventory->current_stock]),
-            'created_at'    => now(),
-        ]);
+            StockMovement::create([
+                'product_id'    => $data['product_id'],
+                'user_id'       => $request->user()?->User_id ?? 1,
+                'movement_type' => 'Stock In',
+                'quantity'      => $data['quantity'],
+                'remarks'       => $data['remarks'] ?? null,
+                'movement_date' => now(),
+            ]);
 
-        WarmAnalyticsCache::dispatch();
+            AuditLog::create([
+                'user_id'       => $request->user()?->User_id ?? 1,
+                'action'        => "Stock-in: {$data['quantity']} units of {$inventory->product?->product_name}",
+                'entity_type'   => 'Inventory',
+                'entity_id'     => $inventory->inventory_id,
+                'old_values'    => null,
+                'new_values'    => json_encode(['current_stock' => $inventory->current_stock]),
+                'created_at'    => now(),
+            ]);
 
-        return response()->json(['message' => 'Stock added.', 'new_stock' => $inventory->current_stock]);
+            WarmAnalyticsCache::dispatch();
+
+            return response()->json(['message' => 'Stock added.', 'new_stock' => $inventory->current_stock]);
+        });
     }
 
     public function stockOut(Request $request)
@@ -100,33 +104,35 @@ class InventoryController extends Controller
             return response()->json(['message' => 'Insufficient stock.'], 422);
         }
 
-        $inventory->current_stock -= $data['quantity'];
-        $inventory->stock_status   = $this->calcStatus($inventory->current_stock, $inventory->product?->reorder_level ?? 10);
-        $inventory->last_updated   = now();
-        $inventory->save();
+        return DB::transaction(function () use ($data, $request, $inventory) {
+            $inventory->current_stock -= $data['quantity'];
+            $inventory->stock_status   = Inventory::calcStatus($inventory->current_stock, $inventory->product?->reorder_level ?? 10);
+            $inventory->last_updated   = now();
+            $inventory->save();
 
-        StockMovement::create([
-            'product_id'    => $data['product_id'],
-            'user_id'       => $request->user()?->User_id ?? 1,
-            'movement_type' => 'Stock Out',
-            'quantity'      => $data['quantity'],
-            'remarks'       => $data['remarks'] ?? null,
-            'movement_date' => now(),
-        ]);
+            StockMovement::create([
+                'product_id'    => $data['product_id'],
+                'user_id'       => $request->user()?->User_id ?? 1,
+                'movement_type' => 'Stock Out',
+                'quantity'      => $data['quantity'],
+                'remarks'       => $data['remarks'] ?? null,
+                'movement_date' => now(),
+            ]);
 
-        AuditLog::create([
-            'user_id'       => $request->user()?->User_id ?? 1,
-            'action'        => "Stock-out: {$data['quantity']} units of {$inventory->product?->product_name}",
-            'entity_type'   => 'Inventory',
-            'entity_id'     => $inventory->inventory_id,
-            'old_values'    => null,
-            'new_values'    => json_encode(['current_stock' => $inventory->current_stock]),
-            'created_at'    => now(),
-        ]);
+            AuditLog::create([
+                'user_id'       => $request->user()?->User_id ?? 1,
+                'action'        => "Stock-out: {$data['quantity']} units of {$inventory->product?->product_name}",
+                'entity_type'   => 'Inventory',
+                'entity_id'     => $inventory->inventory_id,
+                'old_values'    => null,
+                'new_values'    => json_encode(['current_stock' => $inventory->current_stock]),
+                'created_at'    => now(),
+            ]);
 
-        WarmAnalyticsCache::dispatch();
+            WarmAnalyticsCache::dispatch();
 
-        return response()->json(['message' => 'Stock removed.', 'new_stock' => $inventory->current_stock]);
+            return response()->json(['message' => 'Stock removed.', 'new_stock' => $inventory->current_stock]);
+        });
     }
 
     public function movements($id)
@@ -152,13 +158,5 @@ class InventoryController extends Controller
             'current_stock' => $inventory->current_stock,
             'movements'     => $movements,
         ]);
-    }
-
-    private function calcStatus(int $stock, int $reorderLevel): string
-    {
-        if ($stock <= 0) return 'Low Stock';
-        if ($stock <= $reorderLevel) return 'Low Stock';
-        if ($stock > $reorderLevel * 5) return 'Overstock';
-        return 'Normal';
     }
 }

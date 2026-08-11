@@ -138,6 +138,8 @@ export function POSTerminal() {
   
   const [draggedProduct, setDraggedProduct] = useState<CashierProduct | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
+  // Tracks units sold this session so the grid/cart show live stock without a page refresh
+  const [stockAdjustments, setStockAdjustments] = useState<Record<string, number>>({});
   const [pinnedOrder, setPinnedOrder] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('pos_pinned_order');
@@ -304,6 +306,11 @@ export function POSTerminal() {
     return () => clearInterval(timer);
   }, []);
 
+  // Auto-focus the scan input when the POS loads so a USB scanner works immediately
+  useEffect(() => {
+    barcodeRef.current?.focus();
+  }, []);
+
   const totalItems = cart.reduce((sum, l) => sum + l.quantity, 0);
   const subtotal = cart.reduce((sum, l) => sum + l.product.selling_price * l.quantity, 0);
   const discountAmount = cart.reduce((sum, l) => sum + (l.product.selling_price * l.quantity * (l.discountPct || 0)) + (l.discountAmount || 0), 0);
@@ -339,6 +346,8 @@ export function POSTerminal() {
     );
     if (localMatch) {
       addProduct(localMatch);
+      setSearch('');
+      barcodeRef.current?.focus();
       return;
     }
     try {
@@ -358,19 +367,22 @@ export function POSTerminal() {
         image_url: undefined,
       };
       addProduct(product);
+      setSearch('');
     } catch {
       error(`Product not found: ${code}`);
     }
     setPluBuffer('');
+    barcodeRef.current?.focus();
   };
 
   const addProduct = (product: CashierProduct, qtyOverride?: number) => {
     const desiredQty = qtyOverride ?? 1;
+    const available = Math.max(0, product.current_stock - (stockAdjustments[product.product_id] ?? 0));
     setCart(prev => {
       const existing = prev.find(l => l.product.product_id === product.product_id);
       const newQty = existing
-        ? Math.min(existing.quantity + desiredQty, product.current_stock)
-        : Math.min(desiredQty, product.current_stock);
+        ? Math.min(existing.quantity + desiredQty, available)
+        : Math.min(desiredQty, available);
       setAction(`Added ${product.product_name} ×${newQty} to cart`);
       if (existing) {
         return prev.map(l =>
@@ -391,7 +403,8 @@ export function POSTerminal() {
     }
     const line = cart.find(l => l.product.product_id === productId);
     if (line) {
-      const capped = Math.min(qty, line.product.current_stock);
+      const available = Math.max(0, line.product.current_stock - (stockAdjustments[line.product.product_id] ?? 0));
+      const capped = Math.min(qty, available);
       setCart(prev =>
         prev.map(l =>
           l.product.product_id === productId
@@ -494,6 +507,15 @@ export function POSTerminal() {
     } catch (err: any) {
       // Fallback for offline mode
     }
+
+    // Reflect the sale in the live stock shown on the grid/cart
+    setStockAdjustments(prev => {
+      const next = { ...prev };
+      cart.forEach(l => {
+        next[l.product.product_id] = (next[l.product.product_id] ?? 0) + l.quantity;
+      });
+      return next;
+    });
 
     const completedReceipt: SalesTransaction = {
       transaction_id: currentTxnId,
@@ -612,6 +634,12 @@ export function POSTerminal() {
                   ref={barcodeRef}
                   value={search}
                   onChange={e => setSearch(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && search.trim()) {
+                      e.preventDefault();
+                      handlePluLookup(search.trim());
+                    }
+                  }}
                   placeholder={`Search product or scan barcode... (${hotkeys.focusSearch})`}
                   className="w-full pl-12 pr-4 py-3 bg-[#F8FAFC] dark:bg-slate-700 border border-[#E5E7EB] dark:border-slate-600 rounded-xl text-sm font-medium text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-transparent transition-all shadow-inner"
                 />
@@ -719,7 +747,18 @@ export function POSTerminal() {
                     <div className="flex-1 flex flex-col justify-between pt-1">
                       <p className="text-[11px] font-bold text-slate-800 dark:text-slate-100 leading-tight line-clamp-2 mb-1">{product.product_name}</p>
                       <div className="flex items-center justify-between mt-auto">
-                        <p className="text-xs font-black text-slate-900 dark:text-slate-100">{formatCurrency(product.selling_price)}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-xs font-black text-slate-900 dark:text-slate-100">{formatCurrency(product.selling_price)}</p>
+                          <span className={`text-[9px] font-bold px-1 rounded ${
+                            product.current_stock - (stockAdjustments[product.product_id] ?? 0) <= 0
+                              ? 'bg-red-50 text-red-500 dark:bg-red-900/30 dark:text-red-400'
+                              : product.current_stock - (stockAdjustments[product.product_id] ?? 0) <= product.reorder_level
+                                ? 'bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
+                                : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
+                          }`}>
+                            {product.current_stock - (stockAdjustments[product.product_id] ?? 0)} left
+                          </span>
+                        </div>
                         <button className="flex items-center justify-center w-5 h-5 rounded bg-[#16A34A] text-white hover:bg-[#15803d]">
                           <Plus className="w-3 h-3" />
                         </button>
@@ -824,6 +863,15 @@ export function POSTerminal() {
                             <span className="text-[9px] font-bold text-red-400 bg-red-50 dark:bg-red-900/20 px-1 rounded">{hotkeys.unqueue} to remove</span>
                           )}
                         </div>
+                        <p className={`mt-0.5 text-[10px] font-semibold ${
+                          line.product.current_stock - (stockAdjustments[line.product.product_id] ?? 0) - line.quantity <= 0
+                            ? 'text-red-500 dark:text-red-400'
+                            : line.product.current_stock - (stockAdjustments[line.product.product_id] ?? 0) - line.quantity <= line.product.reorder_level
+                              ? 'text-amber-500 dark:text-amber-400'
+                              : 'text-emerald-600 dark:text-emerald-400'
+                        }`}>
+                          {line.product.current_stock - (stockAdjustments[line.product.product_id] ?? 0) - line.quantity <= 0 ? 'Out of stock after this sale' : `${line.product.current_stock - (stockAdjustments[line.product.product_id] ?? 0) - line.quantity} left after sale`}
+                        </p>
                       </div>
                     </div>
 

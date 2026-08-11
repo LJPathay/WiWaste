@@ -11,8 +11,9 @@ class SalesTransaction extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'user_id', 'total_amount', 'transaction_date', 
-        'payment_method', 'amount_tendered', 'change_due', 'status'
+        'user_id', 'total_amount', 'transaction_date',
+        'payment_method', 'amount_tendered', 'change_due', 'status',
+        'global_discount_pct', 'senior_pwd_name', 'senior_pwd_id'
     ];
 
     public function user()

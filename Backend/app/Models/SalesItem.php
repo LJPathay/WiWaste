@@ -11,7 +11,8 @@ class SalesItem extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'transaction_id', 'product_id', 'quantity', 'unit_price', 'subtotal'
+        'transaction_id', 'product_id', 'quantity', 'unit_price', 'subtotal',
+        'original_price', 'override_reason'
     ];
 
     public function transaction()

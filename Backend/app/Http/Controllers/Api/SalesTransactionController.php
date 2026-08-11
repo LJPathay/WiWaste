@@ -96,7 +96,7 @@ class SalesTransactionController extends Controller
                     'product_id'      => $item['product_id'],
                     'quantity'        => $item['quantity'],
                     'unit_price'      => $item['unit_price'],
-                    'original_price'  => $item['discount_pct']
+                    'original_price'  => ($item['discount_pct'] ?? 0)
                         ? round($item['unit_price'] / (1 - $item['discount_pct']), 2)
                         : null,
                     'subtotal'        => $subtotal,
@@ -107,10 +107,7 @@ class SalesTransactionController extends Controller
                 $inventory = Inventory::where('product_id', $item['product_id'])->first();
                 if ($inventory) {
                     $inventory->current_stock = max(0, $inventory->current_stock - $item['quantity']);
-                    $inventory->stock_status  = $inventory->current_stock <= 0 ? 'Low Stock' : 'Normal';
-                    if ($inventory->current_stock <= $inventory->product?->reorder_level) {
-                        $inventory->stock_status = 'Low Stock';
-                    }
+                    $inventory->stock_status  = Inventory::calcStatus($inventory->current_stock, $inventory->product?->reorder_level ?? 10);
                     $inventory->last_updated  = now();
                     $inventory->save();
                 }

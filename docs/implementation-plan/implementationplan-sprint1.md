@@ -96,6 +96,9 @@ Add to `Backend/tests/Feature/` (see the Testing & Evaluation file for the full 
 
 ## 8. Definition of Done
 
+**Acceptance criteria:** A barcode scan at the POS adds the product to the cart and stock always matches
+movements.
+
 - [ ] Cashier scans a barcode → product lands in the cart with correct price/stock.
 - [ ] Scanning an unknown code shows a clear error and does not crash the POS.
 - [ ] Sale, stock-in, stock-out, and wastage all keep `Inventory.current_stock` consistent.

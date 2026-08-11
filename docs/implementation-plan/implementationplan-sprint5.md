@@ -103,6 +103,9 @@ Run this end-to-end to accept the sprint:
 
 ## 8. Definition of Done
 
+**Acceptance criteria:** Barcode → sale → stock-sync loop works end-to-end, payment is recorded, and all
+dashboards are reachable with proper loading/empty/error states.
+
 - [ ] Barcode → sale → stock-sync loop works (manual steps 1–4).
 - [ ] Payment method is recorded on every sale.
 - [ ] All dashboard routes reachable from the sidebar, no orphans.

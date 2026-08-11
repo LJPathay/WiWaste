@@ -175,6 +175,27 @@ Built files will be in `Frontend/dist/`.
 
 ---
 
+## ⚙️ Optional Services & Environment Variables
+
+All optional keys live in `Backend/.env.example` and `Frontend/.env.example`. Copy them into your
+`.env` when you enable the related feature.
+
+| Variable | Where | Purpose |
+|----------|-------|---------|
+| `ML_SERVICE_URL` | Backend | Base URL of the Python loss-prediction service (Sprint 3) |
+| `PAYMONGO_SECRET_KEY` | Backend | PayMongo secret key (Sprint 6) |
+| `PAYMONGO_PUBLIC_KEY` | Backend | PayMongo public key (Sprint 6) |
+| `PAYMONGO_WEBHOOK_SECRET` | Backend | PayMongo webhook signing secret (Sprint 6) |
+| `PAYMONGO_SUCCESS_URL` | Backend | Redirect target after a successful checkout |
+| `PAYMONGO_CANCEL_URL` | Backend | Redirect target when the customer cancels checkout |
+| `VITE_PAYMONGO_PUBLIC_KEY` | Frontend | PayMongo public key exposed to the browser |
+
+> **ML service fallback:** when `ML_SERVICE_URL` is unset or the service is unreachable, the backend
+> automatically falls back to the built-in pure-PHP loss-risk scorer. The app never breaks — the
+> `/loss-risk/*` endpoints just report `"engine": "fallback"` instead of `"xgboost"`.
+
+---
+
 ## 🔧 Common Issues & Fixes
 
 ### ❌ `php artisan serve` fails — class not found or autoload error

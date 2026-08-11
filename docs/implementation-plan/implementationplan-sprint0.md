@@ -93,10 +93,10 @@ No code change required unless a later sprint contradicts this table.
 
 ## 5. Definition of Done
 
-- [ ] `Backend/.env.example` contains `ML_SERVICE_URL` and the `PAYMONGO_*` keys; `Frontend/.env.example` contains `VITE_PAYMONGO_PUBLIC_KEY`.
-- [ ] One-page acceptance criteria written for each sprint (sections in each sprint MD).
-- [ ] API contract for forecast / loss-risk / optimization / paymongo is agreed and written down.
-- [ ] All three roles and their permissions are confirmed.
+- [x] `Backend/.env.example` contains `ML_SERVICE_URL` and the `PAYMONGO_*` keys; `Frontend/.env.example` contains `VITE_PAYMONGO_PUBLIC_KEY`.
+- [x] One-page acceptance criteria written for each sprint (sections in each sprint MD).
+- [x] API contract for forecast / loss-risk / optimization / paymongo is agreed and written down.
+- [x] All three roles and their permissions are confirmed.
 
 ## 6. Output
 

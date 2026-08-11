@@ -147,6 +147,8 @@ export const optimization = {
 
 ## 9. Definition of Done
 
+**Acceptance criteria:** The optimizer returns a replenishment plan that respects the budget constraint.
+
 - [ ] `GeneticOptimizer` returns a budget-respecting, non-negative plan.
 - [ ] `POST /optimization/replenishment` returns the documented payload.
 - [ ] Approved optimizer output appears in the existing Recommendations flow.

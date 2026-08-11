@@ -206,6 +206,9 @@ Frontend:
 
 ## 11. Definition of Done
 
+**Acceptance criteria:** Selecting GCash/Maya/card opens the PayMongo checkout and the sale completes only
+when payment is confirmed; stock is deducted exactly once.
+
 - [ ] GCash / Maya / Card open the PayMongo hosted checkout and return with a receipt.
 - [ ] Stock is deducted exactly once, only after payment is confirmed.
 - [ ] Cancelled/failed payments create no sale and change no stock.

@@ -134,6 +134,9 @@ File: `Frontend/src/pages/dashboard/PredictiveAnalytics.tsx`
 
 ## 9. Definition of Done
 
+**Acceptance criteria:** The forecast endpoint returns 30 days of predicted demand per product with
+confidence.
+
 - [ ] `forecast:generate` runs and fills `Forecast_Result`.
 - [ ] Scheduler entry exists in `routes/console.php`.
 - [ ] `GET /forecast/overview` and `GET /forecast/{product_id}` return documented payloads.

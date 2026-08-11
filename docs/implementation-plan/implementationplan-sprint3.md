@@ -154,6 +154,8 @@ File: `Frontend/src/pages/dashboard/LeakageDetection.tsx`
 
 ## 10. Definition of Done
 
+**Acceptance criteria:** The leakage dashboard shows risk-ranked products with expected loss value.
+
 - [ ] `ml-service/` runs with `uvicorn app.main:app --port 8001`.
 - [ ] `POST /predict/loss` returns documented shape for a batch of products.
 - [ ] Laravel `/loss-risk/*` endpoints return data with and without the service running.

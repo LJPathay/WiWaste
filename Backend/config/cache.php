@@ -129,8 +129,13 @@ return [
     | storage. By default, no PHP classes will be unserialized from your
     | cache to prevent gadget chain attacks if your APP_KEY is leaked.
     |
+    | WiWaste caches framework objects (e.g. Eloquent\Collection and
+    | Carbon\Carbon) in the database store, so classes must be allowed to be
+    | instantiated on read. For a production deployment you should cache only
+    | plain arrays/scalars and keep this setting false.
+    |
     */
 
-    'serializable_classes' => false,
+    'serializable_classes' => true,
 
 ];

@@ -1,0 +1,22 @@
+{
+  "category_map": {
+    "Medicine & Health": 0,
+    "Minimart Essentials": 1,
+    "Beverages": 2,
+    "Canned Goods": 3,
+    "Snacks": 4,
+    "Personal Care": 5,
+    "Household": 6,
+    "Dairy": 7
+  },
+  "supplier_map": {
+    "PharmaCorp": 0,
+    "FreshMart": 1,
+    "BeverageCo": 2,
+    "CanGoods Inc": 3,
+    "SnackTime": 4,
+    "CarePlus": 5,
+    "HomeGoods": 6,
+    "DairyFresh": 7
+  }
+}

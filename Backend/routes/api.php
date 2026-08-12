@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\InventoryAnalyticsController;
 use App\Http\Controllers\Api\FEFOController;
 use App\Http\Controllers\Api\RecommendationController;
 use App\Http\Controllers\Api\ForecastController;
+use App\Http\Controllers\Api\LossPredictionController;
 
 /*
 |--------------------------------------------------------------------------
@@ -122,4 +123,11 @@ Route::prefix('/forecast')->group(function () {
     Route::get('/overview',     [ForecastController::class, 'overview']);
     Route::get('/{product_id}', [ForecastController::class, 'show']);
     Route::post('/generate',    [ForecastController::class, 'generate']);
+});
+
+// Loss-risk (Sprint 3) — XGBoost spoilage/shrinkage risk from the Python ML service
+Route::prefix('/loss-risk')->group(function () {
+    Route::post('/predict', [LossPredictionController::class, 'predict']);
+    Route::get('/items',    [LossPredictionController::class, 'items']);
+    Route::get('/summary',  [LossPredictionController::class, 'summary']);
 });

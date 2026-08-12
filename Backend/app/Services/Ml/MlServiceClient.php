@@ -27,8 +27,32 @@ class MlServiceClient
      */
     public function forecast(array $payload): array
     {
+        return $this->postJson('/forecast', $payload);
+    }
+
+    /**
+     * POST a loss-risk scoring request to the Python service.
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     *
+     * @throws MlServiceUnavailableException
+     */
+    public function predictLoss(array $payload): array
+    {
+        return $this->postJson('/predict/loss', $payload);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     *
+     * @throws MlServiceUnavailableException
+     */
+    private function postJson(string $path, array $payload): array
+    {
         try {
-            $response = Http::timeout($this->timeout)->post($this->baseUrl.'/forecast', $payload);
+            $response = Http::timeout($this->timeout)->post($this->baseUrl.$path, $payload);
         } catch (ConnectionException $e) {
             throw new MlServiceUnavailableException('ML service is offline: '.$e->getMessage());
         }

@@ -15,9 +15,21 @@ By the end of this sprint:
 
 ## 2. Status
 
-- **Not started.**
-- `Frontend/src/pages/dashboard/LeakageDetection.tsx` exists but renders **mock** data.
-- No Python service, no loss-risk endpoints, no XGBoost model.
+- **Complete (100%).** All acceptance criteria below are checked.
+- `ml-service/` (Python 3.14 venv) hosts the XGBoost model; `POST /predict/loss` returns the documented shape.
+- `Backend/app/Services/Ml/LossPredictionService.php` aggregates features and caches scores for 1 hour;
+  `LossPredictionController` exposes `/loss-risk/predict|items|summary`.
+- `Frontend/src/pages/dashboard/LeakageDetection.tsx` now renders real API data with loading/empty/error states.
+
+### Deviations from the plan (documented)
+
+- **Python version:** 3.14 (installed machine-wide) instead of 3.12. `ml-service/requirements.txt` pins
+  `xgboost>=2.0`, `scikit-learn>=1.4`; `train.py` exports `model/model.json` + `model/metadata.json` (committed).
+- **`/loss-risk/predict`:** scores **all** active products (no `product_ids` body needed) and caches the result.
+- **Summary field names:** `high_risk`, `medium_risk`, `low_risk` (not `*_count`).
+- **`GET /loss-risk/items`** reads from the 1h cache (never calls the service) with `?tier=High|Medium|Low&sort=expected_loss|probability`.
+  The **predict** endpoint is the only one that requires the service; `items`/`summary` degrade to empty data when offline.
+  (The Sprint 3.9 "items 503" test therefore checks the predict path.)
 
 ## 3. Approach (decided)
 
@@ -164,8 +176,16 @@ File: `Frontend/src/pages/dashboard/LeakageDetection.tsx`
 
 **Acceptance criteria:** The leakage dashboard shows risk-ranked products with expected loss value.
 
-- [ ] `ml-service/` runs with `uvicorn app.main:app --port 8001` (Python 3.12 venv).
-- [ ] `POST /predict/loss` returns documented shape for a batch of products.
-- [ ] Laravel `/loss-risk/*` endpoints return data with the service running.
-- [ ] Leakage Detection page shows real data + "Model: XGBoost" indicator.
-- [ ] Backend and Python tests pass.
+- [x] `ml-service/` runs with `uvicorn app.main:app --port 8001` (Python 3.14 venv).
+- [x] `POST /predict/loss` returns documented shape for a batch of products.
+- [x] Laravel `/loss-risk/*` endpoints return data with the service running.
+- [x] Leakage Detection page shows real data + "Model: XGBoost" indicator.
+- [x] Backend and Python tests pass.
+
+### Test evidence (2026-08-12)
+
+- `ml-service`: `pytest` → **20 passed** (12 existing + 4 new `test_xgboost.py` + 4 new loss tests in `test_api.py`).
+- Backend: `php artisan test` → **22 passed** (16 existing + 6 new `LossRiskTest`).
+- Frontend: `npm run build` passes; Leakage Detection wired to `/loss-risk/*`.
+- Live smoke: `POST /predict/loss` on `127.0.0.1:8001` scored an overstocked, expiring SKU at 0.73 probability / High tier /
+  ₱21,900 expected loss, with `wastage_count_90d` and `expiring_soon` as the top model drivers.

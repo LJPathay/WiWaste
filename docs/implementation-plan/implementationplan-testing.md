@@ -62,10 +62,13 @@ Run with: `php artisan test`.
 18. [x] Service offline → `/forecast/*` returns a clear 503 (no PHP fallback).
 
 ### 3.5 Sprint 3 — Loss risk
-19. With a fake service URL (Laravel `Http::fake`) → results parsed, cached, `engine = "xgboost"`.
-20. Cache TTL respected (second call within TTL does not re-hit the service).
-21. `loss_probability` ∈ [0,1]; `expected_loss ≥ 0`.
-22. Service offline → `/loss-risk/*` returns a clear 503 (no PHP fallback).
+19. [x] With a fake service URL (Laravel `Http::fake`) → results parsed, cached, `engine = "xgboost"`.
+20. [x] Cache TTL respected (second call within TTL does not re-hit the service).
+21. [x] `loss_probability` ∈ [0,1]; `expected_loss ≥ 0`.
+22. [x] Service offline → `POST /loss-risk/predict` returns a clear 503 (no PHP fallback; `items`/`summary`
+    read the cache and degrade to empty when offline).
+23. [x] Feature vector sent to the service is correct (category, supplier, days_to_expiry, stock, velocity, wastage, turnover, unit cost).
+24. [x] `GET /loss-risk/items?tier=High` filters; default sort is expected-loss desc; empty before any predict.
 
 ### 3.6 Sprint 4 — Optimization
 23. `POST /optimize/replenishment` (ml-service) deterministic with a fixed seed.
@@ -102,12 +105,15 @@ Run inside the Python 3.12 venv with `pytest` from `ml-service/`.
   - [x] `GET /health` → `{ status: "ok" }`.
   - [x] `POST /forecast` — returns one entry per horizon day with the documented fields; flat/short sales
     series return a forecast, never an error; deterministic on a fixed fixture.
-  - `POST /predict/loss` — returns one result per input product with the documented fields; batch of 0
-    products → 422.
+  - [x] `POST /predict/loss` — returns one result per input product with the documented fields; batch of 0
+    products → 422; deterministic on a fixed fixture.
   - `POST /optimize/replenishment` — same inputs + seed → same plan; `total_order_value <= budget`;
     no negative order quantities; missing budget → 422.
 - `ml-service/tests/test_arima.py` — direct unit tests of the ARIMA module (determinism, short/no-sales
-  guards, MAPE threshold, overstock risk). `test_ga.py` (Sprint 4) still pending.
+  guards, MAPE threshold, overstock risk).
+- `ml-service/tests/test_xgboost.py` (Sprint 3) — batch shape, empty batch, expected-loss formula,
+  at-risk product outranks fresh one, unknown category/supplier do not crash. `test_ga.py` (Sprint 4)
+  still pending.
 
 ## 6. Evaluation metrics
 

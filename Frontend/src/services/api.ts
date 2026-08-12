@@ -516,6 +516,56 @@ export const forecast = {
   generate: () => request<{ generated: number; timestamp: string }>('/forecast/generate', { method: 'POST' }),
 };
 
+// ─── Loss Risk (Sprint 3 — XGBoost) ───────────────────────
+export type RiskTier = 'Low' | 'Medium' | 'High';
+
+export interface ApiLossRiskItem {
+  product_id: number;
+  product_name: string;
+  sku: string;
+  category: string;
+  current_stock: number;
+  unit_cost: number;
+  days_to_expiry: number;
+  loss_probability: number;
+  expected_loss: number;
+  risk_tier: RiskTier;
+  feature_importance: Record<string, number>;
+}
+
+export interface ApiLossRiskSummary {
+  total_products: number;
+  high_risk: number;
+  medium_risk: number;
+  low_risk: number;
+  total_expected_loss: number;
+}
+
+export interface ApiLossRiskItemsResponse {
+  generated_at: string | null;
+  engine: string;
+  total: number;
+  items: ApiLossRiskItem[];
+}
+
+export interface ApiLossRiskSummaryResponse {
+  generated_at: string | null;
+  engine: string;
+  summary: ApiLossRiskSummary;
+}
+
+export const lossRisk = {
+  predict: () =>
+    request<ApiLossRiskItemsResponse & { summary: ApiLossRiskSummary }>('/loss-risk/predict', { method: 'POST' }),
+  items: (params?: { tier?: RiskTier }) => {
+    const qs = new URLSearchParams();
+    if (params?.tier) qs.set('tier', params.tier);
+    const q = qs.toString();
+    return request<ApiLossRiskItemsResponse>(`/loss-risk/items${q ? '?' + q : ''}`);
+  },
+  summary: () => request<ApiLossRiskSummaryResponse>('/loss-risk/summary'),
+};
+
 // ─── FEFO Tracking ────────────────────────────────────────
 export const fefo = {
   batches: (page = 1) => request<ApiFefoList>(`/fefo/batches?page=${page}`),

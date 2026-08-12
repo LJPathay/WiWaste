@@ -60,3 +60,69 @@ def test_forecast_rejects_invalid_horizon():
         json={"product_id": 1, "horizon_days": 0, "sales": []},
     )
     assert response.status_code == 422
+
+
+def test_predict_loss_shape():
+    response = client.post(
+        "/predict/loss",
+        json={
+            "products": [
+                {
+                    "product_id": 1,
+                    "category": "Medicine & Health",
+                    "days_to_expiry": 10,
+                    "current_stock": 100,
+                    "stock_status": "Overstock",
+                    "sales_velocity_7d": 0,
+                    "wastage_count_90d": 6,
+                    "turnover_rate": 0.5,
+                    "supplier": "PharmaCorp",
+                    "unit_cost": 250.0,
+                },
+                {
+                    "product_id": 2,
+                    "category": "Snacks",
+                    "days_to_expiry": 300,
+                    "current_stock": 20,
+                    "stock_status": "Normal",
+                    "sales_velocity_7d": 10,
+                    "wastage_count_90d": 0,
+                    "turnover_rate": 4.0,
+                    "supplier": "SnackTime",
+                    "unit_cost": 30.0,
+                },
+            ]
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["engine"] == "xgboost"
+    assert len(body["results"]) == 2
+    for result in body["results"]:
+        assert 0 <= result["loss_probability"] <= 1
+        assert result["expected_loss"] >= 0
+        assert result["risk_tier"] in {"Low", "Medium", "High"}
+        assert "feature_importance" in result
+
+
+def test_predict_loss_empty_products_is_422():
+    response = client.post("/predict/loss", json={"products": []})
+    assert response.status_code == 422
+
+
+def test_predict_loss_deterministic():
+    payload = {"products": [{
+        "product_id": 1,
+        "category": "Dairy",
+        "days_to_expiry": 60,
+        "current_stock": 30,
+        "stock_status": "Normal",
+        "sales_velocity_7d": 3,
+        "wastage_count_90d": 2,
+        "turnover_rate": 2.0,
+        "supplier": "DairyFresh",
+        "unit_cost": 80.0,
+    }]}
+    first = client.post("/predict/loss", json=payload).json()
+    second = client.post("/predict/loss", json=payload).json()
+    assert first["results"] == second["results"]

@@ -4,9 +4,15 @@ The model scores how likely a product is to cause loss (expiry / spoilage /
 damage / shrinkage). There is no real labeled dataset, so training data is
 synthetic with a known loss pattern — see the README for caveats.
 
+The dataset is committed as ``model/training_data.csv`` so training is
+reproducible and inspectable. If the file is missing it is regenerated
+deterministically (seed 42).
+
 Run from the `ml-service/` directory:  python model/train.py
+Rebuild the fixture from scratch:        python model/train.py --rebuild
 """
 
+import argparse
 import json
 import random
 from pathlib import Path
@@ -85,8 +91,37 @@ def build_dataset(n: int = 6000) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def main() -> None:
+DATASET_PATH = MODEL_DIR / "training_data.csv"
+
+
+def load_dataset(rebuild: bool = False) -> pd.DataFrame:
+    """Load the committed CSV fixture; deterministically rebuild it if missing.
+
+    ``rebuild=True`` forces regeneration (e.g. after changing the generator).
+    """
+    if not rebuild and DATASET_PATH.exists():
+        df = pd.read_csv(DATASET_PATH)
+        missing = [col for col in FEATURES + ["risk_score"] if col not in df.columns]
+        if not missing:
+            return df
+
+    random.seed(42)
+    np.random.seed(42)
     df = build_dataset()
+    df.to_csv(DATASET_PATH, index=False)
+    return df
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--rebuild",
+        action="store_true",
+        help="Regenerate model/training_data.csv from scratch",
+    )
+    args = parser.parse_args()
+
+    df = load_dataset(rebuild=args.rebuild)
     X = df[FEATURES]
     y = df["risk_score"]
 
@@ -112,7 +147,7 @@ def main() -> None:
     pred = model.predict(X)
     mae = float(np.mean(np.abs(pred - y)))
     corr = float(np.corrcoef(pred, y)[0, 1])
-    print(f"Trained on {len(df)} synthetic rows.")
+    print(f"Trained on {len(df)} synthetic rows (fixture: {DATASET_PATH.name}).")
     print(f"Saved model -> {MODEL_DIR / 'model.json'}")
     print(f"Saved meta  -> {MODEL_DIR / 'metadata.json'}")
     print(f"Train MAE={mae:.4f}  correlation={corr:.4f}")

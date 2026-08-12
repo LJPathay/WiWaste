@@ -4,7 +4,7 @@ Python (FastAPI) service used by the Laravel backend for the analytics endpoints
 
 - `POST /forecast` — ARIMA/SARIMAX demand forecast (Sprint 2)
 - `POST /predict/loss` — XGBoost loss-risk scoring (Sprint 3)
-- `POST /optimize/replenishment` — Genetic-algorithm replenishment (Sprint 4, planned)
+- `POST /optimize/replenishment` — Genetic-algorithm replenishment plan (Sprint 4)
 
 ## Setup
 
@@ -115,10 +115,67 @@ Response:
 
 There is no real labeled "will spoil" dataset, so `model/train.py` trains a small XGBoost
 regressor on **synthetic** rows with a known loss pattern (high wastage, expiring soon,
-overstocked, slow-moving → higher risk). Re-train any time:
+overstocked, slow-moving → higher risk). The dataset is committed as `model/training_data.csv`
+(6000 rows, generated with seed 42) so training is reproducible; `train.py` loads it and only
+regenerates it if the file is missing. Re-train any time:
 
 ```bash
-python model/train.py   # regenerates model/model.json + model/metadata.json
+python model/train.py            # load model/training_data.csv and retrain
+python model/train.py --rebuild  # regenerate the CSV fixture from scratch, then retrain
 ```
 
-The trained model and label maps are committed so the service runs out-of-the-box.
+The trained model, metadata, and dataset are committed so the service runs out-of-the-box.
+
+## Contract (POST /optimize/replenishment)
+
+Request:
+
+```json
+{
+  "budget": 5000,
+  "products": [
+    {
+      "product_id": 1,
+      "product_name": "Tuna",
+      "current_stock": 3,
+      "forecast_demand": 48,
+      "unit_cost": 45.0,
+      "selling_price": 55.0,
+      "expiring_fraction": 0.1
+    }
+  ],
+  "seed": 42,
+  "generations": 200,
+  "population_size": 80
+}
+```
+
+Response:
+
+```json
+{
+  "plan": [
+    {
+      "product_id": 1,
+      "product_name": "Tuna",
+      "current_stock": 3.0,
+      "forecast_demand": 48.0,
+      "order_qty": 45,
+      "unit_cost": 45.0,
+      "order_value": 2025.0
+    }
+  ],
+  "total_order_value": 2025.0,
+  "budget": 5000.0,
+  "fitness": 583.0,
+  "generations_run": 200,
+  "gen0_fitness": 638.2,
+  "confidence": 0.87
+}
+```
+
+- `fitness` (lower is better) = overstock + stockout + wastage + holding cost, plus a budget penalty.
+- `total_order_value` is always `<= budget` (deterministic budget-repair step).
+- `order_qty` is never negative; SKUs whose stock already covers demand get `order_qty = 0`.
+- Deterministic for a given `seed` (uses `numpy.random.default_rng`).
+- Empty `products` returns an empty plan (no error).

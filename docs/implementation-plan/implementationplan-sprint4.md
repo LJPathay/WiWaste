@@ -16,11 +16,30 @@ By the end of this sprint:
 
 ## 2. Status
 
-- **Not started.**
-- Report pages exist (`Frontend/src/pages/manager/Replenishment.tsx`, `Frontend/src/pages/admin/GenerateReports.tsx`)
-  but are not connected to any optimizer.
-- The recommendation workflow (`RecommendationController` approve/reject) already exists and is ready to
-  receive optimizer output.
+- **Complete (100%).** All acceptance criteria below are checked.
+- `ml-service/app/genetic_algorithm.py` (numpy) runs a seeded GA: tournament selection, uniform crossover,
+  mutation, elitism, and a deterministic budget-repair step so `total_order_value <= budget` always holds.
+  `POST /optimize/replenishment` returns the documented plan payload.
+- `Backend/app/Services/Ml/OptimizationService.php` builds the per-SKU inputs (forecast demand from
+  `Forecast_Result`, stock, unit cost, margin, expiring fraction) and calls the Python service;
+  `OptimizationController` exposes `POST /optimization/replenishment` and persists `Reorder` plans into
+  `Inventory_Recommendation` so the existing approve/reject workflow is reused.
+- `Frontend/src/pages/manager/Replenishment.tsx` and `Frontend/src/pages/admin/GenerateReports.tsx` run the
+  optimizer from the API (budget + horizon inputs, plan table, fitness/confidence banner, approve action).
+
+### Deviations from the plan (documented)
+
+- **Extra request fields:** the endpoint also accepts `persist` (default `true`; `false` skips writing
+  recommendations) and `seed` (deterministic GA runs) in addition to the planned
+  `budget / horizon_days / include_product_ids`.
+- **Response adds:** `gen0_fitness` (generation-0 fitness for the convergence banner) and
+  `recommendations_written` (count of pending `Reorder` rows persisted).
+- **Candidate filter:** `OptimizationService` feeds the GA every active SKU whose forecast demand > 0 or
+  whose stock status is `Low Stock` (per plan §5.2); when no forecast row exists yet, demand falls back to
+  last-7-day sales velocity × horizon.
+- **Budget repair instead of penalty-only:** the GA uses a fitness budget penalty *plus* a final
+  deterministic repair pass, guaranteeing the returned plan respects the budget regardless of random
+  variation (satisfies Testing item 2).
 
 ## 3. Approach (decided)
 
@@ -152,9 +171,22 @@ export const optimization = {
 
 **Acceptance criteria:** The optimizer returns a replenishment plan that respects the budget constraint.
 
-- [ ] `ml-service` `POST /optimize/replenishment` returns a budget-respecting, non-negative plan.
-- [ ] `POST /optimization/replenishment` returns the documented payload.
-- [ ] Approved optimizer output appears in the existing Recommendations flow.
-- [ ] Replenishment page runs the optimizer and shows the plan.
-- [ ] Generate Reports page can produce + approve an optimized plan.
-- [ ] Backend feature tests + Python pytest pass.
+- [x] `ml-service` `POST /optimize/replenishment` returns a budget-respecting, non-negative plan.
+- [x] `POST /optimization/replenishment` returns the documented payload.
+- [x] Approved optimizer output appears in the existing Recommendations flow.
+- [x] Replenishment page runs the optimizer and shows the plan.
+- [x] Generate Reports page can produce + approve an optimized plan.
+- [x] Backend feature tests + Python pytest pass.
+
+### Test evidence (2026-08-12)
+
+- `ml-service`: `pytest` → **31 passed** (12 ARIMA + 4 XGBoost + 9 GA + 6 API; 4 new `test_ga.py` +
+  2 new optimization tests in `test_api.py`).
+- Backend: `php artisan test` → **28 passed** (22 existing + 6 new `OptimizationTest`).
+- Frontend: `npm run build` passes and `npx tsc --noEmit` is clean (exit 0); Replenishment +
+  Generate Reports wired to `/optimization/replenishment`. ESLint still reports pre-existing
+  `no-explicit-any` / unused-var errors across the app (incl. 13 in the Sprint 4 files) — part of the
+  documented backlog owned by the Testing sprint (see `implementationplan-testing.md` §2.1).
+- Live smoke: `POST /optimize/replenishment` on `127.0.0.1:8001` (budget ₱5,000, seed 7) ordered 45× Tuna
+  (₱2,025) and skipped the expiring Bread (expiring_fraction 0.6), `total_order_value` ₱2,025 ≤ budget,
+  `fitness` 583 vs `gen0_fitness` 638.2 (converged).

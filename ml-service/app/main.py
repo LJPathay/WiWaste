@@ -13,6 +13,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from .arima_model import forecast as run_forecast
+from .genetic_algorithm import optimize as run_optimizer
 from .xgboost_model import LossRiskPredictor
 
 app = FastAPI(title="WiWaste ML Service", version="1.0.0")
@@ -57,6 +58,24 @@ class LossRequest(BaseModel):
     products: List[LossProduct] = Field(default_factory=list)
 
 
+class OptimizationProduct(BaseModel):
+    product_id: int
+    product_name: str = ""
+    current_stock: float = 0
+    forecast_demand: float = 0
+    unit_cost: float = 0
+    selling_price: float = 0
+    expiring_fraction: float = 0
+
+
+class OptimizationRequest(BaseModel):
+    budget: float = Field(gt=0)
+    products: List[OptimizationProduct] = Field(default_factory=list)
+    seed: int = 42
+    generations: int = Field(default=200, ge=10, le=2000)
+    population_size: int = Field(default=80, ge=10, le=500)
+
+
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok"}
@@ -80,3 +99,14 @@ def predict_loss(req: LossRequest) -> dict:
         raise HTTPException(status_code=422, detail="products must not be empty")
     results = get_predictor().score_batch([p.model_dump() for p in req.products])
     return {"engine": "xgboost", "results": results}
+
+
+@app.post("/optimize/replenishment")
+def optimize_replenishment(req: OptimizationRequest) -> dict:
+    return run_optimizer(
+        products=[p.model_dump() for p in req.products],
+        budget=req.budget,
+        seed=req.seed,
+        generations=req.generations,
+        population_size=req.population_size,
+    )

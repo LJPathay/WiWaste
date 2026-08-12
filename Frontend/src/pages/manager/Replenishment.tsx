@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { CheckCircle, AlertCircle, Info, ShoppingCart, Check, Search } from 'lucide-react';
-import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, Legend, LabelList } from 'recharts';
+import React, { useMemo, useState } from 'react';
+import { AlertCircle, AlertTriangle, CheckCircle2, Cpu, Info, Loader2, RefreshCw, Search, ShoppingCart, Target, Wallet } from 'lucide-react';
+import { Toast, useToast } from '../../components/ui/Toast';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
+import { optimization, type ApiOptimizationPlan } from '../../services/api';
 
 const currencyFormatter = new Intl.NumberFormat('en-PH', {
   style: 'currency',
@@ -9,60 +10,52 @@ const currencyFormatter = new Intl.NumberFormat('en-PH', {
   maximumFractionDigits: 0,
 });
 
-interface ReplenishMock {
-  id: string;
-  name: string;
-  sku: string;
-  stock: number;
-  min: number;
-  suggested: number;
-  supplier: string;
-  leadTime: number;
-  urgency: 'Critical' | 'Soon' | 'Scheduled';
-  unitCost: number;
-}
-
-const INITIAL_REPLENISH: ReplenishMock[] = [
-  { id: '1', name: 'Century Tuna Flakes in Oil 180g', sku: 'CT-FO-180', stock: 3, min: 15, suggested: 48, supplier: 'Universal Robina Corp.', leadTime: 3, urgency: 'Critical', unitCost: 45 },
-  { id: '2', name: 'Coca-Cola 1.5L', sku: 'CC-15L', stock: 8, min: 20, suggested: 36, supplier: 'San Miguel Corp. Beverage', leadTime: 2, urgency: 'Critical', unitCost: 72 },
-  { id: '3', name: 'Gardenia Classic White Bread', sku: 'GD-WB-400', stock: 6, min: 20, suggested: 40, supplier: 'Gardenia Bakeries PH', leadTime: 1, urgency: 'Critical', unitCost: 85 },
-  { id: '4', name: 'Del Monte Tomato Sauce 250g', sku: 'DM-TS-250', stock: 45, min: 50, suggested: 100, supplier: 'Purefoods Wholesale Corp.', leadTime: 4, urgency: 'Soon', unitCost: 28 },
-  { id: '5', name: 'Safeguard White Soap 130g', sku: 'SG-WS-130', stock: 25, min: 30, suggested: 60, supplier: 'Johnson & Johnson PH', leadTime: 5, urgency: 'Soon', unitCost: 55 },
-  { id: '6', name: 'Nestlé Bear Brand 900g', sku: 'NB-BB-900', stock: 14, min: 20, suggested: 36, supplier: 'Nestlé Philippines', leadTime: 4, urgency: 'Soon', unitCost: 215 },
-  { id: '7', name: 'Biogesic Paracetamol 500mg', sku: 'BG-P-500', stock: 120, min: 100, suggested: 300, supplier: 'Unilab Distribution Inc.', leadTime: 3, urgency: 'Scheduled', unitCost: 7 },
-  { id: '8', name: 'Colgate Triple Action 150g', sku: 'CG-TA-150', stock: 18, min: 15, suggested: 60, supplier: 'Colgate-Palmolive PH', leadTime: 5, urgency: 'Scheduled', unitCost: 95 },
-];
-
 export function Replenishment() {
-  const [items] = useState<ReplenishMock[]>(INITIAL_REPLENISH);
-  const [createdOrders, setCreatedOrders] = useState<string[]>([]);
-  const [search, setSearch] = useState('');
-  const [urgencyFilter, setUrgencyFilter] = useState<'All' | 'Critical' | 'Soon' | 'Scheduled'>('All');
+  const { toasts, dismiss, success } = useToast();
 
-  const handleOrder = (id: string) => {
-    setCreatedOrders(prev => [...prev, id]);
+  const [budget, setBudget] = useState(10000);
+  const [horizon, setHorizon] = useState(30);
+  const [plan, setPlan] = useState<ApiOptimizationPlan | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+
+  const runOptimizer = async () => {
+    if (loading) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await optimization.replenishment({ budget, horizon_days: horizon });
+      setPlan(result);
+      success('Replenishment plan generated.');
+    } catch (e: any) {
+      setError(e.message ?? 'Could not reach the optimization service.');
+      setPlan(null);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const criticalCount = items.filter(i => i.urgency === 'Critical' && !createdOrders.includes(i.id)).length;
+  const filtered = useMemo(() => {
+    const list = plan?.plan ?? [];
+    if (!search) return list;
+    const q = search.toLowerCase();
+    return list.filter(i =>
+      i.product_name.toLowerCase().includes(q) ||
+      String(i.product_id).includes(q)
+    );
+  }, [plan, search]);
 
-  const filtered = items.filter(item => {
-    const matchesUrgency = urgencyFilter === 'All' || item.urgency === urgencyFilter;
-    const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase()) ||
-      item.sku.toLowerCase().includes(search.toLowerCase());
-    return matchesUrgency && matchesSearch;
-  });
-
-  const chartData = ['Critical', 'Soon', 'Scheduled'].map(tier => {
-    const tierItems = items.filter(i => i.urgency === tier);
-    const quantity = tierItems.reduce((acc, curr) => acc + curr.suggested, 0);
-    const cost = tierItems.reduce((acc, curr) => acc + (curr.suggested * curr.unitCost), 0);
-    return { name: tier, quantity, cost };
-  });
+  const budgetPct = plan && plan.budget > 0
+    ? Math.min(100, Math.round((plan.total_order_value / plan.budget) * 100))
+    : 0;
+  const orderableItems = (plan?.plan ?? []).filter(i => i.order_qty > 0).length;
 
   return (
     <div className="space-y-6 w-full">
+      <Toast toasts={toasts} onDismiss={dismiss} />
+
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
         <div className="flex items-center gap-2">
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <ShoppingCart className="h-6 w-6 text-[#006a61]" />
@@ -73,131 +66,199 @@ export function Replenishment() {
               <Info className="h-5 w-5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
             </TooltipTrigger>
             <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
-              AI-calculated replenishment recommendations based on velocity factors, safety minimums, and lead times.
+              Genetic-algorithm replenishment plan that minimizes stockout, overstock, and wastage cost under your budget.
             </TooltipContent>
           </UITooltip>
         </div>
-
-        </div>
-        {criticalCount > 0 && (
-          <div className="bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-100 dark:border-rose-500/20 px-4 py-2 rounded-xl flex items-center gap-2 text-xs font-semibold">
-            <AlertCircle className="h-4 w-4 animate-pulse" />
-            {criticalCount} critical items need restocking
+        {plan && orderableItems > 0 && (
+          <div className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-500/20 px-4 py-2 rounded-xl flex items-center gap-2 text-xs font-semibold">
+            <CheckCircle2 className="h-4 w-4" />
+            {orderableItems} SKU{orderableItems !== 1 ? 's' : ''} to reorder
           </div>
         )}
       </div>
 
-      {/* Aggregated Chart */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 p-6 shadow-sm">
-        <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-5">Replenishment Needs by Urgency</h3>
-        <div className="h-64 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e8edf5" />
-              <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#94a3b8" />
-              <YAxis yAxisId="left" tick={{ fontSize: 11 }} stroke="#94a3b8" label={{ value: 'Total Cost (₱)', angle: -90, position: 'insideLeft', style: { fill: '#94a3b8', fontSize: 11 } }} tickFormatter={v => `₱${v / 1000}k`} />
-              <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} stroke="#94a3b8" label={{ value: 'Total Units', angle: 90, position: 'insideRight', style: { fill: '#94a3b8', fontSize: 11 } }} />
-              <RechartsTooltip />
-              <Legend />
-              <Bar yAxisId="left" dataKey="cost" name="Total Cost" radius={[4, 4, 0, 0]} fill="#0ea5e9" />
-              <Bar yAxisId="right" dataKey="quantity" name="Total Units" radius={[4, 4, 0, 0]} fill="#f59e0b" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden">
-        <div className="p-4 flex flex-col sm:flex-row sm:items-center gap-4 border-b border-slate-200 dark:border-white/10">
-          <div className="flex gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
-            {(['All', 'Critical', 'Soon', 'Scheduled'] as const).map(tab => (
-              <button
-                key={tab}
-                onClick={() => setUrgencyFilter(tab)}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
-                  urgencyFilter === tab
-                    ? 'bg-white dark:bg-slate-950 text-[#006a61] dark:text-[#7ef0cf] shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
+      {/* Optimizer Controls */}
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm p-5">
+        <div className="flex flex-col lg:flex-row lg:items-end gap-4">
+          <div className="flex-1">
+            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1.5">Budget (₱)</label>
+            <div className="relative">
+              <Wallet className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <input
+                type="number"
+                min={1}
+                value={budget}
+                onChange={e => setBudget(Math.max(0, Number(e.target.value)))}
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 pl-9 pr-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-700 dark:text-slate-200"
+              />
+            </div>
           </div>
-          <div className="relative max-w-xs w-full ml-auto">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <div className="w-full lg:w-48">
+            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1.5">Horizon (days)</label>
             <input
-              type="text"
-              placeholder="Search by SKU or name..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 pl-9 pr-3 py-2 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-700 dark:text-slate-200"
+              type="number"
+              min={1}
+              max={365}
+              value={horizon}
+              onChange={e => setHorizon(Math.max(1, Number(e.target.value)))}
+              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-700 dark:text-slate-200"
             />
           </div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs text-left">
-            <thead className="bg-slate-50 dark:bg-slate-950 text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-white/10">
-              <tr>
-                <th className="px-6 py-3 font-semibold">Product</th>
-                <th className="px-6 py-3 font-semibold">Current Stock</th>
-                <th className="px-6 py-3 font-semibold">Suggested Qty</th>
-                <th className="px-6 py-3 font-semibold">Supplier</th>
-                <th className="px-6 py-3 font-semibold">Lead Time</th>
-                <th className="px-6 py-3 font-semibold">Urgency</th>
-                <th className="px-6 py-3 font-semibold text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-              {filtered.map((item) => {
-                const isOrdered = createdOrders.includes(item.id);
-                const isCrit = item.urgency === 'Critical';
-                const isSoon = item.urgency === 'Soon';
-
-                return (
-                  <tr key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-white/5">
-                    <td className="px-6 py-4">
-                      <div className="font-semibold text-slate-900 dark:text-slate-100">{item.name}</div>
-                      <div className="text-[10px] text-slate-400 font-mono mt-0.5">{item.sku}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="font-bold text-slate-700 dark:text-slate-300">{item.stock} units</div>
-                      <div className="text-[10px] text-slate-400 mt-0.5">Safety min: {item.min}</div>
-                    </td>
-                    <td className="px-6 py-4 font-bold text-slate-800 dark:text-slate-200">+{item.suggested} units</td>
-                    <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{item.supplier}</td>
-                    <td className="px-6 py-4 text-slate-500 dark:text-slate-400">{item.leadTime} days</td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        isCrit
-                          ? 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400'
-                          : isSoon
-                          ? 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400'
-                          : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
-                      }`}>{item.urgency}</span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <button
-                        onClick={() => handleOrder(item.id)}
-                        disabled={isOrdered}
-                        className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg transition-all ${
-                          isOrdered
-                            ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500'
-                            : 'bg-[#006a61] hover:bg-[#00574f] text-white'
-                        }`}
-                      >
-                        {isOrdered ? <Check className="h-3.5 w-3.5" /> : null}
-                        {isOrdered ? 'PO Committed' : 'Create PO'}
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <button
+            onClick={runOptimizer}
+            disabled={loading || budget <= 0}
+            className="inline-flex items-center justify-center gap-2 bg-[#006a61] hover:bg-[#00574f] text-white px-5 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Cpu className="h-4 w-4" />}
+            {loading ? 'Optimizing…' : 'Run Optimization'}
+          </button>
         </div>
       </div>
+
+      {error && !plan && (
+        <section className="rounded-xl border border-rose-200 bg-rose-50 p-8 text-center dark:border-rose-500/20 dark:bg-rose-500/5">
+          <AlertTriangle className="mx-auto h-8 w-8 text-rose-500" />
+          <h2 className="mt-3 text-base font-bold text-rose-900 dark:text-rose-200">Optimization service unavailable</h2>
+          <p className="mt-2 text-sm text-rose-700/80 dark:text-rose-300/70">{error}</p>
+          <div className="mt-5 flex justify-center gap-3">
+            <button
+              onClick={runOptimizer}
+              className="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-rose-700"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              Retry
+            </button>
+          </div>
+        </section>
+      )}
+
+      {/* Plan Summary */}
+      {plan && !error && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          <div className="rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 p-4 shadow-sm">
+            <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+              <Wallet className="h-4 w-4 text-[#006a61]" /> Total Order Value
+            </div>
+            <div className="mt-2 flex items-end gap-2">
+              <span className="text-xl font-black text-slate-900 dark:text-slate-100">{currencyFormatter.format(plan.total_order_value)}</span>
+              <span className="text-xs font-semibold text-slate-400">/ {currencyFormatter.format(plan.budget)}</span>
+            </div>
+            <div className="mt-2 h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+              <div className={`h-full rounded-full ${budgetPct >= 100 ? 'bg-rose-500' : 'bg-[#006a61]'}`} style={{ width: `${budgetPct}%` }} />
+            </div>
+            <p className={`mt-2 text-[10px] font-bold ${budgetPct > 100 ? 'text-rose-600' : budgetPct > 90 ? 'text-amber-600' : 'text-emerald-600'}`}>
+              {budgetPct}% of budget used
+            </p>
+          </div>
+          <div className="rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 p-4 shadow-sm">
+            <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+              <Target className="h-4 w-4 text-[#006a61]" /> Fitness Score
+            </div>
+            <div className="mt-2 text-xl font-black text-slate-900 dark:text-slate-100">{plan.fitness.toLocaleString()}</div>
+            <p className="mt-2 text-[10px] font-bold text-slate-400">Lower is better · initial {plan.gen0_fitness.toLocaleString()}</p>
+          </div>
+          <div className="rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 p-4 shadow-sm">
+            <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+              <CheckCircle2 className="h-4 w-4 text-[#006a61]" /> Confidence
+            </div>
+            <div className="mt-2 text-xl font-black text-slate-900 dark:text-slate-100">{Math.round(plan.confidence * 100)}%</div>
+            <div className="mt-2 h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+              <div className="h-full rounded-full bg-[#006a61]" style={{ width: `${Math.min(100, Math.round(plan.confidence * 100))}%` }} />
+            </div>
+          </div>
+          <div className="rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 p-4 shadow-sm">
+            <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+              <Cpu className="h-4 w-4 text-[#006a61]" /> Generations
+            </div>
+            <div className="mt-2 text-xl font-black text-slate-900 dark:text-slate-100">{plan.generations_run}</div>
+            <p className="mt-2 text-[10px] font-bold text-slate-400">
+              {plan.recommendations_written} recommendation{plan.recommendations_written !== 1 ? 's' : ''} written to workflow
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Plan Table */}
+      {plan && !error && (
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden">
+          <div className="p-4 flex flex-col sm:flex-row sm:items-center gap-4 border-b border-slate-200 dark:border-white/10">
+            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">Recommended Order Quantities</h3>
+            <div className="relative max-w-xs w-full sm:ml-auto">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search by SKU or name..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 pl-9 pr-3 py-2 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-700 dark:text-slate-200"
+              />
+            </div>
+          </div>
+
+          {filtered.length === 0 ? (
+            <div className="py-16 text-center">
+              <AlertCircle className="mx-auto h-8 w-8 text-slate-300" />
+              <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
+                {plan.plan.length === 0
+                  ? 'No SKUs to reorder under this budget. Try a larger budget or a longer horizon.'
+                  : 'No items match your search.'}
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs text-left">
+                <thead className="bg-slate-50 dark:bg-slate-950 text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-white/10">
+                  <tr>
+                    <th className="px-6 py-3 font-semibold">Product</th>
+                    <th className="px-6 py-3 font-semibold">Current Stock</th>
+                    <th className="px-6 py-3 font-semibold">Forecast Demand</th>
+                    <th className="px-6 py-3 font-semibold">Order Qty</th>
+                    <th className="px-6 py-3 font-semibold">Unit Cost</th>
+                    <th className="px-6 py-3 font-semibold text-right">Order Value</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                  {filtered.map(item => (
+                    <tr key={item.product_id} className="hover:bg-slate-50/50 dark:hover:bg-white/5">
+                      <td className="px-6 py-4">
+                        <div className="font-semibold text-slate-900 dark:text-slate-100">{item.product_name}</div>
+                        <div className="text-[10px] text-slate-400 font-mono mt-0.5">SKU #{item.product_id}</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="font-bold text-slate-700 dark:text-slate-300">{item.current_stock} units</div>
+                        <div className="text-[10px] text-slate-400 mt-0.5">Forecast {Math.round(item.forecast_demand)}</div>
+                      </td>
+                      <td className="px-6 py-4 font-semibold text-slate-800 dark:text-slate-200">{Math.round(item.forecast_demand)} units</td>
+                      <td className="px-6 py-4">
+                        <span className={`px-2.5 py-1 rounded-lg font-bold ${
+                          item.order_qty > 0
+                            ? 'bg-[#006a61]/10 text-[#006a61] dark:bg-[#7ef0cf]/10 dark:text-[#7ef0cf]'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
+                        }`}>
+                          {item.order_qty > 0 ? `+${item.order_qty}` : '—'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{currencyFormatter.format(item.unit_cost)}</td>
+                      <td className="px-6 py-4 text-right font-bold text-slate-900 dark:text-slate-100">{currencyFormatter.format(item.order_value)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {!plan && !error && (
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm py-16 text-center">
+          <Cpu className="mx-auto h-10 w-10 text-slate-300" />
+          <p className="mt-4 text-sm font-semibold text-slate-700 dark:text-slate-300">No plan yet</p>
+          <p className="mt-1 text-xs text-slate-400 max-w-sm mx-auto">
+            Set a budget and click &quot;Run Optimization&quot;. The genetic algorithm builds an order plan that minimizes stockout, overstock, and wastage costs.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

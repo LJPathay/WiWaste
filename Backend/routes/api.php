@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\FEFOController;
 use App\Http\Controllers\Api\RecommendationController;
 use App\Http\Controllers\Api\ForecastController;
 use App\Http\Controllers\Api\LossPredictionController;
+use App\Http\Controllers\Api\OptimizationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -130,4 +131,9 @@ Route::prefix('/loss-risk')->group(function () {
     Route::post('/predict', [LossPredictionController::class, 'predict']);
     Route::get('/items',    [LossPredictionController::class, 'items']);
     Route::get('/summary',  [LossPredictionController::class, 'summary']);
+});
+
+// Optimization (Sprint 4) — GA replenishment plan from the Python ML service
+Route::prefix('/optimization')->group(function () {
+    Route::post('/replenishment', [OptimizationController::class, 'replenishment']);
 });

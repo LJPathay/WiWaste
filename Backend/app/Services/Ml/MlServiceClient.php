@@ -44,6 +44,19 @@ class MlServiceClient
     }
 
     /**
+     * POST a GA replenishment optimization request to the Python service.
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     *
+     * @throws MlServiceUnavailableException
+     */
+    public function optimizeReplenishment(array $payload): array
+    {
+        return $this->postJson('/optimize/replenishment', $payload);
+    }
+
+    /**
      * @param  array<string, mixed>  $payload
      * @return array<string, mixed>
      *

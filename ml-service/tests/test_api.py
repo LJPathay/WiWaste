@@ -126,3 +126,53 @@ def test_predict_loss_deterministic():
     first = client.post("/predict/loss", json=payload).json()
     second = client.post("/predict/loss", json=payload).json()
     assert first["results"] == second["results"]
+
+
+def test_optimize_replenishment_shape_and_budget():
+    response = client.post(
+        "/optimize/replenishment",
+        json={
+            "budget": 5000,
+            "seed": 7,
+            "products": [
+                {"product_id": 1, "product_name": "Tuna", "current_stock": 3,
+                    "forecast_demand": 48, "unit_cost": 45, "selling_price": 55,
+                    "expiring_fraction": 0.1},
+                {"product_id": 2, "product_name": "Bread", "current_stock": 6,
+                    "forecast_demand": 40, "unit_cost": 85, "selling_price": 95,
+                    "expiring_fraction": 0.6},
+            ],
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body["plan"]) == 2
+    assert body["total_order_value"] <= 5000
+    assert body["generations_run"] == 200
+    assert 0 <= body["confidence"] <= 1
+    for item in body["plan"]:
+        assert item["order_qty"] >= 0
+        assert abs(item["order_value"] - item["order_qty"] * item["unit_cost"]) < 0.01
+
+
+def test_optimize_replenishment_missing_budget_is_422():
+    response = client.post(
+        "/optimize/replenishment",
+        json={"products": [{"product_id": 1, "forecast_demand": 10}]},
+    )
+    assert response.status_code == 422
+
+
+def test_optimize_replenishment_deterministic():
+    payload = {
+        "budget": 3000,
+        "seed": 11,
+        "products": [
+            {"product_id": 1, "product_name": "Soda", "current_stock": 8,
+                "forecast_demand": 36, "unit_cost": 72, "selling_price": 88,
+                "expiring_fraction": 0.2},
+        ],
+    }
+    first = client.post("/optimize/replenishment", json=payload).json()
+    second = client.post("/optimize/replenishment", json=payload).json()
+    assert first == second

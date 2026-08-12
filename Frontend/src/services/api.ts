@@ -589,3 +589,40 @@ export const recommendations = {
   reject: (id: number, rejection_reason: string) =>
     request(`/recommendations/${id}/reject`, { method: 'POST', body: JSON.stringify({ rejection_reason }) }),
 };
+
+// ─── Optimization (Sprint 4 — Genetic Algorithm) ─────────
+export interface ApiReplenishmentPlanItem {
+  product_id: number;
+  product_name: string;
+  current_stock: number;
+  forecast_demand: number;
+  order_qty: number;
+  unit_cost: number;
+  order_value: number;
+}
+
+export interface ApiOptimizationPlan {
+  plan: ApiReplenishmentPlanItem[];
+  total_order_value: number;
+  budget: number;
+  fitness: number;
+  gen0_fitness: number;
+  generations_run: number;
+  confidence: number;
+  generated_at: string;
+  recommendations_written: number;
+}
+
+export const optimization = {
+  replenishment: (params: {
+    budget: number;
+    horizon_days?: number;
+    include_product_ids?: number[];
+    persist?: boolean;
+    seed?: number;
+  }) =>
+    request<ApiOptimizationPlan>('/optimization/replenishment', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    }),
+};

@@ -61,7 +61,7 @@ without updating the other side.
 Add to `Backend/.env.example`:
 
 ```env
-# Python ML service (Sprint 3). Leave empty to use the PHP fallback.
+# Python ML service (Sprints 2-4): ARIMA, XGBoost, Genetic Algorithm. Required by analytics endpoints.
 ML_SERVICE_URL=http://localhost:8001
 
 # PayMongo payment gateway (Sprint 6). Sandbox keys for dev/demo.
@@ -78,8 +78,8 @@ And to a new `Frontend/.env.example`:
 VITE_PAYMONGO_PUBLIC_KEY=pk_test_...
 ```
 
-Document in `README.md` that the PHP fallback activates automatically when `ML_SERVICE_URL` is
-unset/unreachable.
+Document in `README.md` that the Python ML service is a **required local component** for the analytics
+endpoints (forecast, loss-risk, optimization) and show the startup commands. There is **no PHP fallback**.
 
 ### 4.4 Roles & permissions (confirm only)
 

@@ -16,7 +16,7 @@
 
 - **Not started.** `Backend/tests/` contains only `ExampleTest` stubs.
 - **Frontend:** no test runner configured. We add a minimal Vitest setup only for the API client and the
-  mock-fallback behavior.
+  mock-data fallback behavior (Sprint 5 overview pages stay on mock).
 
 ## 3. Backend tests (PHPUnit)
 
@@ -41,28 +41,30 @@ Run with: `php artisan test`.
 11. `stock_status` recalculates (`Low Stock` / `Overstock`) after changes.
 
 ### 3.4 Sprint 2 — Forecast
-12. Engine is deterministic on a fixed sales fixture.
-13. Product with no sales returns the reorder-level fallback (no crash).
+12. `POST /forecast` (ml-service) is deterministic on a fixed sales fixture.
+13. Product with no sales returns a flat-series forecast from the service (no crash).
 14. `POST /forecast/generate` persists rows to `Forecast_Result`.
 15. `GET /forecast/overview` returns well-formed series; `avg_confidence` in [0,100].
 16. MAPE on a synthetic trend+season series below the agreed threshold (e.g., < 25%).
+17. Service offline → `/forecast/*` returns a clear 503 (no PHP fallback).
 
 ### 3.5 Sprint 3 — Loss risk
-17. With `ML_SERVICE_URL` empty → fallback engine still scores products (PHP path).
 18. With a fake service URL (Laravel `Http::fake`) → results parsed, cached, `engine = "xgboost"`.
 19. Cache TTL respected (second call within TTL does not re-hit the service).
 20. `loss_probability` ∈ [0,1]; `expected_loss ≥ 0`.
+21. Service offline → `/loss-risk/*` returns a clear 503 (no PHP fallback).
 
 ### 3.6 Sprint 4 — Optimization
-21. Same inputs + seed → same plan (deterministic).
-22. `total_order_value <= budget` always.
-23. No negative `order_qty`.
-24. Missing `budget` → 422.
-25. Approved plan writes into `Inventory_Recommendation` (`recommendation_type = 'Reorder'`).
-26. Final fitness ≤ generation-0 fitness on a synthetic fixture (convergence).
+22. `POST /optimize/replenishment` (ml-service) deterministic with a fixed seed.
+23. `total_order_value <= budget` always.
+24. No negative `order_qty`.
+25. Missing `budget` → 422.
+26. Approved plan writes into `Inventory_Recommendation` (`recommendation_type = 'Reorder'`).
+27. Final fitness ≤ generation-0 fitness on a synthetic fixture (convergence).
+28. Service offline → `POST /optimization/replenishment` returns a clear 503 (no PHP fallback).
 
 ### 3.7 Sprint 5 — Regression suite
-27. The full set above still passes together (run `php artisan test` end-to-end).
+29. The full set above still passes together (run `php artisan test` end-to-end).
 
 ## 4. Frontend tests (Vitest)
 
@@ -81,10 +83,18 @@ Frontend/
 
 ## 5. Python service tests (ml-service)
 
-- `ml-service/tests/test_api.py` (pytest):
+Run inside the Python 3.12 venv with `pytest` from `ml-service/`.
+
+- `ml-service/tests/test_api.py`:
   - `GET /health` → `{ status: "ok" }`.
-  - `POST /predict/loss` returns one result per input product with the documented fields.
-  - Batch of 0 products → 422.
+  - `POST /forecast` — returns one entry per horizon day with the documented fields; flat/short sales
+    series return a forecast, never an error; deterministic on a fixed fixture.
+  - `POST /predict/loss` — returns one result per input product with the documented fields; batch of 0
+    products → 422.
+  - `POST /optimize/replenishment` — same inputs + seed → same plan; `total_order_value <= budget`;
+    no negative order quantities; missing budget → 422.
+- `ml-service/tests/test_arima.py`, `test_ga.py` — optional: direct unit tests of the ARIMA and GA
+  modules (determinism, convergence, MAPE threshold).
 
 ## 6. Evaluation metrics
 

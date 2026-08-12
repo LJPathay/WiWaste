@@ -8,7 +8,8 @@
 ## 1. Goal
 
 1. The app builds and runs in a **production-style** setup (real env, built frontend, MySQL, optional Docker).
-2. The Python ML service is part of the stack, with the PHP fallback as the safety net.
+2. The Python ML service is a **required component** of the analytics stack (ARIMA + XGBoost + GA). The rest
+   of the app runs without it, but the analytics endpoints need it running.
 3. `README.md` documents everything: prerequisites, install, env vars, new endpoints, and the demo flow.
 
 ## 2. Status
@@ -44,15 +45,20 @@
 6. Serve via PHP-FPM / Apache / Nginx pointing at `Backend/public/`.
 
 ### 3.2 Python ML service
+Requires **Python 3.12** (statsmodels/xgboost build cleanly on 3.12). A separate 3.12 install can sit
+alongside an existing newer Python using the `py` launcher.
+
 ```bash
 cd ml-service
-python -m venv .venv
+py -3.12 -m venv .venv
 .venv\Scripts\activate          # Windows (POSIX: source .venv/bin/activate)
 pip install -r requirements.txt
 uvicorn app.main:app --host 127.0.0.1 --port 8001
 ```
 - Run it as a background service (e.g., NSSM on Windows or systemd on Linux).
-- **Important:** Laravel works even if this service is down — it falls back to the PHP risk scorer.
+- **Important:** the analytics endpoints (`/forecast/*`, `/loss-risk/*`, `/optimization/*`) require this
+  service. There is **no PHP fallback** — if it is down, those endpoints return a clear error while the
+  rest of the app continues to work.
 
 ### 3.3 Frontend
 ```bash
@@ -86,14 +92,15 @@ Add to the repo root:
   ```
 - The Laravel container gets `ML_SERVICE_URL=http://ml-service:8001` so it talks to the container hostname.
 
-> The hybrid design means Docker is a convenience, not a requirement — the system still runs without it.
+> The service-oriented design means Docker is a convenience, not a requirement — the system still runs
+> without it (the ML service runs locally via `uvicorn`).
 
 ## 5. Documentation updates (README.md)
 
 Update the existing `Backend/README.md`-style root `README.md` (the one at the repo root) to add:
 
 1. **Project structure** — add `ml-service/` and `docs/implementation-plan/`.
-2. **ML service setup** — the `uvicorn` commands above + `ML_SERVICE_URL` explanation.
+2. **ML service setup** — Python 3.12 venv, the `uvicorn` commands above + `ML_SERVICE_URL` explanation.
 3. **New environment variables** — `ML_SERVICE_URL`, `PAYMONGO_SECRET_KEY`, `PAYMONGO_PUBLIC_KEY`,
    `PAYMONGO_WEBHOOK_SECRET`, `PAYMONGO_SUCCESS_URL`, `PAYMONGO_CANCEL_URL`, `VITE_PAYMONGO_PUBLIC_KEY`.
 4. **New API endpoints** — link to Sprint 2/3/4 contract sections plus Sprint 6:

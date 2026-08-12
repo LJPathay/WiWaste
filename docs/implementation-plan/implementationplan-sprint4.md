@@ -9,7 +9,7 @@
 
 By the end of this sprint:
 
-1. A **pure-PHP Genetic Algorithm** optimizes a replenishment plan under a budget.
+1. A **Genetic Algorithm** (in the shared Python `ml-service/`) optimizes a replenishment plan under a budget.
 2. New API endpoints return the recommended plan with a fitness score and per-SKU confidence.
 3. Plan outputs feed the **existing** recommendation approve/reject workflow.
 4. The Replenishment and Generate Reports pages show **real optimizer results from the API**.
@@ -24,14 +24,16 @@ By the end of this sprint:
 
 ## 3. Approach (decided)
 
-- **Pure PHP implementation** of the GA. No Python service for this sprint.
+- **Python implementation of the GA** in the shared `ml-service/` (`app/genetic_algorithm.py`, numpy).
+- Laravel gathers the item data (forecast demand, stock, costs) and calls `POST /optimize/replenishment`
+  on `ML_SERVICE_URL` via `MlServiceClient::optimizeReplenishment(...)`.
 - Optimizer output is written into `Inventory_Recommendation` so the existing approve/reject flow is reused.
 
 ## 4. Scope
 
 ### In scope
-- PHP Genetic Algorithm optimizer service.
-- Optimization controller + route.
+- Python Genetic Algorithm optimizer module (`ml-service/app/genetic_algorithm.py`).
+- Optimization controller + route + HTTP client.
 - Persist approved plans into the recommendations flow.
 - Wire the Replenishment + Generate Reports pages to the API.
 
@@ -41,9 +43,9 @@ By the end of this sprint:
 
 ## 5. Backend tasks
 
-### 5.1 Optimizer service
+### 5.1 Optimizer service (Python `ml-service`)
 
-New: `Backend/app/Services/Optimization/GeneticOptimizer.php`.
+Laravel builds the input; Python runs the GA. New: `ml-service/app/genetic_algorithm.py`.
 
 **Chromosome** = an order-quantity vector, one gene per candidate SKU (0 = do not reorder).
 
@@ -57,12 +59,12 @@ holding_cost   = Σ order_qty × unit_cost × w_hold
 ```
 
 Inputs come from existing tables / services:
-- Forecast demand → reuse Sprint 2 `ForecastEngine` output.
+- Forecast demand → reuse Sprint 2 forecast results (`Forecast_Result`) — the ARIMA output from the shared service.
 - Expiring fraction → `Product.expiration_date` proximity (or `FEFOBatch`).
 - Unit cost / margin → `Product.cost_price`, `selling_price`.
 - Budget cap → request parameter.
 
-**Operators** (standard, deterministic for testability when given a seed):
+**Operators** (standard; deterministic for testability when given a seed):
 - Tournament selection.
 - Uniform crossover.
 - Mutation with small probability (adjust one SKU's order qty).
@@ -99,7 +101,7 @@ Request body (POST): `{ budget, horizon_days?, include_product_ids? }`.
 - On success, optionally write high-confidence SKUs into `Inventory_Recommendation`
   (`recommendation_type = 'Reorder'`, `confidence_score` from the GA) so they appear in
   `/recommendations` and can be approved/rejected with the existing flow.
-- The endpoint is **not cached** (each call re-runs the GA).
+- The endpoint is **not cached** (each call re-runs the GA in the Python service).
 
 ## 6. Frontend tasks
 
@@ -137,21 +139,22 @@ export const optimization = {
 
 ## 8. Testing (see Testing & Evaluation for the full list)
 
-1. **Deterministic** — same inputs + seed → same plan.
+1. **Deterministic** — same inputs + seed → same plan (Python pytest).
 2. **Budget respected** — `total_order_value <= budget` for all returned plans.
 3. **Non-negative** — no `order_qty < 0`; no SKU ordered without positive demand or low stock.
 4. **No budget** — request without `budget` → 422 validation error.
 5. **Writes recommendations** — after approve action, `/recommendations` contains the SKU with
    `recommendation_type = 'Reorder'`.
-6. **Convergence** — fitness of the final plan ≤ fitness of generation 0 on a synthetic fixture.
+6. **Convergence** — fitness of the final plan ≤ fitness of generation 0 on a synthetic fixture (Python).
+7. **Service offline** — `POST /optimization/replenishment` returns a clear 503 (no PHP fallback).
 
 ## 9. Definition of Done
 
 **Acceptance criteria:** The optimizer returns a replenishment plan that respects the budget constraint.
 
-- [ ] `GeneticOptimizer` returns a budget-respecting, non-negative plan.
+- [ ] `ml-service` `POST /optimize/replenishment` returns a budget-respecting, non-negative plan.
 - [ ] `POST /optimization/replenishment` returns the documented payload.
 - [ ] Approved optimizer output appears in the existing Recommendations flow.
 - [ ] Replenishment page runs the optimizer and shows the plan.
 - [ ] Generate Reports page can produce + approve an optimized plan.
-- [ ] Backend feature tests pass.
+- [ ] Backend feature tests + Python pytest pass.

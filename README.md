@@ -16,9 +16,12 @@ Make sure these are installed on your machine before starting:
 | MySQL / MariaDB | 8.0+ | https://dev.mysql.com/downloads/ |
 | Node.js | 18 or higher | https://nodejs.org |
 | npm | 9 or higher | Included with Node.js |
+| Python | 3.12 (for the ML service) | https://www.python.org/downloads/ |
 | Git | Latest | https://git-scm.com |
 
-> **Tip:** If you're on Windows, using [XAMPP](https://www.apachefriends.org/) or [Laragon](https://laragon.org/) gives you PHP + MySQL in one installer.
+> **Tip:** If you're on Windows, using [XAMPP](https://www.apachefriends.org/) or [Laragon](https://laragon.org/)
+> gives you PHP + MySQL in one installer. For Python, install 3.12 alongside any other version — the ML
+> service pins its own environment with `py -3.12 -m venv .venv`.
 
 ---
 
@@ -128,6 +131,44 @@ The frontend will be running at: **`http://localhost:5173`**
 
 ---
 
+## 🧠 Python ML Service Setup (FastAPI)
+
+The analytics features (demand forecasting, loss-risk detection, replenishment optimization) run on a
+**local FastAPI service** that hosts three algorithms in Python: **ARIMA** (demand forecast), **XGBoost**
+(loss-risk scoring), and a **Genetic Algorithm** (replenishment optimizer).
+
+> Laravel stays the main backend — it reads data from MySQL, calls this service over HTTP, and returns the
+> results. This service is required for the analytics endpoints and runs fully on your local machine
+> (no internet needed).
+
+### Step 1 — Create the virtual environment
+
+Open a terminal in the `ml-service/` folder:
+
+```bash
+cd ml-service
+py -3.12 -m venv .venv
+.venv\Scripts\activate    # Windows  (POSIX: source .venv/bin/activate)
+```
+
+### Step 2 — Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+> Install this once while you have internet — after that the whole demo can run offline.
+
+### Step 3 — Start the service
+
+```bash
+uvicorn app.main:app --host 127.0.0.1 --port 8001
+```
+
+The ML service will be running at: **`http://localhost:8001`** (`/health` returns `{"status":"ok"}`).
+
+---
+
 ## 🔑 Default Login Credentials
 
 Use these accounts to log in after seeding:
@@ -142,9 +183,9 @@ Use these accounts to log in after seeding:
 
 ---
 
-## 🖥️ Running Both Servers
+## 🖥️ Running All Servers
 
-You need **two terminals open at the same time**:
+You need **three terminals open at the same time**:
 
 **Terminal 1 — Backend:**
 ```bash
@@ -158,7 +199,17 @@ cd WiWaste/Frontend
 npm run dev
 ```
 
+**Terminal 3 — ML service (Python):**
+```bash
+cd WiWaste/ml-service
+.venv\Scripts\activate
+uvicorn app.main:app --host 127.0.0.1 --port 8001
+```
+
 Then open your browser and go to: **`http://localhost:5173`**
+
+> The analytics endpoints (forecast, loss-risk, optimization) require the ML service in **Terminal 3** to
+> be running. Everything else works without it.
 
 ---
 
@@ -182,7 +233,7 @@ All optional keys live in `Backend/.env.example` and `Frontend/.env.example`. Co
 
 | Variable | Where | Purpose |
 |----------|-------|---------|
-| `ML_SERVICE_URL` | Backend | Base URL of the Python loss-prediction service (Sprint 3) |
+| `ML_SERVICE_URL` | Backend | Base URL of the local Python analytics service (ARIMA + XGBoost + GA), Sprints 2–4 |
 | `PAYMONGO_SECRET_KEY` | Backend | PayMongo secret key (Sprint 6) |
 | `PAYMONGO_PUBLIC_KEY` | Backend | PayMongo public key (Sprint 6) |
 | `PAYMONGO_WEBHOOK_SECRET` | Backend | PayMongo webhook signing secret (Sprint 6) |
@@ -190,9 +241,10 @@ All optional keys live in `Backend/.env.example` and `Frontend/.env.example`. Co
 | `PAYMONGO_CANCEL_URL` | Backend | Redirect target when the customer cancels checkout |
 | `VITE_PAYMONGO_PUBLIC_KEY` | Frontend | PayMongo public key exposed to the browser |
 
-> **ML service fallback:** when `ML_SERVICE_URL` is unset or the service is unreachable, the backend
-> automatically falls back to the built-in pure-PHP loss-risk scorer. The app never breaks — the
-> `/loss-risk/*` endpoints just report `"engine": "fallback"` instead of `"xgboost"`.
+> **ML service requirement:** the `/forecast/*`, `/loss-risk/*`, and `/optimization/*` endpoints call the
+> local Python service at `ML_SERVICE_URL`. Start it with `uvicorn app.main:app --port 8001` (see the ML
+> service setup above). There is **no PHP fallback** — if the service is unreachable, those endpoints
+> return a clear error while the rest of the app keeps working.
 
 ---
 
@@ -237,16 +289,26 @@ WiWaste/
 │   │   └── seeders/                # Sample data
 │   └── routes/api.php              # API routes
 │
-└── Frontend/         # React + TypeScript + Vite
-    ├── src/
-    │   ├── pages/
-    │   │   ├── admin/              # Owner pages (Products, Users)
-    │   │   ├── inventory/          # Inventory Staff pages
-    │   │   ├── cashier/            # Cashier POS Terminal
-    │   │   └── dashboard/          # Analytics & Reports
-    │   ├── services/api.ts         # API service layer
-    │   └── styles/theme.css        # Global styles
-    └── package.json
+├── Frontend/         # React + TypeScript + Vite
+│   ├── src/
+│   │   ├── pages/
+│   │   │   ├── admin/              # Owner pages (Products, Users)
+│   │   │   ├── inventory/          # Inventory Staff pages
+│   │   │   ├── cashier/            # Cashier POS Terminal
+│   │   │   └── dashboard/          # Analytics & Reports
+│   │   ├── services/api.ts         # API service layer
+│   │   └── styles/theme.css        # Global styles
+│   └── package.json
+│
+└── ml-service/       # Python 3.12 + FastAPI analytics service (local, offline)
+    ├── app/
+    │   ├── main.py                 # FastAPI app (routes + CORS)
+    │   ├── arima_model.py          # ARIMA demand forecast (statsmodels)
+    │   ├── xgboost_model.py        # XGBoost loss-risk predictor
+    │   └── genetic_algorithm.py    # Genetic Algorithm replenishment optimizer
+    ├── model/                      # Trained XGBoost model (committed)
+    ├── requirements.txt
+    └── README.md                   # ML service setup + run instructions
 ```
 
 ---

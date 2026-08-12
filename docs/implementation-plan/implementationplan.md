@@ -40,10 +40,14 @@ without being confused by unrelated details.
 
 ## Key decisions already made (do not change without discussion)
 
-1. **Hybrid ML approach**
-   - ARIMA + Genetic Algorithm are implemented in **pure PHP** inside Laravel.
-   - XGBoost is implemented as a **separate Python (FastAPI) microservice**.
-   - If the Python service is offline, the backend falls back to a **pure-PHP risk score** so the app never breaks.
+1. **ML approach (all algorithms in Python)**
+   - ARIMA, XGBoost, and the Genetic Algorithm are all implemented as **real Python algorithms** in a
+     single local **FastAPI service** (`ml-service/`).
+   - Laravel is the **orchestrator**: it reads the required data from MySQL, calls the Python service over
+     HTTP (`ML_SERVICE_URL`), and stores/returns the results. No algorithm logic is written in PHP.
+   - The Python service is a **required component** for the analytics endpoints (forecast, loss-risk,
+     optimization). There is **no PHP fallback** — on demo day it runs locally with `uvicorn` on
+     `127.0.0.1:8001`. The rest of the app still works without it; only analytics endpoints need it.
 2. **Mock data**
    - Existing overview/chart pages stay on mock data (`Frontend/src/utils/mockAuthAndFeatures.ts`).
    - **Only the new Sprint 2–4 features** are wired to the real API.
@@ -65,21 +69,30 @@ without being confused by unrelated details.
 WiWaste/
 ├── Backend/                     # Laravel REST API (PHP 8.3+, Sanctum, MySQL)
 │   ├── app/
-│   │   ├── Http/Controllers/Api/   # API controllers (auth, products, inventory, sales, ...)
+│   │   ├── Http/Controllers/Api/   # API controllers (auth, products, inventory, sales, forecast, ...)
 │   │   ├── Models/                  # Eloquent models (18 models incl. ForecastResult)
-│   │   └── Services/                # NEW folder for engines/services (this plan adds it)
+│   │   └── Services/Ml/             # NEW: HTTP client that calls the Python ml-service
 │   ├── database/migrations/         # Schema (Forecast_Result table already exists)
 │   ├── database/seeders/            # Seed data
 │   ├── routes/api.php               # All API routes (already has 60+ routes)
 │   └── tests/                       # PHPUnit (currently only ExampleTest stubs)
-└── Frontend/                    # React 19 + Vite + TypeScript
-    ├── src/
-    │   ├── pages/                   # All screens (admin/, inventory/, cashier/, manager/, dashboard/)
-    │   ├── services/api.ts          # Central API client (all backend calls go here)
-    │   ├── hooks/useDashboardData.ts# Merges mock + real API overview data
-    │   ├── utils/mockAuthAndFeatures.ts # Mock data layer
-    │   └── routes.tsx               # All frontend routes
-    └── package.json                 # No test runner configured yet
+├── Frontend/                    # React 19 + Vite + TypeScript
+│   ├── src/
+│   │   ├── pages/                   # All screens (admin/, inventory/, cashier/, manager/, dashboard/)
+│   │   ├── services/api.ts          # Central API client (all backend calls go here)
+│   │   ├── hooks/useDashboardData.ts# Merges mock + real API overview data
+│   │   ├── utils/mockAuthAndFeatures.ts # Mock data layer
+│   │   └── routes.tsx               # All frontend routes
+│   └── package.json                 # No test runner configured yet
+└── ml-service/                  # Python 3.12 FastAPI analytics service (local, offline)
+    ├── app/
+    │   ├── main.py                  # FastAPI app — CORS + routes for /forecast, /predict/loss, /optimize
+    │   ├── arima_model.py           # ARIMA/SARIMAX demand forecast (statsmodels)
+    │   ├── xgboost_model.py         # XGBoost loss-risk predictor
+    │   └── genetic_algorithm.py     # GA replenishment optimizer (numpy)
+    ├── model/                       # Trained XGBoost model (committed)
+    ├── requirements.txt             # fastapi, uvicorn, statsmodels, xgboost, scikit-learn, numpy, pandas
+    └── README.md                    # Setup + run instructions
 ```
 
 ---
@@ -87,12 +100,15 @@ WiWaste/
 ## Recommended execution order
 
 1. Sprint 1 hardening (core stock consistency guarantee)
-2. Sprint 2 (ARIMA forecast)
-3. Sprint 3 (XGBoost loss visibility)
-4. Sprint 4 (GA decision support)
-5. Sprint 5 (integration & polish)
-6. Sprint 6 (PayMongo payment gateway)
-7. Testing & Evaluation
-8. Deployment & Documentation
+2. **Scaffold `ml-service/` first** — Python 3.12 venv + FastAPI shell + `/health` (Sprints 2–4 all build on it)
+3. Sprint 2 (ARIMA forecast)
+4. Sprint 3 (XGBoost loss visibility)
+5. Sprint 4 (GA decision support)
+6. Sprint 5 (integration & polish)
+7. Sprint 6 (PayMongo payment gateway)
+8. Testing & Evaluation
+9. Deployment & Documentation
 
-Each sprint from 2–4 ships **backend-first**: engine → API endpoint → backend tests → frontend wiring.
+Each sprint from 2–4 ships **backend-first**: engine → API endpoint → backend tests → frontend wiring. The
+"engine" for all three is the Python `ml-service/`; Laravel only adds the HTTP client, controllers, routes,
+and persistence around it.

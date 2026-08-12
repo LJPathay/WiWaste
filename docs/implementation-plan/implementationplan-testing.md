@@ -14,9 +14,18 @@
 
 ## 2. Status
 
-- **Not started.** `Backend/tests/` contains only `ExampleTest` stubs.
+- **In progress.** `Backend/tests/Feature/InventorySyncTest.php` covers the Sprint 1 inventory
+  invariants and passes (`php artisan test` → 10 tests). Groups 3.4–3.7 are not started.
 - **Frontend:** no test runner configured. We add a minimal Vitest setup only for the API client and the
   mock-data fallback behavior (Sprint 5 overview pages stay on mock).
+
+## 2.1 Known issues / backlog
+
+- **Frontend lint & typecheck are NOT clean (pre-existing, outside Sprint 0/1 scope).** `npx eslint src`
+  reports 169 problems (166 errors, 3 warnings) and `npx tsc -b` fails (~90 errors) across the app
+  (unused imports, implicit `any`, unused locals, missing `isOpen` prop typing on `Modal`, etc.). None of
+  these come from Sprint 1's barcode/stock work, and they are not part of Sprint 0/1 Definition of Done.
+  `npm run build` succeeds. Clean this backlog before the section-8 "lint clean" checkbox is claimed.
 
 ## 3. Backend tests (PHPUnit)
 
@@ -39,32 +48,33 @@ Run with: `php artisan test`.
 9. Stock-in increases stock and writes a movement.
 10. Wastage decreases stock and writes a movement.
 11. `stock_status` recalculates (`Low Stock` / `Overstock`) after changes.
+12. Sale cannot exceed available stock (422, nothing written) — added alongside Sprint 1 hardening.
 
 ### 3.4 Sprint 2 — Forecast
-12. `POST /forecast` (ml-service) is deterministic on a fixed sales fixture.
-13. Product with no sales returns a flat-series forecast from the service (no crash).
-14. `POST /forecast/generate` persists rows to `Forecast_Result`.
-15. `GET /forecast/overview` returns well-formed series; `avg_confidence` in [0,100].
-16. MAPE on a synthetic trend+season series below the agreed threshold (e.g., < 25%).
-17. Service offline → `/forecast/*` returns a clear 503 (no PHP fallback).
+13. `POST /forecast` (ml-service) is deterministic on a fixed sales fixture.
+14. Product with no sales returns a flat-series forecast from the service (no crash).
+15. `POST /forecast/generate` persists rows to `Forecast_Result`.
+16. `GET /forecast/overview` returns well-formed series; `avg_confidence` in [0,100].
+17. MAPE on a synthetic trend+season series below the agreed threshold (e.g., < 25%).
+18. Service offline → `/forecast/*` returns a clear 503 (no PHP fallback).
 
 ### 3.5 Sprint 3 — Loss risk
-18. With a fake service URL (Laravel `Http::fake`) → results parsed, cached, `engine = "xgboost"`.
-19. Cache TTL respected (second call within TTL does not re-hit the service).
-20. `loss_probability` ∈ [0,1]; `expected_loss ≥ 0`.
-21. Service offline → `/loss-risk/*` returns a clear 503 (no PHP fallback).
+19. With a fake service URL (Laravel `Http::fake`) → results parsed, cached, `engine = "xgboost"`.
+20. Cache TTL respected (second call within TTL does not re-hit the service).
+21. `loss_probability` ∈ [0,1]; `expected_loss ≥ 0`.
+22. Service offline → `/loss-risk/*` returns a clear 503 (no PHP fallback).
 
 ### 3.6 Sprint 4 — Optimization
-22. `POST /optimize/replenishment` (ml-service) deterministic with a fixed seed.
-23. `total_order_value <= budget` always.
-24. No negative `order_qty`.
-25. Missing `budget` → 422.
-26. Approved plan writes into `Inventory_Recommendation` (`recommendation_type = 'Reorder'`).
-27. Final fitness ≤ generation-0 fitness on a synthetic fixture (convergence).
-28. Service offline → `POST /optimization/replenishment` returns a clear 503 (no PHP fallback).
+23. `POST /optimize/replenishment` (ml-service) deterministic with a fixed seed.
+24. `total_order_value <= budget` always.
+25. No negative `order_qty`.
+26. Missing `budget` → 422.
+27. Approved plan writes into `Inventory_Recommendation` (`recommendation_type = 'Reorder'`).
+28. Final fitness ≤ generation-0 fitness on a synthetic fixture (convergence).
+29. Service offline → `POST /optimization/replenishment` returns a clear 503 (no PHP fallback).
 
 ### 3.7 Sprint 5 — Regression suite
-29. The full set above still passes together (run `php artisan test` end-to-end).
+30. The full set above still passes together (run `php artisan test` end-to-end).
 
 ## 4. Frontend tests (Vitest)
 

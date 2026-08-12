@@ -58,17 +58,25 @@ class SalesTransactionController extends Controller
 
         $userId = $request->user()?->User_id ?? 1;
 
-        // Batch-load inventory records for all items to avoid N+1
-        $productIds = collect($data['items'])->pluck('product_id');
-        $inventories = Inventory::whereIn('product_id', $productIds)->with('product')->get()->keyBy('product_id');
-
-        return DB::transaction(function () use ($data, $userId, $inventories) {
+        return DB::transaction(function () use ($data, $userId) {
             $total = collect($data['items'])->sum(fn ($i) => $i['quantity'] * $i['unit_price']);
 
-            // Check stock availability before deducting
+            // Lock inventory rows inside the transaction and re-check stock so concurrent
+            // sales can never push a product below zero.
+            $lockedInventories = Inventory::whereIn('product_id', collect($data['items'])->pluck('product_id'))
+                ->with('product')
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('product_id');
+
             foreach ($data['items'] as $item) {
-                $inventory = $inventories->get($item['product_id']);
-                if ($inventory && $inventory->current_stock < $item['quantity']) {
+                $inventory = $lockedInventories->get($item['product_id']);
+                if (!$inventory) {
+                    return response()->json([
+                        'message' => "No inventory record for product #{$item['product_id']}.",
+                    ], 422);
+                }
+                if ($inventory->current_stock < $item['quantity']) {
                     $productName = $inventory->product?->product_name ?? "Product #{$item['product_id']}";
                     return response()->json([
                         'message' => "Insufficient stock for {$productName}. Available: {$inventory->current_stock}, requested: {$item['quantity']}.",
@@ -103,10 +111,10 @@ class SalesTransactionController extends Controller
                     'override_reason' => $item['override_reason'] ?? null,
                 ]);
 
-                // Deduct inventory (re-fetch inside transaction for latest data)
-                $inventory = Inventory::where('product_id', $item['product_id'])->first();
+                // Deduct inventory (row already locked for update and validated above)
+                $inventory = $lockedInventories->get($item['product_id']);
                 if ($inventory) {
-                    $inventory->current_stock = max(0, $inventory->current_stock - $item['quantity']);
+                    $inventory->current_stock -= $item['quantity'];
                     $inventory->stock_status  = Inventory::calcStatus($inventory->current_stock, $inventory->product?->reorder_level ?? 10);
                     $inventory->last_updated  = now();
                     $inventory->save();

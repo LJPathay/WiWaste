@@ -110,6 +110,30 @@ class InventorySyncTest extends TestCase
             ->count());
     }
 
+    public function test_sale_cannot_exceed_stock(): void
+    {
+        $this->auth();
+        $product = $this->makeProduct();
+        $product->inventory()->update(['current_stock' => 2]);
+
+        $response = $this->postJson('/api/sales', [
+            'payment_method'  => 'Cash',
+            'amount_tendered' => 100,
+            'change_due'      => 0,
+            'items'           => [
+                ['product_id' => $product->product_id, 'quantity' => 5, 'unit_price' => 15.00],
+            ],
+        ]);
+
+        $response->assertStatus(422);
+        $this->assertDatabaseHas('Inventory', [
+            'product_id'    => $product->product_id,
+            'current_stock' => 2,
+        ]);
+        $this->assertDatabaseCount('Sales_Transaction', 0);
+        $this->assertDatabaseCount('Sales_Item', 0);
+    }
+
     public function test_stock_out_cannot_go_negative(): void
     {
         $this->auth();

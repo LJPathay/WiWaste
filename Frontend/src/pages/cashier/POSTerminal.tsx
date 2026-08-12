@@ -489,14 +489,18 @@ export function POSTerminal() {
 
     // Save transaction to backend API
     try {
+      // GCash/Maya are Sprint-6 PayMongo methods; persist them as E-wallet until the gateway ships.
+      const apiPaymentMethod: PaymentMethod = paymentMethod === 'GCash' || paymentMethod === 'Maya'
+        ? 'E-wallet'
+        : paymentMethod;
       await salesApi.create({
-        payment_method: paymentMethod as any,
+        payment_method: apiPaymentMethod,
         amount_tendered: paymentMethod === 'Cash' ? tendered : grandTotal,
         change_due: paymentMethod === 'Cash' ? changeDue : 0,
         senior_pwd_name: seniorPwdInfo?.name ?? null,
         senior_pwd_id: seniorPwdInfo?.id ?? null,
         items: cart.map(l => ({
-          product_id: Number(l.product.product_id),
+          product_id: Number(l.product.plu_code ?? l.product.product_id.replace('P-', '')),
           quantity: l.quantity,
           unit_price: l.product.selling_price * (1 - (l.discountPct || 0)) - (l.discountAmount || 0),
           discount_pct: l.discountPct ?? 0,

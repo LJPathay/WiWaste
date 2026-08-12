@@ -125,8 +125,17 @@ export const wastage = {
 // ─── Sales (POS) ────────────────────────────────────────
 export const sales = {
   list: (page = 1) => request<PaginatedResponse<ApiSalesTransaction>>(`/sales?page=${page}`),
+  show: (id: number) => request<ApiSalesTransaction>(`/sales/${id}`),
   create: (data: CreateSalePayload) =>
     request('/sales', { method: 'POST', body: JSON.stringify(data) }),
+};
+
+// ─── PayMongo (Sprint 6) ────────────────────────────────
+export const paymongo = {
+  createCheckout: (data: CreateSalePayload) =>
+    request<PayMongoCheckoutResponse>('/sales', { method: 'POST', body: JSON.stringify(data) }),
+  getStatus: (transactionId: number) =>
+    request<PayMongoStatusResponse>(`/paymongo/status/${transactionId}`),
 };
 
 // ─── Returns ────────────────────────────────────────────
@@ -250,6 +259,8 @@ export interface ApiSalesTransaction {
   total_amount: number;
   transaction_date: string;
   payment_method: string;
+  payment_reference?: string | null;
+  payment_status?: 'pending' | 'paid' | 'failed' | string | null;
   amount_tendered: number | null;
   change_due: number | null;
   status: string;
@@ -312,7 +323,8 @@ export interface CreateWastagePayload {
 }
 
 export interface CreateSalePayload {
-  payment_method: 'Cash' | 'E-wallet' | 'Credit Card' | 'Debit Card';
+  payment_method: 'Cash' | 'E-wallet' | 'Credit Card' | 'Debit Card' | 'PayMongo';
+  payment_reference?: 'GCash' | 'Maya' | 'Card';
   amount_tendered?: number;
   change_due?: number;
   senior_pwd_name?: string | null;
@@ -324,6 +336,20 @@ export interface CreateSalePayload {
     discount_pct?: number;
     discount_amount?: number;
   }>;
+}
+
+export interface PayMongoCheckoutResponse {
+  transaction_id: number;
+  checkout_url: string;
+  payment_intent_id: string;
+  status: 'pending';
+}
+
+export interface PayMongoStatusResponse {
+  transaction_id: number;
+  payment_status: 'pending' | 'paid' | 'failed' | null;
+  status: string;
+  payment_reference: string | null;
 }
 
 export interface CreateReturnPayload {

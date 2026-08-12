@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\SettingsController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\PurchaseOrderController;
 use App\Http\Controllers\Api\AuditLogController;
+use App\Http\Controllers\Api\PayMongoController;
 use App\Http\Controllers\Api\ProfitLossController;
 use App\Http\Controllers\Api\InventoryAnalyticsController;
 use App\Http\Controllers\Api\FEFOController;
@@ -59,7 +60,12 @@ Route::post('/wastage', [WastageRecordController::class, 'store']);
 
 // Sales / POS
 Route::get('/sales',  [SalesTransactionController::class, 'index']);
+Route::get('/sales/{id}', [SalesTransactionController::class, 'show']);
 Route::post('/sales', [SalesTransactionController::class, 'store']);
+
+// PayMongo
+Route::post('/paymongo/webhook', [PayMongoController::class, 'webhook']);
+Route::get('/paymongo/status/{transaction_id}', [PayMongoController::class, 'status']);
 
 // Returns & Refunds
 Route::get('/returns',  [ReturnTransactionController::class, 'index']);

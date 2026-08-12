@@ -4,7 +4,7 @@ import {
   Barcode, Search, Trash2, CreditCard, Wallet, Banknote, Plus, Minus, 
   User, Receipt, Clock, ArrowRight, Printer, CheckCircle2,
   Archive, RotateCcw, Percent, Search as SearchIcon, MoreHorizontal, X, AlertCircle, Keyboard, Info,
-  Monitor, Tablet, Smartphone
+  Monitor, Tablet, Smartphone, Loader2
 } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { Toast, useToast } from '../../components/ui/Toast';
@@ -25,7 +25,7 @@ import {
   type SalesTransaction,
 } from '../../utils/cashierData';
 import { clearStoredSession, getStoredSession } from '../../utils/mockAuthAndFeatures';
-import { products as productsApi, sales as salesApi } from '../../services/api';
+import { products as productsApi, sales as salesApi, paymongo as paymongoApi } from '../../services/api';
 
 interface CartLine {
   product: CashierProduct;
@@ -34,6 +34,25 @@ interface CartLine {
   discountAmount?: number;
   originalPrice?: number;
   overrideReason?: string;
+}
+
+type PosPaymentMethod = PaymentMethod | 'GCash' | 'Maya' | 'Card';
+const IS_PAYMONGO = (m: PosPaymentMethod) => m === 'GCash' || m === 'Maya' || m === 'Card';
+const PAYMONGO_PENDING_KEY = 'wiwaste_paymongo_pending';
+
+interface PendingPayMongo {
+  transaction_id?: number;
+  payment_method: PosPaymentMethod;
+  cart: CartLine[];
+  grand_total: number;
+  subtotal: number;
+  discount_amount: number;
+  tax: number;
+  tendered: number;
+  change_due: number;
+  senior_pwd_name?: string | null;
+  senior_pwd_id?: string | null;
+  saved_at: string;
 }
 
 const PRODUCT_SLOT_KEYS = ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'] as const;
@@ -111,8 +130,16 @@ export function POSTerminal() {
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
   const [cart, setCart] = useState<CartLine[]>([]);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | 'GCash' | 'Maya'>('Cash');
+  const [paymentMethod, setPaymentMethod] = useState<PosPaymentMethod>('Cash');
   const [amountTendered, setAmountTendered] = useState('');
+  
+  const [paymongoProcessing, setPaymongoProcessing] = useState(false);
+  const [paymongoPending, setPaymongoPending] = useState<PendingPayMongo | null>(() => {
+    try {
+      const raw = sessionStorage.getItem(PAYMONGO_PENDING_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  });
   
   const [pluBuffer, setPluBuffer] = useState('');
   const pluTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -311,6 +338,18 @@ export function POSTerminal() {
     barcodeRef.current?.focus();
   }, []);
 
+  // Restore an unpaid PayMongo cart when the cashier returns from the hosted checkout (e.g. cancelled)
+  useEffect(() => {
+    if (!paymongoPending || cart.length > 0 || !paymongoPending.cart?.length) return;
+    setCart(paymongoPending.cart);
+    setPaymentMethod(paymongoPending.payment_method);
+    if (paymongoPending.senior_pwd_name && paymongoPending.senior_pwd_id) {
+      setSeniorPwdInfo({ name: paymongoPending.senior_pwd_name, id: paymongoPending.senior_pwd_id });
+    }
+    setAction('Previous PayMongo payment not completed — cart restored');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const totalItems = cart.reduce((sum, l) => sum + l.quantity, 0);
   const subtotal = cart.reduce((sum, l) => sum + l.product.selling_price * l.quantity, 0);
   const discountAmount = cart.reduce((sum, l) => sum + (l.product.selling_price * l.quantity * (l.discountPct || 0)) + (l.discountAmount || 0), 0);
@@ -487,32 +526,59 @@ export function POSTerminal() {
     if (cart.length === 0) { error('Add at least one product.'); return; }
     if (paymentMethod === 'Cash' && tendered < grandTotal) { error('Amount tendered must cover the total.'); return; }
 
-    // Save transaction to backend API
+    const isPayMongo = IS_PAYMONGO(paymentMethod);
+
+    const payload = {
+      payment_method: isPayMongo ? 'PayMongo' : paymentMethod,
+      payment_reference: isPayMongo ? paymentMethod : undefined,
+      amount_tendered: paymentMethod === 'Cash' ? tendered : grandTotal,
+      change_due: paymentMethod === 'Cash' ? changeDue : 0,
+      senior_pwd_name: seniorPwdInfo?.name ?? null,
+      senior_pwd_id: seniorPwdInfo?.id ?? null,
+      items: cart.map(l => ({
+        product_id: Number(l.product.plu_code ?? l.product.product_id.replace('P-', '')),
+        quantity: l.quantity,
+        unit_price: l.product.selling_price * (1 - (l.discountPct || 0)) - (l.discountAmount || 0),
+        discount_pct: l.discountPct ?? 0,
+        discount_amount: l.discountAmount ?? 0,
+        override_reason: l.overrideReason ?? null,
+      })),
+    };
+
     try {
-      // GCash/Maya are Sprint-6 PayMongo methods; persist them as E-wallet until the gateway ships.
-      const apiPaymentMethod: PaymentMethod = paymentMethod === 'GCash' || paymentMethod === 'Maya'
-        ? 'E-wallet'
-        : paymentMethod;
-      await salesApi.create({
-        payment_method: apiPaymentMethod,
-        amount_tendered: paymentMethod === 'Cash' ? tendered : grandTotal,
-        change_due: paymentMethod === 'Cash' ? changeDue : 0,
-        senior_pwd_name: seniorPwdInfo?.name ?? null,
-        senior_pwd_id: seniorPwdInfo?.id ?? null,
-        items: cart.map(l => ({
-          product_id: Number(l.product.plu_code ?? l.product.product_id.replace('P-', '')),
-          quantity: l.quantity,
-          unit_price: l.product.selling_price * (1 - (l.discountPct || 0)) - (l.discountAmount || 0),
-          discount_pct: l.discountPct ?? 0,
-          discount_amount: l.discountAmount ?? 0,
-          override_reason: l.overrideReason ?? null,
-        })),
-      });
-    } catch (err: any) {
-      // Fallback for offline mode
+      if (isPayMongo) {
+        setPaymongoProcessing(true);
+        const response = await paymongoApi.createCheckout(payload);
+        if (!response.checkout_url) {
+          throw new Error('PayMongo did not return a checkout URL. Check PAYMONGO keys.');
+        }
+        const pending: PendingPayMongo = {
+          transaction_id: response.transaction_id,
+          payment_method: paymentMethod,
+          cart,
+          grand_total: grandTotal,
+          subtotal,
+          discount_amount: discountAmount,
+          tax,
+          tendered,
+          change_due,
+          senior_pwd_name: seniorPwdInfo?.name ?? null,
+          senior_pwd_id: seniorPwdInfo?.id ?? null,
+          saved_at: new Date().toISOString(),
+        };
+        sessionStorage.setItem(PAYMONGO_PENDING_KEY, JSON.stringify(pending));
+        setPaymongoPending(pending);
+        window.location.assign(response.checkout_url);
+        return;
+      }
+
+      await salesApi.create(payload);
+    } catch (err: unknown) {
+      setPaymongoProcessing(false);
+      error(err instanceof Error ? err.message : 'Unable to complete payment.');
+      return;
     }
 
-    // Reflect the sale in the live stock shown on the grid/cart
     setStockAdjustments(prev => {
       const next = { ...prev };
       cart.forEach(l => {
@@ -546,16 +612,17 @@ export function POSTerminal() {
 
     setReceipt(completedReceipt);
     setShowCheckout(false);
-    setShowPrintedReceipt(true); // Renders Thermal Receipt layout for print
+    setShowPrintedReceipt(true);
     setAction(`Sale Complete — ${formatCurrency(grandTotal)}`);
 
-    // Auto-trigger browser print for the thermal receipt
     setTimeout(() => {
       try { window.print(); } catch {}
     }, 400);
   };
 
   const startNewTransaction = () => {
+    sessionStorage.removeItem(PAYMONGO_PENDING_KEY);
+    setPaymongoPending(null);
     setCart([]);
     setAmountTendered('');
     setReceipt(null);
@@ -569,6 +636,17 @@ export function POSTerminal() {
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-[#F8FAFC] dark:bg-slate-900 text-[#475569] dark:text-slate-300 font-sans">
       <Toast toasts={toasts} onDismiss={dismiss} />
+
+      {/* Processing payment overlay — shown while creating the PayMongo checkout */}
+      {paymongoProcessing && (
+        <div className="fixed inset-0 z-[70] bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-8 flex flex-col items-center gap-4 animate-in fade-in zoom-in-95 duration-200">
+            <Loader2 className="w-10 h-10 text-[#0F766E] animate-spin" />
+            <p className="text-sm font-bold text-slate-700 dark:text-slate-200">Processing payment…</p>
+            <p className="text-xs text-slate-400">Opening the PayMongo secure checkout shortly.</p>
+          </div>
+        </div>
+      )}
 
       {/* GLOBAL HEADER */}
       <header className="h-14 bg-white dark:bg-slate-800 border-b border-[#E5E7EB] dark:border-slate-700 flex items-center justify-between px-6 shrink-0 shadow-sm z-20 relative">
@@ -1398,11 +1476,11 @@ export function POSTerminal() {
             <div className="w-[60%] p-8 bg-white flex flex-col">
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-3">Payment Method</label>
               
-              <div className="grid grid-cols-5 gap-2 mb-6">
-                {['Cash', 'GCash', 'Maya', 'Debit Card', 'Credit Card'].map((method) => (
+              <div className="grid grid-cols-4 gap-2 mb-6">
+                {['Cash', 'GCash', 'Maya', 'Card'].map((method) => (
                   <button 
                     key={method}
-                    onClick={() => setPaymentMethod(method as PaymentMethod | 'GCash' | 'Maya')}
+                    onClick={() => setPaymentMethod(method as PosPaymentMethod)}
                     className={`py-3 px-1 rounded-xl text-xs font-bold border flex flex-col items-center justify-center gap-2 transition-all text-center
                       ${paymentMethod === method 
                         ? 'bg-[#E8F7F2] text-[#0F766E] border-[#0F766E] shadow-sm' 
@@ -1410,7 +1488,7 @@ export function POSTerminal() {
                   >
                     {method === 'Cash' && <Banknote className="w-5 h-5" />}
                     {(method === 'GCash' || method === 'Maya') && <Wallet className="w-5 h-5" />}
-                    {(method.includes('Card')) && <CreditCard className="w-5 h-5" />}
+                    {method === 'Card' && <CreditCard className="w-5 h-5" />}
                     {method}
                   </button>
                 ))}
@@ -1463,9 +1541,12 @@ export function POSTerminal() {
                 </div>
               ) : (
                 <div className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-[#E5E7EB] rounded-xl p-6 mb-4 bg-[#F8FAFC]">
-                  <CreditCard className="w-12 h-12 mb-3 text-slate-300" />
+                  <Wallet className="w-12 h-12 mb-3 text-[#0F766E]" />
                   <p className="text-sm font-bold text-slate-600 text-center">
-                    Process payment via {paymentMethod} terminal.
+                    Pay via {paymentMethod} on PayMongo's secure hosted checkout.
+                  </p>
+                  <p className="text-xs text-slate-400 text-center mt-1">
+                    You'll be redirected to complete the payment. WiWaste never stores card details.
                   </p>
                 </div>
               )}

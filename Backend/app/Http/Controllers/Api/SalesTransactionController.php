@@ -9,6 +9,7 @@ use App\Models\Inventory;
 use App\Models\StockMovement;
 use App\Models\AuditLog;
 use App\Jobs\WarmAnalyticsCache;
+use App\Services\PayMongoService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -18,16 +19,20 @@ class SalesTransactionController extends Controller
     {
         $perPage = min((int) $request->input('per_page', 20), 100);
         return response()->json(
-            SalesTransaction::with(['user', 'items.product'])->orderByDesc('transaction_date')->paginate($perPage)->through(fn ($t) => [
+            SalesTransaction::with(['user', 'salesItems.product'])->orderByDesc('transaction_date')->paginate($perPage)->through(fn ($t) => [
                 'id'               => $t->transaction_id,
                 'cashier'          => $t->user?->Full_name ?? 'Cashier',
                 'total_amount'     => $t->total_amount,
                 'transaction_date' => $t->transaction_date,
                 'payment_method'   => $t->payment_method,
+                'payment_reference'=> $t->payment_reference,
+                'payment_status'   => $t->payment_status,
+                'paymongo_intent_id' => $t->paymongo_intent_id,
+                'paymongo_checkout_url' => $t->paymongo_checkout_url,
                 'amount_tendered'  => $t->amount_tendered,
                 'change_due'       => $t->change_due,
                 'status'           => $t->status,
-                'items'            => $t->items->map(fn ($item) => [
+                'items'            => $t->salesItems->map(fn ($item) => [
                     'id'           => $item->sales_item_id,
                     'product_name' => $item->product?->product_name,
                     'sku'          => $item->product?->barcode,
@@ -39,10 +44,11 @@ class SalesTransactionController extends Controller
         );
     }
 
-    public function store(Request $request)
+    public function store(Request $request, PayMongoService $paymongoService)
     {
         $data = $request->validate([
-            'payment_method'             => 'required|in:Cash,E-wallet,Credit Card,Debit Card',
+            'payment_method'             => 'required|in:Cash,E-wallet,Credit Card,Debit Card,PayMongo',
+            'payment_reference'          => 'nullable|required_if:payment_method,PayMongo|in:GCash,Maya,Card',
             'amount_tendered'            => 'nullable|numeric|min:0',
             'change_due'                 => 'nullable|numeric|min:0',
             'senior_pwd_name'            => 'nullable|string|max:100',
@@ -58,11 +64,9 @@ class SalesTransactionController extends Controller
 
         $userId = $request->user()?->User_id ?? 1;
 
-        return DB::transaction(function () use ($data, $userId) {
+        return DB::transaction(function () use ($data, $userId, $paymongoService) {
             $total = collect($data['items'])->sum(fn ($i) => $i['quantity'] * $i['unit_price']);
 
-            // Lock inventory rows inside the transaction and re-check stock so concurrent
-            // sales can never push a product below zero.
             $lockedInventories = Inventory::whereIn('product_id', collect($data['items'])->pluck('product_id'))
                 ->with('product')
                 ->lockForUpdate()
@@ -84,7 +88,7 @@ class SalesTransactionController extends Controller
                 }
             }
 
-            $transaction = SalesTransaction::create([
+            $transactionData = [
                 'user_id'            => $userId,
                 'total_amount'       => $total,
                 'transaction_date'   => now(),
@@ -94,12 +98,23 @@ class SalesTransactionController extends Controller
                 'senior_pwd_name'    => $data['senior_pwd_name'] ?? null,
                 'senior_pwd_id'      => $data['senior_pwd_id'] ?? null,
                 'status'             => 'Completed',
-            ]);
+            ];
+
+            if ($data['payment_method'] === 'PayMongo') {
+                $transactionData['status'] = 'Pending';
+                $transactionData['payment_status'] = 'pending';
+                $transactionData['amount_tendered'] = $total;
+                $transactionData['change_due'] = 0;
+                $transactionData['payment_reference'] = $data['payment_reference'];
+            }
+
+            $transaction = SalesTransaction::create($transactionData);
+            $saleItems = [];
 
             foreach ($data['items'] as $item) {
                 $subtotal = $item['quantity'] * $item['unit_price'];
 
-                $saleItem = SalesItem::create([
+                $saleItems[] = SalesItem::create([
                     'transaction_id'  => $transaction->transaction_id,
                     'product_id'      => $item['product_id'],
                     'quantity'        => $item['quantity'],
@@ -111,25 +126,47 @@ class SalesTransactionController extends Controller
                     'override_reason' => $item['override_reason'] ?? null,
                 ]);
 
-                // Deduct inventory (row already locked for update and validated above)
-                $inventory = $lockedInventories->get($item['product_id']);
-                if ($inventory) {
-                    $inventory->current_stock -= $item['quantity'];
-                    $inventory->stock_status  = Inventory::calcStatus($inventory->current_stock, $inventory->product?->reorder_level ?? 10);
-                    $inventory->last_updated  = now();
-                    $inventory->save();
-                }
+                if ($data['payment_method'] !== 'PayMongo') {
+                    $inventory = $lockedInventories->get($item['product_id']);
+                    if ($inventory) {
+                        $inventory->current_stock -= $item['quantity'];
+                        $inventory->stock_status  = Inventory::calcStatus($inventory->current_stock, $inventory->product?->reorder_level ?? 10);
+                        $inventory->last_updated  = now();
+                        $inventory->save();
+                    }
 
-                // Log stock movement
-                StockMovement::create([
-                    'product_id'    => $item['product_id'],
-                    'user_id'       => $userId,
-                    'movement_type' => 'Stock Out',
-                    'quantity'      => $item['quantity'],
-                    'remarks'       => 'Sale - Txn #' . $transaction->transaction_id,
-                    'movement_date' => now(),
-                    'sale_item_id'  => $saleItem->sales_item_id,
-                ]);
+                    StockMovement::create([
+                        'product_id'    => $item['product_id'],
+                        'user_id'       => $userId,
+                        'movement_type' => 'Stock Out',
+                        'quantity'      => $item['quantity'],
+                        'remarks'       => 'Sale - Txn #' . $transaction->transaction_id,
+                        'movement_date' => now(),
+                        'sale_item_id'  => $saleItems[count($saleItems) - 1]->sales_item_id,
+                    ]);
+                }
+            }
+
+            if ($data['payment_method'] === 'PayMongo') {
+                $session = $paymongoService->createCheckoutSession(
+                    (int) round($total * 100),
+                    "WiWaste sale #{$transaction->transaction_id}",
+                    config('services.paymongo.success_url') . '?transaction_id=' . $transaction->transaction_id,
+                    config('services.paymongo.cancel_url'),
+                    $data['payment_reference'],
+                    $transaction->transaction_id
+                );
+
+                $transaction->paymongo_intent_id = $session['payment_intent_id'] ?? null;
+                $transaction->paymongo_checkout_url = $session['checkout_url'] ?? null;
+                $transaction->save();
+
+                return response()->json([
+                    'transaction_id'     => $transaction->transaction_id,
+                    'checkout_url'       => $transaction->paymongo_checkout_url,
+                    'payment_intent_id'  => $transaction->paymongo_intent_id,
+                    'status'             => 'pending',
+                ], 201);
             }
 
             AuditLog::create([
@@ -150,5 +187,36 @@ class SalesTransactionController extends Controller
                 'total_amount'   => $total,
             ], 201);
         });
+    }
+
+    public function show(Request $request, int $id)
+    {
+        $transaction = SalesTransaction::with(['user', 'salesItems.product'])->find($id);
+        if (!$transaction) {
+            return response()->json(['message' => 'Transaction not found.'], 404);
+        }
+
+        return response()->json([
+            'id'                => $transaction->transaction_id,
+            'cashier'           => $transaction->user?->Full_name ?? 'Cashier',
+            'total_amount'      => $transaction->total_amount,
+            'transaction_date'  => $transaction->transaction_date,
+            'payment_method'    => $transaction->payment_method,
+            'payment_reference' => $transaction->payment_reference,
+            'payment_status'    => $transaction->payment_status,
+            'paymongo_intent_id'=> $transaction->paymongo_intent_id,
+            'paymongo_checkout_url' => $transaction->paymongo_checkout_url,
+            'amount_tendered'   => $transaction->amount_tendered,
+            'change_due'        => $transaction->change_due,
+            'status'            => $transaction->status,
+            'items'             => $transaction->salesItems->map(fn ($item) => [
+                'id'           => $item->sales_item_id,
+                'product_name' => $item->product?->product_name,
+                'sku'          => $item->product?->barcode,
+                'quantity'     => $item->quantity,
+                'unit_price'   => $item->unit_price,
+                'subtotal'     => $item->subtotal,
+            ]),
+        ]);
     }
 }

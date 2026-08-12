@@ -40,4 +40,13 @@ return [
         'timeout' => (int) env('ML_SERVICE_TIMEOUT', 30),
     ],
 
+    'paymongo' => [
+        'secret_key'     => env('PAYMONGO_SECRET_KEY'),
+        'public_key'     => env('PAYMONGO_PUBLIC_KEY'),
+        'webhook_secret' => env('PAYMONGO_WEBHOOK_SECRET'),
+        'success_url'    => env('PAYMONGO_SUCCESS_URL'),
+        'cancel_url'     => env('PAYMONGO_CANCEL_URL'),
+        'base_url'       => env('PAYMONGO_API_URL', 'https://api.paymongo.com/v1'),
+    ],
+
 ];

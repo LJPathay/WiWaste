@@ -39,6 +39,7 @@ const ManageInventory = lazyPage(() => import("./pages/inventory/ManageInventory
 const FEFOTracking = lazyPage(() => import("./pages/inventory/FEFOTracking"), "FEFOTracking");
 const Recommendations = lazyPage(() => import("./pages/inventory/Recommendations"), "Recommendations");
 const POSTerminal = lazyPage(() => import("./pages/cashier/POSTerminal"), "POSTerminal");
+const POSPaymentStatus = lazyPage(() => import("./pages/cashier/POSPaymentStatus"), "POSPaymentStatus");
 const ReturnsRefunds = lazyPage(() => import("./pages/cashier/ReturnsRefunds"), "ReturnsRefunds");
 const CashierHistory = lazyPage(() => import("./pages/cashier/CashierHistory"), "CashierHistory");
 const InventoryPerformance = lazyPage(() => import("./pages/manager/InventoryPerformance"), "InventoryPerformance");
@@ -65,6 +66,12 @@ export const router = createBrowserRouter([
         children: [
             { path: "login", Component: Login },
         ],
+    },
+
+    // ── PayMongo payment status (standalone — reached after the hosted checkout) ──
+    {
+        path: "pos/success",
+        Component: POSPaymentStatus,
     },
 
     // ── Authenticated dashboard (always shows sidebar) ──

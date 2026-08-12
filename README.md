@@ -248,6 +248,48 @@ All optional keys live in `Backend/.env.example` and `Frontend/.env.example`. Co
 
 ---
 
+## 💳 PayMongo Payments (Sprint 6)
+
+The POS routes **GCash / Maya / Card** through PayMongo's **hosted Checkout Session** — the customer pays
+on PayMongo's page, so WiWaste never touches card numbers.
+
+### How it works
+
+1. Cashier picks **GCash / Maya / Card** and hits "Complete Payment".
+2. `POST /api/sales` creates the sale as **Pending** (no stock deducted) and returns a `checkout_url`.
+3. The POS opens the PayMongo checkout; on success PayMongo redirects to `PAYMONGO_SUCCESS_URL`
+   (`/pos/success?transaction_id=...`).
+4. The success page polls `GET /api/paymongo/status/{transaction_id}` every 2s. When the PaymentIntent is
+   `paid`, the sale is finalized — **exactly once** (idempotent): stock deducted, `Stock_Movement` +
+   `AuditLog` written, analytics cache warmed.
+5. Cancelled / failed / timeout → no stock change and the cart is restored on the POS.
+
+### Localhost (no webhook needed)
+
+PayMongo's servers can't reach `localhost`, so **skip the webhook entirely** — the poll endpoint finalizes
+the sale. Just set the keys and URLs:
+
+```env
+# Backend/.env
+PAYMONGO_SECRET_KEY=sk_test_...
+PAYMONGO_PUBLIC_KEY=pk_test_...
+PAYMONGO_SUCCESS_URL=http://localhost:5173/pos/success
+PAYMONGO_CANCEL_URL=http://localhost:5173/cashier/pos
+# PAYMONGO_WEBHOOK_SECRET can stay empty on localhost
+```
+
+### Production webhook (optional)
+
+If you want event-driven confirmation (or to let the POS finalize even when the success page is closed):
+
+1. Expose the backend publicly (e.g. ngrok/cloudflared) — the endpoint is `POST /api/paymongo/webhook`.
+2. In the PayMongo dashboard, create a webhook pointing at `https://<your-domain>/api/paymongo/webhook`
+   subscribed to `payment.paid` and `payment.failed`.
+3. Copy the generated `whsec_...` into `PAYMONGO_WEBHOOK_SECRET`. The backend verifies the
+   `X-Paymongo-Signature` header before dispatching the `ProcessPayMongoWebhook` job.
+
+---
+
 ## 🔧 Common Issues & Fixes
 
 ### ❌ `php artisan serve` fails — class not found or autoload error

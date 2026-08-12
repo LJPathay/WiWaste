@@ -11,8 +11,16 @@ class ForecastResult extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'product_id', 'forecast_period', 'predicted_demand', 
-        'overstock_risk', 'generated_date'
+        'product_id', 'forecast_period', 'predicted_demand',
+        'lower_bound', 'upper_bound', 'confidence',
+        'overstock_risk', 'generated_date',
+    ];
+
+    protected $casts = [
+        'predicted_demand' => 'float',
+        'lower_bound' => 'float',
+        'upper_bound' => 'float',
+        'confidence' => 'float',
     ];
 
     public function product()

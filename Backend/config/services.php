@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    'ml_service' => [
+        'url' => env('ML_SERVICE_URL', 'http://localhost:8001'),
+        'timeout' => (int) env('ML_SERVICE_TIMEOUT', 30),
+    ],
+
 ];

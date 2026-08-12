@@ -472,6 +472,50 @@ export const inventoryAnalytics = {
   dashboardSummary: () => request<ApiDashboardSummary>('/analytics/dashboard-summary'),
 };
 
+// ─── Forecast (Sprint 2 — ARIMA) ──────────────────────────
+export interface ApiForecastPoint {
+  period: string;
+  predicted_demand: number;
+  lower: number;
+  upper: number;
+  confidence: number;
+}
+
+export interface ApiForecastRisk {
+  product_id: number;
+  product_name: string;
+  overstock_risk: 'Low' | 'Medium' | 'High';
+  predicted_demand: number;
+}
+
+export interface ApiForecastOverview {
+  generated_at: string | null;
+  total_products: number;
+  avg_confidence: number;
+  model: string;
+  horizon_days: number;
+  top_risks: ApiForecastRisk[];
+  series: ApiForecastPoint[];
+}
+
+export interface ApiForecastProduct {
+  product_id: number;
+  product_name: string;
+  sku: string;
+  current_stock: number;
+  reorder_level: number;
+  overstock_risk: 'Low' | 'Medium' | 'High';
+  model: string;
+  horizon_days: number;
+  series: ApiForecastPoint[];
+}
+
+export const forecast = {
+  overview: () => request<ApiForecastOverview>('/forecast/overview'),
+  byProduct: (productId: number) => request<ApiForecastProduct>(`/forecast/${productId}`),
+  generate: () => request<{ generated: number; timestamp: string }>('/forecast/generate', { method: 'POST' }),
+};
+
 // ─── FEFO Tracking ────────────────────────────────────────
 export const fefo = {
   batches: (page = 1) => request<ApiFefoList>(`/fefo/batches?page=${page}`),

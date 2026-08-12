@@ -17,9 +17,13 @@ By the end of this sprint:
 
 ## 2. Status
 
-- **Not started.**
-- The `Forecast_Result` table and `ForecastResult` model already exist but are **unused**.
-- `Frontend/src/pages/dashboard/PredictiveAnalytics.tsx` currently renders **mock** forecast data.
+- **Complete.**
+- `ml-service/` was scaffolded from scratch: FastAPI app, ARIMA/SARIMAX module (`app/arima_model.py`),
+  pytest suite (12 tests), `requirements.txt`, README.
+- Laravel orchestrates via `MlServiceClient` + `ForecastService` + `ForecastController`; the
+  `forecast:generate` command fills `Forecast_Result` and a daily schedule is registered.
+- Predictive Analytics page now renders real `/forecast/overview` data with loading/empty/error states,
+  a "Generate forecasts" button, and a "Model: ARIMA" indicator.
 
 ## 3. Approach (decided)
 
@@ -144,10 +148,10 @@ File: `Frontend/src/pages/dashboard/PredictiveAnalytics.tsx`
 **Acceptance criteria:** The forecast endpoint returns 30 days of predicted demand per product with
 confidence.
 
-- [ ] `ml-service` `POST /forecast` returns the documented payload for a real product's sales history.
-- [ ] `forecast:generate` runs and fills `Forecast_Result`.
-- [ ] Scheduler entry exists in `routes/console.php`.
-- [ ] `GET /forecast/overview` and `GET /forecast/{product_id}` return documented payloads.
-- [ ] Predictive Analytics page shows API data (with loading/empty/error states).
-- [ ] "Generate forecasts" button works for live demoing.
-- [ ] Backend feature tests + Python pytest pass.
+- [x] `ml-service` `POST /forecast` returns the documented payload for a real product's sales history.
+- [x] `forecast:generate` runs and fills `Forecast_Result`.
+- [x] Scheduler entry exists in `routes/console.php`.
+- [x] `GET /forecast/overview` and `GET /forecast/{product_id}` return documented payloads.
+- [x] Predictive Analytics page shows API data (with loading/empty/error states).
+- [x] "Generate forecasts" button works for live demoing.
+- [x] Backend feature tests + Python pytest pass.

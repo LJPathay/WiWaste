@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\ProfitLossController;
 use App\Http\Controllers\Api\InventoryAnalyticsController;
 use App\Http\Controllers\Api\FEFOController;
 use App\Http\Controllers\Api\RecommendationController;
+use App\Http\Controllers\Api\ForecastController;
 
 /*
 |--------------------------------------------------------------------------
@@ -115,3 +116,10 @@ Route::post('/recommendations/{id}/reject',   [RecommendationController::class, 
 
 // Single-inventory movement history
 Route::get('/inventory/{id}/movements', [InventoryController::class, 'movements']);
+
+// Forecast (Sprint 2) — ARIMA demand predictions from the Python ML service
+Route::prefix('/forecast')->group(function () {
+    Route::get('/overview',     [ForecastController::class, 'overview']);
+    Route::get('/{product_id}', [ForecastController::class, 'show']);
+    Route::post('/generate',    [ForecastController::class, 'generate']);
+});

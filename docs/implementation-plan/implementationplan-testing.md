@@ -15,17 +15,20 @@
 ## 2. Status
 
 - **In progress.** `Backend/tests/Feature/InventorySyncTest.php` covers the Sprint 1 inventory
-  invariants and passes (`php artisan test` → 10 tests). Groups 3.4–3.7 are not started.
+  invariants and `Backend/tests/Feature/ForecastTest.php` covers the Sprint 2 forecast endpoints
+  (both pass — `php artisan test` → 16 tests). `ml-service` pytest → 12 tests. Groups 3.5–3.7 are
+  not started.
 - **Frontend:** no test runner configured. We add a minimal Vitest setup only for the API client and the
   mock-data fallback behavior (Sprint 5 overview pages stay on mock).
 
 ## 2.1 Known issues / backlog
 
-- **Frontend lint & typecheck are NOT clean (pre-existing, outside Sprint 0/1 scope).** `npx eslint src`
-  reports 169 problems (166 errors, 3 warnings) and `npx tsc -b` fails (~90 errors) across the app
+- **Frontend lint & typecheck are NOT clean (pre-existing, outside Sprint 0–2 scope).** `npx eslint src`
+  reports 163 problems (160 errors, 3 warnings) and `npx tsc -b` fails (~61 errors) across the app
   (unused imports, implicit `any`, unused locals, missing `isOpen` prop typing on `Modal`, etc.). None of
-  these come from Sprint 1's barcode/stock work, and they are not part of Sprint 0/1 Definition of Done.
-  `npm run build` succeeds. Clean this backlog before the section-8 "lint clean" checkbox is claimed.
+  these come from the Sprint 1/2 feature work (the Sprint 2 Predictive Analytics rewrite actually
+  removed ~30 of the pre-existing type errors). `npm run build` succeeds. Clean this backlog before the
+  section-8 "lint clean" checkbox is claimed.
 
 ## 3. Backend tests (PHPUnit)
 
@@ -51,12 +54,12 @@ Run with: `php artisan test`.
 12. Sale cannot exceed available stock (422, nothing written) — added alongside Sprint 1 hardening.
 
 ### 3.4 Sprint 2 — Forecast
-13. `POST /forecast` (ml-service) is deterministic on a fixed sales fixture.
-14. Product with no sales returns a flat-series forecast from the service (no crash).
-15. `POST /forecast/generate` persists rows to `Forecast_Result`.
-16. `GET /forecast/overview` returns well-formed series; `avg_confidence` in [0,100].
-17. MAPE on a synthetic trend+season series below the agreed threshold (e.g., < 25%).
-18. Service offline → `/forecast/*` returns a clear 503 (no PHP fallback).
+13. [x] `POST /forecast` (ml-service) is deterministic on a fixed sales fixture.
+14. [x] Product with no sales returns a flat-series forecast from the service (no crash).
+15. [x] `POST /forecast/generate` persists rows to `Forecast_Result`.
+16. [x] `GET /forecast/overview` returns well-formed series; `avg_confidence` in [0,100].
+17. [x] MAPE on a synthetic trend+season series below the agreed threshold (e.g., < 25%).
+18. [x] Service offline → `/forecast/*` returns a clear 503 (no PHP fallback).
 
 ### 3.5 Sprint 3 — Loss risk
 19. With a fake service URL (Laravel `Http::fake`) → results parsed, cached, `engine = "xgboost"`.
@@ -96,15 +99,15 @@ Frontend/
 Run inside the Python 3.12 venv with `pytest` from `ml-service/`.
 
 - `ml-service/tests/test_api.py`:
-  - `GET /health` → `{ status: "ok" }`.
-  - `POST /forecast` — returns one entry per horizon day with the documented fields; flat/short sales
+  - [x] `GET /health` → `{ status: "ok" }`.
+  - [x] `POST /forecast` — returns one entry per horizon day with the documented fields; flat/short sales
     series return a forecast, never an error; deterministic on a fixed fixture.
   - `POST /predict/loss` — returns one result per input product with the documented fields; batch of 0
     products → 422.
   - `POST /optimize/replenishment` — same inputs + seed → same plan; `total_order_value <= budget`;
     no negative order quantities; missing budget → 422.
-- `ml-service/tests/test_arima.py`, `test_ga.py` — optional: direct unit tests of the ARIMA and GA
-  modules (determinism, convergence, MAPE threshold).
+- `ml-service/tests/test_arima.py` — direct unit tests of the ARIMA module (determinism, short/no-sales
+  guards, MAPE threshold, overstock risk). `test_ga.py` (Sprint 4) still pending.
 
 ## 6. Evaluation metrics
 

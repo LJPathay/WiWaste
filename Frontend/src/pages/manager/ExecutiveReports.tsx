@@ -1,17 +1,16 @@
 import React, { useState } from 'react';
-import { FileText, Download, Info, Loader2 } from 'lucide-react';
+import { Download, Info, Loader2 } from 'lucide-react';
 import {
   ComposedChart,
   Area,
   Bar,
   Line,
   LineChart,
-  BarChart,
   PieChart,
   Pie,
   Cell,
   ReferenceLine,
-  CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend
+  CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer
 } from 'recharts';
 import { Toast, useToast } from '../../components/ui/Toast';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';

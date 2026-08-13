@@ -1,6 +1,6 @@
 import React, { useState, useEffect, memo } from 'react';
 import {
-  Users, Search, Plus, Edit2, X, Info, Loader2, Shield, Package,
+  Users, Search, Plus, Edit2, X, Info, Shield, Package,
   Briefcase, AlertTriangle, CheckCircle2, Circle, RotateCcw, Trash2,
   Lock, ShieldOff, ChevronDown, Check, UserX, Eye, EyeOff, ChevronLeft, ChevronRight, AlertCircle
 } from 'lucide-react';
@@ -170,7 +170,7 @@ export function ManageUsers() {
       id: 'status-filter',
       title: 'Filter by Status',
       description: 'Use these tabs to filter users by their account status: All, Active, Inactive, or Quarantined.',
-      targetSelector: '.flex.flex-wrap.items-center.gap-1\.5.bg-slate-100',
+      targetSelector: '.flex.flex-wrap.items-center.gap-1.5.bg-slate-100',
       position: 'bottom' as const,
     },
     {
@@ -270,17 +270,11 @@ export function ManageUsers() {
 
   // Filtered users logic
   const filteredUsers = users.filter(u => {
-    let matchesStatus = true;
-    if (statusFilter === 'Quarantined') {
-      matchesStatus = u.status === 'Quarantined';
-    } else if (statusFilter === 'Active') {
-      matchesStatus = u.status === 'Active';
-    } else if (statusFilter === 'Inactive') {
-      matchesStatus = u.status === 'Inactive';
-    } else {
-      // 'all' status: show non-quarantined accounts (Active & Inactive)
-      matchesStatus = u.status !== 'Quarantined';
-    }
+    const matchesStatus =
+      statusFilter === 'Quarantined' ? u.status === 'Quarantined' :
+      statusFilter === 'Active' ? u.status === 'Active' :
+      statusFilter === 'Inactive' ? u.status === 'Inactive' :
+      u.status !== 'Quarantined';
 
     const matchesRole = roleFilter === 'all' || u.role === roleFilter;
 
@@ -319,7 +313,7 @@ export function ManageUsers() {
     { id: 'upper', label: 'One uppercase letter (A-Z)', met: /[A-Z]/.test(pwd) },
     { id: 'lower', label: 'One lowercase letter (a-z)', met: /[a-z]/.test(pwd) },
     { id: 'number', label: 'One number (0-9)', met: /[0-9]/.test(pwd) },
-    { id: 'special', label: 'One special character (!@#$%^&*)', met: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pwd) },
+    { id: 'special', label: 'One special character (!@#$%^&*)', met: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(pwd) },
   ];
 
   const passwordRules = getPasswordRules(form.password);
@@ -350,8 +344,8 @@ export function ManageUsers() {
       setIsAddOpen(false);
       addItem(created);
       await refetch();
-    } catch (err: any) {
-      setFormError(err.message ?? 'Failed to add user');
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'Failed to add user');
     } finally {
       setSubmitting(false);
     }
@@ -383,8 +377,8 @@ export function ManageUsers() {
       updateItem(editingUser.id, updated);
       setIsEditOpen(false);
       await refetch();
-    } catch (err: any) {
-      setFormError(err.message ?? 'Failed to update user');
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'Failed to update user');
     } finally {
       setSubmitting(false);
     }
@@ -399,8 +393,8 @@ export function ManageUsers() {
       updateItem(quarantineModalUser.id, { ...quarantineModalUser, status: 'Quarantined' });
       setQuarantineModalUser(null);
       await refetch();
-    } catch (err: any) {
-      alert(err.message ?? 'Failed to quarantine user');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to quarantine user');
     } finally {
       setSubmitting(false);
     }
@@ -415,8 +409,8 @@ export function ManageUsers() {
       updateItem(reactivateModalUser.id, { ...reactivateModalUser, status: 'Active' });
       setReactivateModalUser(null);
       await refetch();
-    } catch (err: any) {
-      alert(err.message ?? 'Failed to reactivate user');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to reactivate user');
     } finally {
       setSubmitting(false);
     }
@@ -431,8 +425,8 @@ export function ManageUsers() {
       removeItem(deleteModalUser.id);
       setDeleteModalUser(null);
       await refetch();
-    } catch (err: any) {
-      alert(err.message ?? 'Failed to permanently delete user');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to permanently delete user');
     } finally {
       setSubmitting(false);
     }
@@ -537,7 +531,7 @@ export function ManageUsers() {
                 return (
                   <button
                     key={tab.id}
-                    onClick={() => setStatusFilter(tab.id as any)}
+                    onClick={() => setStatusFilter(tab.id as 'all' | 'Active' | 'Inactive' | 'Quarantined')}
                     className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
                       isSelected
                         ? tab.id === 'Quarantined'
@@ -569,7 +563,7 @@ export function ManageUsers() {
                 <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Role:</span>
                 <select
                   value={roleFilter}
-                  onChange={e => setRoleFilter(e.target.value as any)}
+                  onChange={e => setRoleFilter(e.target.value as 'all' | 'Admin' | 'Inventory' | 'Business Owner')}
                   className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-xs font-medium rounded-lg px-3 py-2 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#006a61]"
                 >
                   <option value="all">All Roles</option>
@@ -927,7 +921,7 @@ export function ManageUsers() {
                 </label>
                 <select
                   value={form.status}
-                  onChange={e => setForm(prev => ({ ...prev, status: e.target.value as any }))}
+                  onChange={e => setForm(prev => ({ ...prev, status: e.target.value as 'Active' | 'Inactive' | 'Quarantined' }))}
                   className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 py-2 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100"
                 >
                   <option value="Active">Active</option>
@@ -1103,7 +1097,7 @@ export function ManageUsers() {
                 </label>
                 <select
                   value={form.status}
-                  onChange={e => setForm(prev => ({ ...prev, status: e.target.value as any }))}
+                  onChange={e => setForm(prev => ({ ...prev, status: e.target.value as 'Active' | 'Inactive' | 'Quarantined' }))}
                   className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 py-2 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100"
                 >
                   <option value="Active">Active</option>
@@ -1196,8 +1190,8 @@ export function ManageUsers() {
                         await usersApi.update(viewingUser.id, { status: newStatus });
                         updateItem(viewingUser.id, { ...viewingUser, status: newStatus });
                         setViewingUser({ ...viewingUser, status: newStatus });
-                      } catch (err: any) {
-                        alert(err.message ?? 'Failed to update status');
+                      } catch (err) {
+                        alert(err instanceof Error ? err.message : 'Failed to update status');
                       }
                     }}
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 py-2 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100 cursor-pointer"

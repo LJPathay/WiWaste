@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { 
   Barcode, Search, Trash2, CreditCard, Wallet, Banknote, Plus, Minus, 
   User, Receipt, Clock, ArrowRight, Printer, CheckCircle2,
-  Archive, RotateCcw, Percent, Search as SearchIcon, MoreHorizontal, X, AlertCircle, Keyboard, Info,
+  Archive, RotateCcw, Percent, Search as SearchIcon, MoreHorizontal, AlertCircle, Keyboard, Info,
   Monitor, Tablet, Smartphone, Loader2
 } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
@@ -25,7 +25,7 @@ import {
   type SalesTransaction,
 } from '../../utils/cashierData';
 import { clearStoredSession, getStoredSession } from '../../utils/mockAuthAndFeatures';
-import { products as productsApi, sales as salesApi, paymongo as paymongoApi } from '../../services/api';
+import { products as productsApi, sales as salesApi, paymongo as paymongoApi, type ApiProduct } from '../../services/api';
 
 interface CartLine {
   product: CashierProduct;
@@ -120,6 +120,58 @@ const CATEGORIES = [
   { id: 'CAT-PERSONAL', label: 'Personal Care' },
 ];
 
+// Backend category names → POS category filter slugs.
+const DB_CATEGORY_TO_SLUG: Record<string, string> = {
+  'Food & Beverage': 'CAT-GROCERY',
+  'Medicine & Health': 'CAT-PHARMA',
+  'Personal Care': 'CAT-PERSONAL',
+  'Household': 'CAT-HOUSEHOLD',
+  'Dairy': 'CAT-GROCERY',
+  'Frozen Goods': 'CAT-GROCERY',
+  'Beverages': 'CAT-BEVERAGE',
+  'Snacks': 'CAT-SNACK',
+};
+
+function apiProductToCashier(api: ApiProduct): CashierProduct {
+  return {
+    product_id: `P-${String(api.id).padStart(4, '0')}`,
+    db_id: api.id,
+    plu_code: String(api.id),
+    category_id: DB_CATEGORY_TO_SLUG[api.category] ?? 'CAT-GROCERY',
+    supplier_id: `SUP-${api.supplier?.toUpperCase() ?? 'GEN'}`,
+    barcode: api.sku,
+    product_name: api.name,
+    cost_price: api.cost_price,
+    selling_price: api.selling_price,
+    reorder_level: api.reorder_level,
+    expiration_date: api.expiration_date ?? '',
+    current_stock: api.stock,
+  };
+}
+
+const POS_CATALOG_CACHE_KEY = 'wiwaste_pos_catalog';
+const POS_CATALOG_CACHE_TTL_MS = 5 * 60 * 1000;
+
+function loadCachedCatalog(): CashierProduct[] | null {
+  try {
+    const raw = localStorage.getItem(POS_CATALOG_CACHE_KEY);
+    if (!raw) return null;
+    const { savedAt, products } = JSON.parse(raw);
+    if (!Array.isArray(products) || Date.now() - Number(savedAt) > POS_CATALOG_CACHE_TTL_MS) return null;
+    return products as CashierProduct[];
+  } catch {
+    return null;
+  }
+}
+
+function saveCachedCatalog(products: CashierProduct[]): void {
+  try {
+    localStorage.setItem(POS_CATALOG_CACHE_KEY, JSON.stringify({ savedAt: Date.now(), products }));
+  } catch {
+    // storage unavailable — catalog still loads from the network
+  }
+}
+
 export function POSTerminal() {
   const { toasts, dismiss, success, error } = useToast();
   const { setAction } = useHeaderAction();
@@ -140,6 +192,11 @@ export function POSTerminal() {
       return raw ? JSON.parse(raw) : null;
     } catch { return null; }
   });
+
+  // Live product catalog. Renders instantly from cache (or the mock list) and refreshes in the
+  // background from the backend — no skeleton loading, the grid is usable immediately.
+  const [catalog, setCatalog] = useState<CashierProduct[]>(() => loadCachedCatalog() ?? cashierProducts);
+  const [catalogError, setCatalogError] = useState(false);
   
   const [pluBuffer, setPluBuffer] = useState('');
   const pluTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -161,7 +218,7 @@ export function POSTerminal() {
   
   const [receipt, setReceipt] = useState<SalesTransaction | null>(null);
   const [showPrintedReceipt, setShowPrintedReceipt] = useState(false);
-  const [isVatRegistered, setIsVatRegistered] = useState(false); // Non-VAT registered micro-enterprise by default
+  const isVatRegistered = false; // Non-VAT registered micro-enterprise by default
   
   const [draggedProduct, setDraggedProduct] = useState<CashierProduct | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
@@ -201,12 +258,14 @@ export function POSTerminal() {
     } catch { return true; }
   });
   const toggleHotkeys = () => {
-    setHotkeysEnabled(prev => {
-      const next = !prev;
-      localStorage.setItem('pos_hotkeys_enabled', JSON.stringify(next));
-      next ? success('Hotkeys enabled') : success('Hotkeys disabled');
-      return next;
-    });
+    const next = !hotkeysEnabled;
+    setHotkeysEnabled(next);
+    localStorage.setItem('pos_hotkeys_enabled', JSON.stringify(next));
+    if (next) {
+      success('Hotkeys enabled');
+    } else {
+      success('Hotkeys disabled');
+    }
   };
 
   const saveHotkeys = () => {
@@ -232,6 +291,82 @@ export function POSTerminal() {
     return () => document.removeEventListener('keydown', handleHotkeyRecord, true);
   }, [recordingAction, handleHotkeyRecord]);
 
+  const filteredProducts = useMemo(() => {
+    const source = catalogError && catalog.length === 0 ? cashierProducts : catalog;
+    const q = search.toLowerCase();
+    return source.filter(p => {
+      const matchCat = activeCategory === 'all' || p.category_id === activeCategory;
+      const matchSearch = !q || p.product_name.toLowerCase().includes(q) || p.barcode.includes(q);
+      return matchCat && matchSearch;
+    });
+  }, [search, activeCategory, catalog, catalogError]);
+
+  const addProduct = useCallback((product: CashierProduct, qtyOverride?: number) => {
+    const desiredQty = qtyOverride ?? 1;
+    const available = Math.max(0, product.current_stock - (stockAdjustments[product.product_id] ?? 0));
+    setCart(prev => {
+      const existing = prev.find(l => l.product.product_id === product.product_id);
+      const newQty = existing
+        ? Math.min(existing.quantity + desiredQty, available)
+        : Math.min(desiredQty, available);
+      setAction(`Added ${product.product_name} ×${newQty} to cart`);
+      if (existing) {
+        return prev.map(l =>
+          l.product.product_id === product.product_id
+            ? { ...l, quantity: newQty }
+            : l
+        );
+      }
+      return [...prev, { product, quantity: newQty, discountPct: 0 }];
+    });
+    setSearch('');
+  }, [stockAdjustments, setAction, setCart, setSearch]);
+
+  const handlePluLookup = useCallback(async (code: string) => {
+    const localMatch = cashierProducts.find(
+      p => p.plu_code === code || p.barcode === code || p.product_id.replace('P-', '') === code
+    );
+    if (localMatch) {
+      addProduct(localMatch);
+      setSearch('');
+      barcodeRef.current?.focus();
+      return;
+    }
+    try {
+      const result = await productsApi.lookup(code);
+      const product: CashierProduct = apiProductToCashier(result);
+      addProduct(product);
+      setSearch('');
+    } catch {
+      error(`Product not found: ${code}`);
+    }
+    setPluBuffer('');
+    barcodeRef.current?.focus();
+  }, [addProduct, error, setSearch, setPluBuffer]);
+
+  const updateQty = useCallback((productId: string, qty: number) => {
+    if (qty < 1) {
+      setCart(prev => prev.filter(l => l.product.product_id !== productId));
+      return;
+    }
+    const line = cart.find(l => l.product.product_id === productId);
+    if (line) {
+      const available = Math.max(0, line.product.current_stock - (stockAdjustments[line.product.product_id] ?? 0));
+      const capped = Math.min(qty, available);
+      setCart(prev =>
+        prev.map(l =>
+          l.product.product_id === productId
+            ? { ...l, quantity: capped }
+            : l
+        )
+      );
+    }
+  }, [cart, stockAdjustments, setCart]);
+
+  const removeProduct = useCallback((productId: string) => {
+    setCart(prev => prev.filter(l => l.product.product_id !== productId));
+  }, [setCart]);
+
   // Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -242,18 +377,18 @@ export function POSTerminal() {
         e.preventDefault();
         barcodeRef.current?.focus();
       } else if (e.key === hotkeys.selectFirstQueue && !isSearchFocused) {
-        if (cartRef.current.length > 0) {
+        if (cart.length > 0) {
           e.preventDefault();
-          setSelectedLineId(prev => prev ? prev : cartRef.current[0].product.product_id);
+          setSelectedLineId(prev => prev ? prev : cart[0].product.product_id);
         }
       } else if (e.key === hotkeys.selectNextItem && selectedLineId && !isSearchFocused) {
         e.preventDefault();
-        const idx = cartRef.current.findIndex(l => l.product.product_id === selectedLineId);
-        if (idx < cartRef.current.length - 1) setSelectedLineId(cartRef.current[idx + 1].product.product_id);
+        const idx = cart.findIndex(l => l.product.product_id === selectedLineId);
+        if (idx < cart.length - 1) setSelectedLineId(cart[idx + 1].product.product_id);
       } else if (e.key === hotkeys.selectPrevItem && selectedLineId && !isSearchFocused) {
         e.preventDefault();
-        const idx = cartRef.current.findIndex(l => l.product.product_id === selectedLineId);
-        if (idx > 0) setSelectedLineId(cartRef.current[idx - 1].product.product_id);
+        const idx = cart.findIndex(l => l.product.product_id === selectedLineId);
+        if (idx > 0) setSelectedLineId(cart[idx - 1].product.product_id);
       } else if (e.key === hotkeys.checkout) {
         e.preventDefault();
         if (cart.length > 0 && !showCheckout) setShowCheckout(true);
@@ -266,7 +401,7 @@ export function POSTerminal() {
       } else if (e.key === hotkeys.unqueue && !isSearchFocused) {
         if (selectedLineId) {
           e.preventDefault();
-          const line = cartRef.current.find(l => l.product.product_id === selectedLineId);
+          const line = cart.find(l => l.product.product_id === selectedLineId);
           if (line) {
             if (line.quantity > 1) {
               updateQty(selectedLineId, line.quantity - 1);
@@ -313,10 +448,10 @@ export function POSTerminal() {
           (_, i) => hotkeys[`product_${i}` as ProductSlotKey] === e.key
         );
         if (slotIndex !== -1) {
-          const pinnedId = pinnedOrderRef.current[slotIndex];
+          const pinnedId = pinnedOrder[slotIndex];
           const product = pinnedId
-            ? filteredProductsRef.current.find(p => p.product_id === pinnedId)
-            : filteredProductsRef.current[slotIndex];
+            ? filteredProducts.find(p => p.product_id === pinnedId)
+            : filteredProducts[slotIndex];
           if (product) {
             e.preventDefault();
             addProduct(product);
@@ -326,7 +461,7 @@ export function POSTerminal() {
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [cart.length, showCheckout, hotkeys, showHotkeySettings, recordingAction, selectedLineId, hotkeysEnabled]);
+  }, [cart, showCheckout, hotkeys, showHotkeySettings, recordingAction, selectedLineId, hotkeysEnabled, addProduct, handlePluLookup, pluBuffer, updateQty, removeProduct, filteredProducts, pinnedOrder]);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -336,6 +471,20 @@ export function POSTerminal() {
   // Auto-focus the scan input when the POS loads so a USB scanner works immediately
   useEffect(() => {
     barcodeRef.current?.focus();
+  }, []);
+
+  // Load the live product catalog so every cart line carries the real DB product_id.
+  useEffect(() => {
+    let cancelled = false;
+    productsApi.list({ per_page: 100 })
+      .then(res => {
+        if (cancelled) return;
+        const mapped = res.data.map(apiProductToCashier);
+        setCatalog(mapped);
+        saveCachedCatalog(mapped);
+      })
+      .catch(() => { if (!cancelled) setCatalogError(true); });
+    return () => { cancelled = true; };
   }, []);
 
   // Restore an unpaid PayMongo cart when the cashier returns from the hosted checkout (e.g. cancelled)
@@ -357,106 +506,6 @@ export function POSTerminal() {
   const grandTotal = (subtotal - discountAmount) + tax;
   const tendered = Number(amountTendered || 0);
   const changeDue = paymentMethod === 'Cash' ? Math.max(0, tendered - grandTotal) : 0;
-
-  const filteredProducts = useMemo(() => {
-    const q = search.toLowerCase();
-    return cashierProducts.filter(p => {
-      const matchCat = activeCategory === 'all' || p.category_id === activeCategory;
-      const matchSearch = !q || p.product_name.toLowerCase().includes(q) || p.barcode.includes(q);
-      return matchCat && matchSearch;
-    });
-  }, [search, activeCategory]);
-
-  // Keep a ref so keydown handler always sees latest cart
-  const cartRef = useRef(cart);
-  useEffect(() => { cartRef.current = cart; }, [cart]);
-
-  // Keep a ref so the keydown handler always sees the latest filtered list
-  const filteredProductsRef = useRef(filteredProducts);
-  useEffect(() => { filteredProductsRef.current = filteredProducts; }, [filteredProducts]);
-
-  // Keep a ref so the keydown handler always sees the latest pinned order
-  const pinnedOrderRef = useRef(pinnedOrder);
-  useEffect(() => { pinnedOrderRef.current = pinnedOrder; }, [pinnedOrder]);
-
-  const handlePluLookup = async (code: string) => {
-    const localMatch = cashierProducts.find(
-      p => p.plu_code === code || p.barcode === code || p.product_id.replace('P-', '') === code
-    );
-    if (localMatch) {
-      addProduct(localMatch);
-      setSearch('');
-      barcodeRef.current?.focus();
-      return;
-    }
-    try {
-      const result = await productsApi.lookup(code);
-      const product: CashierProduct = {
-        product_id: `P-${String(result.id).padStart(4, '0')}`,
-        plu_code: result.plu_code ?? String(result.id),
-        category_id: `CAT-${result.category?.toUpperCase() ?? 'GEN'}`,
-        supplier_id: `SUP-${result.supplier?.toUpperCase() ?? 'GEN'}`,
-        barcode: result.sku,
-        product_name: result.name,
-        cost_price: result.cost_price,
-        selling_price: result.selling_price,
-        reorder_level: result.reorder_level,
-        expiration_date: result.expiration_date ?? '',
-        current_stock: result.stock,
-        image_url: undefined,
-      };
-      addProduct(product);
-      setSearch('');
-    } catch {
-      error(`Product not found: ${code}`);
-    }
-    setPluBuffer('');
-    barcodeRef.current?.focus();
-  };
-
-  const addProduct = (product: CashierProduct, qtyOverride?: number) => {
-    const desiredQty = qtyOverride ?? 1;
-    const available = Math.max(0, product.current_stock - (stockAdjustments[product.product_id] ?? 0));
-    setCart(prev => {
-      const existing = prev.find(l => l.product.product_id === product.product_id);
-      const newQty = existing
-        ? Math.min(existing.quantity + desiredQty, available)
-        : Math.min(desiredQty, available);
-      setAction(`Added ${product.product_name} ×${newQty} to cart`);
-      if (existing) {
-        return prev.map(l =>
-          l.product.product_id === product.product_id
-            ? { ...l, quantity: newQty }
-            : l
-        );
-      }
-      return [...prev, { product, quantity: newQty, discountPct: 0 }];
-    });
-    setSearch('');
-  };
-
-  const updateQty = (productId: string, qty: number) => {
-    if (qty < 1) {
-      setCart(prev => prev.filter(l => l.product.product_id !== productId));
-      return;
-    }
-    const line = cart.find(l => l.product.product_id === productId);
-    if (line) {
-      const available = Math.max(0, line.product.current_stock - (stockAdjustments[line.product.product_id] ?? 0));
-      const capped = Math.min(qty, available);
-      setCart(prev =>
-        prev.map(l =>
-          l.product.product_id === productId
-            ? { ...l, quantity: capped }
-            : l
-        )
-      );
-    }
-  };
-
-  const removeProduct = (productId: string) => {
-    setCart(prev => prev.filter(l => l.product.product_id !== productId));
-  };
 
   const applyDiscount = (pct: number, fixedAmount?: number) => {
     if (pct > 0 && !selectedLineId && !fixedAmount) {
@@ -536,7 +585,7 @@ export function POSTerminal() {
       senior_pwd_name: seniorPwdInfo?.name ?? null,
       senior_pwd_id: seniorPwdInfo?.id ?? null,
       items: cart.map(l => ({
-        product_id: Number(l.product.plu_code ?? l.product.product_id.replace('P-', '')),
+        product_id: l.product.db_id ?? Number(l.product.plu_code ?? l.product.product_id.replace('P-', '')),
         quantity: l.quantity,
         unit_price: l.product.selling_price * (1 - (l.discountPct || 0)) - (l.discountAmount || 0),
         discount_pct: l.discountPct ?? 0,
@@ -561,7 +610,7 @@ export function POSTerminal() {
           discount_amount: discountAmount,
           tax,
           tendered,
-          change_due,
+          change_due: changeDue,
           senior_pwd_name: seniorPwdInfo?.name ?? null,
           senior_pwd_id: seniorPwdInfo?.id ?? null,
           saved_at: new Date().toISOString(),
@@ -616,7 +665,7 @@ export function POSTerminal() {
     setAction(`Sale Complete — ${formatCurrency(grandTotal)}`);
 
     setTimeout(() => {
-      try { window.print(); } catch {}
+      try { window.print(); } catch { /* printing is best-effort */ }
     }, 400);
   };
 
@@ -780,7 +829,7 @@ export function POSTerminal() {
                   .filter((p): p is CashierProduct => !!p);
                 const unpinned = filteredProducts.filter(p => !pinnedOrder.includes(p.product_id));
                 const ordered = [...pinnedProducts, ...unpinned];
-                return ordered.map((product, idx) => {
+                return ordered.map((product) => {
                   const slotIndex = pinnedOrder.indexOf(product.product_id);
                   const slotKey = slotIndex !== -1 && slotIndex < 10 ? hotkeys[`product_${slotIndex}` as ProductSlotKey] : null;
                   const isDragging = draggedProduct?.product_id === product.product_id;
@@ -829,18 +878,7 @@ export function POSTerminal() {
                     <div className="flex-1 flex flex-col justify-between pt-1">
                       <p className="text-[11px] font-bold text-slate-800 dark:text-slate-100 leading-tight line-clamp-2 mb-1">{product.product_name}</p>
                       <div className="flex items-center justify-between mt-auto">
-                        <div className="flex items-center gap-1.5">
-                          <p className="text-xs font-black text-slate-900 dark:text-slate-100">{formatCurrency(product.selling_price)}</p>
-                          <span className={`text-[9px] font-bold px-1 rounded ${
-                            product.current_stock - (stockAdjustments[product.product_id] ?? 0) <= 0
-                              ? 'bg-red-50 text-red-500 dark:bg-red-900/30 dark:text-red-400'
-                              : product.current_stock - (stockAdjustments[product.product_id] ?? 0) <= product.reorder_level
-                                ? 'bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
-                                : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
-                          }`}>
-                            {product.current_stock - (stockAdjustments[product.product_id] ?? 0)} left
-                          </span>
-                        </div>
+                        <p className="text-xs font-black text-slate-900 dark:text-slate-100">{formatCurrency(product.selling_price)}</p>
                         <button className="flex items-center justify-center w-5 h-5 rounded bg-[#16A34A] text-white hover:bg-[#15803d]">
                           <Plus className="w-3 h-3" />
                         </button>
@@ -853,7 +891,9 @@ export function POSTerminal() {
               {filteredProducts.length === 0 && (
                 <div className="col-span-full py-16 text-center text-slate-400">
                   <SearchIcon className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                  <p className="text-sm font-medium">No products match your search</p>
+                  <p className="text-sm font-medium">
+                    {catalogError && catalog.length === 0 ? 'Unable to load products — check that the backend is running' : 'No products match your search'}
+                  </p>
                 </div>
               )}
             </div>
@@ -935,26 +975,17 @@ export function POSTerminal() {
                       <div className="truncate">
                         <p className="font-bold text-slate-800 dark:text-slate-100 text-xs truncate leading-snug">{line.product.product_name}</p>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium truncate">
-                            {line.product.barcode}
-                          </p>
-                          {line.discountPct && line.discountPct > 0 ? (
-                            <span className="text-[9px] font-bold text-[#0F766E] bg-[#0F766E]/10 px-1 rounded">-{line.discountPct * 100}%</span>
-                          ) : null}
-                          {isSelected && (
-                            <span className="text-[9px] font-bold text-red-400 bg-red-50 dark:bg-red-900/20 px-1 rounded">{hotkeys.unqueue} to remove</span>
-                          )}
-                        </div>
-                        <p className={`mt-0.5 text-[10px] font-semibold ${
-                          line.product.current_stock - (stockAdjustments[line.product.product_id] ?? 0) - line.quantity <= 0
-                            ? 'text-red-500 dark:text-red-400'
-                            : line.product.current_stock - (stockAdjustments[line.product.product_id] ?? 0) - line.quantity <= line.product.reorder_level
-                              ? 'text-amber-500 dark:text-amber-400'
-                              : 'text-emerald-600 dark:text-emerald-400'
-                        }`}>
-                          {line.product.current_stock - (stockAdjustments[line.product.product_id] ?? 0) - line.quantity <= 0 ? 'Out of stock after this sale' : `${line.product.current_stock - (stockAdjustments[line.product.product_id] ?? 0) - line.quantity} left after sale`}
+                        <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium truncate">
+                          {line.product.barcode}
                         </p>
+                        {line.discountPct && line.discountPct > 0 ? (
+                          <span className="text-[9px] font-bold text-[#0F766E] bg-[#0F766E]/10 px-1 rounded">-{line.discountPct * 100}%</span>
+                        ) : null}
+                        {isSelected && (
+                          <span className="text-[9px] font-bold text-red-400 bg-red-50 dark:bg-red-900/20 px-1 rounded">{hotkeys.unqueue} to remove</span>
+                        )}
                       </div>
+                    </div>
                     </div>
 
                     {/* Unit Price */}
@@ -1687,7 +1718,7 @@ export function POSTerminal() {
             <div className="bg-slate-50 p-4 border-t border-slate-200 flex gap-2 no-print">
               <button 
                 onClick={() => {
-                  try { window.print(); } catch {}
+                  try { window.print(); } catch { /* printing is best-effort */ }
                 }}
                 className="py-3 px-4 text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 flex items-center gap-1.5"
               >

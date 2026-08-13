@@ -13,6 +13,6 @@ root.render(
 // Remove splash once React has painted
 requestAnimationFrame(() => {
   requestAnimationFrame(() => {
-    (window as any).__hideSplash?.();
+    (window as Window & { __hideSplash?: () => void }).__hideSplash?.();
   });
 });

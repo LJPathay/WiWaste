@@ -41,12 +41,14 @@ By the end of this sprint:
   (demo offline mode) — stock sync still occurs server-side on the live path. Caveat: a backend *reject*
   (e.g. concurrent stock-out) is also silently tolerated; acceptable for the demo, revisit if real
   contention handling is needed.
-- **Returns & Refunds page is mock-only** (`ReturnsRefunds.tsx` uses `initialSalesTransactions` + toast,
-  never calls `POST /returns`), so returns are not persisted/restocked server-side. Out of Sprint 5 scope
-  (not in the demo walkthrough); flagged for the Testing/Integration backlog.
-- **ESLint is not clean repo-wide** (pre-existing `no-explicit-any`/unused-var backlog, ~157 errors in
-  39 files). This change adds **no new** lint errors (removed one). The backlog is owned by the Testing
-  sprint (see `implementationplan-testing.md` §2.1). `npm run build` and `npx tsc --noEmit` pass.
+- **Returns & Refunds now persisted end-to-end** (resolved in the Testing/Integration phase): the page no
+  longer uses `initialSalesTransactions` + toast — it searches real sales via `GET /sales?search=`,
+  records returns via `POST /returns` (stock restocked + audit log server-side), and lists history via
+  `GET /returns`. `GET /sales` gained an optional `search` filter (transaction id / product name) to
+  support the search.
+- **ESLint is clean repo-wide** (resolved in the Testing/Integration phase): the pre-existing
+  `no-explicit-any`/unused-var backlog (~157 problems) was fixed; `npx eslint src` reports 0 problems,
+  `npx tsc --noEmit` and `npm run build` pass.
 - The 8-step **manual demo walkthrough** is validated by code audit + automated tests here; the physical
   USB-scanner walkthrough remains a demo-day activity.
 

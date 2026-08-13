@@ -239,8 +239,8 @@ export function ManageCategories() {
       setSelectedIds([]);
       setShowBulkDeleteConfirm(false);
       refetchCategories();
-    } catch (err: any) {
-      error(err.message || 'Failed to delete selected categories.');
+    } catch (err) {
+      error(err instanceof Error ? err.message : 'Failed to delete selected categories.');
     } finally {
       setIsBulkDeleting(false);
     }
@@ -310,7 +310,7 @@ export function ManageCategories() {
     try {
       const addedItems: ApiCategory[] = [];
       for (const catName of validNames) {
-        const created = await categoriesApi.create(catName) as any;
+        const created = await categoriesApi.create(catName) as ApiCategory;
         const newItem: ApiCategory = {
           id: created.id,
           name: created.name ?? catName,
@@ -329,8 +329,8 @@ export function ManageCategories() {
       } else {
         success(`Successfully created ${addedItems.length} categories.`);
       }
-    } catch (err: any) {
-      setFormError(err.message ?? 'Failed to add category');
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'Failed to add category');
     } finally {
       setSubmitting(false);
     }
@@ -356,8 +356,8 @@ export function ManageCategories() {
       updateItem(editingCategory.id, updated);
       await refetchCategories();
       success(`Category updated successfully.`);
-    } catch (err: any) {
-      setFormError(err.message ?? 'Failed to update category');
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'Failed to update category');
     } finally {
       setSubmitting(false);
     }
@@ -369,8 +369,8 @@ export function ManageCategories() {
       removeItem(id);
       await refetchCategories();
       success('Category deleted successfully.');
-    } catch (err: any) {
-      error(err.message ?? 'Failed to delete category');
+    } catch (err) {
+      error(err instanceof Error ? err.message : 'Failed to delete category');
     }
     setDeletingId(null);
   };
@@ -460,7 +460,7 @@ export function ManageCategories() {
           <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
             <select
               value={sortBy}
-              onChange={e => setSortBy(e.target.value as any)}
+              onChange={e => setSortBy(e.target.value as 'name-asc' | 'name-desc' | 'products-desc' | 'products-asc' | 'id-desc')}
               className="w-full sm:w-auto bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-xs font-medium rounded-lg px-3 py-2 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#006a61]"
             >
               <option value="name-asc">Sort: A - Z</option>

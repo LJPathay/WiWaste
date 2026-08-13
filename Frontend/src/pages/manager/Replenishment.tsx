@@ -28,8 +28,8 @@ export function Replenishment() {
       const result = await optimization.replenishment({ budget, horizon_days: horizon });
       setPlan(result);
       success('Replenishment plan generated.');
-    } catch (e: any) {
-      setError(e.message ?? 'Could not reach the optimization service.');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not reach the optimization service.');
       setPlan(null);
     } finally {
       setLoading(false);

@@ -26,13 +26,13 @@ without being confused by unrelated details.
 
 | File | Sprint | Focus | Status |
 |------|--------|-------|--------|
-| [Sprint 0 — Planning & Requirements](implementationplan-sprint0.md) | Sprint 0 | Requirements, API contract, acceptance criteria | **Mostly complete — finalize artifacts** |
-| [Sprint 1 — POS & Inventory Sync](implementationplan-sprint1.md) | Sprint 1 | Barcode scanning, stock consistency, sync hardening | **Mostly built — harden & verify** |
+| [Sprint 0 — Planning & Requirements](implementationplan-sprint0.md) | Sprint 0 | Requirements, API contract, acceptance criteria | **Complete** |
+| [Sprint 1 — POS & Inventory Sync](implementationplan-sprint1.md) | Sprint 1 | Barcode scanning, stock consistency, sync hardening | **Complete** |
 | [Sprint 2 — Predictive Analytics (ARIMA)](implementationplan-sprint2.md) | Sprint 2 | Demand forecasting engine, forecast API, forecast UI | **Complete** |
 | [Sprint 3 — Loss Visibility Dashboard (XGBoost)](implementationplan-sprint3.md) | Sprint 3 | ML loss-risk service, loss-risk API, leakage UI | **Complete** |
 | [Sprint 4 — Decision-Support Reports (GA)](implementationplan-sprint4.md) | Sprint 4 | Replenishment optimizer, optimization API, reports UI | **Complete** |
 | [Sprint 5 — Integration](implementationplan-sprint5.md) | Sprint 5 | Barcode loop, payment, dashboard consolidation | **Complete** |
-| [Sprint 6 — Payment Gateway (PayMongo)](implementationplan-sprint6.md) | Sprint 6 | Real GCash/Maya/card payments via PayMongo | **Not started** |
+| [Sprint 6 — Payment Gateway (PayMongo)](implementationplan-sprint6.md) | Sprint 6 | Real GCash/Maya/card payments via PayMongo | **Complete** |
 | [Testing & Evaluation](implementationplan-testing.md) | — | Automated tests, quality gates, evaluation metrics | **Not started** |
 | [Deployment & Documentation](implementationplan-deployment.md) | — | Build, Docker, env config, README updates | **Not started** |
 

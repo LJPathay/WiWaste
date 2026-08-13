@@ -54,7 +54,7 @@ export function FEFOTracking() {
   const { toasts, dismiss, success } = useToast();
 
   const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
+  const [page] = useState(1);
   const pageSize = 10;
   const [mockBatches, setMockBatches] = useState<MockBatch[]>(MOCK_BATCHES);
   const [confirmBatch, setConfirmBatch] = useState<{ batchId: number; action: string } | null>(null);
@@ -78,12 +78,7 @@ export function FEFOTracking() {
   };
 
   const criticalCount = filteredAll.filter(b => b.days_left >= 0 && b.days_left <= 5).length;
-  const totalPages = Math.ceil(filteredAll.length / pageSize);
   const filtered = filteredAll.slice((page - 1) * pageSize, page * pageSize);
-  const showPagination = totalPages > 1;
-  const totalEstimatedLoss = useMemo(() =>
-    filteredAll.reduce((s, b) => b.days_left >= 0 && b.days_left <= 14 ? s + (b.quantity * 0.5) : s, 0),
-  [filteredAll]);
 
   return (
     <div className="space-y-6 w-full min-h-screen bg-[#F8FAFC] dark:bg-slate-950 p-4 sm:p-6">

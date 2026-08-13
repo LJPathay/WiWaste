@@ -1,39 +1,100 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { RotateCcw, Search } from 'lucide-react';
 import { FormField, inputCls, Toast, useToast } from '../../components/ui/Toast';
-import { createReturnId, formatCurrency, initialSalesTransactions, type SalesItem } from '../../utils/cashierData';
-import { getStoredSession } from '../../utils/mockAuthAndFeatures';
+import { formatCurrency } from '../../utils/cashierData';
+import { returns as returnsApi, sales as salesApi, type ApiReturn, type ApiSalesTransaction } from '../../services/api';
+
+interface ReturnableItem {
+  sale_item_id: number;
+  transaction_id: number;
+  product_name: string;
+  quantity: number;
+  unit_price: number;
+}
+
+function formatDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' });
+}
 
 export function ReturnsRefunds() {
   const { toasts, dismiss, success, error } = useToast();
-  const session = getStoredSession();
   const [query, setQuery] = useState('');
-  const [selectedItem, setSelectedItem] = useState<SalesItem | null>(null);
+  const [salesData, setSalesData] = useState<ApiSalesTransaction[]>([]);
+  const [returnsHistory, setReturnsHistory] = useState<ApiReturn[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [salesError, setSalesError] = useState<string | null>(null);
+  const [selectedItem, setSelectedItem] = useState<ReturnableItem | null>(null);
   const [quantity, setQuantity] = useState('1');
   const [reason, setReason] = useState('');
   const [overrideAmount, setOverrideAmount] = useState('');
 
-  const matches = useMemo(() => {
-    const normalized = query.toLowerCase();
-    return initialSalesTransactions.filter(transaction =>
-      transaction.transaction_id.toLowerCase().includes(normalized) ||
-      transaction.items.some(item => item.product_name.toLowerCase().includes(normalized))
-    );
+  const loadSales = useCallback(async () => {
+    setLoading(true);
+    setSalesError(null);
+    try {
+      const res = await salesApi.list({ search: query.trim() || undefined, per_page: 50 });
+      setSalesData(res.data);
+    } catch (e) {
+      setSalesError(e instanceof Error ? e.message : 'Unable to load sales.');
+    } finally {
+      setLoading(false);
+    }
   }, [query]);
+
+  const loadReturns = useCallback(async () => {
+    try {
+      const res = await returnsApi.list(1);
+      setReturnsHistory(res.data);
+    } catch {
+      setReturnsHistory([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(loadSales, 400);
+    return () => clearTimeout(timer);
+  }, [loadSales]);
+
+  useEffect(() => {
+    loadReturns();
+  }, [loadReturns]);
 
   const refundAmount = selectedItem ? Number(overrideAmount || selectedItem.unit_price * Number(quantity || 0)) : 0;
 
-  const processReturn = () => {
+  const processReturn = async () => {
     if (!selectedItem || Number(quantity) < 1 || Number(quantity) > selectedItem.quantity || !reason.trim()) {
       error('Select an item, valid quantity, and return reason.');
       return;
     }
-    const returnId = createReturnId();
-    success(`${returnId} processed by ${session?.name ?? 'Current Cashier'} and stock was added back.`);
-    setSelectedItem(null);
-    setQuantity('1');
-    setReason('');
-    setOverrideAmount('');
+    const refund = Number(overrideAmount);
+    if (Number.isNaN(refund) || refund < 0) {
+      error('Enter a valid refund amount.');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await returnsApi.create({
+        sale_item_id: selectedItem.sale_item_id,
+        quantity_returned: Number(quantity),
+        reason: reason.trim(),
+        refund_amount: refund,
+        return_date: new Date().toISOString(),
+      });
+      success('Return processed and stock was added back.');
+      setSelectedItem(null);
+      setQuantity('1');
+      setReason('');
+      setOverrideAmount('');
+      loadSales();
+      loadReturns();
+    } catch (e) {
+      error(e instanceof Error ? e.message : 'Return failed. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -53,7 +114,7 @@ export function ReturnsRefunds() {
                 value={query}
                 onChange={e => setQuery(e.target.value)}
                 className={`${inputCls} pl-9`}
-                placeholder="Search by receipt ID, transaction ID, or product"
+                placeholder="Search by transaction ID or product"
               />
             </div>
           </div>
@@ -69,17 +130,38 @@ export function ReturnsRefunds() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-                {matches.flatMap(transaction =>
+                {loading && (
+                  <tr>
+                    <td colSpan={5} className="px-5 py-6 text-center text-slate-400">Loading sales...</td>
+                  </tr>
+                )}
+                {!loading && salesError && (
+                  <tr>
+                    <td colSpan={5} className="px-5 py-6 text-center text-red-500">{salesError}</td>
+                  </tr>
+                )}
+                {!loading && !salesError && salesData.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-5 py-6 text-center text-slate-400">No matching transactions found.</td>
+                  </tr>
+                )}
+                {!loading && !salesError && salesData.flatMap(transaction =>
                   transaction.items.map(item => (
-                    <tr key={item.sales_item_id}>
-                      <td className="px-5 py-4 font-mono text-slate-600 dark:text-slate-300">{transaction.transaction_id}</td>
+                    <tr key={`${transaction.id}-${item.id}`}>
+                      <td className="px-5 py-4 font-mono text-slate-600 dark:text-slate-300">{transaction.id}</td>
                       <td className="px-5 py-4 font-semibold text-slate-800 dark:text-slate-100">{item.product_name}</td>
                       <td className="px-5 py-4 text-right text-slate-600 dark:text-slate-300">{item.quantity}</td>
                       <td className="px-5 py-4 text-right text-slate-600 dark:text-slate-300">{formatCurrency(item.unit_price)}</td>
                       <td className="px-5 py-4 text-right">
                         <button
                           onClick={() => {
-                            setSelectedItem(item);
+                            setSelectedItem({
+                              sale_item_id: item.id,
+                              transaction_id: transaction.id,
+                              product_name: item.product_name,
+                              quantity: item.quantity,
+                              unit_price: item.unit_price,
+                            });
                             setQuantity('1');
                             setOverrideAmount(String(item.unit_price));
                           }}
@@ -105,6 +187,10 @@ export function ReturnsRefunds() {
                 <div className="flex justify-between gap-4">
                   <span className="text-xs text-slate-500">Product</span>
                   <span className="text-right text-sm font-semibold text-slate-800 dark:text-slate-100">{selectedItem.product_name}</span>
+                </div>
+                <div className="flex justify-between gap-4 mt-1">
+                  <span className="text-xs text-slate-500">Transaction</span>
+                  <span className="text-right font-mono text-xs text-slate-600 dark:text-slate-300">#{selectedItem.transaction_id}</span>
                 </div>
               </div>
               <FormField label="Quantity Returned">
@@ -148,15 +234,53 @@ export function ReturnsRefunds() {
                 </button>
                 <button
                   onClick={processReturn}
-                  className="rounded-lg bg-[#006a61] hover:bg-[#00574f] text-white px-4 py-2 text-xs font-semibold transition-colors"
+                  disabled={submitting}
+                  className="rounded-lg bg-[#006a61] hover:bg-[#00574f] text-white px-4 py-2 text-xs font-semibold transition-colors disabled:opacity-50"
                 >
-                  Process Return
+                  {submitting ? 'Processing...' : 'Process Return'}
                 </button>
               </div>
             </div>
           ) : (
             <div className="text-center py-10 text-sm text-slate-400">Select a sold item to process a return.</div>
           )}
+        </div>
+      </div>
+
+      <div className="bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-slate-200 dark:border-white/10">
+          <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">Recent Returns</h2>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs text-left">
+            <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400">
+              <tr>
+                <th className="px-5 py-3 font-semibold">Product</th>
+                <th className="px-5 py-3 font-semibold text-right">Qty</th>
+                <th className="px-5 py-3 font-semibold text-right">Refund</th>
+                <th className="px-5 py-3 font-semibold">Reason</th>
+                <th className="px-5 py-3 font-semibold">Returned By</th>
+                <th className="px-5 py-3 font-semibold">Date</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+              {returnsHistory.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="px-5 py-6 text-center text-slate-400">No returns recorded yet.</td>
+                </tr>
+              )}
+              {returnsHistory.map(r => (
+                <tr key={r.id}>
+                  <td className="px-5 py-4 font-semibold text-slate-800 dark:text-slate-100">{r.product_name}</td>
+                  <td className="px-5 py-4 text-right text-slate-600 dark:text-slate-300">{r.quantity_returned}</td>
+                  <td className="px-5 py-4 text-right text-slate-600 dark:text-slate-300">{formatCurrency(r.refund_amount)}</td>
+                  <td className="px-5 py-4 text-slate-500 dark:text-slate-400">{r.reason}</td>
+                  <td className="px-5 py-4 text-slate-600 dark:text-slate-300">{r.returned_by}</td>
+                  <td className="px-5 py-4 text-slate-600 dark:text-slate-300">{formatDate(r.return_date)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

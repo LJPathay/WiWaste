@@ -5,7 +5,7 @@ import { AuthLayout } from "./components/layout/AuthLayout";
 import { DashboardLayout } from "./components/layout/DashboardLayout";
 import { PageLoader } from "./components/ui/PageLoader";
 
-function lazyPage(imp: () => Promise<Record<string, ComponentType<any>>>, name: string) {
+function lazyPage(imp: () => Promise<Record<string, ComponentType<unknown>>>, name: string) {
   const Comp = lazy(() => imp().then(m => ({ default: m[name] })));
   return function LazyPage() {
     return (

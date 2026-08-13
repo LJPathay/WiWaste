@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, memo } from 'react';
+import { useState, useEffect, useRef, useMemo, memo } from 'react';
 import { HeaderLabelProvider } from './HeaderLabelProvider';
 import { Navigate, Outlet, Link, useLocation, useNavigate } from 'react-router';
 import {
@@ -22,6 +22,7 @@ import {
   Activity,
   Receipt,
   RotateCcw,
+  type LucideIcon,
   } from 'lucide-react';
 import { ThemeToggle } from '../ThemeToggle';
 import { ErrorBoundary } from '../ui/ErrorBoundary';
@@ -31,7 +32,7 @@ import { clearStoredSession, getRoleDisplayName, getStoredSession, type UserRole
 const BRAND_ICON = '/images/logo.PNG';
 const BRAND_WORDMARK = '/images/Logo_full.PNG';
 
-type SidebarItem = { to: string; label: string; icon: any };
+type SidebarItem = { to: string; label: string; icon: LucideIcon };
 type SidebarGroup = { group: string; items: SidebarItem[] };
 
 const sidebarGroupsByRole: Record<UserRole, SidebarGroup[]> = {
@@ -247,16 +248,7 @@ export function DashboardLayout() {
 
   const session = getStoredSession();
 
-  if (!session) {
-    return <Navigate to="/login" replace />;
-  }
-
-  const handleLogout = () => {
-    clearStoredSession();
-    navigate('/');
-  };
-
-  const sidebarGroups = sidebarGroupsByRole[session.role] ?? [];
+  const sidebarGroups = useMemo(() => (session ? (sidebarGroupsByRole[session.role] ?? []) : []), [session]);
   const sidebarWidth = collapsed ? 'w-[76px]' : 'w-[248px]';
 
   const [visitedPages, setVisitedPages] = useState<SidebarItem[]>([]);
@@ -264,7 +256,7 @@ export function DashboardLayout() {
 
   useEffect(() => {
     const readHeaderStyle = () => {
-      const saved = localStorage.getItem('wiwaste_header_style') as any;
+      const saved = localStorage.getItem('wiwaste_header_style') as 'quick-access' | 'action-text' | 'welcome-text' | null;
       if (saved === 'quick-access' || saved === 'action-text' || saved === 'welcome-text') {
         setHeaderStyle(saved);
       }
@@ -288,8 +280,8 @@ export function DashboardLayout() {
         .sort((a, b) => b.count - a.count);
 
       setVisitedPages(sorted.slice(0, 4));
-    } catch (e) { /* fallback */ }
-  }, [location.pathname, session.role]);
+    } catch { /* fallback */ }
+  }, [location.pathname, session?.role, sidebarGroups]);
 
   // Mobile sidebar focus trap
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -309,6 +301,15 @@ export function DashboardLayout() {
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [mobileOpen]);
+
+  if (!session) {
+    return <Navigate to="/login" replace />;
+  }
+
+  const handleLogout = () => {
+    clearStoredSession();
+    navigate('/');
+  };
 
   return (
     <ErrorBoundary><div className="min-h-screen bg-[#f4f7fb] text-[#1b1b1d] font-['Inter',sans-serif] transition-colors dark:bg-slate-950 dark:text-slate-100">

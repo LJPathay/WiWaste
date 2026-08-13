@@ -9,8 +9,6 @@ import {
   categories as categoriesApi,
   suppliers as suppliersApi,
   type ApiProduct,
-  type ApiCategory,
-  type ApiSupplier,
   type CreateProductPayload,
 } from '../../services/api';
 
@@ -116,7 +114,7 @@ export function ManageProducts() {
       id: 'status-filter',
       title: 'Filter by Status',
       description: 'Use these tabs to view All Products, Active items, or Discontinued products.',
-      targetSelector: '.flex.flex-wrap.items-center.gap-1\.5.bg-slate-100',
+      targetSelector: '.flex.flex-wrap.items-center.gap-1.5.bg-slate-100',
       position: 'bottom' as const,
     },
     {
@@ -281,8 +279,8 @@ export function ManageProducts() {
       setSelectedIds([]);
       setShowBulkArchiveConfirm(false);
       refetchProducts();
-    } catch (err: any) {
-      toastError(err.message || 'Failed to archive selected products.');
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : 'Failed to archive selected products.');
     } finally {
       setIsBulkArchiving(false);
     }
@@ -325,17 +323,17 @@ export function ManageProducts() {
         initial_stock: Number(addForm.initial_stock || 0),
       };
 
-      const res: any = await productsApi.create(payload);
+      const created = (await productsApi.create(payload)) as ApiProduct;
       setShowAddModal(false);
       setAddForm({
         product_name: '', barcode: '', category_id: '', supplier_id: '',
         cost_price: '', selling_price: '', reorder_level: '10', expiration_date: '', initial_stock: '0',
       });
-      addItem(res as ApiProduct);
+      addItem(created);
       await refetchProducts();
       success(`Product "${payload.product_name}" created successfully.`);
-    } catch (err: any) {
-      setAddError(err.message ?? 'Failed to create product.');
+    } catch (err) {
+      setAddError(err instanceof Error ? err.message : 'Failed to create product.');
     } finally {
       setProcessing(false);
     }
@@ -394,21 +392,21 @@ export function ManageProducts() {
       setSelectedProduct(null);
       await refetchProducts();
       success(`Product "${editForm.product_name}" updated successfully.`);
-    } catch (err: any) {
-      setEditError(err.message ?? 'Failed to update product.');
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : 'Failed to update product.');
     } finally {
       setProcessing(false);
     }
   };
 
-  const handleArchive = async (id: number, name: string, status?: string) => {
+  const handleArchive = async (id: number, name: string) => {
     try {
       await productsApi.delete(id);
       removeItem(id);
       await refetchProducts();
       success(`Product "${name}" status updated.`);
-    } catch (err: any) {
-      toastError(err.message ?? 'Failed to update product status.');
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : 'Failed to update product status.');
     }
     setArchiving(null);
   };
@@ -494,7 +492,7 @@ export function ManageProducts() {
                 return (
                   <button
                     key={tab.id}
-                    onClick={() => setStatusFilter(tab.id as any)}
+                    onClick={() => setStatusFilter(tab.id as 'all' | 'Active' | 'Discontinued')}
                     className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
                       isSelected
                         ? 'bg-white dark:bg-slate-950 text-[#006a61] dark:text-[#7ef0cf] shadow-sm'
@@ -818,7 +816,7 @@ export function ManageProducts() {
         <ConfirmDialog
           message={`Are you sure you want to ${archiving.status === 'Discontinued' ? 're-activate' : 'archive'} "${archiving.name}"? Historical sales, wastage logs, and forecast records for this item will be safely preserved for audit compliance.`}
           confirmLabel={archiving.status === 'Discontinued' ? 'Re-activate' : 'Archive'}
-          onConfirm={() => handleArchive(archiving.id, archiving.name, archiving.status)}
+          onConfirm={() => handleArchive(archiving.id, archiving.name)}
           onCancel={() => setArchiving(null)}
         />
       )}

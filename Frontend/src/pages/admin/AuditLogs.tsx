@@ -3,8 +3,23 @@ import { Search, Download, Info, Loader2 } from 'lucide-react';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { auditLogs as auditLogsApi } from '../../services/api';
 
+interface AuditLogEntry {
+  id: number;
+  timestamp: string;
+  action: string;
+  user: string;
+  role: string;
+  entity_type: string;
+  entity_id: string | number;
+}
+
+interface AuditLogResponse {
+  data?: AuditLogEntry[];
+  last_page?: number;
+}
+
 export function AuditLogs() {
-  const [logs, setLogs] = useState<any[]>([]);
+  const [logs, setLogs] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [actionFilter, setActionFilter] = useState('');
@@ -19,7 +34,7 @@ export function AuditLogs() {
       action: actionFilter || undefined,
       entity_type: entityTypeFilter || undefined,
       page,
-    }).then((res: any) => {
+    }).then((res: AuditLogResponse) => {
       const data = res.data ?? res;
       setLogs(Array.isArray(data) ? data : []);
       setTotalPages(res.last_page ?? 1);
@@ -29,8 +44,8 @@ export function AuditLogs() {
 
   useEffect(() => { fetchLogs(); }, [fetchLogs]);
 
-  const uniqueEntityTypes = [...new Set(logs.map((l: any) => l.entity_type))].filter(Boolean);
-  const uniqueActions = [...new Set(logs.map((l: any) => l.action))].filter(Boolean);
+  const uniqueEntityTypes = [...new Set(logs.map(l => l.entity_type))].filter(Boolean);
+  const uniqueActions = [...new Set(logs.map(l => l.action))].filter(Boolean);
 
   return (
     <div className="space-y-6 w-full font-sans">
@@ -100,7 +115,7 @@ export function AuditLogs() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-white/5">
-                  {logs.map((log: any) => (
+                  {logs.map(log => (
                     <tr key={log.id} className="hover:bg-slate-55/20 dark:hover:bg-white/5">
                       <td className="px-6 py-4 text-slate-500 dark:text-slate-400 font-mono">{log.timestamp}</td>
                       <td className="px-6 py-4 font-medium text-slate-900 dark:text-slate-100">{log.action}</td>

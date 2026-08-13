@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { FileText, Download, Loader2, CheckCircle2, Cpu, Target, Wallet, AlertTriangle, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router';
 import { Toast, useToast } from '../../components/ui/Toast';
-import { formatCurrency, paymentMethods } from '../../utils/cashierData';
-import { reports as reportsApi, sales, returns, optimization, type ApiOptimizationPlan, type ApiReport } from '../../services/api';
+import { formatCurrency, paymentMethods, type PaymentMethod } from '../../utils/cashierData';
+import { reports as reportsApi, sales, returns, optimization, type ApiOptimizationPlan } from '../../services/api';
 
 interface ReportCard {
   id: string;
@@ -21,6 +21,26 @@ interface Compilation {
   status: 'Ready';
 }
 
+interface SalesTransaction {
+  transaction_id?: number | string;
+  id?: number;
+  cashier_name?: string;
+  cashier?: string;
+  payment_method?: string;
+  paymentMethod?: string;
+  total_amount: number;
+}
+
+interface ReturnRecord {
+  id?: number;
+  return_id?: number | string;
+  reason: string | null;
+  returned_by?: string;
+  processed_by?: string;
+  return_date: string;
+  refund_amount: number;
+}
+
 const REPORT_CARDS: ReportCard[] = [
   { id: 'waste', title: 'Waste Summary Report', description: 'Daily and weekly breakdown of waste items recorded across all categories.', icon: '🗂️' },
   { id: 'inventory', title: 'Inventory Movement Report', description: 'Track stock-in, stock-out, and adjustments over a selected period.', icon: '📦' },
@@ -32,21 +52,14 @@ const REPORT_CARDS: ReportCard[] = [
 
 const TODAY = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 
-const INITIAL_COMPILATIONS: Compilation[] = [
-  { id: 'c1', reportName: 'Waste Summary Report', generatedBy: 'Lia Cruz', date: 'Jul 1, 2026', size: '214 KB', status: 'Ready' },
-  { id: 'c2', reportName: 'Inventory Movement Report', generatedBy: 'John Store Ops', date: 'Jun 28, 2026', size: '185 KB', status: 'Ready' },
-  { id: 'c3', reportName: 'Expiry & Near-Expiry Report', generatedBy: 'Mia Stockwell', date: 'Jun 25, 2026', size: '97 KB', status: 'Ready' },
-  { id: 'c4', reportName: 'Category Analysis Report', generatedBy: 'Lia Cruz', date: 'Jun 20, 2026', size: '312 KB', status: 'Ready' },
-];
-
 export function GenerateReports() {
   const { toasts, dismiss, success } = useToast();
 
   const [compilations, setCompilations] = useState<Compilation[]>([]);
   const [paymentFilter, setPaymentFilter] = useState<string>('all');
   const [cashierFilter, setCashierFilter] = useState('all');
-  const [salesData, setSalesData] = useState<any[]>([]);
-  const [returnsData, setReturnsData] = useState<any[]>([]);
+  const [salesData, setSalesData] = useState<SalesTransaction[]>([]);
+  const [returnsData, setReturnsData] = useState<ReturnRecord[]>([]);
   const [generatingIds, setGeneratingIds] = useState<Set<string>>(new Set());
   const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set());
 
@@ -64,8 +77,8 @@ export function GenerateReports() {
       const result = await optimization.replenishment({ budget: optBudget, persist: false });
       setOptPlan(result);
       success('Optimized replenishment plan generated.');
-    } catch (e: any) {
-      setOptError(e.message ?? 'Could not reach the optimization service.');
+    } catch (e) {
+      setOptError(e instanceof Error ? e.message : 'Could not reach the optimization service.');
       setOptPlan(null);
     } finally {
       setOptLoading(false);
@@ -79,30 +92,29 @@ export function GenerateReports() {
     try {
       const result = await optimization.replenishment({ budget: optBudget, persist: true });
       success(`Plan approved for review — ${result.recommendations_written} recommendation${result.recommendations_written !== 1 ? 's' : ''} written to the workflow.`);
-    } catch (e: any) {
-      setOptError(e.message ?? 'Could not approve the plan.');
+    } catch (e) {
+      setOptError(e instanceof Error ? e.message : 'Could not approve the plan.');
     } finally {
       setOptApproving(false);
     }
   };
 
   useEffect(() => {
-    sales.list().then(setSalesData).catch(() => {});
-    returns.list().then(setReturnsData).catch(() => {});
+    sales.list().then(res => setSalesData(res.data)).catch(() => {});
+    returns.list().then(res => setReturnsData(res.data)).catch(() => {});
   }, []);
 
   const handleGenerate = async (card: ReportCard) => {
     if (generatingIds.has(card.id)) return;
     setGeneratingIds(prev => new Set(prev).add(card.id));
     try {
-      let result: ApiReport[] = [];
       switch (card.id) {
-        case 'waste': result = await reportsApi.wasteSummary(); break;
-        case 'inventory': result = await reportsApi.inventoryMovement(); break;
-        case 'supplier': result = await reportsApi.supplierPerformance(); break;
-        case 'expiry': result = await reportsApi.expiryAnalysis(); break;
-        case 'category': result = await reportsApi.categoryAnalysis(); break;
-        case 'cost': result = await reportsApi.costImpact(); break;
+        case 'waste': await reportsApi.wasteSummary(); break;
+        case 'inventory': await reportsApi.inventoryMovement(); break;
+        case 'supplier': await reportsApi.supplierPerformance(); break;
+        case 'expiry': await reportsApi.expiryAnalysis(); break;
+        case 'category': await reportsApi.categoryAnalysis(); break;
+        case 'cost': await reportsApi.costImpact(); break;
       }
       const newEntry: Compilation = {
         id: `c${Date.now()}`,
@@ -114,7 +126,7 @@ export function GenerateReports() {
       };
       setCompilations(prev => [newEntry, ...prev]);
       success(`"${card.title}" generated and ready for download.`);
-    } catch (e: any) {
+    } catch {
       success(`"${card.title}" generated (offline fallback).`);
     }
     setGeneratingIds(prev => {
@@ -136,15 +148,15 @@ export function GenerateReports() {
     success(`"${comp.reportName}" downloaded successfully.`);
   };
 
-  const cashierOptions = Array.from(new Set(salesData.map((t: any) => t.cashier_name ?? t.cashier).filter(Boolean)));
-  const filteredSales = salesData.filter((transaction: any) => {
+  const cashierOptions = Array.from(new Set(salesData.map(t => t.cashier_name ?? t.cashier).filter(Boolean)));
+  const filteredSales = salesData.filter(transaction => {
     const method = transaction.payment_method ?? transaction.paymentMethod;
     const cashier = transaction.cashier_name ?? transaction.cashier;
     const matchesPayment = paymentFilter === 'all' || method === paymentFilter;
     const matchesCashier = cashierFilter === 'all' || cashier === cashierFilter;
     return matchesPayment && matchesCashier;
   });
-  const filteredRevenue = filteredSales.reduce((sum: number, transaction: any) => sum + (transaction.total_amount ?? 0), 0);
+  const filteredRevenue = filteredSales.reduce((sum, transaction) => sum + (transaction.total_amount ?? 0), 0);
 
   return (
     <div className="space-y-8 w-full font-sans">
@@ -490,7 +502,7 @@ export function GenerateReports() {
               <tbody className="divide-y divide-slate-100 dark:divide-white/5">
                 {returnsData.length === 0 ? (
                   <tr><td colSpan={5} className="px-6 py-8 text-center text-slate-400 text-sm">No returns data available</td></tr>
-                ) : (returnsData.map((returnItem: any) => (
+                ) : (returnsData.map(returnItem => (
                   <tr key={returnItem.id ?? returnItem.return_id} className="hover:bg-slate-50/60 dark:hover:bg-white/5 transition-colors">
                     <td className="px-6 py-4 font-mono text-slate-600 dark:text-slate-300">{returnItem.id ?? returnItem.return_id}</td>
                     <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{returnItem.reason}</td>

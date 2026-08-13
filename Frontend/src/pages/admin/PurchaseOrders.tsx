@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, Eye, X, CheckCircle, Package, Truck, Loader2 } from 'lucide-react';
+import { Plus, Search, Eye, X, CheckCircle, Package, Loader2 } from 'lucide-react';
 import { Toast, useToast, ConfirmDialog } from '../../components/ui/Toast';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
-import { purchaseOrders as poApi, suppliers as supplierApi, products as productApi } from '../../services/api';
+import { purchaseOrders as poApi, suppliers as supplierApi, products as productApi, type PaginatedResponse, type ApiProduct, type ApiSupplier } from '../../services/api';
 
 const currencyFormatter = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 });
 
@@ -14,9 +14,55 @@ const statusColor: Record<string, string> = {
   Cancelled: 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400',
 };
 
+interface PurchaseOrderItem {
+  id: number;
+  product: string;
+  quantity: number;
+  unit_price: number;
+  subtotal: number;
+  received_qty: number;
+}
+
+interface PurchaseOrder {
+  id: number;
+  po_number: string;
+  supplier: string;
+  user: string;
+  total_amount: number;
+  status: string;
+  created_at: string;
+  notes?: string;
+  items?: PurchaseOrderItem[];
+}
+
+interface PurchaseOrdersResponse {
+  data?: PurchaseOrder[];
+  last_page?: number;
+}
+
+interface SupplierOption {
+  id?: number;
+  supplier_id?: number;
+  name?: string;
+  supplier_name?: string;
+}
+
+interface ProductOption {
+  id?: number;
+  product_id?: number;
+  name?: string;
+  product_name?: string;
+}
+
+interface PurchaseOrderLineItem {
+  product_id: number;
+  quantity: number;
+  unit_price: number;
+}
+
 export function PurchaseOrders() {
   const { toasts, dismiss, success, error } = useToast();
-  const [orders, setOrders] = useState<any[]>([]);
+  const [orders, setOrders] = useState<PurchaseOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -25,19 +71,19 @@ export function PurchaseOrders() {
 
   // Modal state
   const [showCreate, setShowCreate] = useState(false);
-  const [showReceive, setShowReceive] = useState<{ open: boolean; order: any | null }>({ open: false, order: null });
-  const [showDetail, setShowDetail] = useState<{ open: boolean; order: any | null }>({ open: false, order: null });
-  const [confirmCancel, setConfirmCancel] = useState<{ open: boolean; order: any | null }>({ open: false, order: null });
+  const [showReceive, setShowReceive] = useState<{ open: boolean; order: PurchaseOrder | null }>({ open: false, order: null });
+  const [showDetail, setShowDetail] = useState<{ open: boolean; order: PurchaseOrder | null }>({ open: false, order: null });
+  const [confirmCancel, setConfirmCancel] = useState<{ open: boolean; order: PurchaseOrder | null }>({ open: false, order: null });
 
   // Form state
-  const [suppliers, setSuppliers] = useState<any[]>([]);
-  const [products, setProducts] = useState<any[]>([]);
-  const [formData, setFormData] = useState({ supplier_id: 0, notes: '', items: [] as { product_id: number; quantity: number; unit_price: number }[] });
+  const [suppliers, setSuppliers] = useState<SupplierOption[]>([]);
+  const [products, setProducts] = useState<ProductOption[]>([]);
+  const [formData, setFormData] = useState({ supplier_id: 0, notes: '', items: [] as PurchaseOrderLineItem[] });
   const [submitting, setSubmitting] = useState(false);
 
   const fetchOrders = useCallback(() => {
     setLoading(true);
-    poApi.list({ search, status: statusFilter || undefined, page }).then((res: any) => {
+    poApi.list({ search, status: statusFilter || undefined, page }).then((res: PurchaseOrdersResponse) => {
       const data = res.data ?? res;
       setOrders(Array.isArray(data) ? data : []);
       setTotalPages(res.last_page ?? 1);
@@ -50,8 +96,8 @@ export function PurchaseOrders() {
 
   useEffect(() => {
     if (showCreate) {
-      supplierApi.list().then((r: any) => setSuppliers(Array.isArray(r) ? r : r.data ?? [])).catch(() => {});
-      productApi.list().then((r: any) => setProducts(Array.isArray(r) ? r : r.data ?? [])).catch(() => {});
+      supplierApi.list().then((r: ApiSupplier[] | { data?: SupplierOption[] }) => setSuppliers(Array.isArray(r) ? r : r.data ?? [])).catch(() => {});
+      productApi.list().then((r: PaginatedResponse<ApiProduct> | ApiProduct[]) => setProducts(Array.isArray(r) ? r : r.data ?? [])).catch(() => {});
     }
   }, [showCreate]);
 
@@ -59,7 +105,7 @@ export function PurchaseOrders() {
     setFormData(f => ({ ...f, items: [...f.items, { product_id: 0, quantity: 1, unit_price: 0 }] }));
   }
 
-  function updateItem(idx: number, field: string, value: any) {
+  function updateItem(idx: number, field: string, value: number) {
     setFormData(f => {
       const items = [...f.items];
       items[idx] = { ...items[idx], [field]: value };
@@ -91,7 +137,7 @@ export function PurchaseOrders() {
     if (!showReceive.order) return;
     setSubmitting(true);
     try {
-      const items = showReceive.order.items?.filter((i: any) => i.received_qty < i.quantity).map((i: any) => ({
+      const items = showReceive.order.items?.filter(i => i.received_qty < i.quantity).map(i => ({
         po_item_id: i.id,
         received_qty: i.received_qty,
       })) ?? [];
@@ -172,7 +218,7 @@ export function PurchaseOrders() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-                {orders.map((po: any) => (
+                {orders.map(po => (
                   <tr key={po.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
                     <td className="px-6 py-4 font-medium text-slate-800 dark:text-slate-200">{po.po_number}</td>
                     <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{po.supplier}</td>
@@ -225,7 +271,7 @@ export function PurchaseOrders() {
                 <select value={formData.supplier_id} onChange={e => setFormData(f => ({ ...f, supplier_id: Number(e.target.value) }))}
                   className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#006a61]">
                   <option value={0}>Select supplier...</option>
-                  {suppliers.map((s: any) => <option key={s.id ?? s.supplier_id} value={s.id ?? s.supplier_id}>{s.name ?? s.supplier_name}</option>)}
+                  {suppliers.map(s => <option key={s.id ?? s.supplier_id} value={s.id ?? s.supplier_id}>{s.name ?? s.supplier_name}</option>)}
                 </select>
               </div>
               <div>
@@ -244,7 +290,7 @@ export function PurchaseOrders() {
                       <select value={item.product_id} onChange={e => updateItem(idx, 'product_id', Number(e.target.value))}
                         className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61]">
                         <option value={0}>Select product...</option>
-                        {products.map((p: any) => <option key={p.id ?? p.product_id} value={p.id ?? p.product_id}>{p.name ?? p.product_name}</option>)}
+                        {products.map(p => <option key={p.id ?? p.product_id} value={p.id ?? p.product_id}>{p.name ?? p.product_name}</option>)}
                       </select>
                       <input type="number" min={1} value={item.quantity} onChange={e => updateItem(idx, 'quantity', Number(e.target.value))}
                         className="w-20 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61]" placeholder="Qty" />
@@ -289,7 +335,7 @@ export function PurchaseOrders() {
                 <table className="w-full text-xs">
                   <thead><tr className="text-slate-400"><th className="text-left py-1">Product</th><th className="text-right py-1">Qty</th><th className="text-right py-1">Price</th><th className="text-right py-1">Subtotal</th><th className="text-right py-1">Received</th></tr></thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-                    {(showDetail.order.items ?? []).map((i: any) => (
+                    {(showDetail.order.items ?? []).map(i => (
                       <tr key={i.id}><td className="py-1.5 text-slate-700 dark:text-slate-300">{i.product}</td><td className="py-1.5 text-right text-slate-700 dark:text-slate-300">{i.quantity}</td><td className="py-1.5 text-right text-slate-700 dark:text-slate-300">{currencyFormatter.format(i.unit_price)}</td><td className="py-1.5 text-right font-semibold text-slate-800 dark:text-slate-200">{currencyFormatter.format(i.subtotal)}</td><td className="py-1.5 text-right text-emerald-600">{i.received_qty}</td></tr>
                     ))}
                   </tbody>
@@ -313,7 +359,7 @@ export function PurchaseOrders() {
             </div>
             <div className="p-6 space-y-3">
               <p className="text-xs text-slate-500">Enter the quantity received for each item.</p>
-              {(showReceive.order.items ?? []).filter((i: any) => i.received_qty < i.quantity).map((item: any) => (
+              {(showReceive.order.items ?? []).filter(i => i.received_qty < i.quantity).map(item => (
                 <div key={item.id} className="flex items-center gap-3">
                   <span className="flex-1 text-sm text-slate-700 dark:text-slate-300">{item.product}</span>
                   <span className="text-xs text-slate-400">Ordered: {item.quantity}</span>
@@ -327,7 +373,7 @@ export function PurchaseOrders() {
                           open: true,
                           order: {
                             ...prev.order,
-                            items: prev.order.items.map((i: any) => i.id === item.id ? { ...i, received_qty: val } : i),
+                            items: (prev.order.items ?? []).map(i => i.id === item.id ? { ...i, received_qty: val } : i),
                           },
                         };
                       });
@@ -335,7 +381,7 @@ export function PurchaseOrders() {
                     className="w-20 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61]" />
                 </div>
               ))}
-              {(showReceive.order.items ?? []).filter((i: any) => i.received_qty >= i.quantity).length > 0 && (
+              {(showReceive.order.items ?? []).filter(i => i.received_qty >= i.quantity).length > 0 && (
                 <p className="text-xs text-emerald-600">All items fully received.</p>
               )}
             </div>

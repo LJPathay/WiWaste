@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Info, Search, CheckCircle, TrendingDown, DollarSign, Clock, ChevronRight, X } from 'lucide-react';
+import { Info, Search, CheckCircle, TrendingDown, Clock, ChevronRight, X } from 'lucide-react';
 import { Toast, useToast, ConfirmDialog, Modal } from '../../components/ui/Toast';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 type MockRecommendation = {
@@ -27,12 +27,6 @@ const MOCK_RECS: MockRecommendation[] = [
   { recommendation_id: 8, product_name: 'Palmolive Shampoo 200ml', sku: 'PLM-200', category: 'Personal Care', current_stock: 12, recommended_stock: 70, confidence_score: 0.85, recommendation_type: 'Restock', status: 'pending' },
 ];
 
-const currencyFormatter = new Intl.NumberFormat('en-PH', {
-  style: 'currency',
-  currency: 'PHP',
-  maximumFractionDigits: 0,
-});
-
 function getTypeLabel(type: string): { label: string; cls: string } {
   if (type === 'Restock') return { label: 'Restock', cls: 'bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800' };
   if (type === 'Reduce Stock') return { label: 'Reduce', cls: 'bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800' };
@@ -57,7 +51,6 @@ export function Recommendations() {
   const { toasts, dismiss, success } = useToast();
 
   const [mockRecs, setMockRecs] = useState<MockRecommendation[]>(MOCK_RECS);
-  const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [selectedRec, setSelectedRec] = useState<MockRecommendation | null>(null);

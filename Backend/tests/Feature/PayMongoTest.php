@@ -107,7 +107,7 @@ class PayMongoTest extends TestCase
         ]);
     }
 
-    private function fakeIntent(string $status, string $method = 'gcash'): void
+    private function fakeIntent(string $status, string $method = 'gcash', string $paymentStatus = 'paid'): void
     {
         Http::fake([
             'https://api.paymongo.com/v1/payment_intents/*' => Http::response([
@@ -115,10 +115,20 @@ class PayMongoTest extends TestCase
                     'id'         => 'pi_123',
                     'type'       => 'payment_intent',
                     'attributes' => [
-                        'status'               => $status,
-                        'amount'               => 4500,
-                        'currency'             => 'PHP',
-                        'payment_method_type'  => $method,
+                        'status'                 => $status,
+                        'amount'                 => 4500,
+                        'currency'               => 'PHP',
+                        'payment_method_allowed' => ['gcash', 'paymaya', 'card'],
+                        'payments'               => [
+                            [
+                                'id'         => 'pay_123',
+                                'type'       => 'payment',
+                                'attributes' => [
+                                    'status' => $paymentStatus,
+                                    'source' => ['type' => $method],
+                                ],
+                            ],
+                        ],
                     ],
                 ],
             ], 200),
@@ -149,6 +159,20 @@ class PayMongoTest extends TestCase
             'current_stock' => 50,
         ]);
         $this->assertDatabaseCount('Stock_Movement', 0);
+
+        // The checkout session must be sent inside a JSON:API envelope with line_items
+        Http::assertSent(function ($request) use ($product, $transaction) {
+            $attributes = $request['data']['attributes'] ?? null;
+            return $request->url() === 'https://api.paymongo.com/v1/checkout_sessions'
+                && $attributes !== null
+                && $attributes['line_items'][0]['name'] === $product->product_name
+                && $attributes['line_items'][0]['amount'] === 4500
+                && $attributes['line_items'][0]['quantity'] === 3
+                && $attributes['line_items'][0]['currency'] === 'PHP'
+                && in_array('paymaya', $attributes['payment_method_types'], true)
+                && $attributes['metadata']['transaction_id'] === (string) $transaction->transaction_id
+                && $attributes['metadata']['payment_reference'] === 'GCash';
+        });
     }
 
     public function test_paid_payment_is_finalized_exactly_once(): void
@@ -159,13 +183,13 @@ class PayMongoTest extends TestCase
 
         $transaction = SalesTransaction::where('payment_method', 'PayMongo')->firstOrFail();
 
-        $this->fakeIntent('paid', 'gcash');
+        $this->fakeIntent('succeeded', 'gcash');
 
         $this->getJson("/api/paymongo/status/{$transaction->transaction_id}")
             ->assertOk()
             ->assertJsonPath('payment_status', 'paid')
             ->assertJsonPath('status', 'Completed')
-            ->assertJsonPath('payment_reference', 'gcash');
+            ->assertJsonPath('payment_reference', 'GCash');
 
         $transaction->refresh();
         $this->assertSame('Completed', $transaction->status);
@@ -190,7 +214,7 @@ class PayMongoTest extends TestCase
 
         $transaction = SalesTransaction::where('payment_method', 'PayMongo')->firstOrFail();
 
-        $this->fakeIntent('paid', 'maya');
+        $this->fakeIntent('succeeded', 'paymaya');
 
         $this->getJson("/api/paymongo/status/{$transaction->transaction_id}")->assertOk();
         $this->getJson("/api/paymongo/status/{$transaction->transaction_id}")->assertOk();
@@ -202,6 +226,25 @@ class PayMongoTest extends TestCase
         $this->assertSame(1, StockMovement::where('product_id', $product->product_id)
             ->where('movement_type', 'Stock Out')
             ->count());
+    }
+
+    public function test_paymaya_payment_reference_is_derived(): void
+    {
+        $this->fakeCheckoutSession();
+        $product = $this->makeProduct();
+        $this->postJson('/api/sales', $this->paymongoSalePayload($product))->assertStatus(201);
+
+        $transaction = SalesTransaction::where('payment_method', 'PayMongo')->firstOrFail();
+
+        $this->fakeIntent('succeeded', 'paymaya');
+
+        $this->getJson("/api/paymongo/status/{$transaction->transaction_id}")
+            ->assertOk()
+            ->assertJsonPath('payment_status', 'paid')
+            ->assertJsonPath('payment_reference', 'Maya');
+
+        $transaction->refresh();
+        $this->assertSame('Maya', $transaction->payment_reference);
     }
 
     public function test_webhook_rejects_bad_signature_and_accepts_valid_one(): void
@@ -244,6 +287,112 @@ class PayMongoTest extends TestCase
         $signature = hash_hmac('sha256', $payload, 'whsec_test_123');
         $this->call('POST', '/api/paymongo/webhook', content: $payload, server: [
             'HTTP_X-Paymongo-Signature' => $signature,
+        ])->assertOk()->assertJsonPath('received', true);
+
+        Queue::assertPushed(ProcessPayMongoWebhook::class);
+    }
+
+    public function test_checkout_session_webhook_event_dispatches_job(): void
+    {
+        $this->fakeCheckoutSession();
+        $product = $this->makeProduct();
+        $this->postJson('/api/sales', $this->paymongoSalePayload($product))->assertStatus(201);
+
+        $transaction = SalesTransaction::where('payment_method', 'PayMongo')->firstOrFail();
+
+        $payload = json_encode([
+            'data' => [
+                'id'         => 'evt_456',
+                'type'       => 'event',
+                'attributes' => [
+                    'type' => 'checkout_session.payment.paid',
+                    'data' => [
+                        'id'         => 'cs_123',
+                        'type'       => 'checkout_session',
+                        'attributes' => [
+                            'payment_intent' => ['id' => 'pi_123'],
+                            'metadata'       => [
+                                'transaction_id'    => (string) $transaction->transaction_id,
+                                'payment_reference' => 'GCash',
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        Queue::fake();
+        $signature = hash_hmac('sha256', $payload, 'whsec_test_123');
+        $this->call('POST', '/api/paymongo/webhook', content: $payload, server: [
+            'HTTP_X-Paymongo-Signature' => $signature,
+        ])->assertOk()->assertJsonPath('received', true);
+
+        Queue::assertPushed(ProcessPayMongoWebhook::class);
+    }
+
+    public function test_unknown_webhook_event_is_ignored(): void
+    {
+        $payload = json_encode([
+            'data' => [
+                'id'         => 'evt_789',
+                'type'       => 'event',
+                'attributes' => [
+                    'type' => 'checkout_session.created',
+                    'data' => [
+                        'id'         => 'cs_123',
+                        'type'       => 'checkout_session',
+                        'attributes' => [
+                            'payment_intent' => ['id' => 'pi_123'],
+                            'metadata'       => ['transaction_id' => '1'],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        Queue::fake();
+        $signature = hash_hmac('sha256', $payload, 'whsec_test_123');
+        $this->call('POST', '/api/paymongo/webhook', content: $payload, server: [
+            'HTTP_X-Paymongo-Signature' => $signature,
+        ])->assertOk()->assertJsonPath('received', true);
+
+        Queue::assertNothingPushed();
+    }
+
+    public function test_timestamped_signature_and_flattened_envelope_are_accepted(): void
+    {
+        $this->fakeCheckoutSession();
+        $product = $this->makeProduct();
+        $this->postJson('/api/sales', $this->paymongoSalePayload($product))->assertStatus(201);
+
+        $transaction = SalesTransaction::where('payment_method', 'PayMongo')->firstOrFail();
+
+        $payload = json_encode([
+            'data' => [
+                'type'     => 'checkout_session.payment.paid',
+                'resource' => 'checkout_session',
+                'livemode' => false,
+                'data'     => [
+                    'id'         => 'cs_123',
+                    'type'       => 'checkout_session',
+                    'attributes' => [
+                        'payment_intent' => ['id' => 'pi_123'],
+                        'metadata'       => [
+                            'transaction_id'    => (string) $transaction->transaction_id,
+                            'payment_reference' => 'GCash',
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        Queue::fake();
+        $timestamp = (string) time();
+        $te = hash_hmac('sha256', $timestamp . '.' . $payload, 'whsec_test_123');
+        $header = "t={$timestamp},te={$te},li=";
+
+        $this->call('POST', '/api/paymongo/webhook', content: $payload, server: [
+            'HTTP_Paymongo-Signature' => $header,
         ])->assertOk()->assertJsonPath('received', true);
 
         Queue::assertPushed(ProcessPayMongoWebhook::class);

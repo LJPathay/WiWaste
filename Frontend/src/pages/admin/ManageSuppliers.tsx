@@ -180,8 +180,8 @@ export function ManageSuppliers() {
       setSelectedIds([]);
       setShowBulkDeleteConfirm(false);
       refetchSuppliers();
-    } catch (err: any) {
-      error(err.message || 'Failed to delete selected suppliers.');
+    } catch (err) {
+      error(err instanceof Error ? err.message : 'Failed to delete selected suppliers.');
     } finally {
       setIsBulkDeleting(false);
     }
@@ -211,7 +211,7 @@ export function ManageSuppliers() {
 
     setAddLoading(true);
     try {
-      const created = await suppliersApi.create(addForm) as any;
+      const created = (await suppliersApi.create(addForm)) as ApiSupplier;
       setIsAddOpen(false);
       const newItem: ApiSupplier = {
         id: created.id,
@@ -224,8 +224,8 @@ export function ManageSuppliers() {
       addItem(newItem);
       await refetchSuppliers();
       success(`Supplier "${newItem.name}" added successfully.`);
-    } catch (err: any) {
-      error(err.message ?? 'Failed to add supplier');
+    } catch (err) {
+      error(err instanceof Error ? err.message : 'Failed to add supplier');
     } finally {
       setAddLoading(false);
     }
@@ -266,8 +266,8 @@ export function ManageSuppliers() {
       setEditingSupplier(null);
       await refetchSuppliers();
       success(`Supplier "${editForm.supplier_name}" updated successfully.`);
-    } catch (err: any) {
-      error(err.message ?? 'Failed to update supplier');
+    } catch (err) {
+      error(err instanceof Error ? err.message : 'Failed to update supplier');
     } finally {
       setEditLoading(false);
     }
@@ -283,8 +283,8 @@ export function ManageSuppliers() {
       setArchivingSupplier(null);
       await refetchSuppliers();
       success(`Supplier "${name}" has been deleted.`);
-    } catch (err: any) {
-      error(err.message ?? 'Failed to delete supplier');
+    } catch (err) {
+      error(err instanceof Error ? err.message : 'Failed to delete supplier');
     } finally {
       setArchiveLoading(false);
     }
@@ -368,7 +368,7 @@ export function ManageSuppliers() {
           <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
             <select
               value={sortBy}
-              onChange={e => setSortBy(e.target.value as any)}
+              onChange={e => setSortBy(e.target.value as 'name-asc' | 'name-desc' | 'products-desc' | 'products-asc' | 'id-desc')}
               className="w-full sm:w-auto bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-xs font-medium rounded-lg px-3 py-2 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#006a61]"
             >
               <option value="name-asc">Sort: A - Z</option>

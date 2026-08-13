@@ -85,7 +85,7 @@ export function DashboardOverview() {
 
   const activeKpi = clickedKpi ?? highlightedKpi;
 
-  const kpiSectionRef = useRef<HTMLElement | null>(null);
+  const kpiSectionRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     if (highlightedKpi !== null && kpiSectionRef.current) {
       kpiSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -295,7 +295,7 @@ export function DashboardOverview() {
         <SectionDivider title="Business Health" />
 
         {/* KPI Cards */}
-        <div ref={kpiSectionRef as any} className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-6">
+        <div ref={kpiSectionRef} className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-6">
           {kpiCards.map((card, idx) => {
             const Icon = card.icon;
             const isActive = activeKpi === idx;

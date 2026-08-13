@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, Info, Loader2 } from 'lucide-react';
+import { Info } from 'lucide-react';
 import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, LineChart, Line, LabelList } from 'recharts';
 import { Toast, useToast, ConfirmDialog } from '../../components/ui/Toast';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';

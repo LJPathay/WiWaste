@@ -31,8 +31,6 @@ interface InventoryStats {
   criticalFefoBatches: number;
 }
 
-const EXPIRY_WINDOW_DAYS = 7;
-
 const operationalProducts = [
   ...cashierProducts,
   {

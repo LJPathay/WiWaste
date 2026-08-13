@@ -14,7 +14,6 @@ import {
   Filter,
 } from 'lucide-react';
 import { Toast, useToast, Modal, FormField, inputCls } from '../../components/ui/Toast';
-import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { inventory as inventoryApi } from '../../services/api';
 import { useOptimisticList } from '../../hooks/useOptimisticList';
 import { useDebounce } from '../../hooks/useDebounce';
@@ -113,7 +112,7 @@ export function ManageInventory() {
     [debouncedSearch, statusFilter, page]
   );
 
-  const { data: apiData, loading, error: fetchError, refetch, addItem, updateItem } = useOptimisticList(fetchList);
+  const { data: apiData, refetch, updateItem } = useOptimisticList(fetchList);
 
   const items = useMemo(() => (apiData ?? []).map(mapApiItem), [apiData]);
 
@@ -183,10 +182,10 @@ export function ManageInventory() {
       updateItem(Number(selectedItem.id), {
         current_stock: newQty,
         stock_status: newQty < 10 ? 'Low Stock' : newQty > 300 ? 'Overstock' : 'Normal',
-      } as any);
+      } as ApiInventory);
       success(`${type} recorded successfully for "${selectedItem.itemName}"`);
-    } catch (e: any) {
-      showError(e.message ?? 'Operation failed');
+    } catch (e) {
+      showError(e instanceof Error ? e.message : 'Operation failed');
     }
     setProcessing(false);
     setStockQty('');
@@ -213,12 +212,12 @@ export function ManageInventory() {
       if (existing) {
         updateItem(pid, {
           current_stock: (existing.current_stock ?? 0) + Number(qty),
-        } as any);
+        } as ApiInventory);
       }
       refetch();
       success(`Received ${qty} units of "${itemName}".`);
-    } catch (e: any) {
-      showError(e.message ?? 'Failed to receive stock');
+    } catch (e) {
+      showError(e instanceof Error ? e.message : 'Failed to receive stock');
     }
     setProcessing(false);
     setShowAddModal(false);
@@ -242,10 +241,10 @@ export function ManageInventory() {
       updateItem(Number(adjustItem.id), {
         current_stock: newQty,
         stock_status: newQty < 10 ? 'Low Stock' : newQty > 300 ? 'Overstock' : 'Normal',
-      } as any);
+      } as ApiInventory);
       success(`${adjustType} of ${adjustQty} units recorded for "${adjustItem.itemName}"`);
-    } catch (e: any) {
-      showError(e.message ?? 'Operation failed');
+    } catch (e) {
+      showError(e instanceof Error ? e.message : 'Operation failed');
     }
     setProcessing(false);
     setAdjustItem(null);
@@ -597,7 +596,7 @@ export function ManageInventory() {
                 return (
                   <button
                     key={tab.id}
-                    onClick={() => setActiveTab(tab.id as any)}
+                    onClick={() => setActiveTab(tab.id as 'details' | 'stockin' | 'stockout' | 'history')}
                     className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 transition-colors ${
                       activeTab === tab.id
                         ? 'border-[#0F766E] text-[#0F766E]'

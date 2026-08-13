@@ -237,6 +237,9 @@ All optional keys live in `Backend/.env.example` and `Frontend/.env.example`. Co
 | `PAYMONGO_SECRET_KEY` | Backend | PayMongo secret key (Sprint 6) |
 | `PAYMONGO_PUBLIC_KEY` | Backend | PayMongo public key (Sprint 6) |
 | `PAYMONGO_WEBHOOK_SECRET` | Backend | PayMongo webhook signing secret (Sprint 6) |
+| `PAYMONGO_API_URL` | Backend | PayMongo API base URL — keep at `https://api.paymongo.com/v1` |
+| `PAYMONGO_WEBHOOK_URL` | Backend | Public webhook endpoint registered in the PayMongo dashboard (e.g. your ngrok URL) |
+| `PAYMONGO_VERIFY_SSL` | Backend | `true` (default). Set `false` on local Windows dev when PHP has no CA bundle (cURL error 60) |
 | `PAYMONGO_SUCCESS_URL` | Backend | Redirect target after a successful checkout |
 | `PAYMONGO_CANCEL_URL` | Backend | Redirect target when the customer cancels checkout |
 | `VITE_PAYMONGO_PUBLIC_KEY` | Frontend | PayMongo public key exposed to the browser |
@@ -260,8 +263,8 @@ on PayMongo's page, so WiWaste never touches card numbers.
 3. The POS opens the PayMongo checkout; on success PayMongo redirects to `PAYMONGO_SUCCESS_URL`
    (`/pos/success?transaction_id=...`).
 4. The success page polls `GET /api/paymongo/status/{transaction_id}` every 2s. When the PaymentIntent is
-   `paid`, the sale is finalized — **exactly once** (idempotent): stock deducted, `Stock_Movement` +
-   `AuditLog` written, analytics cache warmed.
+   `succeeded` (or any Payment reports `paid`), the sale is finalized — **exactly once** (idempotent):
+   stock deducted, `Stock_Movement` + `AuditLog` written, analytics cache warmed.
 5. Cancelled / failed / timeout → no stock change and the cart is restored on the POS.
 
 ### Localhost (no webhook needed)
@@ -283,10 +286,18 @@ PAYMONGO_CANCEL_URL=http://localhost:5173/cashier/pos
 If you want event-driven confirmation (or to let the POS finalize even when the success page is closed):
 
 1. Expose the backend publicly (e.g. ngrok/cloudflared) — the endpoint is `POST /api/paymongo/webhook`.
-2. In the PayMongo dashboard, create a webhook pointing at `https://<your-domain>/api/paymongo/webhook`
-   subscribed to `payment.paid` and `payment.failed`.
+2. In the PayMongo dashboard, create a webhook pointing at your public URL
+   (e.g. `https://veraciously-provocational-susan.ngrok-free.dev/api/paymongo/webhook`) subscribed to
+   `checkout_session.payment.paid` (and `checkout_session.payment.failed` if you want failure events),
+   then record it as `PAYMONGO_WEBHOOK_URL`.
 3. Copy the generated `whsec_...` into `PAYMONGO_WEBHOOK_SECRET`. The backend verifies the
-   `X-Paymongo-Signature` header before dispatching the `ProcessPayMongoWebhook` job.
+   `Paymongo-Signature` header before dispatching the `ProcessPayMongoWebhook` job. Both signature
+   formats are supported: the current `t=<ts>,te=<test-sig>,li=<live-sig>` (HMAC-SHA256 over
+   `<ts>.<raw-body>`) and the legacy raw-body HMAC on `X-Paymongo-Signature`.
+
+> ⚠️ `PAYMONGO_API_URL` is the **PayMongo API base URL** (`https://api.paymongo.com/v1`) used to create
+> checkouts — do **not** point it at your webhook URL. The webhook URL is only registered in the
+> PayMongo dashboard (via `PAYMONGO_WEBHOOK_URL` for reference).
 
 ---
 

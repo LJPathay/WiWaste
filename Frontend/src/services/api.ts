@@ -81,11 +81,12 @@ export const suppliers = {
 
 // ─── Products ───────────────────────────────────────────
 export const products = {
-  list: (params?: { search?: string; category_id?: number; page?: number }) => {
+  list: (params?: { search?: string; category_id?: number; page?: number; per_page?: number }) => {
     const qs = new URLSearchParams();
     if (params?.search) qs.set('search', params.search);
     if (params?.category_id) qs.set('category_id', String(params.category_id));
     if (params?.page) qs.set('page', String(params.page));
+    if (params?.per_page) qs.set('per_page', String(params.per_page));
     const q = qs.toString();
     return request<PaginatedResponse<ApiProduct>>(`/products${q ? '?' + q : ''}`);
   },
@@ -124,7 +125,14 @@ export const wastage = {
 
 // ─── Sales (POS) ────────────────────────────────────────
 export const sales = {
-  list: (page = 1) => request<PaginatedResponse<ApiSalesTransaction>>(`/sales?page=${page}`),
+  list: (params?: { search?: string; page?: number; per_page?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.search) qs.set('search', params.search);
+    if (params?.page) qs.set('page', String(params.page));
+    if (params?.per_page) qs.set('per_page', String(params.per_page));
+    const q = qs.toString();
+    return request<PaginatedResponse<ApiSalesTransaction>>(`/sales${q ? '?' + q : ''}`);
+  },
   show: (id: number) => request<ApiSalesTransaction>(`/sales/${id}`),
   create: (data: CreateSalePayload) =>
     request('/sales', { method: 'POST', body: JSON.stringify(data) }),
@@ -433,7 +441,7 @@ export interface ApiRecommendation {
   reviewed_at: string | null;
 }
 
-export interface ApiRecommendationDetail extends ApiRecommendation {}
+export type ApiRecommendationDetail = ApiRecommendation;
 
 export interface ApiMovement {
   movement_id: number;
@@ -452,6 +460,40 @@ export interface ApiInventoryMovements {
 }
 
 // ─── Purchase Orders ──────────────────────────────────────
+export interface ApiPurchaseOrderItem {
+  id: number;
+  product_id: number;
+  product: string;
+  quantity: number;
+  unit_price: number;
+  subtotal: number;
+  received_qty: number;
+}
+
+export interface ApiPurchaseOrder {
+  id: number;
+  po_number: string;
+  supplier_id: number;
+  supplier: string;
+  user: string | null;
+  status: string;
+  total_amount: number;
+  notes: string | null;
+  items: ApiPurchaseOrderItem[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreatePurchaseOrderPayload {
+  supplier_id: number;
+  notes?: string;
+  items: Array<{
+    product_id: number;
+    quantity: number;
+    unit_price: number;
+  }>;
+}
+
 export const purchaseOrders = {
   list: (params?: { status?: string; search?: string; page?: number }) => {
     const qs = new URLSearchParams();
@@ -459,10 +501,10 @@ export const purchaseOrders = {
     if (params?.search) qs.set('search', params.search);
     if (params?.page) qs.set('page', String(params.page));
     const q = qs.toString();
-    return request<any>(`/purchase-orders${q ? '?' + q : ''}`);
+    return request<PaginatedResponse<ApiPurchaseOrder>>(`/purchase-orders${q ? '?' + q : ''}`);
   },
-  show: (id: number) => request<any>(`/purchase-orders/${id}`),
-  create: (data: any) =>
+  show: (id: number) => request<ApiPurchaseOrder>(`/purchase-orders/${id}`),
+  create: (data: CreatePurchaseOrderPayload) =>
     request('/purchase-orders', { method: 'POST', body: JSON.stringify(data) }),
   updateStatus: (id: number, status: string) =>
     request(`/purchase-orders/${id}`, { method: 'PUT', body: JSON.stringify({ status }) }),
@@ -471,6 +513,18 @@ export const purchaseOrders = {
 };
 
 // ─── Audit Logs ───────────────────────────────────────────
+export interface ApiAuditLog {
+  id: number;
+  action: string;
+  user: string;
+  role: string;
+  entity_type: string;
+  entity_id: number | null;
+  old_values: string | null;
+  new_values: string | null;
+  timestamp: string;
+}
+
 export const auditLogs = {
   list: (params?: { search?: string; action?: string; entity_type?: string; page?: number }) => {
     const qs = new URLSearchParams();
@@ -479,22 +533,95 @@ export const auditLogs = {
     if (params?.entity_type) qs.set('entity_type', params.entity_type);
     if (params?.page) qs.set('page', String(params.page));
     const q = qs.toString();
-    return request<any>(`/audit-logs${q ? '?' + q : ''}`);
+    return request<PaginatedResponse<ApiAuditLog>>(`/audit-logs${q ? '?' + q : ''}`);
   },
 };
 
 // ─── Profit & Loss ────────────────────────────────────────
+export interface ApiProfitLossOverview {
+  total_sales: number;
+  total_cogs: number;
+  total_wastage_loss: number;
+  total_returns: number;
+  net_profit: number;
+  gross_margin: number;
+}
+
+export interface ApiProfitLossCategory {
+  category: string;
+  total_sales: number;
+  total_wastage_loss: number;
+  product_count: number;
+}
+
+export interface ApiProfitLossTrend {
+  period: string;
+  sales: number;
+  wastage_loss: number;
+}
+
 export const profitLoss = {
-  overview: () => request<any>('/profit-loss/overview'),
-  byCategory: () => request<any[]>('/profit-loss/by-category'),
-  trends: (period?: string) => request<any[]>(`/profit-loss/trends${period ? '?period=' + period : ''}`),
+  overview: () => request<ApiProfitLossOverview>('/profit-loss/overview'),
+  byCategory: () => request<ApiProfitLossCategory[]>('/profit-loss/by-category'),
+  trends: (period?: string) => request<ApiProfitLossTrend[]>(`/profit-loss/trends${period ? '?period=' + period : ''}`),
 };
 
 // ─── Inventory Analytics ──────────────────────────────────
+export interface ApiTurnoverProduct {
+  product_id: number;
+  product_name: string;
+  category: string;
+  total_sold: number;
+  avg_stock: number;
+  turnover_rate: number;
+  days_on_shelf: number;
+  status: string;
+}
+
+export interface ApiTurnoverResponse {
+  products: ApiTurnoverProduct[];
+  avg_turnover: number;
+  total_dead_stock: number;
+}
+
+export interface ApiOverstockItem {
+  id: number;
+  name: string;
+  category: string;
+  qty_on_hand: number;
+  reorder_point: number;
+  excess_qty: number;
+  unit_cost: number;
+  exposure: number;
+  recommended_action: string;
+}
+
+export interface ApiOverstockResponse {
+  items: ApiOverstockItem[];
+  total_exposure: number;
+  total_items: number;
+}
+
+export interface ApiDeadStockItem {
+  id: number;
+  name: string;
+  category: string;
+  stock: number;
+  cost_price: number;
+  locked_capital: number;
+  days_on_shelf: number;
+}
+
+export interface ApiDeadStockResponse {
+  items: ApiDeadStockItem[];
+  total_locked_capital: number;
+  total_items: number;
+}
+
 export const inventoryAnalytics = {
-  turnover: () => request<any>('/analytics/turnover'),
-  overstock: () => request<any>('/analytics/overstock'),
-  deadStock: () => request<any>('/analytics/dead-stock'),
+  turnover: () => request<ApiTurnoverResponse>('/analytics/turnover'),
+  overstock: () => request<ApiOverstockResponse>('/analytics/overstock'),
+  deadStock: () => request<ApiDeadStockResponse>('/analytics/dead-stock'),
   dashboardSummary: () => request<ApiDashboardSummary>('/analytics/dashboard-summary'),
 };
 

@@ -18,27 +18,40 @@ class PayMongoController extends Controller
     public function webhook(Request $request)
     {
         $payload = $request->getContent();
-        $signature = $request->header('X-Paymongo-Signature');
+        $signature = $request->header('Paymongo-Signature') ?: $request->header('X-Paymongo-Signature');
 
         if (!app(PayMongoService::class)->verifyWebhookSignature($payload, $signature)) {
             return response()->json(['message' => 'Invalid signature.'], 401);
         }
 
         $body = json_decode($payload, true);
-        $eventType = data_get($body, 'data.attributes.type') ?? $body['type'] ?? null;
-        $intentId = data_get($body, 'data.attributes.data.attributes.payment_intent.id')
+        $eventType = data_get($body, 'data.attributes.type')
+            ?? data_get($body, 'data.type')
+            ?? $body['type']
+            ?? null;
+
+        $resource = data_get($body, 'data.attributes.data');
+        if (!is_array($resource)) {
+            $resource = data_get($body, 'data.data', []);
+        }
+
+        $intentId = data_get($resource, 'attributes.payment_intent.id')
+            ?? data_get($resource, 'payment_intent.id')
             ?? data_get($body, 'data.attributes.payment_intent.id')
+            ?? data_get($body, 'data.payment_intent.id')
             ?? data_get($body, 'data.id')
             ?? null;
-        $transactionId = data_get($body, 'data.attributes.data.attributes.metadata.transaction_id')
+        $transactionId = data_get($resource, 'attributes.metadata.transaction_id')
+            ?? data_get($resource, 'metadata.transaction_id')
             ?? data_get($body, 'data.attributes.metadata.transaction_id')
+            ?? data_get($body, 'data.metadata.transaction_id')
             ?? null;
 
         if (!$eventType || !$intentId || !$transactionId) {
             return response()->json(['message' => 'Invalid webhook payload.'], 400);
         }
 
-        if (in_array($eventType, ['payment.paid', 'payment.failed'], true)) {
+        if ($this->isRelevantEvent($eventType)) {
             ProcessPayMongoWebhook::dispatch((int) $transactionId, $eventType, $intentId);
         }
 
@@ -71,10 +84,14 @@ class PayMongoController extends Controller
         }
 
         $intent = $paymongoService->retrieveIntent($transaction->paymongo_intent_id);
-        $intentStatus = data_get($intent, 'data.attributes.status');
+        $payments = data_get($intent, 'data.attributes.payments', []);
+        $isPaid = data_get($intent, 'data.attributes.status') === 'succeeded'
+            || $this->hasPaymentStatus($payments, 'paid');
+        $isFailed = data_get($intent, 'data.attributes.status') === 'cancelled'
+            || $this->hasPaymentStatus($payments, 'failed');
 
-        if ($intentStatus !== 'paid') {
-            if (in_array($intentStatus, ['failed', 'cancelled'], true)) {
+        if (!$isPaid) {
+            if ($isFailed) {
                 $transaction->payment_status = 'failed';
                 $transaction->save();
             }
@@ -89,7 +106,7 @@ class PayMongoController extends Controller
 
             $locked->status = 'Completed';
             $locked->payment_status = 'paid';
-            $locked->payment_reference = data_get($intent, 'data.attributes.payment_method_type');
+            $locked->payment_reference = $this->derivePaymentReference($intent) ?? $locked->payment_reference;
             $locked->save();
 
             foreach ($locked->salesItems as $item) {
@@ -129,6 +146,45 @@ class PayMongoController extends Controller
         });
 
         return $this->payload($transaction->fresh());
+    }
+
+    private function isRelevantEvent(string $eventType): bool
+    {
+        return in_array($eventType, [
+            'checkout_session.payment.paid',
+            'checkout_session.payment.failed',
+            'payment.paid',
+            'payment.failed',
+            'payment_intent.succeeded',
+            'payment_intent.payment_failed',
+        ], true);
+    }
+
+    private function hasPaymentStatus(array $payments, string $status): bool
+    {
+        foreach ($payments as $payment) {
+            if (data_get($payment, 'attributes.status') === $status) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function derivePaymentReference(array $intent): ?string
+    {
+        $sourceType = data_get($intent, 'data.attributes.payments.0.attributes.source.type');
+        if (!$sourceType) {
+            return null;
+        }
+
+        return match (strtolower((string) $sourceType)) {
+            'gcash'   => 'GCash',
+            'maya'    => 'Maya',
+            'paymaya' => 'Maya',
+            'card'    => 'Card',
+            default   => $sourceType,
+        };
     }
 
     private function payload(?SalesTransaction $transaction): array

@@ -73,7 +73,7 @@ export function SystemSettings() {
     timezone: 'Asia/Manila',
   });
   const [saveLoading, setSaveLoading] = useState(false);
-  const [loadingSettings, setLoadingSettings] = useState(true);
+  const [, setLoadingSettings] = useState(true);
 
   /* ── Smart Alerts ── */
   const [alerts, setAlerts] = useState({
@@ -89,7 +89,7 @@ export function SystemSettings() {
   const [headerStyle, setHeaderStyle] = useState<'quick-access' | 'action-text' | 'welcome-text'>('quick-access');
 
   useEffect(() => {
-    const savedHeader = localStorage.getItem('wiwaste_header_style') as any;
+    const savedHeader = localStorage.getItem('wiwaste_header_style') as 'quick-access' | 'action-text' | 'welcome-text' | null;
     if (savedHeader === 'quick-access' || savedHeader === 'action-text' || savedHeader === 'welcome-text') {
       setHeaderStyle(savedHeader);
     }
@@ -141,8 +141,8 @@ export function SystemSettings() {
         ...Object.fromEntries(Object.entries(alerts).map(([k, v]) => [k, String(v)])),
       });
       success('System configuration saved successfully.');
-    } catch (e: any) {
-      error(e.message ?? 'Failed to save settings.');
+    } catch (e) {
+      error(e instanceof Error ? e.message : 'Failed to save settings.');
     }
     setSaveLoading(false);
   };

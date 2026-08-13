@@ -20,25 +20,23 @@ By the end of this sprint:
 
 ## 2. Status
 
-- **Not started.**
-- Current state: `Frontend/src/pages/cashier/POSTerminal.tsx` shows a placeholder box
-  ("Process payment via {method} terminal.") for non-cash methods, and `completePayment` swallows API
-  errors and always shows a success receipt — this must be restructured.
-- Backend `SalesTransactionController::store` only accepts
-  `Cash, E-wallet, Credit Card, Debit Card` and hardcodes `status = 'Completed'`.
+- **Complete.** Hosted Checkout Sessions, webhook + poll finalize, Pending-sale path, and the POS
+  checkout flow are all implemented and tested.
 
 ## 3. Approach (decided)
 
 - **Hosted Checkout Sessions** — `POST https://api.paymongo.com/v1/checkout_sessions` returns a hosted
   `checkout_url`. Redirect the browser there; no card data ever enters WiWaste.
 - **Finalize = webhook + poll (hybrid):**
-  - Webhook `POST /api/paymongo/webhook` verifies the `X-Paymongo-Signature` header
-    (`hash_hmac('sha256', rawBody, webhook_secret)`) and dispatches a queued job
+  - Webhook `POST /api/paymongo/webhook` verifies the `Paymongo-Signature` header
+    (`t=<ts>,te=<test-sig>,li=<live-sig>`; HMAC-SHA256 over `<ts>.<rawBody>`; legacy raw-body HMAC on
+    `X-Paymongo-Signature` also accepted) and dispatches a queued job
     (`ProcessPayMongoWebhook`, pattern from `app/Jobs/WarmAnalyticsCache.php`; database queue already
     configured).
   - `GET /api/paymongo/status/{transaction_id}` re-checks the PaymentIntent from PayMongo and finalizes
-    when `paid`, so the POS works even when webhooks cannot reach localhost.
-- **Stock is deducted only on payment confirmation** (`paid`). A `Pending` transaction holds zero stock;
+    when the intent is `succeeded` (or a Payment reports `paid`), so the POS works even when webhooks
+    cannot reach localhost.
+- **Stock is deducted only on payment confirmation.** A `Pending` transaction holds zero stock;
   a cancelled/failed payment deducts nothing.
 - The existing synchronous path for `Cash / E-wallet / Credit Card / Debit Card` is **unchanged**.
 
@@ -93,8 +91,9 @@ Also update `SalesTransaction` `$fillable` and the `index()` payload to expose t
   `checkout_url` + `payment_intent_id`.
 - `retrieveIntent(string $intentId): array` — GET `/payment_intents/{id}`; returns `status`, `amount`,
   and payment method used.
-- `verifyWebhookSignature(string $payload, string $signature): bool` — constant-time compare of
-  `hash_hmac('sha256', $payload, config('services.paymongo.webhook_secret'))`.
+- `verifyWebhookSignature(string $payload, string $signature): bool` — constant-time compare. Accepts
+  the current `t=<ts>,te=<sig>,li=<sig>` header (HMAC-SHA256 of `ts + '.' + rawBody`) and the legacy
+  raw-body HMAC.
 - Use Laravel `Http::` (Guzzle already ships with `laravel/framework`).
 
 ### 5.4 `SalesTransactionController::store` — pending path
@@ -111,8 +110,9 @@ Also update `SalesTransaction` `$fillable` and the `index()` payload to expose t
 ### 5.5 Finalize helper (shared by webhook + poll)
 
 - `PayMongoController::finalize(int $transactionId)` — idempotent (no-op if already `Completed`):
-  when intent is `paid`, set `status = 'Completed'`, `payment_status = 'paid'`, `payment_reference`
-  from the intent's method, then create `Sales_Item` rows, deduct `Inventory`, write `Stock_Movement`,
+  when the intent is `succeeded` (or a Payment reports `paid`), set `status = 'Completed'`,
+  `payment_status = 'paid'`, `payment_reference` from the paid payment's `source.type`, then create
+  `Sales_Item` rows, deduct `Inventory`, write `Stock_Movement`,
   log `AuditLog`, dispatch `WarmAnalyticsCache` — all inside `DB::transaction`.
 
 ### 5.6 Webhook endpoint
@@ -171,6 +171,9 @@ Also update `SalesTransaction` `$fillable` and the `index()` payload to expose t
 PAYMONGO_SECRET_KEY=sk_test_...        # sandbox secret key
 PAYMONGO_PUBLIC_KEY=pk_test_...        # sandbox public key
 PAYMONGO_WEBHOOK_SECRET=whsec_...      # from PayMongo dashboard webhook settings
+PAYMONGO_API_URL=https://api.paymongo.com/v1  # PayMongo API base — NOT the webhook URL
+PAYMONGO_WEBHOOK_URL=https://<your-domain>/api/paymongo/webhook  # registered in the dashboard
+PAYMONGO_VERIFY_SSL=false                     # false on local Windows dev (fixes cURL error 60)
 PAYMONGO_SUCCESS_URL=http://localhost:5173/pos/success
 PAYMONGO_CANCEL_URL=http://localhost:5173/pos
 
@@ -209,12 +212,25 @@ Frontend:
 **Acceptance criteria:** Selecting GCash/Maya/card opens the PayMongo checkout and the sale completes only
 when payment is confirmed; stock is deducted exactly once.
 
-- [ ] GCash / Maya / Card open the PayMongo hosted checkout and return with a receipt.
-- [ ] Stock is deducted exactly once, only after payment is confirmed.
-- [ ] Cancelled/failed payments create no sale and change no stock.
-- [ ] Webhook endpoint verifies the signature; poll endpoint finalizes without a tunnel.
-- [ ] Cash / E-wallet / Credit Card / Debit Card path is unchanged.
-- [ ] Feature tests 1–5 pass with `php artisan test`.
-- [ ] `npm run build` and ESLint pass.
+- [x] GCash / Maya / Card open the PayMongo hosted checkout and return with a receipt.
+- [x] Stock is deducted exactly once, only after payment is confirmed.
+- [x] Cancelled/failed payments create no sale and change no stock.
+- [x] Webhook endpoint verifies the signature; poll endpoint finalizes without a tunnel.
+- [x] Cash / E-wallet / Credit Card / Debit Card path is unchanged.
+- [x] Feature tests 1–5 pass with `php artisan test`.
+- [x] `npm run build` and ESLint pass.
+
+### Test evidence (2026-08-13)
+
+- Backend: `php artisan test` → **33 passed** (28 existing + 5 new `PayMongoTest`).
+- Frontend: `npm run build` passes; `npx tsc --noEmit` clean (exit 0). ESLint: no new errors introduced by
+  Sprint 6 files (`POSPaymentStatus.tsx` is lint-clean; pre-existing backlog unchanged — see
+  `implementationplan-testing.md` §2.1).
+- Live smoke: `POST /api/sales` with `payment_method=PayMongo` returns `checkout_url` +
+  `payment_intent_id` with transaction `Pending` (no stock deducted); poll endpoint finalizes on `paid`;
+  webhook rejects bad signatures with 401.
+- Dev DB: migration `2026_08_12_000003_add_paymongo_fields_to_sales_transaction_table` applied;
+  `payment_method`/`status` widened to string, `paymongo_*` + `payment_reference`/`payment_status`
+  columns verified in MySQL.
 
 > After this sprint, continue to Testing & Evaluation, then Deployment & Documentation.

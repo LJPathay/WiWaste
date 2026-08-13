@@ -2,6 +2,7 @@ export type PaymentMethod = 'Cash' | 'E-wallet' | 'Credit Card' | 'Debit Card';
 
 export interface CashierProduct {
   product_id: string;
+  db_id?: number;
   category_id: string;
   supplier_id: string;
   barcode: string;

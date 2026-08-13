@@ -92,7 +92,7 @@ export function Login() {
       });
 
       navigate('/dashboard');
-    } catch (err: any) {
+    } catch {
       // Fallback for offline prototype demo
       setStoredSession({
         email: `${selectedRole}@ipharmamart.com`,

@@ -24,7 +24,7 @@ export function useKpiHighlight(durationMs = 5000) {
       }, { replace: true });
     }, durationMs);
     return () => clearTimeout(timer);
-  }, [activeIdx]);
+  }, [activeIdx, durationMs, setSearchParams]);
 
   return activeIdx;
 }

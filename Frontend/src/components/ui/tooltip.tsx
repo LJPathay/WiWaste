@@ -50,8 +50,7 @@ function TooltipTrigger({
 }: {
     children: React.ReactNode;
     asChild?: boolean;
-    [key: string]: any;
-}) {
+} & Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "onClick" | "onMouseEnter" | "onMouseLeave">) {
     const { open, setOpen, timerRef } = React.useContext(TooltipContext);
 
     const handleToggle = (e: React.SyntheticEvent) => {
@@ -73,7 +72,7 @@ function TooltipTrigger({
     };
 
     if (asChild && React.isValidElement(children)) {
-        return React.cloneElement(children as React.ReactElement<any>, { ...props, ...sharedProps });
+        return React.cloneElement(children as React.ReactElement<React.ButtonHTMLAttributes<HTMLButtonElement>>, { ...props, ...sharedProps });
     }
 
     return (
@@ -86,7 +85,6 @@ function TooltipTrigger({
 function TooltipContent({
     children,
     className,
-    sideOffset = 4,
     align = "center",
     ...props
 }: {
@@ -94,8 +92,7 @@ function TooltipContent({
     className?: string;
     sideOffset?: number;
     align?: "center" | "start" | "end";
-    [key: string]: any;
-}) {
+} & React.HTMLAttributes<HTMLDivElement>) {
     const { open } = React.useContext(TooltipContext);
     if (!open) return null;
 

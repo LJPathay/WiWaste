@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { AlertTriangle, Trash2, Search, Loader2, Info, TrendingDown, BarChart2, PackageX, CheckCircle, ChevronDown } from 'lucide-react';
+import { AlertTriangle, Trash2, Search, Loader2, Info, TrendingDown, BarChart2, PackageX, ChevronDown } from 'lucide-react';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { Toast, useToast, ConfirmDialog } from '../../components/ui/Toast';
 import { useApi } from '../../hooks/useApi';
@@ -22,7 +22,7 @@ function getReasonBadge(reason: string): string {
 export function RecordWastage() {
   const { toasts, dismiss, success, error } = useToast();
   const { data: apiProducts } = useApi(productsApi.list);
-  const { data: wastageRecords, loading, refetch } = useApi<ApiWastage[]>(wastageApi.list);
+  const { data: wastageRecords, refetch } = useApi<ApiWastage[]>(wastageApi.list);
 
   const [search, setSearch] = useState('');
   
@@ -109,10 +109,10 @@ export function RecordWastage() {
           date_recorded: new Date().toISOString().slice(0, 10),
         });
       }
-    } catch (err: any) {
+    } catch (err) {
       setSubmitting(false);
       setConfirmData(null);
-      error(err.message ?? 'Failed to record wastage. Please try again.');
+      error(err instanceof Error ? err.message : 'Failed to record wastage. Please try again.');
       return;
     }
 

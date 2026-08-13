@@ -14,8 +14,8 @@ export function useOptimisticList<T extends { id: number }>(
       const result = await fetcher();
       const items = Array.isArray(result) ? result : result.data;
       setData(items);
-    } catch (err: any) {
-      setError(err.message ?? 'Failed to load data');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load data');
     } finally {
       setLoading(false);
     }

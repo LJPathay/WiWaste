@@ -14,21 +14,17 @@
 
 ## 2. Status
 
-- **In progress.** `Backend/tests/Feature/InventorySyncTest.php` covers the Sprint 1 inventory
-  invariants and `Backend/tests/Feature/ForecastTest.php` covers the Sprint 2 forecast endpoints
-  (both pass — `php artisan test` → 16 tests). `ml-service` pytest → 12 tests. Groups 3.5–3.7 are
-  not started.
-- **Frontend:** no test runner configured. We add a minimal Vitest setup only for the API client and the
-  mock-data fallback behavior (Sprint 5 overview pages stay on mock).
+- **Complete.** `Backend/tests/Feature/` covers Sprints 1–6 (inventory sync, forecast, loss risk,
+  optimization, PayMongo) — `php artisan test` → **37 tests**. `ml-service` pytest → **31 tests**.
+  Frontend Vitest (see §4) → **7 tests**. Evaluation metrics recorded in §6.
+- **Frontend:** Vitest is configured for the API client and the mock-data fallback behavior (§4);
+  `npx eslint src` → **0 problems**, `npx tsc --noEmit` → clean, `npm run build` passes.
 
 ## 2.1 Known issues / backlog
 
-- **Frontend lint & typecheck are NOT clean (pre-existing, outside Sprint 0–2 scope).** `npx eslint src`
-  reports 163 problems (160 errors, 3 warnings) and `npx tsc -b` fails (~61 errors) across the app
-  (unused imports, implicit `any`, unused locals, missing `isOpen` prop typing on `Modal`, etc.). None of
-  these come from the Sprint 1/2 feature work (the Sprint 2 Predictive Analytics rewrite actually
-  removed ~30 of the pre-existing type errors). `npm run build` succeeds. Clean this backlog before the
-  section-8 "lint clean" checkbox is claimed.
+- **Frontend lint & typecheck (resolved).** The pre-existing `no-explicit-any`/unused-var backlog
+  (~157 ESLint problems, plus type errors) was fixed during the Testing/Integration phase. `npx eslint src`
+  reports **0 problems**, `npx tsc --noEmit` passes, and `npm run build` succeeds.
 
 ## 3. Backend tests (PHPUnit)
 
@@ -71,29 +67,33 @@ Run with: `php artisan test`.
 24. [x] `GET /loss-risk/items?tier=High` filters; default sort is expected-loss desc; empty before any predict.
 
 ### 3.6 Sprint 4 — Optimization
-23. `POST /optimize/replenishment` (ml-service) deterministic with a fixed seed.
-24. `total_order_value <= budget` always.
-25. No negative `order_qty`.
-26. Missing `budget` → 422.
-27. Approved plan writes into `Inventory_Recommendation` (`recommendation_type = 'Reorder'`).
-28. Final fitness ≤ generation-0 fitness on a synthetic fixture (convergence).
-29. Service offline → `POST /optimization/replenishment` returns a clear 503 (no PHP fallback).
+23. [x] `POST /optimize/replenishment` (ml-service) deterministic with a fixed seed.
+24. [x] `total_order_value <= budget` always.
+25. [x] No negative `order_qty`.
+26. [x] Missing `budget` → 422.
+27. [x] Approved plan writes into `Inventory_Recommendation` (`recommendation_type = 'Reorder'`).
+28. [x] Final fitness ≤ generation-0 fitness on a synthetic fixture (convergence).
+29. [x] Service offline → `POST /optimization/replenishment` returns a clear 503 (no PHP fallback).
 
 ### 3.7 Sprint 5 — Regression suite
-30. The full set above still passes together (run `php artisan test` end-to-end).
+30. [x] The full set above still passes together (run `php artisan test` end-to-end). — **37 tests pass.**
 
 ## 4. Frontend tests (Vitest)
 
-Add the minimum setup: `vitest`, `@testing-library/react`, `jsdom`.
+Setup added: `vitest`, `@testing-library/react`, `jsdom` (+ `@testing-library/jest-dom`). Run with
+`npm test` (→ `vitest run`).
 
 ```
 Frontend/
-├── vitest.config.ts
-└── src/services/api.test.ts        # request() attaches token, throws on non-OK
+├── vitest.config.ts                  # jsdom env, @ alias, react plugin
+├── vitest.setup.ts                   # jest-dom matchers + in-memory localStorage mock
+└── src/services/api.test.ts          # request() attaches token, throws on non-OK
 └── src/hooks/useDashboardData.test.ts  # falls back to mock data when API fails
 ```
 
-- `npm test` runs Vitest.
+- `npm test` runs Vitest. **7 tests pass.**
+- Note: Node ≥ 22 ships an experimental `localStorage` global that shadows jsdom's; `vitest.setup.ts`
+  installs an in-memory `Storage` mock so the API client tests are environment-independent.
 - Keep the suite small: the UI is already covered by the manual demo walkthrough (Sprint 5) and the
   backend integration tests.
 
@@ -107,23 +107,27 @@ Run inside the Python 3.12 venv with `pytest` from `ml-service/`.
     series return a forecast, never an error; deterministic on a fixed fixture.
   - [x] `POST /predict/loss` — returns one result per input product with the documented fields; batch of 0
     products → 422; deterministic on a fixed fixture.
-  - `POST /optimize/replenishment` — same inputs + seed → same plan; `total_order_value <= budget`;
+  - [x] `POST /optimize/replenishment` — same inputs + seed → same plan; `total_order_value <= budget`;
     no negative order quantities; missing budget → 422.
 - `ml-service/tests/test_arima.py` — direct unit tests of the ARIMA module (determinism, short/no-sales
   guards, MAPE threshold, overstock risk).
 - `ml-service/tests/test_xgboost.py` (Sprint 3) — batch shape, empty batch, expected-loss formula,
-  at-risk product outranks fresh one, unknown category/supplier do not crash. `test_ga.py` (Sprint 4)
-  still pending.
+  at-risk product outranks fresh one, unknown category/supplier do not crash.
+- `ml-service/tests/test_ga.py` (Sprint 4) — determinism, budget respected across budgets × seeds,
+  no negative orders, convergence (final ≤ gen-0), empty/tiny-budget guards. **31 tests pass total.**
 
 ## 6. Evaluation metrics
 
-| Component | Metric | Target |
-|-----------|--------|--------|
-| Forecast (Sprint 2) | MAPE / MAD on hold-out window | MAPE < 25% on demo data |
-| Forecast confidence | Avg confidence from the model | documented, shown in UI |
-| Loss risk (Sprint 3) | Precision@K of `High`-risk items vs. actual wastage on demo data | report the number honestly |
-| Optimizer (Sprint 4) | % of plans within budget; fitness improvement over generations | 100% within budget; monotone decrease |
-| Inventory sync | Stock = Σ movements reconciliation on demo data | 0 drift |
+Computed by `ml-service/eval_metrics.py` (deterministic, seeded — run with
+`.venv\Scripts\python eval_metrics.py` from `ml-service/`).
+
+| Component | Metric | Target | Actual |
+|-----------|--------|--------|--------|
+| Forecast (Sprint 2) | MAPE / MAD on hold-out window | MAPE < 25% on demo data | **MAPE 16.31%** / MAD 0.94 units on a 14-day hold-out (SARIMAX(1,1,1)x(1,0,0,7), synthetic trend+seasonal demo series) |
+| Forecast confidence | Avg confidence from the model | documented, shown in UI | **72.18%** average over the horizon |
+| Loss risk (Sprint 3) | Precision@K of `High`-risk items vs. actual wastage on demo data | report the number honestly | **precision@10/20/50/100 = 1.00** on a synthetic held-out set (n=4000, seed 123; ground truth = risk_score ≥ 0.6; truly-high rate 11%). Caveat: labels are synthetic from the same generator the demo model trains on, so this is an upper bound — treat as a consistency check, not real-world accuracy. |
+| Optimizer (Sprint 4) | % of plans within budget; fitness improvement over generations | 100% within budget; monotone decrease | **100%** within budget over 40 runs (4 budgets × 10 seeds); **100%** convergence (final ≤ gen-0); avg fitness improvement **54.26%** |
+| Inventory sync | Stock = Σ movements reconciliation on demo data | 0 drift | **0 drift** — every stock change writes a `Stock_Movement` and `Backend/tests/Feature/InventorySyncTest.php` asserts exact post-operation stock (sale 50→47, wastage 50→46, stock-in 50→70) and that rejected ops leave stock unchanged (422). |
 
 ## 7. Demo script (capstone defense)
 
@@ -137,9 +141,9 @@ Run inside the Python 3.12 venv with `pytest` from `ml-service/`.
 
 ## 8. Definition of Done
 
-- [ ] `php artisan test` passes (groups 3.1–3.7).
-- [ ] `npm test` passes (frontend Vitest).
-- [ ] `ml-service` pytest passes.
-- [ ] `npm run build` and `npx eslint src` clean.
-- [ ] Evaluation metrics recorded in this file (fill the target column with actuals).
-- [ ] Demo script runs end-to-end without errors.
+- [x] `php artisan test` passes (groups 3.1–3.7). — **37 tests pass.**
+- [x] `npm test` passes (frontend Vitest). — **7 tests pass** (`api.test.ts` request() token/error behavior, `useDashboardData.test.ts` offline fallback).
+- [x] `ml-service` pytest passes. — **31 tests pass.**
+- [x] `npm run build` and `npx eslint src` clean. — **build passes; eslint 0 problems.**
+- [x] Evaluation metrics recorded in this file (fill the target column with actuals). — see §6.
+- [ ] Demo script runs end-to-end without errors. — validated by code audit + automated tests (Sprint 5); the physical USB-scanner walkthrough remains a manual demo-day activity.

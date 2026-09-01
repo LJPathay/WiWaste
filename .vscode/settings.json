@@ -1,8 +1,0 @@
-{
-    "chat.tools.terminal.autoApprove": {
-        "/^cd \"c:\\\\Users\\\\pc-an tika run\\\\Documents\\\\Cap\\\\WiWaste\\\\Frontend\"; npx vitest run --pool=threads src/pages/cashier/POSTerminal\\.test\\.ts$/": {
-            "approve": true,
-            "matchCommandLine": true
-        }
-    }
-}

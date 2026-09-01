@@ -13,7 +13,7 @@ Redesign the checkout modal in `POSTerminal.tsx` to match real-world cashier wor
 **HIGH** — Directly impacts cashier speed and UX; core POS functionality
 
 ---
-
+# test
 ## Files to Modify
 
 | File | Action | Lines |

@@ -37,6 +37,80 @@ interface CartLine {
   overrideReason?: string;
 }
 
+export type CheckoutStatusTone = 'info' | 'warning' | 'success' | 'danger';
+
+export function getCheckoutStatusMessage({
+  paymentMethod,
+  grandTotal,
+  amountTendered,
+  terminalAmount,
+  terminalRef,
+}: {
+  paymentMethod: PosPaymentMethod;
+  grandTotal: number;
+  amountTendered: string;
+  terminalAmount: string;
+  terminalRef: string;
+}): { tone: CheckoutStatusTone; text: string; detail: string } {
+  const formattedTotal = `₱${grandTotal.toFixed(2)}`;
+
+  if (paymentMethod === 'Cash') {
+    const cashValue = Number(amountTendered || 0);
+
+    if (!amountTendered.trim()) {
+      return {
+        tone: 'info',
+        text: 'Awaiting cash tender',
+        detail: `Enter an amount to complete the sale for ${formattedTotal}.`,
+      };
+    }
+
+    if (cashValue < grandTotal) {
+      return {
+        tone: 'warning',
+        text: 'Short payment detected',
+        detail: `Customer still owes ₱${(grandTotal - cashValue).toFixed(2)} before the sale can be completed.`,
+      };
+    }
+
+    return {
+      tone: 'success',
+      text: 'Exact cash payment ready',
+      detail: `Customer provided ${formatCurrency(cashValue)}. Change due: ${formatCurrency(Math.max(0, cashValue - grandTotal))}.`,
+    };
+  }
+
+  if (!terminalRef.trim()) {
+    return {
+      tone: 'info',
+      text: 'Waiting for terminal approval',
+      detail: 'Capture the approval or reference number from the payment terminal before finalizing the sale.',
+    };
+  }
+
+  if (terminalAmount.trim() && Number(terminalAmount) !== grandTotal) {
+    return {
+      tone: 'warning',
+      text: `${paymentMethod} amount mismatch`,
+      detail: `Terminal reads ₱${Number(terminalAmount).toFixed(2)}, but the order total is ${formattedTotal}.`,
+    };
+  }
+
+  if (terminalAmount.trim() && Number(terminalAmount) === grandTotal) {
+    return {
+      tone: 'success',
+      text: `${paymentMethod} payment verified`,
+      detail: `The terminal amount matches the order total and reference ${terminalRef.trim()} is ready to complete the sale.`,
+    };
+  }
+
+  return {
+    tone: 'info',
+    text: `${paymentMethod} awaiting confirmation`,
+    detail: `Please confirm the terminal amount before completing this payment for ${formattedTotal}.`,
+  };
+}
+
 const IS_TERMINAL = (m: PosPaymentMethod) =>
   m === 'Card (Terminal)' || m === 'E-wallet (Terminal)';
 
@@ -137,6 +211,11 @@ function apiProductToCashier(api: ApiProduct): CashierProduct {
 const POS_CATALOG_CACHE_KEY = 'wiwaste_pos_catalog';
 const POS_CATALOG_CACHE_TTL_MS = 5 * 60 * 1000;
 
+function resolveCatalogSource(catalog: CashierProduct[], fallback: CashierProduct[], apiFailed: boolean): CashierProduct[] {
+  if (catalog.length > 0) return catalog;
+  return apiFailed ? fallback : [];
+}
+
 function loadCachedCatalog(): CashierProduct[] | null {
   try {
     const raw = localStorage.getItem(POS_CATALOG_CACHE_KEY);
@@ -169,13 +248,17 @@ export function POSTerminal() {
   const [cart, setCart] = useState<CartLine[]>([]);
   const [paymentMethod, setPaymentMethod] = useState<PosPaymentMethod>('Cash');
   const [amountTendered, setAmountTendered] = useState('');
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [customerEmail, setCustomerEmail] = useState('');
+  const [customerNotes, setCustomerNotes] = useState('');
   
   const [terminalRef, setTerminalRef] = useState('');
   const [terminalAmount, setTerminalAmount] = useState('');
 
-  // Live product catalog. Renders instantly from cache (or the mock list) and refreshes in the
-  // background from the backend — no skeleton loading, the grid is usable immediately.
-  const [catalog, setCatalog] = useState<CashierProduct[]>(() => loadCachedCatalog() ?? cashierProducts);
+  // Use the real backend catalog as the source of truth. Only fall back to mock data when the live
+  // catalog cannot be loaded so the dashboard doesn't flash stale static items before the real data appears.
+  const [catalog, setCatalog] = useState<CashierProduct[]>(() => loadCachedCatalog() ?? []);
   const [catalogError, setCatalogError] = useState(false);
   
   const [pluBuffer, setPluBuffer] = useState('');
@@ -272,7 +355,7 @@ export function POSTerminal() {
   }, [recordingAction, handleHotkeyRecord]);
 
   const filteredProducts = useMemo(() => {
-    const source = catalogError && catalog.length === 0 ? cashierProducts : catalog;
+    const source = resolveCatalogSource(catalog, cashierProducts, catalogError);
     const q = search.toLowerCase();
     return source.filter(p => {
       const matchCat = activeCategory === 'all' || p.category_id === activeCategory;
@@ -488,6 +571,13 @@ export function POSTerminal() {
     { id: 'Card (Terminal)' as PosPaymentMethod, icon: CreditCard, label: 'CARD', sublabel: 'TERMINAL' },
     { id: 'E-wallet (Terminal)' as PosPaymentMethod, icon: Wallet, label: 'E-WALLET', sublabel: 'TERMINAL' },
   ] as const;
+  const checkoutStatus = getCheckoutStatusMessage({
+    paymentMethod,
+    grandTotal,
+    amountTendered,
+    terminalAmount,
+    terminalRef,
+  });
 
   // Smart quick amounts based on grandTotal
   const quickAmounts = useMemo(() => {
@@ -586,6 +676,10 @@ export function POSTerminal() {
         : paymentMethod === 'Card (Terminal)' ? 'Credit Card' 
         : 'E-wallet',
       payment_reference: isTerminal ? terminalRef : undefined,
+      customer_name: customerName || null,
+      customer_phone: customerPhone || null,
+      customer_email: customerEmail || null,
+      customer_notes: customerNotes || null,
       amount_tendered: isCash ? tendered : grandTotal,
       change_due: isCash ? changeDue : 0,
       senior_pwd_name: seniorPwdInfo?.name ?? null,
@@ -651,6 +745,10 @@ export function POSTerminal() {
   const startNewTransaction = () => {
     setCart([]);
     setAmountTendered('');
+    setCustomerName('');
+    setCustomerPhone('');
+    setCustomerEmail('');
+    setCustomerNotes('');
     setTerminalRef('');
     setTerminalAmount('');
     setReceipt(null);
@@ -662,7 +760,7 @@ export function POSTerminal() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-[#F8FAFC] dark:bg-slate-900 text-[#475569] dark:text-slate-300 font-sans">
+    <div className="relative h-screen w-full z-50 flex flex-col bg-[#F8FAFC] dark:bg-slate-900 text-[#475569] dark:text-slate-300 font-sans overflow-hidden">
       <Toast toasts={toasts} onDismiss={dismiss} />
 
       {/* GLOBAL HEADER */}
@@ -1142,7 +1240,7 @@ export function POSTerminal() {
 
       {/* Hotkey Settings Modal */}
       {showHotkeySettings && (
-        <div className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="absolute inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-3xl p-6 animate-in fade-in zoom-in-95 duration-200">
             <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-1 flex items-center gap-2">
               <Keyboard className="w-5 h-5 text-[#0F766E]" /> Hotkey Settings
@@ -1223,7 +1321,7 @@ export function POSTerminal() {
       
       {/* Discount Modal */}
       {showDiscountModal && (
-        <div className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="absolute inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-sm overflow-hidden p-6 animate-in fade-in zoom-in-95 duration-200">
             <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
               <Percent className="w-5 h-5 text-[#0F766E]" /> Apply Discount
@@ -1285,7 +1383,7 @@ export function POSTerminal() {
 
       {/* Return Modal */}
       {showReturnModal && (
-        <div className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="absolute inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden p-6 animate-in fade-in zoom-in-95 duration-200">
             <h3 className="text-lg font-bold text-slate-800 mb-2 flex items-center gap-2">
               <ArrowRight className="w-5 h-5 text-[#0F766E]" /> Process Return
@@ -1302,7 +1400,7 @@ export function POSTerminal() {
 
       {/* Senior/PWD ID Modal */}
       {showSeniorPwdModal && (
-        <div className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="absolute inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-sm overflow-hidden p-6 animate-in fade-in zoom-in-95 duration-200">
             <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-2 flex items-center gap-2">
               <Percent className="w-5 h-5 text-[#0F766E]" /> Senior/PWD Discount
@@ -1341,7 +1439,7 @@ export function POSTerminal() {
 
       {/* Price Override Modal */}
       {showPriceOverrideModal && (
-        <div className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="absolute inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-sm overflow-hidden p-6 animate-in fade-in zoom-in-95 duration-200">
             <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-2 flex items-center gap-2">
               <Percent className="w-5 h-5 text-amber-500" /> Override Price
@@ -1382,7 +1480,7 @@ export function POSTerminal() {
 
       {/* Void Modal */}
       {showVoidModal && (
-        <div className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="absolute inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden p-6 animate-in fade-in zoom-in-95 duration-200">
             <h3 className="text-lg font-bold text-red-600 mb-2 flex items-center gap-2">
               <AlertCircle className="w-5 h-5" /> Void Selected Item
@@ -1398,7 +1496,7 @@ export function POSTerminal() {
 
       {/* Exit Confirm Modal */}
       {showExitConfirm && (
-        <div className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="absolute inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden p-6 animate-in fade-in zoom-in-95 duration-200">
             <h3 className="text-lg font-bold text-slate-800 mb-2 flex items-center gap-2">
               <AlertCircle className="w-5 h-5 text-red-500" /> Exit POS
@@ -1422,11 +1520,11 @@ export function POSTerminal() {
 
       {/* Payment Checkout Modal - Landscape Split Layout */}
       {showCheckout && (
-        <div className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl overflow-hidden flex">
+        <div className="absolute inset-0 z-[60] bg-slate-900/20 backdrop-blur-[1px] flex items-center justify-center p-5">
+          <div className="bg-white rounded-[26px] shadow-[0_28px_80px_rgba(15,23,42,0.25)] w-full max-w-4xl max-h-[88vh] overflow-hidden flex border border-slate-200 relative">
             
             {/* LEFT PANEL: Order Summary (45%) */}
-            <div className="w-[45%] bg-slate-50 border-r border-slate-200 p-6 flex flex-col min-h-[500px]">
+            <div className="w-[45%] bg-slate-50 border-r border-slate-200 p-6 flex flex-col min-h-[500px] text-slate-800">
               {/* Header */}
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-slate-800">Order Summary</h2>
@@ -1443,9 +1541,9 @@ export function POSTerminal() {
               </div>
 
               {/* Cart Items */}
-              <div className="flex-1 overflow-y-auto space-y-3 mb-6 max-h-[280px] pr-2">
+              <div className="flex-1 overflow-y-auto space-y-3 mb-6 max-h-[42vh] min-h-[160px] pr-2">
                 {cart.map((line, idx) => (
-                  <div key={line.product.product_id} className="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-100 shadow-sm">
+                  <div key={line.product.product_id} className="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-200 shadow-sm">
                     <div className="w-16 h-16 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0">
                       {line.product.image_url ? (
                         <img src={line.product.image_url} alt="" className="w-full h-full object-cover rounded-lg" />
@@ -1513,7 +1611,7 @@ export function POSTerminal() {
             </div>
 
             {/* RIGHT PANEL: Payment (55%) */}
-            <div className="w-[55%] p-6 bg-white flex flex-col min-h-[500px]">
+            <div className="w-[55%] p-6 bg-white flex flex-col min-h-[500px] text-slate-800">
               {/* Payment Method Selector */}
               <div className="mb-6">
                 <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-4">Payment Method</span>
@@ -1540,6 +1638,23 @@ export function POSTerminal() {
                 </div>
               </div>
 
+              {paymentMethod !== 'Cash' && (
+                <div className="mb-4 grid grid-cols-2 gap-2">
+                  <input
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    placeholder="Customer name"
+                    className="w-full px-3 py-2.5 border border-slate-200 rounded-lg bg-white text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-transparent"
+                  />
+                  <input
+                    value={customerPhone}
+                    onChange={(e) => setCustomerPhone(e.target.value)}
+                    placeholder="Phone"
+                    className="w-full px-3 py-2.5 border border-slate-200 rounded-lg bg-white text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-transparent"
+                  />
+                </div>
+              )}
+
               {/* Payment-Specific Interface */}
               <div className="flex-1 space-y-5">
                 {paymentMethod === 'Cash' && (
@@ -1562,33 +1677,6 @@ export function POSTerminal() {
                       </div>
                     </div>
 
-                    {/* Smart Quick Amounts */}
-                    <div>
-                      <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-3">Quick Amount</span>
-                      <div className="grid grid-cols-5 gap-3">
-                        {quickAmounts.map((amt) => (
-                          <button
-                            key={amt}
-                            onClick={() => setAmountTendered(amt.toFixed(2))}
-                            className={`py-4 rounded-xl font-bold text-base transition-all shadow-sm ${
-                              Number(amountTendered) === amt
-                                ? 'bg-[#0F766E] text-white shadow-lg'
-                                : 'bg-white border-2 border-slate-200 text-slate-700 hover:border-[#0F766E] hover:text-[#0F766E] hover:shadow-md'
-                            }`}
-                          >
-                            {amt === Math.ceil(grandTotal) ? `Exact ₱${amt}` : `₱${amt}`}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Change - Very Prominent */}
-                    <div className="bg-gradient-to-r from-[#E8F7F2] to-[#D1F4E8] border-2 border-[#0F766E]/30 rounded-2xl p-6 text-center">
-                      <span className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-2">Change Due</span>
-                      <span className="text-5xl font-black text-[#0F766E]">{formatCurrency(Math.max(0, Number(amountTendered) - grandTotal))}</span>
-                      <p className="text-xs text-slate-500 mt-1">Customer receives this amount</p>
-                    </div>
-
                     {/* Insufficient Amount Warning */}
                     {Number(amountTendered) > 0 && Number(amountTendered) < grandTotal && (
                       <div className="flex items-center gap-2 text-red-600 text-sm bg-red-50 px-4 py-3 rounded-lg border border-red-200">
@@ -1601,19 +1689,6 @@ export function POSTerminal() {
 
                 {paymentMethod === 'Card (Terminal)' && (
                   <div className="space-y-5">
-                    {/* Instruction Banner */}
-                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-5">
-                      <div className="flex items-start gap-4">
-                        <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center shrink-0">
-                          <CreditCard className="w-5 h-5 text-blue-600" />
-                        </div>
-                        <div>
-                          <p className="text-base font-bold text-blue-800">Card Terminal Payment</p>
-                          <p className="text-sm text-blue-700 mt-1">Customer pays on the card terminal. Terminal prints receipt with approval code. Enter details below.</p>
-                        </div>
-                      </div>
-                    </div>
-
                     {/* Approval / Reference No. */}
                     <div>
                       <label className="block text-xs font-bold text-slate-600 mb-2 flex items-center gap-1">
@@ -1642,13 +1717,13 @@ export function POSTerminal() {
                           className="w-full pl-12 pr-5 py-4 bg-slate-50 border-2 border-slate-200 rounded-xl text-xl font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-[#0F766E] transition-all"
                         />
                       </div>
-                      {terminalAmount && Number(terminalAmount) !== grandTotal && (
+                      {terminalAmount && Math.abs(Number(terminalAmount) - grandTotal) > 0.005 && (
                         <div className="flex items-center gap-2 mt-3 text-amber-600 text-sm bg-amber-50 px-4 py-3 rounded-lg border border-amber-200">
                           <AlertCircle className="w-4 h-4 shrink-0" />
                           <span>Terminal amount (₱{Number(terminalAmount).toFixed(2)}) doesn't match order total (₱{grandTotal.toFixed(2)})</span>
                         </div>
                       )}
-                      {terminalAmount && Number(terminalAmount) === grandTotal && (
+                      {terminalAmount && Math.abs(Number(terminalAmount) - grandTotal) <= 0.005 && (
                         <div className="flex items-center gap-2 mt-3 text-green-600 text-sm bg-green-50 px-4 py-3 rounded-lg border border-green-200">
                           <CheckCircle2 className="w-4 h-4 shrink-0" />
                           <span>Terminal amount matches order total ✓</span>
@@ -1656,28 +1731,6 @@ export function POSTerminal() {
                       )}
                     </div>
 
-                    {/* Quick Reference Guide */}
-                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
-                      <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Terminal Receipt Fields</p>
-                      <div className="grid grid-cols-2 gap-3 text-sm">
-                        <div className="bg-white p-3 rounded-lg border border-slate-100">
-                          <p className="text-slate-400 text-[11px]">Approval Code</p>
-                          <p className="font-mono font-bold text-slate-800">e.g. 123456</p>
-                        </div>
-                        <div className="bg-white p-3 rounded-lg border border-slate-100">
-                          <p className="text-slate-400 text-[11px]">Ref / Trace No.</p>
-                          <p className="font-mono font-bold text-slate-800">e.g. 000123456789</p>
-                        </div>
-                        <div className="bg-white p-3 rounded-lg border border-slate-100">
-                          <p className="text-slate-400 text-[11px]">Batch No.</p>
-                          <p className="font-mono font-bold text-slate-800">e.g. 042</p>
-                        </div>
-                        <div className="bg-white p-3 rounded-lg border border-slate-100">
-                          <p className="text-slate-400 text-[11px]">Amount</p>
-                          <p className="font-mono font-bold text-slate-800">₱{grandTotal.toFixed(2)}</p>
-                        </div>
-                      </div>
-                    </div>
                   </div>
                 )}
 
@@ -1724,13 +1777,13 @@ export function POSTerminal() {
                           className="w-full pl-12 pr-5 py-4 bg-slate-50 border-2 border-slate-200 rounded-xl text-xl font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-[#0F766E] transition-all"
                         />
                       </div>
-                      {terminalAmount && Number(terminalAmount) !== grandTotal && (
+                      {terminalAmount && Math.abs(Number(terminalAmount) - grandTotal) > 0.005 && (
                         <div className="flex items-center gap-2 mt-3 text-amber-600 text-sm bg-amber-50 px-4 py-3 rounded-lg border border-amber-200">
                           <AlertCircle className="w-4 h-4 shrink-0" />
                           <span>Terminal amount (₱{Number(terminalAmount).toFixed(2)}) doesn't match order total (₱{grandTotal.toFixed(2)})</span>
                         </div>
                       )}
-                      {terminalAmount && Number(terminalAmount) === grandTotal && (
+                      {terminalAmount && Math.abs(Number(terminalAmount) - grandTotal) <= 0.005 && (
                         <div className="flex items-center gap-2 mt-3 text-green-600 text-sm bg-green-50 px-4 py-3 rounded-lg border border-green-200">
                           <CheckCircle2 className="w-4 h-4 shrink-0" />
                           <span>Terminal amount matches order total ✓</span>
@@ -1738,53 +1791,6 @@ export function POSTerminal() {
                       )}
                     </div>
 
-                    {/* Quick Reference Guide */}
-                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
-                      <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Terminal Receipt Fields</p>
-                      <div className="grid grid-cols-2 gap-3 text-sm">
-                        <div className="bg-white p-3 rounded-lg border border-slate-100">
-                          <p className="text-slate-400 text-[11px]">Transaction ID</p>
-                          <p className="font-mono font-bold text-slate-800">e.g. 2026090112345678</p>
-                        </div>
-                        <div className="bg-white p-3 rounded-lg border border-slate-100">
-                          <p className="text-slate-400 text-[11px]">Reference No.</p>
-                          <p className="font-mono font-bold text-slate-800">e.g. GCash-000123</p>
-                        </div>
-                        <div className="bg-white p-3 rounded-lg border border-slate-100">
-                          <p className="text-slate-400 text-[11px]">Merchant ID</p>
-                          <p className="font-mono font-bold text-slate-800">e.g. MW123456</p>
-                        </div>
-                        <div className="bg-white p-3 rounded-lg border border-slate-100">
-                          <p className="text-slate-400 text-[11px]">Amount</p>
-                          <p className="font-mono font-bold text-slate-800">₱{grandTotal.toFixed(2)}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* VAT Breakdown Details */}
-                {isVatRegistered && tax > 0 && (
-                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
-                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">VAT Breakdown (12%)</p>
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                      <div className="bg-white p-3 rounded-lg border border-slate-100">
-                        <p className="text-slate-500">VATable Sales</p>
-                        <p className="font-bold text-slate-800">{formatCurrency(subtotal - discountAmount - (seniorPwdInfo ? (subtotal - discountAmount) * 0.2 : 0) - tax)}</p>
-                      </div>
-                      <div className="bg-white p-3 rounded-lg border border-slate-100">
-                        <p className="text-slate-500">VAT Amount</p>
-                        <p className="font-bold text-slate-800">{formatCurrency(tax)}</p>
-                      </div>
-                      <div className="bg-white p-3 rounded-lg border border-slate-100">
-                        <p className="text-slate-500">Total with VAT</p>
-                        <p className="font-bold text-slate-800">{formatCurrency(subtotal - discountAmount - (seniorPwdInfo ? (subtotal - discountAmount) * 0.2 : 0))}</p>
-                      </div>
-                      <div className="bg-white p-3 rounded-lg border border-slate-100">
-                        <p className="text-slate-500">Less Discount</p>
-                        <p className="font-bold text-green-600">-{formatCurrency(discountAmount + (seniorPwdInfo ? (subtotal - discountAmount) * 0.2 : 0))}</p>
-                      </div>
-                    </div>
                   </div>
                 )}
               </div>
@@ -1822,7 +1828,7 @@ export function POSTerminal() {
           ========================================================= */}
           
       {showPrintedReceipt && receipt && (
-        <div className="fixed inset-0 z-[80] bg-slate-900/90 backdrop-blur-sm flex items-center justify-center p-4 font-sans no-print-bg">
+        <div className="absolute inset-0 z-[80] bg-slate-900/90 backdrop-blur-sm flex items-center justify-center p-4 font-sans no-print-bg">
           <div className="bg-white shadow-2xl rounded-2xl w-[380px] overflow-hidden flex flex-col max-h-[95vh] border border-slate-200">
             
             {/* Header & Change Due Handoff Hero Banner (Screen Only) */}

@@ -4,7 +4,7 @@ import {
   Barcode, Search, Trash2, CreditCard, Wallet, Banknote, Plus, Minus, 
   User, Receipt, Clock, ArrowRight, Printer, CheckCircle2,
   Archive, RotateCcw, Percent, Search as SearchIcon, MoreHorizontal, AlertCircle, Keyboard, Info,
-  Monitor, Tablet, Smartphone, Loader2
+  Monitor, Tablet, Smartphone, Loader2, X, Package
 } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { Toast, useToast } from '../../components/ui/Toast';
@@ -475,6 +475,38 @@ export function POSTerminal() {
   const tendered = Number(amountTendered || 0);
   const changeDue = paymentMethod === 'Cash' ? Math.max(0, tendered - grandTotal) : 0;
 
+  // Sync terminalAmount with grandTotal when modal opens or payment method changes to terminal
+  useEffect(() => {
+    if (showCheckout && IS_TERMINAL(paymentMethod)) {
+      setTerminalAmount(grandTotal.toFixed(2));
+    }
+  }, [showCheckout, paymentMethod, grandTotal]);
+
+  // Payment method configuration
+  const paymentMethods = [
+    { id: 'Cash' as PosPaymentMethod, icon: Banknote, label: 'CASH', sublabel: '' },
+    { id: 'Card (Terminal)' as PosPaymentMethod, icon: CreditCard, label: 'CARD', sublabel: 'TERMINAL' },
+    { id: 'E-wallet (Terminal)' as PosPaymentMethod, icon: Wallet, label: 'E-WALLET', sublabel: 'TERMINAL' },
+  ] as const;
+
+  // Smart quick amounts based on grandTotal
+  const quickAmounts = useMemo(() => {
+    const base = Math.ceil(grandTotal);
+    const amounts = [
+      base,
+      Math.ceil(base / 50) * 50,
+      Math.ceil(base / 100) * 100,
+      500,
+      1000,
+    ];
+    return amounts.filter((v, i, arr) => arr.indexOf(v) === i);
+  }, [grandTotal]);
+
+  // Complete button enabled state
+  const isCompleteEnabled = paymentMethod === 'Cash'
+    ? Number(amountTendered) >= grandTotal
+    : terminalRef.trim() !== '';
+
   const applyDiscount = (pct: number, fixedAmount?: number) => {
     if (pct > 0 && !selectedLineId && !fixedAmount) {
       error('Please select an item first.');
@@ -547,10 +579,7 @@ export function POSTerminal() {
 
     if (isCash && tendered < grandTotal) { error('Amount tendered must cover the total.'); return; }
     if (isTerminal && !terminalRef.trim()) { error('Enter terminal approval/reference number.'); return; }
-    if (terminalAmount && Number(terminalAmount) !== grandTotal) {
-      error(`Terminal amount (${formatCurrency(Number(terminalAmount))}) doesn't match total (${formatCurrency(grandTotal)})`);
-      return;
-    }
+    // Terminal amount mismatch is warned in UI but doesn't block completion
 
     const payload = {
       payment_method: isCash ? 'Cash' 
@@ -1391,166 +1420,398 @@ export function POSTerminal() {
         </div>
       )}
 
-      {/* Payment Checkout Modal */}
+      {/* Payment Checkout Modal - Landscape Split Layout */}
       {showCheckout && (
-        <div className="fixed inset-0 z-[60] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden flex">
+        <div className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl overflow-hidden flex">
             
-            {/* Left side: Totals */}
-            <div className="w-[40%] bg-[#0F766E] border-r border-[#E5E7EB] p-8 flex flex-col justify-between text-white">
-              <div>
-                <h2 className="text-xl font-bold mb-6 uppercase tracking-wider text-white/90">Complete Payment</h2>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center text-white/80 text-sm font-medium">
-                    <span>Subtotal</span>
-                    <span>{formatCurrency(subtotal)}</span>
-                  </div>
-                  {discountAmount > 0 && (
-                    <div className="flex justify-between items-center text-white/80 text-sm font-medium">
-                      <span>Discount</span>
-                      <span>-{formatCurrency(discountAmount)}</span>
-                    </div>
-                  )}
-                  {seniorPwdInfo && (
-                    <div className="flex justify-between items-center text-white/80 text-sm font-medium">
-                      <span>Senior/PWD</span>
-                      <span className="text-[10px]">{seniorPwdInfo.name}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between items-center text-white/80 text-sm font-medium">
-                    <span>VAT (12%)</span>
-                    <span>{formatCurrency(tax)}</span>
-                  </div>
-                  <div className="w-full h-px bg-white/20 my-4"></div>
-                  <div className="flex flex-col">
-                    <span className="text-xs font-bold text-white/60 uppercase tracking-widest mb-1">Grand Total</span>
-                    <span className="text-5xl font-black text-white tracking-tight">{formatCurrency(grandTotal)}</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="mt-8">
-                <button 
+            {/* LEFT PANEL: Order Summary (45%) */}
+            <div className="w-[45%] bg-slate-50 border-r border-slate-200 p-6 flex flex-col min-h-[500px]">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-slate-800">Order Summary</h2>
+                <button
                   onClick={() => {
                     setShowCheckout(false);
                     barcodeRef.current?.focus();
                   }}
-                  className="px-6 py-3 text-sm font-bold text-white bg-white/10 rounded-xl hover:bg-white/20 transition-colors shadow-sm"
+                  className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-lg transition-colors"
+                  aria-label="Close checkout"
                 >
-                  Cancel Checkout (Esc)
+                  <X className="w-5 h-5" />
                 </button>
               </div>
-            </div>
 
-            {/* Right side: Payment Method & Input */}
-            <div className="w-[60%] p-8 bg-white flex flex-col">
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-3">Payment Method</label>
-              
-              <div className="space-y-2 mb-6">
-                {(['Cash', 'Card (Terminal)', 'E-wallet (Terminal)'] as PosPaymentMethod[]).map(m => (
-                  <label key={m} className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-slate-50">
-                    <input
-                      type="radio"
-                      value={m}
-                      checked={paymentMethod === m}
-                      onChange={() => { setPaymentMethod(m); setTerminalRef(''); setTerminalAmount(''); }}
-                      className="w-5 h-5 text-[#0F766E] border-slate-300 focus:ring-[#0F766E]"
-                    />
-                    <span className="font-medium text-slate-800">{m}</span>
-                  </label>
+              {/* Cart Items */}
+              <div className="flex-1 overflow-y-auto space-y-3 mb-6 max-h-[280px] pr-2">
+                {cart.map((line, idx) => (
+                  <div key={line.product.product_id} className="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-100 shadow-sm">
+                    <div className="w-16 h-16 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                      {line.product.image_url ? (
+                        <img src={line.product.image_url} alt="" className="w-full h-full object-cover rounded-lg" />
+                      ) : (
+                        <Package className="w-8 h-8 text-slate-400" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-slate-800 truncate">{line.product.product_name}</p>
+                      <p className="text-xs text-slate-500">{line.product.sku || line.product.barcode}</p>
+                      {line.discountPct > 0 && (
+                        <span className="text-[10px] font-bold text-[#0F766E] bg-[#0F766E]/10 px-1.5 py-0.5 rounded">-{line.discountPct * 100}%</span>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-slate-800">{formatCurrency(line.product.selling_price * (1 - (line.discountPct || 0)) - (line.discountAmount || 0))}</p>
+                      <p className="text-xs text-slate-500">× {line.quantity}</p>
+                    </div>
+                  </div>
                 ))}
               </div>
 
-              {IS_TERMINAL(paymentMethod) && (
-                <div className="space-y-3 pt-3 border-t mb-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-600 mb-1">Terminal Ref # <span className="text-red-500">*</span></label>
-                    <input
-                      value={terminalRef}
-                      onChange={e => setTerminalRef(e.target.value)}
-                      placeholder="Approval code from terminal slip"
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#0F766E] focus:border-transparent"
-                      autoFocus
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-600 mb-1">Terminal Amount (optional)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={terminalAmount}
-                      onChange={e => setTerminalAmount(e.target.value)}
-                      placeholder={formatCurrency(grandTotal)}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#0F766E] focus:border-transparent"
-                    />
-                  </div>
+              {/* Price Breakdown */}
+              <div className="border-t border-slate-200 pt-4 space-y-3">
+                <div className="flex justify-between text-sm text-slate-600">
+                  <span>Subtotal</span>
+                  <span className="font-medium">{formatCurrency(subtotal)}</span>
                 </div>
-              )}
+                {discountAmount > 0 && (
+                  <div className="flex justify-between text-sm text-green-600">
+                    <span>Item Discount</span>
+                    <span className="font-medium">-{formatCurrency(discountAmount)}</span>
+                  </div>
+                )}
+                {seniorPwdInfo && (
+                  <div className="flex justify-between text-sm text-blue-600">
+                    <span>Senior/PWD 20%</span>
+                    <span className="font-medium">-{formatCurrency((subtotal - discountAmount) * 0.2)}</span>
+                  </div>
+                )}
+                {isVatRegistered && tax > 0 && (
+                  <>
+                    <div className="flex justify-between text-sm text-slate-600">
+                      <span>VATable Amount</span>
+                      <span className="font-medium">{formatCurrency(subtotal - discountAmount - (seniorPwdInfo ? (subtotal - discountAmount) * 0.2 : 0) - tax)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm text-slate-600">
+                      <span>VAT (12%)</span>
+                      <span className="font-medium">{formatCurrency(tax)}</span>
+                    </div>
+                  </>
+                )}
+                {!isVatRegistered && (
+                  <div className="flex justify-between text-sm text-slate-600">
+                    <span>VAT Exempt</span>
+                    <span className="font-medium text-green-600">₱0.00</span>
+                  </div>
+                )}
+                <div className="border-t border-slate-200 pt-3"></div>
+                <div className="flex justify-between text-xl font-black text-slate-900">
+                  <span>TOTAL DUE</span>
+                  <span>{formatCurrency(grandTotal)}</span>
+                </div>
+              </div>
+            </div>
 
-              {paymentMethod === 'Cash' ? (
-                <div className="flex-1">
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">Amount Tendered</label>
-                  <div className="relative mb-4">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xl">₱</span>
-                    <input
-                      type="number"
-                      autoFocus
-                      value={amountTendered}
-                      onChange={(e) => setAmountTendered(e.target.value)}
-                      placeholder="0.00"
-                      className="w-full pl-12 pr-4 py-4 bg-[#F8FAFC] border border-[#E5E7EB] rounded-xl text-3xl font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-transparent transition-all"
-                    />
-                  </div>
-                  
-                  {/* Preset Buttons — Bills + Coins */}
-                  <div className="grid grid-cols-5 gap-2 mb-2">
-                    {[1, 5, 10, 20, 50].map((amt) => (
-                      <button
-                        key={amt}
-                        onClick={() => setAmountTendered(amt.toString())}
-                        className={`py-2 bg-white border border-[#E5E7EB] text-slate-700 text-xs font-bold rounded-xl hover:border-[#0F766E] hover:text-[#0F766E] transition-colors shadow-sm ${amt <= 10 ? 'text-amber-600' : ''}`}
-                      >
-                        {amt >= 20 ? `₱${amt}` : `${amt}`}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="grid grid-cols-5 gap-2 mb-4">
-                    {[100, 200, 500, 1000].map((amt) => (
-                      <button
-                        key={amt}
-                        onClick={() => setAmountTendered(amt.toString())}
-                        className="py-3 bg-white border border-[#E5E7EB] text-slate-700 text-sm font-bold rounded-xl hover:border-[#0F766E] hover:text-[#0F766E] transition-colors shadow-sm"
-                      >
-                        ₱{amt}
-                      </button>
-                    ))}
+            {/* RIGHT PANEL: Payment (55%) */}
+            <div className="w-[55%] p-6 bg-white flex flex-col min-h-[500px]">
+              {/* Payment Method Selector */}
+              <div className="mb-6">
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-4">Payment Method</span>
+                <div className="grid grid-cols-3 gap-3">
+                  {paymentMethods.map((m) => (
                     <button
-                        onClick={() => setAmountTendered(Math.ceil(grandTotal).toString())}
-                        className="py-3 bg-[#E8F7F2] border border-[#0F766E]/30 text-[#0F766E] text-sm font-bold rounded-xl hover:bg-[#d1f4e8] transition-colors shadow-sm"
-                      >
-                        Exact
+                      key={m.id}
+                      onClick={() => {
+                        setPaymentMethod(m.id);
+                        setTerminalRef('');
+                        setTerminalAmount(String(grandTotal));
+                      }}
+                      className={`flex flex-col items-center gap-2 p-5 rounded-xl border-2 text-center transition-all ${
+                        paymentMethod === m.id
+                          ? 'border-[#0F766E] bg-[#E8F7F2] shadow-md'
+                          : 'border-slate-200 hover:border-[#0F766E] hover:bg-slate-50'
+                      }`}
+                    >
+                      <m.icon className="w-10 h-10 text-[#0F766E]" />
+                      <span className="text-base font-bold text-slate-800">{m.label}</span>
+                      {m.sublabel && <span className="text-[11px] font-medium text-slate-500">{m.sublabel}</span>}
                     </button>
-                  </div>
+                  ))}
                 </div>
-              ) : (
-                <div className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-[#E5E7EB] rounded-xl p-6 mb-4 bg-[#F8FAFC]">
-                  {paymentMethod === 'Card (Terminal)' ? <CreditCard className="w-12 h-12 mb-3 text-[#0F766E]" /> : <Wallet className="w-12 h-12 mb-3 text-[#0F766E]" />}
-                  <p className="text-sm font-bold text-slate-600 text-center">
-                    Customer pays on standalone terminal. Enter approval code above.
-                  </p>
-                  <p className="text-xs text-slate-400 text-center mt-1">
-                    Transaction completes immediately — no redirect.
-                  </p>
-                </div>
-              )}
+              </div>
 
-              <button 
-                onClick={completePayment}
-                className="w-full py-4 text-lg font-bold text-white bg-[#0F766E] rounded-xl shadow-md hover:bg-[#0d615b] transition-all relative"
-              >
-                Complete Payment
-                <span className="absolute right-4 text-[10px] bg-white/20 px-2 py-1 rounded">{hotkeys.checkout}</span>
-              </button>
+              {/* Payment-Specific Interface */}
+              <div className="flex-1 space-y-5">
+                {paymentMethod === 'Cash' && (
+                  <div className="space-y-5">
+                    {/* Amount Tendered - Huge Input */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 mb-3">Amount Tendered</label>
+                      <div className="relative">
+                        <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-3xl">₱</span>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          autoFocus
+                          value={amountTendered}
+                          onChange={(e) => setAmountTendered(e.target.value.replace(/[^0-9.]/g, ''))}
+                          placeholder="0.00"
+                          className="w-full pl-14 pr-5 py-6 bg-slate-50 border-2 border-slate-200 rounded-xl text-5xl font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-[#0F766E] transition-all text-center"
+                          style={{ appearance: 'textfield' }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Smart Quick Amounts */}
+                    <div>
+                      <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-3">Quick Amount</span>
+                      <div className="grid grid-cols-5 gap-3">
+                        {quickAmounts.map((amt) => (
+                          <button
+                            key={amt}
+                            onClick={() => setAmountTendered(amt.toFixed(2))}
+                            className={`py-4 rounded-xl font-bold text-base transition-all shadow-sm ${
+                              Number(amountTendered) === amt
+                                ? 'bg-[#0F766E] text-white shadow-lg'
+                                : 'bg-white border-2 border-slate-200 text-slate-700 hover:border-[#0F766E] hover:text-[#0F766E] hover:shadow-md'
+                            }`}
+                          >
+                            {amt === Math.ceil(grandTotal) ? `Exact ₱${amt}` : `₱${amt}`}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Change - Very Prominent */}
+                    <div className="bg-gradient-to-r from-[#E8F7F2] to-[#D1F4E8] border-2 border-[#0F766E]/30 rounded-2xl p-6 text-center">
+                      <span className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-2">Change Due</span>
+                      <span className="text-5xl font-black text-[#0F766E]">{formatCurrency(Math.max(0, Number(amountTendered) - grandTotal))}</span>
+                      <p className="text-xs text-slate-500 mt-1">Customer receives this amount</p>
+                    </div>
+
+                    {/* Insufficient Amount Warning */}
+                    {Number(amountTendered) > 0 && Number(amountTendered) < grandTotal && (
+                      <div className="flex items-center gap-2 text-red-600 text-sm bg-red-50 px-4 py-3 rounded-lg border border-red-200">
+                        <AlertCircle className="w-4 h-4 shrink-0" />
+                        Short by {formatCurrency(grandTotal - Number(amountTendered))} — need {formatCurrency(grandTotal)} total
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {paymentMethod === 'Card (Terminal)' && (
+                  <div className="space-y-5">
+                    {/* Instruction Banner */}
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-5">
+                      <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center shrink-0">
+                          <CreditCard className="w-5 h-5 text-blue-600" />
+                        </div>
+                        <div>
+                          <p className="text-base font-bold text-blue-800">Card Terminal Payment</p>
+                          <p className="text-sm text-blue-700 mt-1">Customer pays on the card terminal. Terminal prints receipt with approval code. Enter details below.</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Approval / Reference No. */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 mb-2 flex items-center gap-1">
+                        Approval / Reference No.
+                        <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        value={terminalRef}
+                        onChange={e => setTerminalRef(e.target.value)}
+                        placeholder="Enter approval code from terminal receipt"
+                        className="w-full px-5 py-4 border-2 border-slate-200 rounded-xl text-lg focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-[#0F766E] transition-all"
+                        autoFocus
+                      />
+                    </div>
+
+                    {/* Terminal Amount - Pre-filled, editable with verification */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 mb-2">Terminal Amount</label>
+                      <div className="relative">
+                        <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xl">₱</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={terminalAmount}
+                          onChange={e => setTerminalAmount(e.target.value)}
+                          className="w-full pl-12 pr-5 py-4 bg-slate-50 border-2 border-slate-200 rounded-xl text-xl font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-[#0F766E] transition-all"
+                        />
+                      </div>
+                      {terminalAmount && Number(terminalAmount) !== grandTotal && (
+                        <div className="flex items-center gap-2 mt-3 text-amber-600 text-sm bg-amber-50 px-4 py-3 rounded-lg border border-amber-200">
+                          <AlertCircle className="w-4 h-4 shrink-0" />
+                          <span>Terminal amount (₱{Number(terminalAmount).toFixed(2)}) doesn't match order total (₱{grandTotal.toFixed(2)})</span>
+                        </div>
+                      )}
+                      {terminalAmount && Number(terminalAmount) === grandTotal && (
+                        <div className="flex items-center gap-2 mt-3 text-green-600 text-sm bg-green-50 px-4 py-3 rounded-lg border border-green-200">
+                          <CheckCircle2 className="w-4 h-4 shrink-0" />
+                          <span>Terminal amount matches order total ✓</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Quick Reference Guide */}
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                      <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Terminal Receipt Fields</p>
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div className="bg-white p-3 rounded-lg border border-slate-100">
+                          <p className="text-slate-400 text-[11px]">Approval Code</p>
+                          <p className="font-mono font-bold text-slate-800">e.g. 123456</p>
+                        </div>
+                        <div className="bg-white p-3 rounded-lg border border-slate-100">
+                          <p className="text-slate-400 text-[11px]">Ref / Trace No.</p>
+                          <p className="font-mono font-bold text-slate-800">e.g. 000123456789</p>
+                        </div>
+                        <div className="bg-white p-3 rounded-lg border border-slate-100">
+                          <p className="text-slate-400 text-[11px]">Batch No.</p>
+                          <p className="font-mono font-bold text-slate-800">e.g. 042</p>
+                        </div>
+                        <div className="bg-white p-3 rounded-lg border border-slate-100">
+                          <p className="text-slate-400 text-[11px]">Amount</p>
+                          <p className="font-mono font-bold text-slate-800">₱{grandTotal.toFixed(2)}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {paymentMethod === 'E-wallet (Terminal)' && (
+                  <div className="space-y-5">
+                    {/* Instruction Banner */}
+                    <div className="bg-green-50 border border-green-200 rounded-xl p-5">
+                      <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center shrink-0">
+                          <Wallet className="w-5 h-5 text-green-600" />
+                        </div>
+                        <div>
+                          <p className="text-base font-bold text-green-800">E-Wallet Terminal Payment</p>
+                          <p className="text-sm text-green-700 mt-1">Customer pays via GCash/Maya on the terminal. Terminal prints receipt with transaction reference. Enter details below.</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Transaction Reference No. */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 mb-2 flex items-center gap-1">
+                        Transaction Reference No.
+                        <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        value={terminalRef}
+                        onChange={e => setTerminalRef(e.target.value)}
+                        placeholder="Enter transaction reference from terminal receipt"
+                        className="w-full px-5 py-4 border-2 border-slate-200 rounded-xl text-lg focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-[#0F766E] transition-all"
+                        autoFocus
+                      />
+                    </div>
+
+                    {/* Terminal Amount - Pre-filled, editable with verification */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 mb-2">Terminal Amount</label>
+                      <div className="relative">
+                        <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xl">₱</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={terminalAmount}
+                          onChange={e => setTerminalAmount(e.target.value)}
+                          className="w-full pl-12 pr-5 py-4 bg-slate-50 border-2 border-slate-200 rounded-xl text-xl font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-[#0F766E] transition-all"
+                        />
+                      </div>
+                      {terminalAmount && Number(terminalAmount) !== grandTotal && (
+                        <div className="flex items-center gap-2 mt-3 text-amber-600 text-sm bg-amber-50 px-4 py-3 rounded-lg border border-amber-200">
+                          <AlertCircle className="w-4 h-4 shrink-0" />
+                          <span>Terminal amount (₱{Number(terminalAmount).toFixed(2)}) doesn't match order total (₱{grandTotal.toFixed(2)})</span>
+                        </div>
+                      )}
+                      {terminalAmount && Number(terminalAmount) === grandTotal && (
+                        <div className="flex items-center gap-2 mt-3 text-green-600 text-sm bg-green-50 px-4 py-3 rounded-lg border border-green-200">
+                          <CheckCircle2 className="w-4 h-4 shrink-0" />
+                          <span>Terminal amount matches order total ✓</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Quick Reference Guide */}
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                      <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Terminal Receipt Fields</p>
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div className="bg-white p-3 rounded-lg border border-slate-100">
+                          <p className="text-slate-400 text-[11px]">Transaction ID</p>
+                          <p className="font-mono font-bold text-slate-800">e.g. 2026090112345678</p>
+                        </div>
+                        <div className="bg-white p-3 rounded-lg border border-slate-100">
+                          <p className="text-slate-400 text-[11px]">Reference No.</p>
+                          <p className="font-mono font-bold text-slate-800">e.g. GCash-000123</p>
+                        </div>
+                        <div className="bg-white p-3 rounded-lg border border-slate-100">
+                          <p className="text-slate-400 text-[11px]">Merchant ID</p>
+                          <p className="font-mono font-bold text-slate-800">e.g. MW123456</p>
+                        </div>
+                        <div className="bg-white p-3 rounded-lg border border-slate-100">
+                          <p className="text-slate-400 text-[11px]">Amount</p>
+                          <p className="font-mono font-bold text-slate-800">₱{grandTotal.toFixed(2)}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* VAT Breakdown Details */}
+                {isVatRegistered && tax > 0 && (
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">VAT Breakdown (12%)</p>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div className="bg-white p-3 rounded-lg border border-slate-100">
+                        <p className="text-slate-500">VATable Sales</p>
+                        <p className="font-bold text-slate-800">{formatCurrency(subtotal - discountAmount - (seniorPwdInfo ? (subtotal - discountAmount) * 0.2 : 0) - tax)}</p>
+                      </div>
+                      <div className="bg-white p-3 rounded-lg border border-slate-100">
+                        <p className="text-slate-500">VAT Amount</p>
+                        <p className="font-bold text-slate-800">{formatCurrency(tax)}</p>
+                      </div>
+                      <div className="bg-white p-3 rounded-lg border border-slate-100">
+                        <p className="text-slate-500">Total with VAT</p>
+                        <p className="font-bold text-slate-800">{formatCurrency(subtotal - discountAmount - (seniorPwdInfo ? (subtotal - discountAmount) * 0.2 : 0))}</p>
+                      </div>
+                      <div className="bg-white p-3 rounded-lg border border-slate-100">
+                        <p className="text-slate-500">Less Discount</p>
+                        <p className="font-bold text-green-600">-{formatCurrency(discountAmount + (seniorPwdInfo ? (subtotal - discountAmount) * 0.2 : 0))}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer Actions */}
+              <div className="border-t border-slate-200 pt-4 flex items-center justify-end gap-3">
+                <button
+                  onClick={() => {
+                    setShowCheckout(false);
+                    barcodeRef.current?.focus();
+                  }}
+                  className="px-6 py-3 text-sm font-bold text-slate-600 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 hover:border-slate-400 transition-colors"
+                >
+                  Cancel (Esc)
+                </button>
+                <button
+                  onClick={completePayment}
+                  disabled={!isCompleteEnabled}
+                  className={`px-8 py-3 text-lg font-bold rounded-xl shadow-md transition-all relative ${
+                    isCompleteEnabled
+                      ? 'bg-[#0F766E] text-white hover:bg-[#0d615b]'
+                      : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                  }`}
+                >
+                  Complete Payment
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -91,7 +91,7 @@ export function Login() {
         role: uiRole,
       });
 
-      navigate('/dashboard');
+      navigate(uiRole === 'cashier' ? '/cashier/pos' : '/dashboard');
     } catch {
       // Fallback for offline prototype demo
       setStoredSession({
@@ -100,7 +100,7 @@ export function Login() {
         company: companyMap[selectedRole],
         role: selectedRole,
       });
-      navigate('/dashboard');
+      navigate(selectedRole === 'cashier' ? '/cashier/pos' : '/dashboard');
     } finally {
       setLoading(false);
     }

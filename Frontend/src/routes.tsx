@@ -3,6 +3,7 @@ import { createBrowserRouter, Navigate } from "react-router";
 import { MainLayout } from "./components/layout/MainLayout";
 import { AuthLayout } from "./components/layout/AuthLayout";
 import { DashboardLayout } from "./components/layout/DashboardLayout";
+import { CashierLayout } from "./components/layout/CashierLayout";
 import { PageLoader } from "./components/ui/PageLoader";
 
 function lazyPage(imp: () => Promise<Record<string, ComponentType<unknown>>>, name: string) {
@@ -106,15 +107,21 @@ export const router = createBrowserRouter([
             { path: "inventory/manage", Component: ManageInventory },
             { path: "inventory/fefo", Component: FEFOTracking },
             { path: "inventory/recommendations", Component: Recommendations },
-            // Cashier routes
-            { path: "cashier/pos", Component: POSTerminal },
-            { path: "cashier/returns", Component: ReturnsRefunds },
-            { path: "cashier/history", Component: CashierHistory },
             { path: "manager/performance", element: <Navigate to="/owner/performance" replace /> },
             { path: "manager/overstock", element: <Navigate to="/owner/overstock" replace /> },
             { path: "manager/replenishment", element: <Navigate to="/owner/replenishment" replace /> },
             { path: "manager/suppliers", element: <Navigate to="/owner/supplier-performance" replace /> },
             { path: "manager/reports", element: <Navigate to="/owner/executive-reports" replace /> },
+        ],
+    },
+
+    // ── Cashier terminal: no manager sidebar, kiosk-style interface ──
+    {
+        Component: CashierLayout,
+        children: [
+            { path: "cashier/pos", Component: POSTerminal },
+            { path: "cashier/returns", Component: ReturnsRefunds },
+            { path: "cashier/history", Component: CashierHistory },
         ],
     },
 ]);

@@ -95,11 +95,9 @@ const sidebarGroupsByRole: Record<UserRole, SidebarGroup[]> = {
   ],
   cashier: [
     {
-      group: 'Cashier',
+      group: 'POS',
       items: [
         { to: '/cashier/pos', label: 'POS Terminal', icon: Receipt },
-        { to: '/cashier/returns', label: 'Returns & Refunds', icon: RotateCcw },
-        { to: '/cashier/history', label: 'Transaction History', icon: FileText },
       ],
     },
   ],

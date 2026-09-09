@@ -1658,10 +1658,10 @@ export function POSTerminal() {
               {/* Payment-Specific Interface */}
               <div className="flex-1 space-y-5">
                 {paymentMethod === 'Cash' && (
-                  <div className="space-y-5">
+                  <div className="space-y-4">
                     {/* Amount Tendered - Huge Input */}
                     <div>
-                      <label className="block text-xs font-bold text-slate-600 mb-3">Amount Tendered</label>
+                      <label className="block text-xs font-bold text-slate-600 mb-2">Amount Tendered</label>
                       <div className="relative">
                         <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-3xl">₱</span>
                         <input
@@ -1671,10 +1671,37 @@ export function POSTerminal() {
                           value={amountTendered}
                           onChange={(e) => setAmountTendered(e.target.value.replace(/[^0-9.]/g, ''))}
                           placeholder="0.00"
-                          className="w-full pl-14 pr-5 py-6 bg-slate-50 border-2 border-slate-200 rounded-xl text-5xl font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-[#0F766E] transition-all text-center"
+                          className="w-full pl-14 pr-5 py-5 bg-slate-50 border-2 border-slate-200 rounded-xl text-4xl font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-[#0F766E] transition-all text-center"
                           style={{ appearance: 'textfield' }}
                         />
                       </div>
+                    </div>
+
+                    {/* Quick Amount Pills */}
+                    <div>
+                      <span className="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-wider">Quick Amounts</span>
+                      <div className="flex flex-wrap gap-2">
+                        {quickAmounts.map((amt) => (
+                          <button
+                            key={amt}
+                            type="button"
+                            onClick={() => setAmountTendered(amt.toString())}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${
+                              Number(amountTendered) === amt
+                                ? 'bg-[#0F766E] text-white border-[#0F766E]'
+                                : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
+                            }`}
+                          >
+                            {amt === Math.ceil(grandTotal) ? `Exact ₱${amt.toFixed(2)}` : `₱${amt}`}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Change Due Display */}
+                    <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between">
+                      <span className="text-xs font-extrabold uppercase tracking-wider text-emerald-800">Change Due</span>
+                      <span className="text-2xl font-black text-emerald-700">{formatCurrency(changeDue)}</span>
                     </div>
 
                     {/* Insufficient Amount Warning */}

@@ -1,6 +1,6 @@
 export type PaymentMethod = 'Cash' | 'E-wallet' | 'Credit Card' | 'Debit Card';
 
-export type PosPaymentMethod = 'Cash' | 'Card (Terminal)' | 'E-wallet (Terminal)';
+export type PosPaymentMethod = 'Cash' | 'Card' | 'E-Wallet';
 
 export interface CashierProduct {
   product_id: string;

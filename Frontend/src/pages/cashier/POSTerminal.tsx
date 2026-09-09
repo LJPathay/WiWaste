@@ -4,7 +4,7 @@ import {
   Barcode, Search, Trash2, CreditCard, Wallet, Banknote, Plus, Minus, 
   User, Receipt, Clock, ArrowRight, Printer, CheckCircle2,
   Archive, RotateCcw, Percent, Search as SearchIcon, MoreHorizontal, AlertCircle, Keyboard, Info,
-  Monitor, Tablet, Smartphone, Loader2, X, Package
+  Monitor, Tablet, Smartphone, X, Package
 } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { Toast, useToast } from '../../components/ui/Toast';
@@ -21,7 +21,6 @@ import {
   createTransactionId,
   formatCurrency,
   type CashierProduct,
-  type PaymentMethod,
   type PosPaymentMethod,
   type SalesTransaction,
 } from '../../utils/cashierData';
@@ -36,83 +35,6 @@ interface CartLine {
   originalPrice?: number;
   overrideReason?: string;
 }
-
-type CheckoutStatusTone = 'info' | 'warning' | 'success' | 'danger';
-
-function getCheckoutStatusMessage({
-  paymentMethod,
-  grandTotal,
-  amountTendered,
-  terminalAmount,
-  terminalRef,
-}: {
-  paymentMethod: PosPaymentMethod;
-  grandTotal: number;
-  amountTendered: string;
-  terminalAmount: string;
-  terminalRef: string;
-}): { tone: CheckoutStatusTone; text: string; detail: string } {
-  const formattedTotal = `₱${grandTotal.toFixed(2)}`;
-
-  if (paymentMethod === 'Cash') {
-    const cashValue = Number(amountTendered || 0);
-
-    if (!amountTendered.trim()) {
-      return {
-        tone: 'info',
-        text: 'Awaiting cash tender',
-        detail: `Enter an amount to complete the sale for ${formattedTotal}.`,
-      };
-    }
-
-    if (cashValue < grandTotal) {
-      return {
-        tone: 'warning',
-        text: 'Short payment detected',
-        detail: `Customer still owes ₱${(grandTotal - cashValue).toFixed(2)} before the sale can be completed.`,
-      };
-    }
-
-    return {
-      tone: 'success',
-      text: 'Exact cash payment ready',
-      detail: `Customer provided ${formatCurrency(cashValue)}. Change due: ${formatCurrency(Math.max(0, cashValue - grandTotal))}.`,
-    };
-  }
-
-  if (!terminalRef.trim()) {
-    return {
-      tone: 'info',
-      text: 'Waiting for terminal approval',
-      detail: 'Capture the approval or reference number from the payment terminal before finalizing the sale.',
-    };
-  }
-
-  if (terminalAmount.trim() && Number(terminalAmount) !== grandTotal) {
-    return {
-      tone: 'warning',
-      text: `${paymentMethod} amount mismatch`,
-      detail: `Terminal reads ₱${Number(terminalAmount).toFixed(2)}, but the order total is ${formattedTotal}.`,
-    };
-  }
-
-  if (terminalAmount.trim() && Number(terminalAmount) === grandTotal) {
-    return {
-      tone: 'success',
-      text: `${paymentMethod} payment verified`,
-      detail: `The terminal amount matches the order total and reference ${terminalRef.trim()} is ready to complete the sale.`,
-    };
-  }
-
-  return {
-    tone: 'info',
-    text: `${paymentMethod} awaiting confirmation`,
-    detail: `Please confirm the terminal amount before completing this payment for ${formattedTotal}.`,
-  };
-}
-
-const IS_TERMINAL = (m: PosPaymentMethod) =>
-  m === 'Card (Terminal)' || m === 'E-wallet (Terminal)';
 
 const PRODUCT_SLOT_KEYS = ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'] as const;
 type ProductSlotKey = `product_${0|1|2|3|4|5|6|7|8|9}`;
@@ -248,13 +170,15 @@ export function POSTerminal() {
   const [cart, setCart] = useState<CartLine[]>([]);
   const [paymentMethod, setPaymentMethod] = useState<PosPaymentMethod>('Cash');
   const [amountTendered, setAmountTendered] = useState('');
-  const [customerName, setCustomerName] = useState('');
-  const [customerPhone, setCustomerPhone] = useState('');
-  const [customerEmail, setCustomerEmail] = useState('');
-  const [customerNotes, setCustomerNotes] = useState('');
   
-  const [terminalRef, setTerminalRef] = useState('');
-  const [terminalAmount, setTerminalAmount] = useState('');
+  // Card payment fields
+  const [cardNumber, setCardNumber] = useState('');
+  const [transactionRef, setTransactionRef] = useState('');
+  const [chargedAmount, setChargedAmount] = useState('');
+  
+  // E-Wallet payment fields
+  const [accountDetails, setAccountDetails] = useState('');
+  const [amountPaid, setAmountPaid] = useState('');
 
   // Use the real backend catalog as the source of truth. Only fall back to mock data when the live
   // catalog cannot be loaded so the dashboard doesn't flash stale static items before the real data appears.
@@ -557,44 +481,38 @@ export function POSTerminal() {
   const tendered = Number(amountTendered || 0);
   const changeDue = paymentMethod === 'Cash' ? Math.max(0, tendered - grandTotal) : 0;
 
-  // Sync terminalAmount with grandTotal when modal opens or payment method changes to terminal
+  // Sync charged/amount fields with grandTotal when modal opens or payment method changes
   useEffect(() => {
-    if (showCheckout && IS_TERMINAL(paymentMethod)) {
-      setTerminalAmount(grandTotal.toFixed(2));
+    if (showCheckout) {
+      if (paymentMethod === 'Card') {
+        setChargedAmount(grandTotal.toFixed(2));
+      } else if (paymentMethod === 'E-Wallet') {
+        setAmountPaid(grandTotal.toFixed(2));
+      }
     }
   }, [showCheckout, paymentMethod, grandTotal]);
 
   // Payment method configuration
   const paymentMethods = [
     { id: 'Cash' as PosPaymentMethod, icon: Banknote, label: 'CASH', sublabel: '' },
-    { id: 'Card (Terminal)' as PosPaymentMethod, icon: CreditCard, label: 'CARD', sublabel: 'TERMINAL' },
-    { id: 'E-wallet (Terminal)' as PosPaymentMethod, icon: Wallet, label: 'E-WALLET', sublabel: 'TERMINAL' },
+    { id: 'Card' as PosPaymentMethod, icon: CreditCard, label: 'CARD', sublabel: '' },
+    { id: 'E-Wallet' as PosPaymentMethod, icon: Wallet, label: 'E-WALLET', sublabel: '' },
   ] as const;
-  const checkoutStatus = getCheckoutStatusMessage({
-    paymentMethod,
-    grandTotal,
-    amountTendered,
-    terminalAmount,
-    terminalRef,
-  });
 
-  // Smart quick amounts based on grandTotal
-  const quickAmounts = useMemo(() => {
-    const base = Math.ceil(grandTotal);
-    const amounts = [
-      base,
-      Math.ceil(base / 50) * 50,
-      Math.ceil(base / 100) * 100,
-      500,
-      1000,
-    ];
-    return amounts.filter((v, i, arr) => arr.indexOf(v) === i);
-  }, [grandTotal]);
+  // Card amount match check
+  const isCardAmountMatch = Math.abs(Number(chargedAmount || grandTotal.toFixed(2)) - grandTotal) < 0.01;
+  // E-Wallet amount match check
+  const isEwalletAmountMatch = Math.abs(Number(amountPaid || grandTotal.toFixed(2)) - grandTotal) < 0.01;
+
+  // Quick amounts for cash: ₱200, ₱500, ₱1,000
+  const quickAmounts = [200, 500, 1000];
 
   // Complete button enabled state
   const isCompleteEnabled = paymentMethod === 'Cash'
     ? Number(amountTendered) >= grandTotal
-    : terminalRef.trim() !== '';
+    : paymentMethod === 'Card'
+      ? transactionRef.trim() !== '' && cardNumber.length >= 4 && isCardAmountMatch
+      : accountDetails.trim() !== '' && transactionRef.trim() !== '' && isEwalletAmountMatch;
 
   const applyDiscount = (pct: number, fixedAmount?: number) => {
     if (pct > 0 && !selectedLineId && !fixedAmount) {
@@ -664,20 +582,30 @@ export function POSTerminal() {
     if (cart.length === 0) { error('Add at least one product.'); return; }
     
     const isCash = paymentMethod === 'Cash';
-    const isTerminal = IS_TERMINAL(paymentMethod);
+    const isCard = paymentMethod === 'Card';
+    const isEwallet = paymentMethod === 'E-Wallet';
 
     if (isCash && tendered < grandTotal) { error('Amount tendered must cover the total.'); return; }
-    if (isTerminal && !terminalRef.trim()) { error('Enter terminal approval/reference number.'); return; }
+    if (isCard && !transactionRef.trim()) { error('Enter transaction number from card receipt.'); return; }
+    if (isCard && !isCardAmountMatch) { error('Charged amount does not match order total.'); return; }
+    if (isEwallet && !accountDetails.trim()) { error('Enter account details.'); return; }
+    if (isEwallet && !transactionRef.trim()) { error('Enter transaction number.'); return; }
+    if (isEwallet && !isEwalletAmountMatch) { error('Amount paid does not match order total.'); return; }
+
+    // Build payment reference
+    let paymentRef: string | undefined;
+    if (isCard) {
+      const last4 = cardNumber.slice(-4);
+      paymentRef = `Card ending ${last4} | ${transactionRef}`;
+    } else if (isEwallet) {
+      paymentRef = `${accountDetails} | ${transactionRef}`;
+    }
 
     const payload: CreateSalePayload = {
       payment_method: (isCash ? 'Cash' 
-        : paymentMethod === 'Card (Terminal)' ? 'Credit Card' 
+        : isCard ? 'Credit Card' 
         : 'E-wallet') as CreateSalePayload['payment_method'],
-      payment_reference: isTerminal ? terminalRef : undefined,
-      customer_name: customerName || null,
-      customer_phone: customerPhone || null,
-      customer_email: customerEmail || null,
-      customer_notes: customerNotes || null,
+      payment_reference: paymentRef,
       amount_tendered: isCash ? tendered : grandTotal,
       change_due: isCash ? changeDue : 0,
       senior_pwd_name: seniorPwdInfo?.name ?? null,
@@ -713,7 +641,7 @@ export function POSTerminal() {
       cashier_name: session?.name ?? 'Carlo Reyes',
       total_amount: grandTotal,
       transaction_date: new Date().toLocaleString(),
-      payment_method: paymentMethod as PaymentMethod,
+      payment_method: paymentMethod === 'Card' ? 'Credit Card' : paymentMethod === 'E-Wallet' ? 'E-wallet' : 'Cash',
       amount_tendered: isCash ? tendered : grandTotal,
       change_due: isCash ? changeDue : 0,
       status: 'Completed',
@@ -745,12 +673,11 @@ export function POSTerminal() {
   const startNewTransaction = () => {
     setCart([]);
     setAmountTendered('');
-    setCustomerName('');
-    setCustomerPhone('');
-    setCustomerEmail('');
-    setCustomerNotes('');
-    setTerminalRef('');
-    setTerminalAmount('');
+    setCardNumber('');
+    setTransactionRef('');
+    setChargedAmount('');
+    setAccountDetails('');
+    setAmountPaid('');
     setReceipt(null);
     setSelectedLineId(null);
     setCurrentTxnId(createTransactionId());
@@ -1620,8 +1547,11 @@ export function POSTerminal() {
                       key={m.id}
                       onClick={() => {
                         setPaymentMethod(m.id);
-                        setTerminalRef('');
-                        setTerminalAmount(String(grandTotal));
+                        setTransactionRef('');
+                        setChargedAmount(String(grandTotal));
+                        setAmountPaid(String(grandTotal));
+                        setCardNumber('');
+                        setAccountDetails('');
                       }}
                       className={`flex flex-col items-center gap-2 p-5 rounded-xl border-2 text-center transition-all ${
                         paymentMethod === m.id
@@ -1631,36 +1561,27 @@ export function POSTerminal() {
                     >
                       <m.icon className="w-10 h-10 text-[#0F766E]" />
                       <span className="text-base font-bold text-slate-800">{m.label}</span>
-                      {m.sublabel && <span className="text-[11px] font-medium text-slate-500">{m.sublabel}</span>}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {paymentMethod !== 'Cash' && (
-                <div className="mb-4 grid grid-cols-2 gap-2">
-                  <input
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    placeholder="Customer name"
-                    className="w-full px-3 py-2.5 border border-slate-200 rounded-lg bg-white text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-transparent"
-                  />
-                  <input
-                    value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
-                    placeholder="Phone"
-                    className="w-full px-3 py-2.5 border border-slate-200 rounded-lg bg-white text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-transparent"
-                  />
-                </div>
-              )}
-
               {/* Payment-Specific Interface */}
               <div className="flex-1 space-y-5">
+                {/* ═══════════════════════════════════════ */}
+                {/* CASH PAYMENT                           */}
+                {/* ═══════════════════════════════════════ */}
                 {paymentMethod === 'Cash' && (
                   <div className="space-y-4">
-                    {/* Amount Tendered - Huge Input */}
+                    {/* Amount Due */}
+                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+                      <span className="text-sm font-bold text-slate-600 uppercase tracking-wider">Amount Due</span>
+                      <span className="text-2xl font-black text-slate-900">{formatCurrency(grandTotal)}</span>
+                    </div>
+
+                    {/* Amount Received - Large Input */}
                     <div>
-                      <label className="block text-xs font-bold text-slate-600 mb-2">Amount Tendered</label>
+                      <label className="block text-xs font-bold text-slate-600 mb-2">Amount Received</label>
                       <div className="relative">
                         <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-3xl">₱</span>
                         <input
@@ -1676,7 +1597,7 @@ export function POSTerminal() {
                       </div>
                     </div>
 
-                    {/* Quick Amount Pills */}
+                    {/* Quick Amount Buttons */}
                     <div>
                       <span className="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-wider">Quick Amounts</span>
                       <div className="flex flex-wrap gap-2">
@@ -1685,13 +1606,13 @@ export function POSTerminal() {
                             key={amt}
                             type="button"
                             onClick={() => setAmountTendered(amt.toString())}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${
+                            className={`px-4 py-2 rounded-lg text-sm font-bold border transition-colors ${
                               Number(amountTendered) === amt
                                 ? 'bg-[#0F766E] text-white border-[#0F766E]'
                                 : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
                             }`}
                           >
-                            {amt === Math.ceil(grandTotal) ? `Exact ₱${amt.toFixed(2)}` : `₱${amt}`}
+                            ₱{amt.toLocaleString()}
                           </button>
                         ))}
                       </div>
@@ -1713,110 +1634,172 @@ export function POSTerminal() {
                   </div>
                 )}
 
-                {paymentMethod === 'Card (Terminal)' && (
-                  <div className="space-y-5">
-                    {/* Approval / Reference No. */}
+                {/* ═══════════════════════════════════════ */}
+                {/* CARD PAYMENT                           */}
+                {/* ═══════════════════════════════════════ */}
+                {paymentMethod === 'Card' && (
+                  <div className="space-y-4">
+                    {/* Amount Due */}
+                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+                      <span className="text-sm font-bold text-slate-600 uppercase tracking-wider">Amount Due</span>
+                      <span className="text-2xl font-black text-slate-900">{formatCurrency(grandTotal)}</span>
+                    </div>
+
+                    {/* Card Number */}
                     <div>
                       <label className="block text-xs font-bold text-slate-600 mb-2 flex items-center gap-1">
-                        Approval / Reference No.
+                        Card Number
                         <span className="text-red-500">*</span>
                       </label>
                       <input
-                        value={terminalRef}
-                        onChange={e => setTerminalRef(e.target.value)}
-                        placeholder="Enter approval code from terminal receipt"
-                        className="w-full px-5 py-4 border-2 border-slate-200 rounded-xl text-lg focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-[#0F766E] transition-all"
+                        type="text"
+                        inputMode="numeric"
+                        value={cardNumber}
+                        onChange={(e) => {
+                          const raw = e.target.value.replace(/\D/g, '').slice(0, 16);
+                          setCardNumber(raw);
+                        }}
+                        placeholder="****-****-****-****"
+                        className="w-full px-5 py-4 border-2 border-slate-200 rounded-xl text-lg font-mono focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-[#0F766E] transition-all"
                         autoFocus
+                      />
+                      {cardNumber.length > 0 && (
+                        <p className="mt-1.5 text-xs text-slate-400">
+                          Display: ****-****-****-{cardNumber.slice(-4).padStart(4, 'X')}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Transaction Number */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 mb-2 flex items-center gap-1">
+                        Transaction Number
+                        <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={transactionRef}
+                        onChange={e => setTransactionRef(e.target.value)}
+                        placeholder="Enter transaction number from card receipt"
+                        className="w-full px-5 py-4 border-2 border-slate-200 rounded-xl text-lg focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-[#0F766E] transition-all"
                       />
                     </div>
 
-                    {/* Terminal Amount - Pre-filled, editable with verification */}
+                    {/* Amount Charged */}
                     <div>
-                      <label className="block text-xs font-bold text-slate-600 mb-2">Terminal Amount</label>
+                      <label className="block text-xs font-bold text-slate-600 mb-2">Amount Charged</label>
                       <div className="relative">
                         <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xl">₱</span>
                         <input
                           type="number"
                           step="0.01"
-                          value={terminalAmount}
-                          onChange={e => setTerminalAmount(e.target.value)}
+                          value={chargedAmount}
+                          onChange={e => setChargedAmount(e.target.value)}
                           className="w-full pl-12 pr-5 py-4 bg-slate-50 border-2 border-slate-200 rounded-xl text-xl font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-[#0F766E] transition-all"
                         />
                       </div>
-                      {terminalAmount && Math.abs(Number(terminalAmount) - grandTotal) > 0.005 && (
-                        <div className="flex items-center gap-2 mt-3 text-amber-600 text-sm bg-amber-50 px-4 py-3 rounded-lg border border-amber-200">
-                          <AlertCircle className="w-4 h-4 shrink-0" />
-                          <span>Terminal amount (₱{Number(terminalAmount).toFixed(2)}) doesn't match order total (₱{grandTotal.toFixed(2)})</span>
-                        </div>
-                      )}
-                      {terminalAmount && Math.abs(Number(terminalAmount) - grandTotal) <= 0.005 && (
-                        <div className="flex items-center gap-2 mt-3 text-green-600 text-sm bg-green-50 px-4 py-3 rounded-lg border border-green-200">
-                          <CheckCircle2 className="w-4 h-4 shrink-0" />
-                          <span>Terminal amount matches order total ✓</span>
-                        </div>
-                      )}
                     </div>
 
+                    {/* Amount Match Confirmation */}
+                    {chargedAmount && (
+                      isCardAmountMatch ? (
+                        <div className="flex items-center gap-2 text-green-600 text-sm bg-green-50 px-4 py-3 rounded-lg border border-green-200">
+                          <CheckCircle2 className="w-4 h-4 shrink-0" />
+                          <span className="font-semibold">Amount matches</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-start gap-2 text-amber-600 text-sm bg-amber-50 px-4 py-3 rounded-lg border border-amber-200">
+                          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                          <div>
+                            <span className="font-semibold">Payment amount does not match</span>
+                            <div className="mt-1 text-xs space-y-0.5">
+                              <div>Order Total: {formatCurrency(grandTotal)}</div>
+                              <div>Entered Amount: {formatCurrency(Number(chargedAmount))}</div>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    )}
                   </div>
                 )}
 
-                {paymentMethod === 'E-wallet (Terminal)' && (
-                  <div className="space-y-5">
-                    {/* Instruction Banner */}
-                    <div className="bg-green-50 border border-green-200 rounded-xl p-5">
-                      <div className="flex items-start gap-4">
-                        <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center shrink-0">
-                          <Wallet className="w-5 h-5 text-green-600" />
-                        </div>
-                        <div>
-                          <p className="text-base font-bold text-green-800">E-Wallet Terminal Payment</p>
-                          <p className="text-sm text-green-700 mt-1">Customer pays via GCash/Maya on the terminal. Terminal prints receipt with transaction reference. Enter details below.</p>
-                        </div>
-                      </div>
+                {/* ═══════════════════════════════════════ */}
+                {/* E-WALLET PAYMENT                       */}
+                {/* ═══════════════════════════════════════ */}
+                {paymentMethod === 'E-Wallet' && (
+                  <div className="space-y-4">
+                    {/* Amount Due */}
+                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+                      <span className="text-sm font-bold text-slate-600 uppercase tracking-wider">Amount Due</span>
+                      <span className="text-2xl font-black text-slate-900">{formatCurrency(grandTotal)}</span>
                     </div>
 
-                    {/* Transaction Reference No. */}
+                    {/* Account Details */}
                     <div>
                       <label className="block text-xs font-bold text-slate-600 mb-2 flex items-center gap-1">
-                        Transaction Reference No.
+                        Account Details
                         <span className="text-red-500">*</span>
                       </label>
                       <input
-                        value={terminalRef}
-                        onChange={e => setTerminalRef(e.target.value)}
-                        placeholder="Enter transaction reference from terminal receipt"
+                        type="text"
+                        value={accountDetails}
+                        onChange={e => setAccountDetails(e.target.value)}
+                        placeholder="e.g. 09171234567 or GCash/Maya account"
                         className="w-full px-5 py-4 border-2 border-slate-200 rounded-xl text-lg focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-[#0F766E] transition-all"
                         autoFocus
                       />
                     </div>
 
-                    {/* Terminal Amount - Pre-filled, editable with verification */}
+                    {/* Transaction Number */}
                     <div>
-                      <label className="block text-xs font-bold text-slate-600 mb-2">Terminal Amount</label>
+                      <label className="block text-xs font-bold text-slate-600 mb-2 flex items-center gap-1">
+                        Transaction Number
+                        <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={transactionRef}
+                        onChange={e => setTransactionRef(e.target.value)}
+                        placeholder="Enter transaction number from e-wallet receipt"
+                        className="w-full px-5 py-4 border-2 border-slate-200 rounded-xl text-lg focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-[#0F766E] transition-all"
+                      />
+                    </div>
+
+                    {/* Amount Paid */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 mb-2">Amount Paid</label>
                       <div className="relative">
                         <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xl">₱</span>
                         <input
                           type="number"
                           step="0.01"
-                          value={terminalAmount}
-                          onChange={e => setTerminalAmount(e.target.value)}
+                          value={amountPaid}
+                          onChange={e => setAmountPaid(e.target.value)}
                           className="w-full pl-12 pr-5 py-4 bg-slate-50 border-2 border-slate-200 rounded-xl text-xl font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-[#0F766E] transition-all"
                         />
                       </div>
-                      {terminalAmount && Math.abs(Number(terminalAmount) - grandTotal) > 0.005 && (
-                        <div className="flex items-center gap-2 mt-3 text-amber-600 text-sm bg-amber-50 px-4 py-3 rounded-lg border border-amber-200">
-                          <AlertCircle className="w-4 h-4 shrink-0" />
-                          <span>Terminal amount (₱{Number(terminalAmount).toFixed(2)}) doesn't match order total (₱{grandTotal.toFixed(2)})</span>
-                        </div>
-                      )}
-                      {terminalAmount && Math.abs(Number(terminalAmount) - grandTotal) <= 0.005 && (
-                        <div className="flex items-center gap-2 mt-3 text-green-600 text-sm bg-green-50 px-4 py-3 rounded-lg border border-green-200">
-                          <CheckCircle2 className="w-4 h-4 shrink-0" />
-                          <span>Terminal amount matches order total ✓</span>
-                        </div>
-                      )}
                     </div>
 
+                    {/* Amount Match Confirmation */}
+                    {amountPaid && (
+                      isEwalletAmountMatch ? (
+                        <div className="flex items-center gap-2 text-green-600 text-sm bg-green-50 px-4 py-3 rounded-lg border border-green-200">
+                          <CheckCircle2 className="w-4 h-4 shrink-0" />
+                          <span className="font-semibold">Amount matches</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-start gap-2 text-amber-600 text-sm bg-amber-50 px-4 py-3 rounded-lg border border-amber-200">
+                          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                          <div>
+                            <span className="font-semibold">Payment amount does not match</span>
+                            <div className="mt-1 text-xs space-y-0.5">
+                              <div>Order Total: {formatCurrency(grandTotal)}</div>
+                              <div>Entered Amount: {formatCurrency(Number(amountPaid))}</div>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    )}
                   </div>
                 )}
               </div>

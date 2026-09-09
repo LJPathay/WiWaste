@@ -46,40 +46,46 @@
 }
 
 .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.145 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.145 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.985 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.396 0.141 25.723);
-    --destructive-foreground: oklch(0.637 0.237 25.331);
-    --border: oklch(0.269 0 0);
-    --input: oklch(0.269 0 0);
-    --ring: oklch(0.439 0 0);
+    /* ── Dark theme 5-tier surface hierarchy ── */
+    --brand: #10B981;
+    --brand-dark: #059669;
+    --brand-light: #064E3B;
+    --background: #0B1120;
+    --foreground: #F1F5F9;
+    --card: #151F32;
+    --card-foreground: #F1F5F9;
+    --popover: #151F32;
+    --popover-foreground: #F1F5F9;
+    --primary: #10B981;
+    --primary-foreground: #0B1120;
+    --secondary: #1B2639;
+    --secondary-foreground: #F1F5F9;
+    --muted: #1B2639;
+    --muted-foreground: #71809A;
+    --accent: #202D42;
+    --accent-foreground: #F1F5F9;
+    --destructive: #EF4444;
+    --destructive-foreground: #FFFFFF;
+    --border: #2A3850;
+    --input: #1B2639;
+    --input-background: #1B2639;
+    --switch-background: #202D42;
+    --ring: #10B981;
     --font-weight-medium: 500;
     --font-weight-normal: 400;
-    --chart-1: oklch(0.488 0.243 264.376);
-    --chart-2: oklch(0.696 0.17 162.48);
-    --chart-3: oklch(0.769 0.188 70.08);
-    --chart-4: oklch(0.627 0.265 303.9);
-    --chart-5: oklch(0.645 0.246 16.439);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(0.269 0 0);
-    --sidebar-ring: oklch(0.439 0 0);
+    --chart-1: #10B981;
+    --chart-2: #38BDF8;
+    --chart-3: #F59E0B;
+    --chart-4: #A78BFA;
+    --chart-5: #F43F5E;
+    --sidebar: #111A2D;
+    --sidebar-foreground: #F1F5F9;
+    --sidebar-primary: #10B981;
+    --sidebar-primary-foreground: #0B1120;
+    --sidebar-accent: #1B2639;
+    --sidebar-accent-foreground: #F1F5F9;
+    --sidebar-border: #2A3850;
+    --sidebar-ring: #10B981;
 }
 
 @theme inline {
@@ -188,68 +194,119 @@
     }
 }
 
-.dark .theme-content [class~="bg-white"] {
-    background-color: rgb(15 23 42);
-}
+/* ─────────────────────────────────────────────────────────────
+   DARK MODE SURFACE OVERRIDES
+   Lifts light-mode Tailwind class names to the correct dark
+   surface tier. Scoped to .theme-content to avoid affecting
+   the POS terminal, modals, and other non-dashboard UIs.
+   ───────────────────────────────────────────────────────────── */
 
+/* Page-level backgrounds → darkest tier */
+.dark .theme-content [class~="bg-[#f4f7fb]"],
 .dark .theme-content [class~="bg-[#fcf8fa]"],
 .dark .theme-content [class~="bg-[#f6f3f5]"],
-.dark .theme-content [class~="bg-[#f8f9ff]"],
+.dark .theme-content [class~="bg-[#f8f9ff]"] {
+    background-color: #0B1120;
+}
+
+/* Primary card surfaces → Tier 2 */
+.dark .theme-content [class~="bg-white"],
+.dark .theme-content [class*="dark:bg-slate-900"],
+.dark .theme-content [class*="dark:bg-white/5"] {
+    background-color: #151F32 !important;
+}
+
+/* Secondary / nested card surfaces → Tier 3 */
 .dark .theme-content [class~="bg-gray-50"],
-.dark .theme-content [class~="bg-slate-50"] {
-    background-color: rgb(30 41 59 / 0.55);
+.dark .theme-content [class~="bg-slate-50"],
+.dark .theme-content [class~="bg-[#F8FAFC]"],
+.dark .theme-content [class~="bg-[#f8f9ff]"],
+.dark .theme-content [class*="dark:bg-slate-800/50"] {
+    background-color: #1B2639 !important;
 }
 
-.dark .theme-content [class~="bg-[#eae7e9]"],
+/* Deeper nested surfaces → Tier 4 */
 .dark .theme-content [class~="bg-slate-100"],
-.dark .theme-content [class~="bg-gray-100"] {
-    background-color: rgb(51 65 85 / 0.7);
+.dark .theme-content [class~="bg-gray-100"],
+.dark .theme-content [class~="bg-[#eae7e9]"],
+.dark .theme-content [class*="dark:bg-slate-800"],
+.dark .theme-content [class*="dark:bg-slate-700"] {
+    background-color: #202D42 !important;
 }
 
+/* Hover / interactive → Tier 5 */
+.dark .theme-content [class~="hover:bg-gray-50"]:hover,
+.dark .theme-content [class~="hover:bg-slate-50"]:hover,
+.dark .theme-content [class*="dark:hover:bg-white/8"]:hover,
+.dark .theme-content [class*="dark:hover:bg-slate-800"]:hover {
+    background-color: #202D42 !important;
+}
+.dark .theme-content [class~="hover:bg-gray-100"]:hover,
+.dark .theme-content [class~="hover:bg-slate-100"]:hover {
+    background-color: #243045 !important;
+}
+
+/* Gradient overrides — subtle page-depth gradient */
 .dark .theme-content [class~="bg-gradient-to-r"] {
-    background-image: linear-gradient(to right, rgb(2 6 23), rgb(15 23 42));
+    background-image: linear-gradient(to right, #0B1120, #111A2D);
 }
 
+/* ── Borders ── */
 .dark .theme-content [class~="border-slate-200"],
+.dark .theme-content [class~="border-slate-100"],
 .dark .theme-content [class~="border-gray-200"],
 .dark .theme-content [class~="border-gray-100"],
 .dark .theme-content [class~="border-[#c6c6cd]/50"],
-.dark .theme-content [class~="border-[#c6c6cd]"] {
-    border-color: rgb(255 255 255 / 0.1);
+.dark .theme-content [class~="border-[#c6c6cd]"],
+.dark .theme-content [class~="border-[#E5E7EB]"],
+.dark .theme-content [class*="dark:border-white/10"] {
+    border-color: #2A3850 !important;
 }
 
+/* ── Primary text ── */
 .dark .theme-content [class~="text-[#0b1c30]"],
 .dark .theme-content [class~="text-[#1b1b1d]"],
 .dark .theme-content [class~="text-black"],
 .dark .theme-content [class~="text-gray-900"],
-.dark .theme-content [class~="text-gray-800"] {
-    color: rgb(241 245 249);
+.dark .theme-content [class~="text-gray-800"],
+.dark .theme-content [class~="text-slate-900"],
+.dark .theme-content [class~="text-slate-800"] {
+    color: #F1F5F9;
 }
 
+/* ── Secondary text ── */
 .dark .theme-content [class~="text-[#45464d]"],
 .dark .theme-content [class~="text-[#76777d]"],
 .dark .theme-content [class~="text-gray-700"],
 .dark .theme-content [class~="text-gray-600"],
+.dark .theme-content [class~="text-slate-700"],
+.dark .theme-content [class~="text-slate-600"] {
+    color: #A8B4C7;
+}
+
+/* ── Muted text ── */
 .dark .theme-content [class~="text-gray-500"],
+.dark .theme-content [class~="text-gray-400"],
 .dark .theme-content [class~="text-slate-500"],
-.dark .theme-content [class~="text-slate-600"],
-.dark .theme-content [class~="text-slate-700"] {
-    color: rgb(148 163 184);
+.dark .theme-content [class~="text-slate-400"] {
+    color: #71809A;
 }
 
-.dark .theme-content [class~="hover:bg-gray-50"]:hover {
-    background-color: rgb(51 65 85 / 0.65);
-}
-
+/* ── bg-black → page background (no pure black surfaces) ── */
 .dark .theme-content [class~="bg-black"] {
-    background-color: rgb(2 6 23);
+    background-color: #0B1120;
 }
 
-.dark .theme-content [class~="shadow-sm"],
+/* ── Shadows — reduced intensity, no pure-black halos ── */
+.dark .theme-content [class~="shadow-sm"] {
+    box-shadow: 0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3);
+}
+.dark .theme-content [class~="shadow-md"] {
+    box-shadow: 0 4px 6px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.25);
+}
 .dark .theme-content [class~="shadow-xl"],
 .dark .theme-content [class~="shadow-2xl"] {
-    --tw-shadow-color: rgb(0 0 0 / 0.35);
-    --tw-shadow: var(--tw-shadow-colored);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.45), 0 4px 10px rgba(0,0,0,0.3);
 }
 
 /* Glassmorphism card */

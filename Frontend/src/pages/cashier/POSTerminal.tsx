@@ -37,7 +37,7 @@ interface CartLine {
   overrideReason?: string;
 }
 
-export type CheckoutStatusTone = 'info' | 'warning' | 'success' | 'danger';
+type CheckoutStatusTone = 'info' | 'warning' | 'success' | 'danger';
 
 function getCheckoutStatusMessage({
   paymentMethod,

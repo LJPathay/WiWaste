@@ -15,6 +15,7 @@ interface User {
 }
 
 export interface AuthSession {
+  id: string;
   email: string;
   name: string;
   company: string;
@@ -66,6 +67,7 @@ export function getStoredSession(): AuthSession | null {
     if (!session.name || !session.role) return null;
 
     return {
+      id: session.id ?? session.email ?? 'user-unknown',
       email: session.email,
       name: session.name,
       company: session.company,

@@ -1,12 +1,14 @@
-import { lazy, Suspense, ComponentType } from "react";
+import { lazy, Suspense } from "react";
+import type { ComponentType } from "react";
 import { createBrowserRouter, Navigate } from "react-router";
 import { MainLayout } from "./components/layout/MainLayout";
 import { AuthLayout } from "./components/layout/AuthLayout";
 import { DashboardLayout } from "./components/layout/DashboardLayout";
+import { CashierLayout } from "./components/layout/CashierLayout";
 import { PageLoader } from "./components/ui/PageLoader";
 
-function lazyPage(imp: () => Promise<Record<string, ComponentType<unknown>>>, name: string) {
-  const Comp = lazy(() => imp().then(m => ({ default: m[name] })));
+function lazyPage(imp: () => Promise<Record<string, unknown>>, name: string) {
+  const Comp = lazy(() => imp().then(m => ({ default: m[name] as ComponentType<unknown> })));
   return function LazyPage() {
     return (
       <Suspense fallback={<PageLoader />}>
@@ -39,7 +41,6 @@ const ManageInventory = lazyPage(() => import("./pages/inventory/ManageInventory
 const FEFOTracking = lazyPage(() => import("./pages/inventory/FEFOTracking"), "FEFOTracking");
 const Recommendations = lazyPage(() => import("./pages/inventory/Recommendations"), "Recommendations");
 const POSTerminal = lazyPage(() => import("./pages/cashier/POSTerminal"), "POSTerminal");
-const POSPaymentStatus = lazyPage(() => import("./pages/cashier/POSPaymentStatus"), "POSPaymentStatus");
 const ReturnsRefunds = lazyPage(() => import("./pages/cashier/ReturnsRefunds"), "ReturnsRefunds");
 const CashierHistory = lazyPage(() => import("./pages/cashier/CashierHistory"), "CashierHistory");
 const InventoryPerformance = lazyPage(() => import("./pages/manager/InventoryPerformance"), "InventoryPerformance");
@@ -68,12 +69,6 @@ export const router = createBrowserRouter([
         ],
     },
 
-    // ── PayMongo payment status (standalone — reached after the hosted checkout) ──
-    {
-        path: "pos/success",
-        Component: POSPaymentStatus,
-    },
-
     // ── Authenticated dashboard (always shows sidebar) ──
     {
         Component: DashboardLayout,
@@ -99,29 +94,21 @@ export const router = createBrowserRouter([
             { path: "owner/replenishment", Component: Replenishment },
             { path: "owner/supplier-performance", Component: SupplierPerformance },
             { path: "owner/executive-reports", Component: ExecutiveReports },
-            // Legacy redirects
-            { path: "admin/users", element: <Navigate to="/owner/users" replace /> },
-            { path: "admin/products", element: <Navigate to="/owner/products" replace /> },
-            { path: "admin/categories", element: <Navigate to="/owner/categories" replace /> },
-            { path: "admin/suppliers", element: <Navigate to="/owner/suppliers" replace /> },
-            { path: "admin/settings", element: <Navigate to="/owner/settings" replace /> },
-            { path: "admin/reports", element: <Navigate to="/owner/reports" replace /> },
-            { path: "admin/audit-logs", element: <Navigate to="/owner/audit-logs" replace /> },
-            { path: "admin/purchase-orders", element: <Navigate to="/owner/purchase-orders" replace /> },
             // Inventory routes
             { path: "inventory/wastage", Component: RecordWastage },
             { path: "inventory/manage", Component: ManageInventory },
             { path: "inventory/fefo", Component: FEFOTracking },
             { path: "inventory/recommendations", Component: Recommendations },
-            // Cashier routes
+        ],
+    },
+
+    // ── Cashier terminal: no manager sidebar, kiosk-style interface ──
+    {
+        Component: CashierLayout,
+        children: [
             { path: "cashier/pos", Component: POSTerminal },
             { path: "cashier/returns", Component: ReturnsRefunds },
             { path: "cashier/history", Component: CashierHistory },
-            { path: "manager/performance", element: <Navigate to="/owner/performance" replace /> },
-            { path: "manager/overstock", element: <Navigate to="/owner/overstock" replace /> },
-            { path: "manager/replenishment", element: <Navigate to="/owner/replenishment" replace /> },
-            { path: "manager/suppliers", element: <Navigate to="/owner/supplier-performance" replace /> },
-            { path: "manager/reports", element: <Navigate to="/owner/executive-reports" replace /> },
         ],
     },
 ]);

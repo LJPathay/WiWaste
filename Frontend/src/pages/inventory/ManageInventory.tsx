@@ -253,10 +253,16 @@ export function ManageInventory() {
   };
 
   const handleExportCSV = () => {
+    if (filtered.length === 0) {
+      showError('No inventory data to export.');
+      return;
+    }
+    const q = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
     const headers = ['Item Name', 'SKU', 'Category', 'Stock Qty', 'Status', 'Cost Price', 'Selling Price', 'Supplier', 'Last Updated'];
-    const rows = items.map(item => [
-      item.itemName, item.sku, item.category, item.qty,
-      item.stockStatus, item.costPrice, item.sellingPrice, item.supplier, item.lastUpdated,
+    const rows = filtered.map(item => [
+      q(item.itemName), q(item.sku), q(item.category), q(item.qty),
+      q(item.stockStatus), q(item.costPrice), q(item.sellingPrice),
+      q(item.supplier), q(item.lastUpdated),
     ]);
     const csvContent = [headers, ...rows].map(r => r.join(',')).join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv' });

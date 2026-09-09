@@ -21,9 +21,8 @@ import {
   PhilippinePeso,
   Activity,
   Receipt,
-  RotateCcw,
   type LucideIcon,
-  } from 'lucide-react';
+} from 'lucide-react';
 import { ThemeToggle } from '../ThemeToggle';
 import { ErrorBoundary } from '../ui/ErrorBoundary';
 import { Breadcrumb } from '../ui/breadcrumb';
@@ -95,11 +94,9 @@ const sidebarGroupsByRole: Record<UserRole, SidebarGroup[]> = {
   ],
   cashier: [
     {
-      group: 'Cashier',
+      group: 'POS',
       items: [
         { to: '/cashier/pos', label: 'POS Terminal', icon: Receipt },
-        { to: '/cashier/returns', label: 'Returns & Refunds', icon: RotateCcw },
-        { to: '/cashier/history', label: 'Transaction History', icon: FileText },
       ],
     },
   ],
@@ -165,7 +162,7 @@ const SidebarInner = memo(function SidebarInner({
   currentPath: string;
 }) {
   return (
-    <div className="flex h-full flex-col bg-[#f5f5f5] dark:bg-slate-900">
+    <div className="flex h-full flex-col bg-[#f5f5f5] dark:bg-slate-900 transition-colors duration-200">
       <div className="border-b border-gray-200 dark:border-white/10 px-3 py-3 bg-white dark:bg-slate-950">
         <div className="flex items-center justify-between gap-2">
           <div className={`flex min-w-0 items-center flex-1 ${compact ? 'justify-center' : 'justify-start'}`}>
@@ -312,12 +309,12 @@ export function DashboardLayout() {
   };
 
   return (
-    <ErrorBoundary><div className="min-h-screen bg-[#f4f7fb] text-[#1b1b1d] font-['Inter',sans-serif] transition-colors dark:bg-slate-950 dark:text-slate-100">
+    <ErrorBoundary><div className="min-h-screen bg-[#f4f7fb] text-[#1b1b1d] font-['Inter',sans-serif] transition-colors duration-200 dark:bg-slate-950 dark:text-slate-100">
       <div className="flex min-h-screen w-full">
 
         {/* ── Desktop Sidebar ── */}
         <aside
-          className={`hidden md:flex flex-none flex-col overflow-hidden border-r border-gray-200 dark:border-white/10 bg-[#f5f5f5] dark:bg-slate-900 text-gray-700 dark:text-slate-300 transition-all duration-300 h-screen sticky top-0 ${sidebarWidth}`}
+          className={`hidden md:flex flex-none flex-col overflow-hidden border-r border-gray-200 dark:border-white/10 bg-[#f5f5f5] dark:bg-slate-900 text-gray-700 dark:text-slate-300 transition-all duration-300 h-screen sticky top-0 transition-colors duration-200 ${sidebarWidth}`}
         >
           <SidebarInner
             compact={collapsed}
@@ -336,7 +333,7 @@ export function DashboardLayout() {
               className="fixed inset-0 z-40 bg-black/40 md:hidden"
               onClick={() => setMobileOpen(false)}
             />
-            <aside ref={sidebarRef} className="fixed inset-y-0 left-0 z-50 w-[248px] flex flex-col overflow-hidden border-r border-gray-200 bg-[#f5f5f5] md:hidden">
+            <aside ref={sidebarRef} className="fixed inset-y-0 left-0 z-50 w-[248px] flex flex-col overflow-hidden border-r border-gray-200 bg-[#f5f5f5] md:hidden transition-colors duration-200">
               <SidebarInner
                 onClose={() => setMobileOpen(false)}
                 session={session}
@@ -352,7 +349,7 @@ export function DashboardLayout() {
         {/* ── Main Content ── */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* Top bar for mobile */}
-          <header className="md:hidden sticky top-0 z-30 flex h-14 items-center justify-between border-b border-gray-200/50 dark:border-white/10 bg-white/60 dark:bg-slate-950/60 backdrop-blur-md px-4">
+          <header className="md:hidden sticky top-0 z-30 flex h-14 items-center justify-between border-b border-gray-200/50 dark:border-white/10 bg-white/60 dark:bg-slate-950/60 backdrop-blur-md px-4 transition-colors duration-200">
             <button
               type="button"
               onClick={() => setMobileOpen(true)}
@@ -371,7 +368,7 @@ export function DashboardLayout() {
           >
             {(state) => (
               <>
-                <header className="hidden md:flex sticky top-0 z-30 h-14 items-center justify-between border-b border-gray-200/50 dark:border-white/10 bg-white/60 dark:bg-slate-950/60 backdrop-blur-md px-6 gap-3 overflow-hidden">
+                <header className="hidden md:flex sticky top-0 z-30 h-14 items-center justify-between border-b border-gray-200/50 dark:border-white/10 bg-white/60 dark:bg-slate-950/60 backdrop-blur-md px-6 gap-3 overflow-hidden transition-colors duration-200">
                   {/* ── Mode 1: Quick Access Bar ── */}
                   {headerStyle === 'quick-access' && (
                     <>
@@ -449,7 +446,7 @@ export function DashboardLayout() {
                 </header>
 
                 {/* Page content */}
-                <div className="theme-content min-w-0 flex-1 overflow-hidden relative px-4 py-6 sm:px-6 lg:pl-6 lg:pr-8 lg:py-8">
+                <div className="theme-content min-w-0 flex-1 overflow-hidden relative px-4 py-6 sm:px-6 lg:pl-6 lg:pr-8 lg:py-8 transition-colors duration-200">
                   <Breadcrumb />
                   <Outlet />
                 </div>

@@ -4,7 +4,7 @@ import {
   Barcode, Search, Trash2, CreditCard, Wallet, Banknote, Plus, Minus, 
   User, Receipt, Clock, ArrowRight, Printer, CheckCircle2,
   Archive, RotateCcw, Percent, Search as SearchIcon, MoreHorizontal, AlertCircle, Keyboard, Info,
-  Monitor, Tablet, Smartphone, Loader2
+  Monitor, Tablet, Smartphone, Loader2, X, Package
 } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { Toast, useToast } from '../../components/ui/Toast';
@@ -22,10 +22,11 @@ import {
   formatCurrency,
   type CashierProduct,
   type PaymentMethod,
+  type PosPaymentMethod,
   type SalesTransaction,
 } from '../../utils/cashierData';
 import { clearStoredSession, getStoredSession } from '../../utils/mockAuthAndFeatures';
-import { products as productsApi, sales as salesApi, paymongo as paymongoApi, type ApiProduct } from '../../services/api';
+import { products as productsApi, sales as salesApi, type ApiProduct, type CreateSalePayload } from '../../services/api';
 
 interface CartLine {
   product: CashierProduct;
@@ -36,24 +37,82 @@ interface CartLine {
   overrideReason?: string;
 }
 
-type PosPaymentMethod = PaymentMethod | 'GCash' | 'Maya' | 'Card';
-const IS_PAYMONGO = (m: PosPaymentMethod) => m === 'GCash' || m === 'Maya' || m === 'Card';
-const PAYMONGO_PENDING_KEY = 'wiwaste_paymongo_pending';
+type CheckoutStatusTone = 'info' | 'warning' | 'success' | 'danger';
 
-interface PendingPayMongo {
-  transaction_id?: number;
-  payment_method: PosPaymentMethod;
-  cart: CartLine[];
-  grand_total: number;
-  subtotal: number;
-  discount_amount: number;
-  tax: number;
-  tendered: number;
-  change_due: number;
-  senior_pwd_name?: string | null;
-  senior_pwd_id?: string | null;
-  saved_at: string;
+function getCheckoutStatusMessage({
+  paymentMethod,
+  grandTotal,
+  amountTendered,
+  terminalAmount,
+  terminalRef,
+}: {
+  paymentMethod: PosPaymentMethod;
+  grandTotal: number;
+  amountTendered: string;
+  terminalAmount: string;
+  terminalRef: string;
+}): { tone: CheckoutStatusTone; text: string; detail: string } {
+  const formattedTotal = `₱${grandTotal.toFixed(2)}`;
+
+  if (paymentMethod === 'Cash') {
+    const cashValue = Number(amountTendered || 0);
+
+    if (!amountTendered.trim()) {
+      return {
+        tone: 'info',
+        text: 'Awaiting cash tender',
+        detail: `Enter an amount to complete the sale for ${formattedTotal}.`,
+      };
+    }
+
+    if (cashValue < grandTotal) {
+      return {
+        tone: 'warning',
+        text: 'Short payment detected',
+        detail: `Customer still owes ₱${(grandTotal - cashValue).toFixed(2)} before the sale can be completed.`,
+      };
+    }
+
+    return {
+      tone: 'success',
+      text: 'Exact cash payment ready',
+      detail: `Customer provided ${formatCurrency(cashValue)}. Change due: ${formatCurrency(Math.max(0, cashValue - grandTotal))}.`,
+    };
+  }
+
+  if (!terminalRef.trim()) {
+    return {
+      tone: 'info',
+      text: 'Waiting for terminal approval',
+      detail: 'Capture the approval or reference number from the payment terminal before finalizing the sale.',
+    };
+  }
+
+  if (terminalAmount.trim() && Number(terminalAmount) !== grandTotal) {
+    return {
+      tone: 'warning',
+      text: `${paymentMethod} amount mismatch`,
+      detail: `Terminal reads ₱${Number(terminalAmount).toFixed(2)}, but the order total is ${formattedTotal}.`,
+    };
+  }
+
+  if (terminalAmount.trim() && Number(terminalAmount) === grandTotal) {
+    return {
+      tone: 'success',
+      text: `${paymentMethod} payment verified`,
+      detail: `The terminal amount matches the order total and reference ${terminalRef.trim()} is ready to complete the sale.`,
+    };
+  }
+
+  return {
+    tone: 'info',
+    text: `${paymentMethod} awaiting confirmation`,
+    detail: `Please confirm the terminal amount before completing this payment for ${formattedTotal}.`,
+  };
 }
+
+const IS_TERMINAL = (m: PosPaymentMethod) =>
+  m === 'Card (Terminal)' || m === 'E-wallet (Terminal)';
 
 const PRODUCT_SLOT_KEYS = ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'] as const;
 type ProductSlotKey = `product_${0|1|2|3|4|5|6|7|8|9}`;
@@ -152,6 +211,11 @@ function apiProductToCashier(api: ApiProduct): CashierProduct {
 const POS_CATALOG_CACHE_KEY = 'wiwaste_pos_catalog';
 const POS_CATALOG_CACHE_TTL_MS = 5 * 60 * 1000;
 
+function resolveCatalogSource(catalog: CashierProduct[], fallback: CashierProduct[], apiFailed: boolean): CashierProduct[] {
+  if (catalog.length > 0) return catalog;
+  return apiFailed ? fallback : [];
+}
+
 function loadCachedCatalog(): CashierProduct[] | null {
   try {
     const raw = localStorage.getItem(POS_CATALOG_CACHE_KEY);
@@ -184,18 +248,17 @@ export function POSTerminal() {
   const [cart, setCart] = useState<CartLine[]>([]);
   const [paymentMethod, setPaymentMethod] = useState<PosPaymentMethod>('Cash');
   const [amountTendered, setAmountTendered] = useState('');
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [customerEmail, setCustomerEmail] = useState('');
+  const [customerNotes, setCustomerNotes] = useState('');
   
-  const [paymongoProcessing, setPaymongoProcessing] = useState(false);
-  const [paymongoPending, setPaymongoPending] = useState<PendingPayMongo | null>(() => {
-    try {
-      const raw = sessionStorage.getItem(PAYMONGO_PENDING_KEY);
-      return raw ? JSON.parse(raw) : null;
-    } catch { return null; }
-  });
+  const [terminalRef, setTerminalRef] = useState('');
+  const [terminalAmount, setTerminalAmount] = useState('');
 
-  // Live product catalog. Renders instantly from cache (or the mock list) and refreshes in the
-  // background from the backend — no skeleton loading, the grid is usable immediately.
-  const [catalog, setCatalog] = useState<CashierProduct[]>(() => loadCachedCatalog() ?? cashierProducts);
+  // Use the real backend catalog as the source of truth. Only fall back to mock data when the live
+  // catalog cannot be loaded so the dashboard doesn't flash stale static items before the real data appears.
+  const [catalog, setCatalog] = useState<CashierProduct[]>(() => loadCachedCatalog() ?? []);
   const [catalogError, setCatalogError] = useState(false);
   
   const [pluBuffer, setPluBuffer] = useState('');
@@ -217,7 +280,6 @@ export function POSTerminal() {
   const [overrideReasonInput, setOverrideReasonInput] = useState('');
   
   const [receipt, setReceipt] = useState<SalesTransaction | null>(null);
-  const [showPrintedReceipt, setShowPrintedReceipt] = useState(false);
   const isVatRegistered = false; // Non-VAT registered micro-enterprise by default
   
   const [draggedProduct, setDraggedProduct] = useState<CashierProduct | null>(null);
@@ -292,7 +354,7 @@ export function POSTerminal() {
   }, [recordingAction, handleHotkeyRecord]);
 
   const filteredProducts = useMemo(() => {
-    const source = catalogError && catalog.length === 0 ? cashierProducts : catalog;
+    const source = resolveCatalogSource(catalog, cashierProducts, catalogError);
     const q = search.toLowerCase();
     return source.filter(p => {
       const matchCat = activeCategory === 'all' || p.category_id === activeCategory;
@@ -487,18 +549,6 @@ export function POSTerminal() {
     return () => { cancelled = true; };
   }, []);
 
-  // Restore an unpaid PayMongo cart when the cashier returns from the hosted checkout (e.g. cancelled)
-  useEffect(() => {
-    if (!paymongoPending || cart.length > 0 || !paymongoPending.cart?.length) return;
-    setCart(paymongoPending.cart);
-    setPaymentMethod(paymongoPending.payment_method);
-    if (paymongoPending.senior_pwd_name && paymongoPending.senior_pwd_id) {
-      setSeniorPwdInfo({ name: paymongoPending.senior_pwd_name, id: paymongoPending.senior_pwd_id });
-    }
-    setAction('Previous PayMongo payment not completed — cart restored');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const totalItems = cart.reduce((sum, l) => sum + l.quantity, 0);
   const subtotal = cart.reduce((sum, l) => sum + l.product.selling_price * l.quantity, 0);
   const discountAmount = cart.reduce((sum, l) => sum + (l.product.selling_price * l.quantity * (l.discountPct || 0)) + (l.discountAmount || 0), 0);
@@ -506,6 +556,45 @@ export function POSTerminal() {
   const grandTotal = (subtotal - discountAmount) + tax;
   const tendered = Number(amountTendered || 0);
   const changeDue = paymentMethod === 'Cash' ? Math.max(0, tendered - grandTotal) : 0;
+
+  // Sync terminalAmount with grandTotal when modal opens or payment method changes to terminal
+  useEffect(() => {
+    if (showCheckout && IS_TERMINAL(paymentMethod)) {
+      setTerminalAmount(grandTotal.toFixed(2));
+    }
+  }, [showCheckout, paymentMethod, grandTotal]);
+
+  // Payment method configuration
+  const paymentMethods = [
+    { id: 'Cash' as PosPaymentMethod, icon: Banknote, label: 'CASH', sublabel: '' },
+    { id: 'Card (Terminal)' as PosPaymentMethod, icon: CreditCard, label: 'CARD', sublabel: 'TERMINAL' },
+    { id: 'E-wallet (Terminal)' as PosPaymentMethod, icon: Wallet, label: 'E-WALLET', sublabel: 'TERMINAL' },
+  ] as const;
+  const checkoutStatus = getCheckoutStatusMessage({
+    paymentMethod,
+    grandTotal,
+    amountTendered,
+    terminalAmount,
+    terminalRef,
+  });
+
+  // Smart quick amounts based on grandTotal
+  const quickAmounts = useMemo(() => {
+    const base = Math.ceil(grandTotal);
+    const amounts = [
+      base,
+      Math.ceil(base / 50) * 50,
+      Math.ceil(base / 100) * 100,
+      500,
+      1000,
+    ];
+    return amounts.filter((v, i, arr) => arr.indexOf(v) === i);
+  }, [grandTotal]);
+
+  // Complete button enabled state
+  const isCompleteEnabled = paymentMethod === 'Cash'
+    ? Number(amountTendered) >= grandTotal
+    : terminalRef.trim() !== '';
 
   const applyDiscount = (pct: number, fixedAmount?: number) => {
     if (pct > 0 && !selectedLineId && !fixedAmount) {
@@ -573,15 +662,24 @@ export function POSTerminal() {
 
   const completePayment = async () => {
     if (cart.length === 0) { error('Add at least one product.'); return; }
-    if (paymentMethod === 'Cash' && tendered < grandTotal) { error('Amount tendered must cover the total.'); return; }
+    
+    const isCash = paymentMethod === 'Cash';
+    const isTerminal = IS_TERMINAL(paymentMethod);
 
-    const isPayMongo = IS_PAYMONGO(paymentMethod);
+    if (isCash && tendered < grandTotal) { error('Amount tendered must cover the total.'); return; }
+    if (isTerminal && !terminalRef.trim()) { error('Enter terminal approval/reference number.'); return; }
 
-    const payload = {
-      payment_method: isPayMongo ? 'PayMongo' : paymentMethod,
-      payment_reference: isPayMongo ? paymentMethod : undefined,
-      amount_tendered: paymentMethod === 'Cash' ? tendered : grandTotal,
-      change_due: paymentMethod === 'Cash' ? changeDue : 0,
+    const payload: CreateSalePayload = {
+      payment_method: (isCash ? 'Cash' 
+        : paymentMethod === 'Card (Terminal)' ? 'Credit Card' 
+        : 'E-wallet') as CreateSalePayload['payment_method'],
+      payment_reference: isTerminal ? terminalRef : undefined,
+      customer_name: customerName || null,
+      customer_phone: customerPhone || null,
+      customer_email: customerEmail || null,
+      customer_notes: customerNotes || null,
+      amount_tendered: isCash ? tendered : grandTotal,
+      change_due: isCash ? changeDue : 0,
       senior_pwd_name: seniorPwdInfo?.name ?? null,
       senior_pwd_id: seniorPwdInfo?.id ?? null,
       items: cart.map(l => ({
@@ -595,35 +693,8 @@ export function POSTerminal() {
     };
 
     try {
-      if (isPayMongo) {
-        setPaymongoProcessing(true);
-        const response = await paymongoApi.createCheckout(payload);
-        if (!response.checkout_url) {
-          throw new Error('PayMongo did not return a checkout URL. Check PAYMONGO keys.');
-        }
-        const pending: PendingPayMongo = {
-          transaction_id: response.transaction_id,
-          payment_method: paymentMethod,
-          cart,
-          grand_total: grandTotal,
-          subtotal,
-          discount_amount: discountAmount,
-          tax,
-          tendered,
-          change_due: changeDue,
-          senior_pwd_name: seniorPwdInfo?.name ?? null,
-          senior_pwd_id: seniorPwdInfo?.id ?? null,
-          saved_at: new Date().toISOString(),
-        };
-        sessionStorage.setItem(PAYMONGO_PENDING_KEY, JSON.stringify(pending));
-        setPaymongoPending(pending);
-        window.location.assign(response.checkout_url);
-        return;
-      }
-
       await salesApi.create(payload);
     } catch (err: unknown) {
-      setPaymongoProcessing(false);
       error(err instanceof Error ? err.message : 'Unable to complete payment.');
       return;
     }
@@ -643,8 +714,8 @@ export function POSTerminal() {
       total_amount: grandTotal,
       transaction_date: new Date().toLocaleString(),
       payment_method: paymentMethod as PaymentMethod,
-      amount_tendered: paymentMethod === 'Cash' ? tendered : grandTotal,
-      change_due: paymentMethod === 'Cash' ? changeDue : 0,
+      amount_tendered: isCash ? tendered : grandTotal,
+      change_due: isCash ? changeDue : 0,
       status: 'Completed',
       seniorPwdName: seniorPwdInfo?.name ?? null,
       seniorPwdId: seniorPwdInfo?.id ?? null,
@@ -661,21 +732,26 @@ export function POSTerminal() {
 
     setReceipt(completedReceipt);
     setShowCheckout(false);
-    setShowPrintedReceipt(true);
     setAction(`Sale Complete — ${formatCurrency(grandTotal)}`);
 
     setTimeout(() => {
       try { window.print(); } catch { /* printing is best-effort */ }
+      setTimeout(() => {
+        startNewTransaction();
+      }, 300);
     }, 400);
   };
 
   const startNewTransaction = () => {
-    sessionStorage.removeItem(PAYMONGO_PENDING_KEY);
-    setPaymongoPending(null);
     setCart([]);
     setAmountTendered('');
+    setCustomerName('');
+    setCustomerPhone('');
+    setCustomerEmail('');
+    setCustomerNotes('');
+    setTerminalRef('');
+    setTerminalAmount('');
     setReceipt(null);
-    setShowPrintedReceipt(false);
     setSelectedLineId(null);
     setCurrentTxnId(createTransactionId());
     setSeniorPwdInfo(null);
@@ -683,19 +759,8 @@ export function POSTerminal() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-[#F8FAFC] dark:bg-slate-900 text-[#475569] dark:text-slate-300 font-sans">
+    <div className="relative h-screen w-full z-50 flex flex-col bg-[#F8FAFC] dark:bg-slate-900 text-[#475569] dark:text-slate-300 font-sans overflow-hidden">
       <Toast toasts={toasts} onDismiss={dismiss} />
-
-      {/* Processing payment overlay — shown while creating the PayMongo checkout */}
-      {paymongoProcessing && (
-        <div className="fixed inset-0 z-[70] bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-8 flex flex-col items-center gap-4 animate-in fade-in zoom-in-95 duration-200">
-            <Loader2 className="w-10 h-10 text-[#0F766E] animate-spin" />
-            <p className="text-sm font-bold text-slate-700 dark:text-slate-200">Processing payment…</p>
-            <p className="text-xs text-slate-400">Opening the PayMongo secure checkout shortly.</p>
-          </div>
-        </div>
-      )}
 
       {/* GLOBAL HEADER */}
       <header className="h-14 bg-white dark:bg-slate-800 border-b border-[#E5E7EB] dark:border-slate-700 flex items-center justify-between px-6 shrink-0 shadow-sm z-20 relative">
@@ -1174,7 +1239,7 @@ export function POSTerminal() {
 
       {/* Hotkey Settings Modal */}
       {showHotkeySettings && (
-        <div className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="absolute inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-3xl p-6 animate-in fade-in zoom-in-95 duration-200">
             <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-1 flex items-center gap-2">
               <Keyboard className="w-5 h-5 text-[#0F766E]" /> Hotkey Settings
@@ -1255,7 +1320,7 @@ export function POSTerminal() {
       
       {/* Discount Modal */}
       {showDiscountModal && (
-        <div className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="absolute inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-sm overflow-hidden p-6 animate-in fade-in zoom-in-95 duration-200">
             <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
               <Percent className="w-5 h-5 text-[#0F766E]" /> Apply Discount
@@ -1317,7 +1382,7 @@ export function POSTerminal() {
 
       {/* Return Modal */}
       {showReturnModal && (
-        <div className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="absolute inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden p-6 animate-in fade-in zoom-in-95 duration-200">
             <h3 className="text-lg font-bold text-slate-800 mb-2 flex items-center gap-2">
               <ArrowRight className="w-5 h-5 text-[#0F766E]" /> Process Return
@@ -1334,7 +1399,7 @@ export function POSTerminal() {
 
       {/* Senior/PWD ID Modal */}
       {showSeniorPwdModal && (
-        <div className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="absolute inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-sm overflow-hidden p-6 animate-in fade-in zoom-in-95 duration-200">
             <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-2 flex items-center gap-2">
               <Percent className="w-5 h-5 text-[#0F766E]" /> Senior/PWD Discount
@@ -1373,7 +1438,7 @@ export function POSTerminal() {
 
       {/* Price Override Modal */}
       {showPriceOverrideModal && (
-        <div className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="absolute inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-sm overflow-hidden p-6 animate-in fade-in zoom-in-95 duration-200">
             <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-2 flex items-center gap-2">
               <Percent className="w-5 h-5 text-amber-500" /> Override Price
@@ -1414,7 +1479,7 @@ export function POSTerminal() {
 
       {/* Void Modal */}
       {showVoidModal && (
-        <div className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="absolute inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden p-6 animate-in fade-in zoom-in-95 duration-200">
             <h3 className="text-lg font-bold text-red-600 mb-2 flex items-center gap-2">
               <AlertCircle className="w-5 h-5" /> Void Selected Item
@@ -1430,7 +1495,7 @@ export function POSTerminal() {
 
       {/* Exit Confirm Modal */}
       {showExitConfirm && (
-        <div className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="absolute inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden p-6 animate-in fade-in zoom-in-95 duration-200">
             <h3 className="text-lg font-bold text-slate-800 mb-2 flex items-center gap-2">
               <AlertCircle className="w-5 h-5 text-red-500" /> Exit POS
@@ -1452,288 +1517,336 @@ export function POSTerminal() {
         </div>
       )}
 
-      {/* Payment Checkout Modal */}
+      {/* Payment Checkout Modal - Landscape Split Layout */}
       {showCheckout && (
-        <div className="fixed inset-0 z-[60] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden flex">
+        <div className="absolute inset-0 z-[60] bg-slate-900/20 backdrop-blur-[1px] flex items-center justify-center p-5">
+          <div className="bg-white rounded-[26px] shadow-[0_28px_80px_rgba(15,23,42,0.25)] w-full max-w-4xl max-h-[88vh] overflow-hidden flex border border-slate-200 relative">
             
-            {/* Left side: Totals */}
-            <div className="w-[40%] bg-[#0F766E] border-r border-[#E5E7EB] p-8 flex flex-col justify-between text-white">
-              <div>
-                <h2 className="text-xl font-bold mb-6 uppercase tracking-wider text-white/90">Complete Payment</h2>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center text-white/80 text-sm font-medium">
-                    <span>Subtotal</span>
-                    <span>{formatCurrency(subtotal)}</span>
-                  </div>
-                  {discountAmount > 0 && (
-                    <div className="flex justify-between items-center text-white/80 text-sm font-medium">
-                      <span>Discount</span>
-                      <span>-{formatCurrency(discountAmount)}</span>
-                    </div>
-                  )}
-                  {seniorPwdInfo && (
-                    <div className="flex justify-between items-center text-white/80 text-sm font-medium">
-                      <span>Senior/PWD</span>
-                      <span className="text-[10px]">{seniorPwdInfo.name}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between items-center text-white/80 text-sm font-medium">
-                    <span>VAT (12%)</span>
-                    <span>{formatCurrency(tax)}</span>
-                  </div>
-                  <div className="w-full h-px bg-white/20 my-4"></div>
-                  <div className="flex flex-col">
-                    <span className="text-xs font-bold text-white/60 uppercase tracking-widest mb-1">Grand Total</span>
-                    <span className="text-5xl font-black text-white tracking-tight">{formatCurrency(grandTotal)}</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="mt-8">
-                <button 
+            {/* LEFT PANEL: Order Summary (45%) */}
+            <div className="w-[45%] bg-slate-50 border-r border-slate-200 p-6 flex flex-col min-h-[500px] text-slate-800">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-slate-800">Order Summary</h2>
+                <button
                   onClick={() => {
                     setShowCheckout(false);
                     barcodeRef.current?.focus();
                   }}
-                  className="px-6 py-3 text-sm font-bold text-white bg-white/10 rounded-xl hover:bg-white/20 transition-colors shadow-sm"
+                  className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-lg transition-colors"
+                  aria-label="Close checkout"
                 >
-                  Cancel Checkout (Esc)
+                  <X className="w-5 h-5" />
                 </button>
               </div>
-            </div>
 
-            {/* Right side: Payment Method & Input */}
-            <div className="w-[60%] p-8 bg-white flex flex-col">
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-3">Payment Method</label>
-              
-              <div className="grid grid-cols-4 gap-2 mb-6">
-                {['Cash', 'GCash', 'Maya', 'Card'].map((method) => (
-                  <button 
-                    key={method}
-                    onClick={() => setPaymentMethod(method as PosPaymentMethod)}
-                    className={`py-3 px-1 rounded-xl text-xs font-bold border flex flex-col items-center justify-center gap-2 transition-all text-center
-                      ${paymentMethod === method 
-                        ? 'bg-[#E8F7F2] text-[#0F766E] border-[#0F766E] shadow-sm' 
-                        : 'bg-white text-slate-600 border-[#E5E7EB] hover:bg-[#F8FAFC]'}`}
-                  >
-                    {method === 'Cash' && <Banknote className="w-5 h-5" />}
-                    {(method === 'GCash' || method === 'Maya') && <Wallet className="w-5 h-5" />}
-                    {method === 'Card' && <CreditCard className="w-5 h-5" />}
-                    {method}
-                  </button>
+              {/* Cart Items */}
+              <div className="flex-1 overflow-y-auto space-y-3 mb-6 max-h-[42vh] min-h-[160px] pr-2">
+                {cart.map((line, idx) => (
+                  <div key={line.product.product_id} className="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-200 shadow-sm">
+                    <div className="w-16 h-16 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                      {line.product.image_url ? (
+                        <img src={line.product.image_url} alt="" className="w-full h-full object-cover rounded-lg" />
+                      ) : (
+                        <Package className="w-8 h-8 text-slate-400" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-slate-800 truncate">{line.product.product_name}</p>
+                      <p className="text-xs text-slate-500">{line.product.barcode}</p>
+                      {line.discountPct > 0 && (
+                        <span className="text-[10px] font-bold text-[#0F766E] bg-[#0F766E]/10 px-1.5 py-0.5 rounded">-{line.discountPct * 100}%</span>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-slate-800">{formatCurrency(line.product.selling_price * (1 - (line.discountPct || 0)) - (line.discountAmount || 0))}</p>
+                      <p className="text-xs text-slate-500">× {line.quantity}</p>
+                    </div>
+                  </div>
                 ))}
               </div>
 
-              {paymentMethod === 'Cash' ? (
-                <div className="flex-1">
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">Amount Tendered</label>
-                  <div className="relative mb-4">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xl">₱</span>
-                    <input
-                      type="number"
-                      autoFocus
-                      value={amountTendered}
-                      onChange={(e) => setAmountTendered(e.target.value)}
-                      placeholder="0.00"
-                      className="w-full pl-12 pr-4 py-4 bg-[#F8FAFC] border border-[#E5E7EB] rounded-xl text-3xl font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-transparent transition-all"
-                    />
-                  </div>
-                  
-                  {/* Preset Buttons — Bills + Coins */}
-                  <div className="grid grid-cols-5 gap-2 mb-2">
-                    {[1, 5, 10, 20, 50].map((amt) => (
-                      <button
-                        key={amt}
-                        onClick={() => setAmountTendered(amt.toString())}
-                        className={`py-2 bg-white border border-[#E5E7EB] text-slate-700 text-xs font-bold rounded-xl hover:border-[#0F766E] hover:text-[#0F766E] transition-colors shadow-sm ${amt <= 10 ? 'text-amber-600' : ''}`}
-                      >
-                        {amt >= 20 ? `₱${amt}` : `${amt}`}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="grid grid-cols-5 gap-2 mb-4">
-                    {[100, 200, 500, 1000].map((amt) => (
-                      <button
-                        key={amt}
-                        onClick={() => setAmountTendered(amt.toString())}
-                        className="py-3 bg-white border border-[#E5E7EB] text-slate-700 text-sm font-bold rounded-xl hover:border-[#0F766E] hover:text-[#0F766E] transition-colors shadow-sm"
-                      >
-                        ₱{amt}
-                      </button>
-                    ))}
-                    <button
-                        onClick={() => setAmountTendered(Math.ceil(grandTotal).toString())}
-                        className="py-3 bg-[#E8F7F2] border border-[#0F766E]/30 text-[#0F766E] text-sm font-bold rounded-xl hover:bg-[#d1f4e8] transition-colors shadow-sm"
-                      >
-                        Exact
-                    </button>
-                  </div>
+              {/* Price Breakdown */}
+              <div className="border-t border-slate-200 pt-4 space-y-3">
+                <div className="flex justify-between text-sm text-slate-600">
+                  <span>Subtotal</span>
+                  <span className="font-medium">{formatCurrency(subtotal)}</span>
                 </div>
-              ) : (
-                <div className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-[#E5E7EB] rounded-xl p-6 mb-4 bg-[#F8FAFC]">
-                  <Wallet className="w-12 h-12 mb-3 text-[#0F766E]" />
-                  <p className="text-sm font-bold text-slate-600 text-center">
-                    Pay via {paymentMethod} on PayMongo's secure hosted checkout.
-                  </p>
-                  <p className="text-xs text-slate-400 text-center mt-1">
-                    You'll be redirected to complete the payment. WiWaste never stores card details.
-                  </p>
+                {discountAmount > 0 && (
+                  <div className="flex justify-between text-sm text-green-600">
+                    <span>Item Discount</span>
+                    <span className="font-medium">-{formatCurrency(discountAmount)}</span>
+                  </div>
+                )}
+                {seniorPwdInfo && (
+                  <div className="flex justify-between text-sm text-blue-600">
+                    <span>Senior/PWD 20%</span>
+                    <span className="font-medium">-{formatCurrency((subtotal - discountAmount) * 0.2)}</span>
+                  </div>
+                )}
+                {isVatRegistered && tax > 0 && (
+                  <>
+                    <div className="flex justify-between text-sm text-slate-600">
+                      <span>VATable Amount</span>
+                      <span className="font-medium">{formatCurrency(subtotal - discountAmount - (seniorPwdInfo ? (subtotal - discountAmount) * 0.2 : 0) - tax)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm text-slate-600">
+                      <span>VAT (12%)</span>
+                      <span className="font-medium">{formatCurrency(tax)}</span>
+                    </div>
+                  </>
+                )}
+                {!isVatRegistered && (
+                  <div className="flex justify-between text-sm text-slate-600">
+                    <span>VAT Exempt</span>
+                    <span className="font-medium text-green-600">₱0.00</span>
+                  </div>
+                )}
+                <div className="border-t border-slate-200 pt-3"></div>
+                <div className="flex justify-between text-xl font-black text-slate-900">
+                  <span>TOTAL DUE</span>
+                  <span>{formatCurrency(grandTotal)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* RIGHT PANEL: Payment (55%) */}
+            <div className="w-[55%] p-6 bg-white flex flex-col min-h-[500px] text-slate-800">
+              {/* Payment Method Selector */}
+              <div className="mb-6">
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-4">Payment Method</span>
+                <div className="grid grid-cols-3 gap-3">
+                  {paymentMethods.map((m) => (
+                    <button
+                      key={m.id}
+                      onClick={() => {
+                        setPaymentMethod(m.id);
+                        setTerminalRef('');
+                        setTerminalAmount(String(grandTotal));
+                      }}
+                      className={`flex flex-col items-center gap-2 p-5 rounded-xl border-2 text-center transition-all ${
+                        paymentMethod === m.id
+                          ? 'border-[#0F766E] bg-[#E8F7F2] shadow-md'
+                          : 'border-slate-200 hover:border-[#0F766E] hover:bg-slate-50'
+                      }`}
+                    >
+                      <m.icon className="w-10 h-10 text-[#0F766E]" />
+                      <span className="text-base font-bold text-slate-800">{m.label}</span>
+                      {m.sublabel && <span className="text-[11px] font-medium text-slate-500">{m.sublabel}</span>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {paymentMethod !== 'Cash' && (
+                <div className="mb-4 grid grid-cols-2 gap-2">
+                  <input
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    placeholder="Customer name"
+                    className="w-full px-3 py-2.5 border border-slate-200 rounded-lg bg-white text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-transparent"
+                  />
+                  <input
+                    value={customerPhone}
+                    onChange={(e) => setCustomerPhone(e.target.value)}
+                    placeholder="Phone"
+                    className="w-full px-3 py-2.5 border border-slate-200 rounded-lg bg-white text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-transparent"
+                  />
                 </div>
               )}
 
-              <button 
-                onClick={completePayment}
-                className="w-full py-4 text-lg font-bold text-white bg-[#0F766E] rounded-xl shadow-md hover:bg-[#0d615b] transition-all relative"
-              >
-                Complete Payment
-                <span className="absolute right-4 text-[10px] bg-white/20 px-2 py-1 rounded">{hotkeys.checkout}</span>
-              </button>
+              {/* Payment-Specific Interface */}
+              <div className="flex-1 space-y-5">
+                {paymentMethod === 'Cash' && (
+                  <div className="space-y-4">
+                    {/* Amount Tendered - Huge Input */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 mb-2">Amount Tendered</label>
+                      <div className="relative">
+                        <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-3xl">₱</span>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          autoFocus
+                          value={amountTendered}
+                          onChange={(e) => setAmountTendered(e.target.value.replace(/[^0-9.]/g, ''))}
+                          placeholder="0.00"
+                          className="w-full pl-14 pr-5 py-5 bg-slate-50 border-2 border-slate-200 rounded-xl text-4xl font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-[#0F766E] transition-all text-center"
+                          style={{ appearance: 'textfield' }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Quick Amount Pills */}
+                    <div>
+                      <span className="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-wider">Quick Amounts</span>
+                      <div className="flex flex-wrap gap-2">
+                        {quickAmounts.map((amt) => (
+                          <button
+                            key={amt}
+                            type="button"
+                            onClick={() => setAmountTendered(amt.toString())}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${
+                              Number(amountTendered) === amt
+                                ? 'bg-[#0F766E] text-white border-[#0F766E]'
+                                : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
+                            }`}
+                          >
+                            {amt === Math.ceil(grandTotal) ? `Exact ₱${amt.toFixed(2)}` : `₱${amt}`}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Change Due Display */}
+                    <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between">
+                      <span className="text-xs font-extrabold uppercase tracking-wider text-emerald-800">Change Due</span>
+                      <span className="text-2xl font-black text-emerald-700">{formatCurrency(changeDue)}</span>
+                    </div>
+
+                    {/* Insufficient Amount Warning */}
+                    {Number(amountTendered) > 0 && Number(amountTendered) < grandTotal && (
+                      <div className="flex items-center gap-2 text-red-600 text-sm bg-red-50 px-4 py-3 rounded-lg border border-red-200">
+                        <AlertCircle className="w-4 h-4 shrink-0" />
+                        Short by {formatCurrency(grandTotal - Number(amountTendered))} — need {formatCurrency(grandTotal)} total
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {paymentMethod === 'Card (Terminal)' && (
+                  <div className="space-y-5">
+                    {/* Approval / Reference No. */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 mb-2 flex items-center gap-1">
+                        Approval / Reference No.
+                        <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        value={terminalRef}
+                        onChange={e => setTerminalRef(e.target.value)}
+                        placeholder="Enter approval code from terminal receipt"
+                        className="w-full px-5 py-4 border-2 border-slate-200 rounded-xl text-lg focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-[#0F766E] transition-all"
+                        autoFocus
+                      />
+                    </div>
+
+                    {/* Terminal Amount - Pre-filled, editable with verification */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 mb-2">Terminal Amount</label>
+                      <div className="relative">
+                        <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xl">₱</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={terminalAmount}
+                          onChange={e => setTerminalAmount(e.target.value)}
+                          className="w-full pl-12 pr-5 py-4 bg-slate-50 border-2 border-slate-200 rounded-xl text-xl font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-[#0F766E] transition-all"
+                        />
+                      </div>
+                      {terminalAmount && Math.abs(Number(terminalAmount) - grandTotal) > 0.005 && (
+                        <div className="flex items-center gap-2 mt-3 text-amber-600 text-sm bg-amber-50 px-4 py-3 rounded-lg border border-amber-200">
+                          <AlertCircle className="w-4 h-4 shrink-0" />
+                          <span>Terminal amount (₱{Number(terminalAmount).toFixed(2)}) doesn't match order total (₱{grandTotal.toFixed(2)})</span>
+                        </div>
+                      )}
+                      {terminalAmount && Math.abs(Number(terminalAmount) - grandTotal) <= 0.005 && (
+                        <div className="flex items-center gap-2 mt-3 text-green-600 text-sm bg-green-50 px-4 py-3 rounded-lg border border-green-200">
+                          <CheckCircle2 className="w-4 h-4 shrink-0" />
+                          <span>Terminal amount matches order total ✓</span>
+                        </div>
+                      )}
+                    </div>
+
+                  </div>
+                )}
+
+                {paymentMethod === 'E-wallet (Terminal)' && (
+                  <div className="space-y-5">
+                    {/* Instruction Banner */}
+                    <div className="bg-green-50 border border-green-200 rounded-xl p-5">
+                      <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center shrink-0">
+                          <Wallet className="w-5 h-5 text-green-600" />
+                        </div>
+                        <div>
+                          <p className="text-base font-bold text-green-800">E-Wallet Terminal Payment</p>
+                          <p className="text-sm text-green-700 mt-1">Customer pays via GCash/Maya on the terminal. Terminal prints receipt with transaction reference. Enter details below.</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Transaction Reference No. */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 mb-2 flex items-center gap-1">
+                        Transaction Reference No.
+                        <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        value={terminalRef}
+                        onChange={e => setTerminalRef(e.target.value)}
+                        placeholder="Enter transaction reference from terminal receipt"
+                        className="w-full px-5 py-4 border-2 border-slate-200 rounded-xl text-lg focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-[#0F766E] transition-all"
+                        autoFocus
+                      />
+                    </div>
+
+                    {/* Terminal Amount - Pre-filled, editable with verification */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 mb-2">Terminal Amount</label>
+                      <div className="relative">
+                        <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xl">₱</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={terminalAmount}
+                          onChange={e => setTerminalAmount(e.target.value)}
+                          className="w-full pl-12 pr-5 py-4 bg-slate-50 border-2 border-slate-200 rounded-xl text-xl font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-[#0F766E] transition-all"
+                        />
+                      </div>
+                      {terminalAmount && Math.abs(Number(terminalAmount) - grandTotal) > 0.005 && (
+                        <div className="flex items-center gap-2 mt-3 text-amber-600 text-sm bg-amber-50 px-4 py-3 rounded-lg border border-amber-200">
+                          <AlertCircle className="w-4 h-4 shrink-0" />
+                          <span>Terminal amount (₱{Number(terminalAmount).toFixed(2)}) doesn't match order total (₱{grandTotal.toFixed(2)})</span>
+                        </div>
+                      )}
+                      {terminalAmount && Math.abs(Number(terminalAmount) - grandTotal) <= 0.005 && (
+                        <div className="flex items-center gap-2 mt-3 text-green-600 text-sm bg-green-50 px-4 py-3 rounded-lg border border-green-200">
+                          <CheckCircle2 className="w-4 h-4 shrink-0" />
+                          <span>Terminal amount matches order total ✓</span>
+                        </div>
+                      )}
+                    </div>
+
+                  </div>
+                )}
+              </div>
+
+              {/* Footer Actions */}
+              <div className="border-t border-slate-200 pt-4 flex items-center justify-end gap-3">
+                <button
+                  onClick={() => {
+                    setShowCheckout(false);
+                    barcodeRef.current?.focus();
+                  }}
+                  className="px-6 py-3 text-sm font-bold text-slate-600 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 hover:border-slate-400 transition-colors"
+                >
+                  Cancel (Esc)
+                </button>
+                <button
+                  onClick={completePayment}
+                  disabled={!isCompleteEnabled}
+                  className={`px-8 py-3 text-lg font-bold rounded-xl shadow-md transition-all relative ${
+                    isCompleteEnabled
+                      ? 'bg-[#0F766E] text-white hover:bg-[#0d615b]'
+                      : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                  }`}
+                >
+                  Complete Payment
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* =========================================================
-          THERMAL RECEIPT & PAYMENT SUCCESS OVERLAY
-          ========================================================= */}
-          
-      {showPrintedReceipt && receipt && (
-        <div className="fixed inset-0 z-[80] bg-slate-900/90 backdrop-blur-sm flex items-center justify-center p-4 font-sans no-print-bg">
-          <div className="bg-white shadow-2xl rounded-2xl w-[380px] overflow-hidden flex flex-col max-h-[95vh] border border-slate-200">
-            
-            {/* Header & Change Due Handoff Hero Banner (Screen Only) */}
-            <div className="bg-[#0F766E] text-white p-5 text-center no-print">
-              <div className="flex items-center justify-center gap-2 font-bold text-base mb-1">
-                <CheckCircle2 className="w-5 h-5 text-emerald-300" />
-                <span>Payment Successful</span>
-              </div>
-              <p className="text-xs text-emerald-100 flex items-center justify-center gap-1.5 mb-3">
-                <Printer className="w-3.5 h-3.5" /> Thermal receipt automatically printed
-              </p>
-
-              {/* Prominent Change Due Box */}
-              <div className="bg-white text-[#0F766E] rounded-xl p-3 shadow-inner">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider block text-slate-500 mb-0.5">
-                  Cash Change Due
-                </span>
-                <span className="text-3xl font-black tracking-tight block text-[#0F766E]">
-                  {formatCurrency(receipt.change_due ?? 0)}
-                </span>
-              </div>
-            </div>
-
-            {/* Printable Thermal Receipt Content */}
-            <div className="flex-1 overflow-y-auto p-6 receipt-print-area font-mono text-xs text-black hide-scrollbar bg-white">
-              <div className="text-center mb-4">
-                <h1 className="text-lg font-bold mb-0.5">WiWaste Store</h1>
-                <p className="text-[10px] text-slate-600">123 Retail Avenue, Metro Manila</p>
-                <p className="text-[10px] text-slate-600 font-semibold mt-0.5">
-                  {isVatRegistered ? 'VAT REG TIN: 000-123-456-000' : 'NON-VAT OFFICIAL RECEIPT'}
-                </p>
-              </div>
-
-              <div className="mb-3 text-[11px] space-y-0.5">
-                <div className="flex justify-between">
-                  <span>Txn:</span>
-                  <span className="font-bold">#POS-2026-{receipt.transaction_id.slice(-6)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Date:</span>
-                  <span>{receipt.transaction_date}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Cashier:</span>
-                  <span>{receipt.cashier_name}</span>
-                </div>
-              </div>
-
-              <div className="border-t border-b border-dashed border-black py-2 mb-3">
-                <div className="flex justify-between font-bold mb-1.5">
-                  <span className="w-8">Qty</span>
-                  <span className="flex-1">Item</span>
-                  <span className="w-16 text-right">Total</span>
-                </div>
-                {receipt.items.map((item, idx) => (
-                  <div key={idx} className="flex justify-between mb-1">
-                    <span className="w-8">{item.quantity}</span>
-                    <span className="flex-1 truncate pr-2">{item.product_name}</span>
-                    <span className="w-16 text-right">{formatCurrency(item.subtotal)}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="space-y-1 mb-3">
-                <div className="flex justify-between">
-                  <span>Subtotal</span>
-                  <span>{formatCurrency(receipt.total_amount - (isVatRegistered ? receipt.total_amount * 0.12 : 0))}</span>
-                </div>
-                {receipt.seniorPwdName && (
-                  <div className="flex justify-between text-[10px]">
-                    <span>Senior/PWD</span>
-                    <span className="text-right">{receipt.seniorPwdName}</span>
-                  </div>
-                )}
-                {receipt.seniorPwdId && (
-                  <div className="flex justify-between text-[10px]">
-                    <span>ID No.</span>
-                    <span>{receipt.seniorPwdId}</span>
-                  </div>
-                )}
-                {isVatRegistered && (
-                  <div className="flex justify-between">
-                    <span>VAT (12%)</span>
-                    <span>{formatCurrency(receipt.total_amount * 0.12)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between font-bold text-xs mt-2 pt-2 border-t border-black">
-                  <span>Grand Total</span>
-                  <span>{formatCurrency(receipt.total_amount)}</span>
-                </div>
-              </div>
-
-              <div className="border-t border-dashed border-black pt-2 mb-4 space-y-1">
-                <div className="flex justify-between">
-                  <span>Payment Method:</span>
-                  <span>{receipt.payment_method}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Amount Tendered:</span>
-                  <span>{receipt.amount_tendered ? formatCurrency(receipt.amount_tendered) : formatCurrency(receipt.total_amount)}</span>
-                </div>
-                <div className="flex justify-between font-bold">
-                  <span>Change:</span>
-                  <span>{formatCurrency(receipt.change_due ?? 0)}</span>
-                </div>
-              </div>
-
-              <div className="text-center text-[10px] text-slate-500 pt-2 border-t border-slate-200">
-                <p className="font-bold mb-0.5">Thank you for shopping with us!</p>
-                <p>Please come again.</p>
-                <p className="mt-2 text-[9px]">Powered by WiWaste POS</p>
-              </div>
-            </div>
-            
-            {/* Non-printed Action Footer */}
-            <div className="bg-slate-50 p-4 border-t border-slate-200 flex gap-2 no-print">
-              <button 
-                onClick={() => {
-                  try { window.print(); } catch { /* printing is best-effort */ }
-                }}
-                className="py-3 px-4 text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 flex items-center gap-1.5"
-              >
-                <Printer className="w-4 h-4" /> Re-Print
-              </button>
-              <button 
-                onClick={startNewTransaction}
-                className="flex-1 py-3 text-xs font-bold text-white bg-[#0F766E] rounded-xl shadow-sm hover:bg-[#0d615b] transition-all flex items-center justify-center gap-2"
-              >
-                Start New Transaction
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </div>
+</div>
       )}
 
       {/* =========================================================

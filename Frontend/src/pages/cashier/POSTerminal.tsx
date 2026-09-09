@@ -280,7 +280,6 @@ export function POSTerminal() {
   const [overrideReasonInput, setOverrideReasonInput] = useState('');
   
   const [receipt, setReceipt] = useState<SalesTransaction | null>(null);
-  const [showPrintedReceipt, setShowPrintedReceipt] = useState(false);
   const isVatRegistered = false; // Non-VAT registered micro-enterprise by default
   
   const [draggedProduct, setDraggedProduct] = useState<CashierProduct | null>(null);
@@ -669,7 +668,6 @@ export function POSTerminal() {
 
     if (isCash && tendered < grandTotal) { error('Amount tendered must cover the total.'); return; }
     if (isTerminal && !terminalRef.trim()) { error('Enter terminal approval/reference number.'); return; }
-    // Terminal amount mismatch is warned in UI but doesn't block completion
 
     const payload: CreateSalePayload = {
       payment_method: (isCash ? 'Cash' 
@@ -734,11 +732,13 @@ export function POSTerminal() {
 
     setReceipt(completedReceipt);
     setShowCheckout(false);
-    setShowPrintedReceipt(true);
     setAction(`Sale Complete — ${formatCurrency(grandTotal)}`);
 
     setTimeout(() => {
       try { window.print(); } catch { /* printing is best-effort */ }
+      setTimeout(() => {
+        startNewTransaction();
+      }, 300);
     }, 400);
   };
 
@@ -1847,149 +1847,7 @@ export function POSTerminal() {
               </div>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* =========================================================
-          THERMAL RECEIPT & PAYMENT SUCCESS OVERLAY
-          ========================================================= */}
-          
-      {showPrintedReceipt && receipt && (
-        <div className="absolute inset-0 z-[80] bg-slate-900/90 backdrop-blur-sm flex items-center justify-center p-4 font-sans no-print-bg">
-          <div className="bg-white shadow-2xl rounded-2xl w-[380px] overflow-hidden flex flex-col max-h-[95vh] border border-slate-200">
-            
-            {/* Header & Change Due Handoff Hero Banner (Screen Only) */}
-            <div className="bg-[#0F766E] text-white p-5 text-center no-print">
-              <div className="flex items-center justify-center gap-2 font-bold text-base mb-1">
-                <CheckCircle2 className="w-5 h-5 text-emerald-300" />
-                <span>Payment Successful</span>
-              </div>
-              <p className="text-xs text-emerald-100 flex items-center justify-center gap-1.5 mb-3">
-                <Printer className="w-3.5 h-3.5" /> Thermal receipt automatically printed
-              </p>
-
-              {/* Prominent Change Due Box */}
-              <div className="bg-white text-[#0F766E] rounded-xl p-3 shadow-inner">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider block text-slate-500 mb-0.5">
-                  Cash Change Due
-                </span>
-                <span className="text-3xl font-black tracking-tight block text-[#0F766E]">
-                  {formatCurrency(receipt.change_due ?? 0)}
-                </span>
-              </div>
-            </div>
-
-            {/* Printable Thermal Receipt Content */}
-            <div className="flex-1 overflow-y-auto p-6 receipt-print-area font-mono text-xs text-black hide-scrollbar bg-white">
-              <div className="text-center mb-4">
-                <h1 className="text-lg font-bold mb-0.5">WiWaste Store</h1>
-                <p className="text-[10px] text-slate-600">123 Retail Avenue, Metro Manila</p>
-                <p className="text-[10px] text-slate-600 font-semibold mt-0.5">
-                  {isVatRegistered ? 'VAT REG TIN: 000-123-456-000' : 'NON-VAT OFFICIAL RECEIPT'}
-                </p>
-              </div>
-
-              <div className="mb-3 text-[11px] space-y-0.5">
-                <div className="flex justify-between">
-                  <span>Txn:</span>
-                  <span className="font-bold">#POS-2026-{receipt.transaction_id.slice(-6)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Date:</span>
-                  <span>{receipt.transaction_date}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Cashier:</span>
-                  <span>{receipt.cashier_name}</span>
-                </div>
-              </div>
-
-              <div className="border-t border-b border-dashed border-black py-2 mb-3">
-                <div className="flex justify-between font-bold mb-1.5">
-                  <span className="w-8">Qty</span>
-                  <span className="flex-1">Item</span>
-                  <span className="w-16 text-right">Total</span>
-                </div>
-                {receipt.items.map((item, idx) => (
-                  <div key={idx} className="flex justify-between mb-1">
-                    <span className="w-8">{item.quantity}</span>
-                    <span className="flex-1 truncate pr-2">{item.product_name}</span>
-                    <span className="w-16 text-right">{formatCurrency(item.subtotal)}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="space-y-1 mb-3">
-                <div className="flex justify-between">
-                  <span>Subtotal</span>
-                  <span>{formatCurrency(receipt.total_amount - (isVatRegistered ? receipt.total_amount * 0.12 : 0))}</span>
-                </div>
-                {receipt.seniorPwdName && (
-                  <div className="flex justify-between text-[10px]">
-                    <span>Senior/PWD</span>
-                    <span className="text-right">{receipt.seniorPwdName}</span>
-                  </div>
-                )}
-                {receipt.seniorPwdId && (
-                  <div className="flex justify-between text-[10px]">
-                    <span>ID No.</span>
-                    <span>{receipt.seniorPwdId}</span>
-                  </div>
-                )}
-                {isVatRegistered && (
-                  <div className="flex justify-between">
-                    <span>VAT (12%)</span>
-                    <span>{formatCurrency(receipt.total_amount * 0.12)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between font-bold text-xs mt-2 pt-2 border-t border-black">
-                  <span>Grand Total</span>
-                  <span>{formatCurrency(receipt.total_amount)}</span>
-                </div>
-              </div>
-
-              <div className="border-t border-dashed border-black pt-2 mb-4 space-y-1">
-                <div className="flex justify-between">
-                  <span>Payment Method:</span>
-                  <span>{receipt.payment_method}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Amount Tendered:</span>
-                  <span>{receipt.amount_tendered ? formatCurrency(receipt.amount_tendered) : formatCurrency(receipt.total_amount)}</span>
-                </div>
-                <div className="flex justify-between font-bold">
-                  <span>Change:</span>
-                  <span>{formatCurrency(receipt.change_due ?? 0)}</span>
-                </div>
-              </div>
-
-              <div className="text-center text-[10px] text-slate-500 pt-2 border-t border-slate-200">
-                <p className="font-bold mb-0.5">Thank you for shopping with us!</p>
-                <p>Please come again.</p>
-                <p className="mt-2 text-[9px]">Powered by WiWaste POS</p>
-              </div>
-            </div>
-            
-            {/* Non-printed Action Footer */}
-            <div className="bg-slate-50 p-4 border-t border-slate-200 flex gap-2 no-print">
-              <button 
-                onClick={() => {
-                  try { window.print(); } catch { /* printing is best-effort */ }
-                }}
-                className="py-3 px-4 text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 flex items-center gap-1.5"
-              >
-                <Printer className="w-4 h-4" /> Re-Print
-              </button>
-              <button 
-                onClick={startNewTransaction}
-                className="flex-1 py-3 text-xs font-bold text-white bg-[#0F766E] rounded-xl shadow-sm hover:bg-[#0d615b] transition-all flex items-center justify-center gap-2"
-              >
-                Start New Transaction
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </div>
+</div>
       )}
 
       {/* =========================================================

@@ -19,7 +19,7 @@ class Inventory extends Model
 
     public static function calcStatus(int $stock, int $reorderLevel): string
     {
-        if ($stock <= 0) return 'Low Stock';
+        if ($stock <= 0) return 'Out of Stock';
         if ($stock <= $reorderLevel) return 'Low Stock';
         if ($stock > $reorderLevel * 5) return 'Overstock';
         return 'Normal';

@@ -39,7 +39,7 @@ interface CartLine {
 
 export type CheckoutStatusTone = 'info' | 'warning' | 'success' | 'danger';
 
-export function getCheckoutStatusMessage({
+function getCheckoutStatusMessage({
   paymentMethod,
   grandTotal,
   amountTendered,
@@ -1553,7 +1553,7 @@ export function POSTerminal() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-slate-800 truncate">{line.product.product_name}</p>
-                      <p className="text-xs text-slate-500">{line.product.sku || line.product.barcode}</p>
+                      <p className="text-xs text-slate-500">{line.product.barcode}</p>
                       {line.discountPct > 0 && (
                         <span className="text-[10px] font-bold text-[#0F766E] bg-[#0F766E]/10 px-1.5 py-0.5 rounded">-{line.discountPct * 100}%</span>
                       )}

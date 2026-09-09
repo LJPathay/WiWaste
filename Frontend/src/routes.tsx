@@ -6,8 +6,8 @@ import { DashboardLayout } from "./components/layout/DashboardLayout";
 import { CashierLayout } from "./components/layout/CashierLayout";
 import { PageLoader } from "./components/ui/PageLoader";
 
-function lazyPage(imp: () => Promise<Record<string, ComponentType<unknown>>>, name: string) {
-  const Comp = lazy(() => imp().then(m => ({ default: m[name] })));
+function lazyPage(imp: () => Promise<Record<string, unknown>>, name: string) {
+  const Comp = lazy(() => imp().then(m => ({ default: m[name] as ComponentType<unknown> })));
   return function LazyPage() {
     return (
       <Suspense fallback={<PageLoader />}>

@@ -21,9 +21,8 @@ import {
   PhilippinePeso,
   Activity,
   Receipt,
-  RotateCcw,
   type LucideIcon,
-  } from 'lucide-react';
+} from 'lucide-react';
 import { ThemeToggle } from '../ThemeToggle';
 import { ErrorBoundary } from '../ui/ErrorBoundary';
 import { Breadcrumb } from '../ui/breadcrumb';

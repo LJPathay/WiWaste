@@ -752,7 +752,6 @@ export function POSTerminal() {
     setTerminalRef('');
     setTerminalAmount('');
     setReceipt(null);
-    setShowPrintedReceipt(false);
     setSelectedLineId(null);
     setCurrentTxnId(createTransactionId());
     setSeniorPwdInfo(null);

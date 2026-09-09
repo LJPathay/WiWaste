@@ -50,10 +50,28 @@ const REPORT_CARDS: ReportCard[] = [
   { id: 'cost', title: 'Cost Impact Report', description: 'Estimate the financial impact of waste and spoilage across departments.', icon: '💰' },
 ];
 
+const REPORT_ENDPOINT_MAP: Record<string, () => Promise<ApiReport[]>> = {
+  waste: () => reportsApi.wasteSummary(),
+  inventory: () => reportsApi.inventoryMovement(),
+  supplier: () => reportsApi.supplierPerformance(),
+  expiry: () => reportsApi.expiryAnalysis(),
+  category: () => reportsApi.categoryAnalysis(),
+  cost: () => reportsApi.costImpact(),
+};
+
+const REPORT_FILENAME_MAP: Record<string, string> = {
+  waste: 'waste-summary-report',
+  inventory: 'inventory-movement-report',
+  supplier: 'supplier-performance-report',
+  expiry: 'expiry-analysis-report',
+  category: 'category-analysis-report',
+  cost: 'cost-impact-report',
+};
+
 const TODAY = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 
 export function GenerateReports() {
-  const { toasts, dismiss, success } = useToast();
+  const { toasts, dismiss, success, error: showError } = useToast();
 
   const [compilations, setCompilations] = useState<Compilation[]>([]);
   const [paymentFilter, setPaymentFilter] = useState<string>('all');
@@ -139,13 +157,40 @@ export function GenerateReports() {
   const handleDownload = async (comp: Compilation) => {
     if (downloadingIds.has(comp.id)) return;
     setDownloadingIds(prev => new Set(prev).add(comp.id));
-    await new Promise(r => setTimeout(r, 1000));
+    try {
+      const cardId = REPORT_CARDS.find(c => c.title === comp.reportName)?.id;
+      if (!cardId) throw new Error('Unknown report type');
+
+      const fetchFn = REPORT_ENDPOINT_MAP[cardId];
+      if (!fetchFn) throw new Error('No endpoint for this report');
+
+      const data = await fetchFn();
+      if (!data || data.length === 0) {
+        showError('No data available for this report.');
+        return;
+      }
+
+      const q = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+      const headers = Object.keys(data[0] as object);
+      const rows = data.map(item => headers.map(h => q((item as Record<string, unknown>)[h])));
+      const csvContent = [headers.map(q), ...rows].map(r => r.join(',')).join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${REPORT_FILENAME_MAP[cardId]}-${TODAY}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      success(`"${comp.reportName}" downloaded successfully.`);
+    } catch (e) {
+      showError(e instanceof Error ? e.message : 'Download failed');
+    }
     setDownloadingIds(prev => {
       const next = new Set(prev);
       next.delete(comp.id);
       return next;
     });
-    success(`"${comp.reportName}" downloaded successfully.`);
   };
 
   const cashierOptions = Array.from(new Set(salesData.map(t => t.cashier_name ?? t.cashier).filter(Boolean)));

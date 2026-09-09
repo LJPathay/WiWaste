@@ -26,7 +26,7 @@ import {
   type SalesTransaction,
 } from '../../utils/cashierData';
 import { clearStoredSession, getStoredSession } from '../../utils/mockAuthAndFeatures';
-import { products as productsApi, sales as salesApi, type ApiProduct } from '../../services/api';
+import { products as productsApi, sales as salesApi, type ApiProduct, type CreateSalePayload } from '../../services/api';
 
 interface CartLine {
   product: CashierProduct;
@@ -671,10 +671,10 @@ export function POSTerminal() {
     if (isTerminal && !terminalRef.trim()) { error('Enter terminal approval/reference number.'); return; }
     // Terminal amount mismatch is warned in UI but doesn't block completion
 
-    const payload = {
-      payment_method: isCash ? 'Cash' 
+    const payload: CreateSalePayload = {
+      payment_method: (isCash ? 'Cash' 
         : paymentMethod === 'Card (Terminal)' ? 'Credit Card' 
-        : 'E-wallet',
+        : 'E-wallet') as CreateSalePayload['payment_method'],
       payment_reference: isTerminal ? terminalRef : undefined,
       customer_name: customerName || null,
       customer_phone: customerPhone || null,

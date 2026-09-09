@@ -325,6 +325,10 @@ export interface CreateWastagePayload {
 export interface CreateSalePayload {
   payment_method: 'Cash' | 'E-wallet' | 'Credit Card' | 'Debit Card';
   payment_reference?: string;
+  customer_name?: string | null;
+  customer_phone?: string | null;
+  customer_email?: string | null;
+  customer_notes?: string | null;
   amount_tendered?: number;
   change_due?: number;
   senior_pwd_name?: string | null;

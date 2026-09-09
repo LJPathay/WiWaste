@@ -21,8 +21,9 @@ import {
   PhilippinePeso,
   Activity,
   Receipt,
+  RotateCcw,
   type LucideIcon,
-} from 'lucide-react';
+  } from 'lucide-react';
 import { ThemeToggle } from '../ThemeToggle';
 import { ErrorBoundary } from '../ui/ErrorBoundary';
 import { Breadcrumb } from '../ui/breadcrumb';
@@ -115,7 +116,7 @@ const NavItems = memo(function NavItems({
       {sidebarGroups.map((group) => (
         <div key={group.group} className="mb-2">
           {!compact && (
-            <div className="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-[#71809A]">
+            <div className="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-slate-500">
               {group.group}
             </div>
           )}
@@ -133,7 +134,7 @@ const NavItems = memo(function NavItems({
                   } ${
                     active
                       ? 'bg-[#006a61] text-white'
-                      : 'text-gray-700 dark:text-[#A8B4C7] hover:bg-gray-200 dark:hover:bg-[#202D42]'
+                      : 'text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-white/10'
                   }`}
                   aria-label={item.label}
                   title={compact ? item.label : undefined}
@@ -162,8 +163,8 @@ const SidebarInner = memo(function SidebarInner({
   currentPath: string;
 }) {
   return (
-    <div className="flex h-full flex-col bg-[#f5f5f5] dark:bg-[#111A2D]">
-      <div className="border-b border-gray-200 dark:border-[#2A3850] px-3 py-3 bg-white dark:bg-[#0E1828]">
+    <div className="flex h-full flex-col bg-[#f5f5f5] dark:bg-slate-900">
+      <div className="border-b border-gray-200 dark:border-white/10 px-3 py-3 bg-white dark:bg-slate-950">
         <div className="flex items-center justify-between gap-2">
           <div className={`flex min-w-0 items-center flex-1 ${compact ? 'justify-center' : 'justify-start'}`}>
             <div className={`flex items-center justify-center ${compact ? 'h-10 w-10' : 'h-10 px-2'}`}>
@@ -178,7 +179,7 @@ const SidebarInner = memo(function SidebarInner({
             <button
               type="button"
               onClick={onToggleCollapse}
-              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-gray-200 dark:border-[#2A3850] bg-white dark:bg-[#1B2639] text-gray-500 dark:text-[#A8B4C7] transition-colors hover:bg-gray-100 dark:hover:bg-[#202D42]"
+              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-gray-500 dark:text-slate-400 transition-colors hover:bg-gray-100 dark:hover:bg-slate-700"
               aria-label={compact ? 'Expand sidebar' : 'Collapse sidebar'}
             >
               {compact ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
@@ -188,7 +189,7 @@ const SidebarInner = memo(function SidebarInner({
             <button
               type="button"
               onClick={onClose}
-              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-gray-200 dark:border-[#2A3850] bg-white dark:bg-[#1B2639] text-gray-500 dark:text-[#A8B4C7] hover:bg-gray-100 dark:hover:bg-[#202D42]"
+              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700"
               aria-label="Close sidebar"
             >
               <X className="h-3.5 w-3.5" />
@@ -198,15 +199,15 @@ const SidebarInner = memo(function SidebarInner({
       </div>
 
       {!compact && (
-        <div className="border-b border-gray-200 dark:border-[#2A3850] px-4 py-3 bg-white dark:bg-[#0E1828]">
-          <p className="text-xs font-semibold text-gray-800 dark:text-[#F1F5F9] truncate">{session.name}</p>
-          <p className="text-xs text-gray-500 dark:text-[#71809A]">{getRoleDisplayName(session.role)}</p>
+        <div className="border-b border-gray-200 dark:border-white/10 px-4 py-3 bg-white dark:bg-slate-950">
+          <p className="text-xs font-semibold text-gray-800 dark:text-slate-100 truncate">{session.name}</p>
+          <p className="text-xs text-gray-500 dark:text-slate-400">{getRoleDisplayName(session.role)}</p>
         </div>
       )}
 
       <NavItems compact={compact} onClose={onClose} sidebarGroups={sidebarGroups} currentPath={currentPath} />
 
-      <div className="border-t border-gray-200 dark:border-[#2A3850] p-3 bg-white dark:bg-[#111A2D] flex items-center gap-2">
+      <div className="border-t border-gray-200 dark:border-white/10 p-3 bg-white dark:bg-slate-900 flex items-center gap-2">
         <div className="flex-shrink-0">
           <ThemeToggle compact />
         </div>
@@ -214,7 +215,7 @@ const SidebarInner = memo(function SidebarInner({
           <button
             type="button"
             onClick={onLogout}
-            className="flex-1 flex items-center gap-2 rounded-lg bg-gray-100 dark:bg-[#1B2639] px-3 py-2 text-sm font-medium text-gray-700 dark:text-[#A8B4C7] transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 dark:hover:text-red-400"
+            className="flex-1 flex items-center gap-2 rounded-lg bg-gray-100 dark:bg-white/10 px-3 py-2 text-sm font-medium text-gray-700 dark:text-slate-300 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 dark:hover:text-red-400"
             aria-label="Sign out"
           >
             <LogOut className="h-4 w-4 shrink-0" />
@@ -225,7 +226,7 @@ const SidebarInner = memo(function SidebarInner({
           <button
             type="button"
             onClick={onLogout}
-            className="flex-1 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-[#1B2639] p-2 text-gray-700 dark:text-[#A8B4C7] transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 dark:hover:text-red-400"
+            className="flex-1 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-white/10 p-2 text-gray-700 dark:text-slate-300 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 dark:hover:text-red-400"
             aria-label="Sign out"
             title="Sign out"
           >
@@ -309,12 +310,12 @@ export function DashboardLayout() {
   };
 
   return (
-    <ErrorBoundary><div className="min-h-screen bg-[#f4f7fb] text-[#1b1b1d] font-['Inter',sans-serif] transition-colors dark:bg-[#0B1120] dark:text-[#F1F5F9]">
+    <ErrorBoundary><div className="min-h-screen bg-[#f4f7fb] text-[#1b1b1d] font-['Inter',sans-serif] transition-colors dark:bg-slate-950 dark:text-slate-100">
       <div className="flex min-h-screen w-full">
 
         {/* ── Desktop Sidebar ── */}
         <aside
-          className={`hidden md:flex flex-none flex-col overflow-hidden border-r border-gray-200 dark:border-[#2A3850] bg-[#f5f5f5] dark:bg-[#111A2D] text-gray-700 dark:text-[#A8B4C7] transition-all duration-300 h-screen sticky top-0 ${sidebarWidth}`}
+          className={`hidden md:flex flex-none flex-col overflow-hidden border-r border-gray-200 dark:border-white/10 bg-[#f5f5f5] dark:bg-slate-900 text-gray-700 dark:text-slate-300 transition-all duration-300 h-screen sticky top-0 ${sidebarWidth}`}
         >
           <SidebarInner
             compact={collapsed}
@@ -333,7 +334,7 @@ export function DashboardLayout() {
               className="fixed inset-0 z-40 bg-black/40 md:hidden"
               onClick={() => setMobileOpen(false)}
             />
-            <aside ref={sidebarRef} className="fixed inset-y-0 left-0 z-50 w-[248px] flex flex-col overflow-hidden border-r border-gray-200 dark:border-[#2A3850] bg-[#f5f5f5] dark:bg-[#111A2D] md:hidden">
+            <aside ref={sidebarRef} className="fixed inset-y-0 left-0 z-50 w-[248px] flex flex-col overflow-hidden border-r border-gray-200 bg-[#f5f5f5] md:hidden">
               <SidebarInner
                 onClose={() => setMobileOpen(false)}
                 session={session}
@@ -349,11 +350,11 @@ export function DashboardLayout() {
         {/* ── Main Content ── */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* Top bar for mobile */}
-          <header className="md:hidden sticky top-0 z-30 flex h-14 items-center justify-between border-b border-gray-200/50 dark:border-[#2A3850] bg-white/60 dark:bg-[#0B1120]/80 backdrop-blur-md px-4">
+          <header className="md:hidden sticky top-0 z-30 flex h-14 items-center justify-between border-b border-gray-200/50 dark:border-white/10 bg-white/60 dark:bg-slate-950/60 backdrop-blur-md px-4">
             <button
               type="button"
               onClick={() => setMobileOpen(true)}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 dark:border-[#2A3850] text-gray-600 dark:text-[#A8B4C7] hover:bg-gray-100 dark:hover:bg-[#1B2639]"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 dark:border-white/10 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-white/10"
               aria-label="Open sidebar"
             >
               <Menu className="h-5 w-5" />
@@ -368,7 +369,7 @@ export function DashboardLayout() {
           >
             {(state) => (
               <>
-                <header className="hidden md:flex sticky top-0 z-30 h-14 items-center justify-between border-b border-gray-200/50 dark:border-[#2A3850] bg-white/60 dark:bg-[#0B1120]/80 backdrop-blur-md px-6 gap-3 overflow-hidden">
+                <header className="hidden md:flex sticky top-0 z-30 h-14 items-center justify-between border-b border-gray-200/50 dark:border-white/10 bg-white/60 dark:bg-slate-950/60 backdrop-blur-md px-6 gap-3 overflow-hidden">
                   {/* ── Mode 1: Quick Access Bar ── */}
                   {headerStyle === 'quick-access' && (
                     <>
@@ -389,7 +390,7 @@ export function DashboardLayout() {
                                 className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all shrink-0 border ${
                                   isActive
                                     ? 'bg-[#006a61] text-white border-[#006a61] shadow-xs font-semibold'
-                                    : 'bg-slate-100 dark:bg-[#1B2639] text-slate-700 dark:text-[#A8B4C7] border-slate-200 dark:border-[#2A3850] hover:bg-slate-200 dark:hover:bg-[#202D42]'
+                                    : 'bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-slate-700'
                                 }`}
                               >
                                 <PageIcon className="h-3.5 w-3.5" />

@@ -85,6 +85,7 @@ export function Login() {
       const uiRole: UserRole = result.user.role === 'Admin' ? 'owner' : (result.user.role === 'Inventory' ? 'inventory' : 'cashier');
 
       setStoredSession({
+        id: String(result.user.id ?? result.user.email ?? username),
         email: result.user.email || `${username}@ipharmamart.com`,
         name: result.user.name,
         company: companyMap[uiRole],
@@ -93,8 +94,8 @@ export function Login() {
 
       navigate(uiRole === 'cashier' ? '/cashier/pos' : '/dashboard');
     } catch {
-      // Fallback for offline prototype demo
       setStoredSession({
+        id: `demo-${selectedRole}`,
         email: `${selectedRole}@ipharmamart.com`,
         name: nameMap[selectedRole],
         company: companyMap[selectedRole],
@@ -131,11 +132,10 @@ export function Login() {
                     key={opt.role}
                     type="button"
                     onClick={() => handleSelectRole(opt)}
-                    className={`px-3 py-2 rounded-lg border text-left transition-all flex items-center gap-2 ${
-                      isSelected
+                    className={`px-3 py-2 rounded-lg border text-left transition-all flex items-center gap-2 ${isSelected
                         ? 'border-[#006a61] bg-[#006a61]/10 text-[#006a61] dark:text-[#7ef0cf] font-bold shadow-sm'
                         : 'border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                    }`}
+                      }`}
                   >
                     {opt.icon}
                     <span className="text-xs truncate">{opt.label}</span>

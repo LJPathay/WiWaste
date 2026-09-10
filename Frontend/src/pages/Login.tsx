@@ -9,7 +9,7 @@ interface RoleOption {
   label: string;
   username: string;
   password: string;
-  icon: React.ReactNode;
+  icon: React.ComponentType<{ className?: string }>;
   description: string;
   color: string;
   bgColor: string;
@@ -21,7 +21,7 @@ const DEMO_ROLES: RoleOption[] = [
     label: 'Owner / Admin',
     username: 'admin',
     password: 'admin123',
-    icon: <Shield className="h-5 w-5" />,
+    icon: Shield,
     description: 'Full system access — analytics, settings, user management',
     color: 'text-emerald-600 dark:text-emerald-400',
     bgColor: 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800',
@@ -31,7 +31,7 @@ const DEMO_ROLES: RoleOption[] = [
     label: 'Inventory Staff',
     username: 'inventory',
     password: 'inventory123',
-    icon: <Package className="h-5 w-5" />,
+    icon: Package,
     description: 'Stock control, FEFO tracking, wastage logs, receiving',
     color: 'text-blue-600 dark:text-blue-400',
     bgColor: 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800',
@@ -41,7 +41,7 @@ const DEMO_ROLES: RoleOption[] = [
     label: 'Cashier',
     username: 'cashier',
     password: 'cashier123',
-    icon: <Receipt className="h-5 w-5" />,
+    icon: Receipt,
     description: 'POS terminal, sales, returns, receipt reprints',
     color: 'text-violet-600 dark:text-violet-400',
     bgColor: 'bg-violet-50 dark:bg-violet-900/20 border-violet-200 dark:border-violet-800',

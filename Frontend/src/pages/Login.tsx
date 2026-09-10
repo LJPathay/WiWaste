@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router';
+import { useNavigate } from 'react-router';
 import {
   Shield,
   Package,
@@ -22,53 +22,8 @@ import {
 import { auth } from '../services/api';
 import { setStoredSession, type UserRole } from '../utils/mockAuthAndFeatures';
 
-interface RoleOption {
-  role: UserRole;
-  label: string;
-  username: string;
-  password: string;
-  icon: React.ComponentType<{ className?: string }>;
-  description: string;
-  color: string;
-  bgColor: string;
-}
-
-const DEMO_ROLES: RoleOption[] = [
-  {
-    role: 'owner',
-    label: 'Owner / Admin',
-    username: 'admin',
-    password: 'admin123',
-    icon: Shield,
-    description: 'Full system access — analytics, settings, user management',
-    color: 'text-emerald-600 dark:text-emerald-400',
-    bgColor: 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800',
-  },
-  {
-    role: 'inventory',
-    label: 'Inventory Staff',
-    username: 'inventory',
-    password: 'inventory123',
-    icon: Package,
-    description: 'Stock control, FEFO tracking, wastage logs, receiving',
-    color: 'text-blue-600 dark:text-blue-400',
-    bgColor: 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800',
-  },
-  {
-    role: 'cashier',
-    label: 'Cashier',
-    username: 'cashier',
-    password: 'cashier123',
-    icon: Receipt,
-    description: 'POS terminal, sales, returns, receipt reprints',
-    color: 'text-violet-600 dark:text-violet-400',
-    bgColor: 'bg-violet-50 dark:bg-violet-900/20 border-violet-200 dark:border-violet-800',
-  },
-];
-
 export function Login() {
   const navigate = useNavigate();
-  const [selectedRole, setSelectedRole] = useState<UserRole>('owner');
   const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('admin123');
   const [loading, setLoading] = useState(false);
@@ -76,14 +31,6 @@ export function Login() {
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showDemoDropdown, setShowDemoDropdown] = useState(false);
-
-  const handleSelectRole = (option: RoleOption) => {
-    setSelectedRole(option.role);
-    setUsername(option.username);
-    setPassword(option.password);
-    setError(null);
-    setShowDemoDropdown(false);
-  };
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -124,19 +71,17 @@ export function Login() {
       navigate(uiRole === 'cashier' ? '/cashier/pos' : '/dashboard');
     } catch {
       setStoredSession({
-        id: `demo-${selectedRole}`,
-        email: `${selectedRole}@ipharmamart.com`,
-        name: nameMap[selectedRole],
-        company: companyMap[selectedRole],
-        role: selectedRole,
+        id: `demo-owner`,
+        email: `owner@ipharmamart.com`,
+        name: nameMap.owner,
+        company: companyMap.owner,
+        role: 'owner',
       });
-      navigate(selectedRole === 'cashier' ? '/cashier/pos' : '/dashboard');
+      navigate('/dashboard');
     } finally {
       setLoading(false);
     }
   }
-
-  const currentRole = DEMO_ROLES.find(r => r.role === selectedRole);
 
   return (
     <div className="min-h-screen w-full bg-slate-50 dark:bg-slate-950 font-sans antialiased flex overflow-x-hidden relative">
@@ -217,10 +162,9 @@ export function Login() {
 
       {/* RIGHT PANE: Authentication Card & Controls */}
       <div className="w-full lg:w-1/2 flex flex-col justify-between p-6 sm:p-10 xl:p-16 relative bg-dot-pattern bg-slate-50 dark:bg-slate-950">
-
         {/* Centered Elongated Login Form Card */}
-        <div className="w-full max-w-lg mx-auto my-auto z-10 py-6">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/90 dark:border-slate-700/90 shadow-xl shadow-slate-200/50 dark:shadow-slate-900/50 overflow-hidden">
+        <div className="w-full max-w-lg mx-auto my-auto z-10 py-6 flex-1 flex items-center justify-center">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/90 dark:border-slate-700/90 shadow-xl shadow-slate-200/50 dark:shadow-slate-900/50 overflow-hidden w-full">
             <form onSubmit={handleLogin} className="p-8 sm:p-12 space-y-6">
               {/* Username Field */}
               <div className="space-y-2">
@@ -285,7 +229,7 @@ export function Login() {
 
               {/* Error State */}
               {error && (
-                <div className="flex items-center gap-2 text-red-600 dark:text-red-400 text-xs bg-red-50 dark:bg-red-900/20 p-3 rounded-xl border border-red-200 dark:border-red-800 animate-shake">
+                <div className="flex items-center gap-2 text-red-600 dark:text-red-400 text-xs bg-red-50 dark:bg-red-900/20 p-3 rounded-xl border border-red-200 dark:border-red-800">
                   <AlertTriangle className="w-4 h-4 flex-shrink-0" />
                   {error}
                 </div>
@@ -325,17 +269,30 @@ export function Login() {
                 {showDemoDropdown && (
                   <div className="absolute bottom-full left-0 right-0 mb-2 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg shadow-slate-200/50 dark:shadow-slate-900/50 p-3 animate-accordion-down z-10">
                     <div className="grid grid-cols-3 gap-2 text-xs font-mono text-slate-600 dark:text-slate-300">
-                      {DEMO_ROLES.map((opt) => (
-                        <button
-                          key={opt.role}
-                          type="button"
-                          onClick={() => handleSelectRole(opt)}
-                          className={`p-2 rounded-lg text-center transition-all ${opt.bgColor}`}
-                        >
-                          <div className="font-semibold">{opt.username}</div>
-                          <div className="text-[10px] opacity-70">{opt.password}</div>
-                        </button>
-                      ))}
+                      <button
+                        type="button"
+                        onClick={() => { setUsername('admin'); setPassword('admin123'); setShowDemoDropdown(false); }}
+                        className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 text-center"
+                      >
+                        <div className="font-semibold">admin</div>
+                        <div className="text-[10px] opacity-70">admin123</div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setUsername('inventory'); setPassword('inventory123'); setShowDemoDropdown(false); }}
+                        className="p-2 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-center"
+                      >
+                        <div className="font-semibold">inventory</div>
+                        <div className="text-[10px] opacity-70">inventory123</div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setUsername('cashier'); setPassword('cashier123'); setShowDemoDropdown(false); }}
+                        className="p-2 rounded-lg bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 text-center"
+                      >
+                        <div className="font-semibold">cashier</div>
+                        <div className="text-[10px] opacity-70">cashier123</div>
+                      </button>
                     </div>
                   </div>
                 )}
@@ -352,7 +309,7 @@ export function Login() {
         </div>
 
         {/* Bottom Gateway Tagline */}
-        <div className="w-full text-center text-xs text-slate-400 dark:text-slate-500 z-10">
+        <div className="w-full text-center text-xs text-slate-400 dark:text-slate-500 z-10 pb-4">
           WiWaste Pharmacy OS &bull; Secure Gateway
         </div>
       </div>
@@ -400,18 +357,12 @@ export function Login() {
           from { opacity: 0; transform: translateY(20px); }
           to { opacity: 1; transform: translateY(0); }
         }
-        @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
-          20%, 40%, 60%, 80% { transform: translateX(4px); }
-        }
         @keyframes accordion-down {
           from { opacity: 0; transform: translateY(-8px); max-height: 0; }
           to { opacity: 1; transform: translateY(0); max-height: 200px; }
         }
         .animate-fade-in { animation: fade-in 0.3s ease-out; }
         .animate-slide-up { animation: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
-        .animate-shake { animation: shake 0.4s ease-in-out; }
         .animate-accordion-down { animation: accordion-down 0.25s ease-out; }
       `}</style>
     </div>

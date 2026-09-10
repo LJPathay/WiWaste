@@ -22,6 +22,12 @@ use App\Http\Controllers\Api\RecommendationController;
 use App\Http\Controllers\Api\ForecastController;
 use App\Http\Controllers\Api\LossPredictionController;
 use App\Http\Controllers\Api\OptimizationController;
+use App\Http\Controllers\Api\CycleCountController;
+use App\Http\Controllers\Api\VendorReturnController;
+use App\Http\Controllers\Api\ShiftController;
+use App\Http\Controllers\Api\AlertController;
+use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\ForecastAccuracyController;
 
 /*
 |--------------------------------------------------------------------------
@@ -141,3 +147,32 @@ Route::prefix('/loss-risk')->group(function () {
 Route::prefix('/optimization')->group(function () {
     Route::post('/replenishment', [OptimizationController::class, 'replenishment']);
 });
+
+// ── New process flow endpoints (Phase 2.3) ──
+
+// Cycle Count
+Route::post('/inventory/cycle-count', [CycleCountController::class, 'store']);
+
+// Vendor Returns
+Route::post('/vendor-returns/{id}/receive', [VendorReturnController::class, 'receive']);
+Route::post('/vendor-returns/{id}/credit',  [VendorReturnController::class, 'credit']);
+
+// Shifts
+Route::post('/shifts/open',  [ShiftController::class, 'open']);
+Route::post('/shifts/close', [ShiftController::class, 'close']);
+
+// Alerts
+Route::get('/alerts/expiring', [AlertController::class, 'expiring']);
+
+// Returns approval
+Route::post('/returns/{id}/approve', [ReturnTransactionController::class, 'approve']);
+
+// Notifications
+Route::get('/notifications',              [NotificationController::class, 'index']);
+Route::post('/notifications/{id}/read',   [NotificationController::class, 'markRead']);
+Route::post('/notifications/read-all',    [NotificationController::class, 'markAllRead']);
+
+// ML Accuracy Tracking
+Route::post('/ml/accuracy',               [ForecastAccuracyController::class, 'store']);
+Route::get('/ml/accuracy/alerts',         [ForecastAccuracyController::class, 'alerts']);
+Route::get('/ml/accuracy/{product_id}',   [ForecastAccuracyController::class, 'show']);

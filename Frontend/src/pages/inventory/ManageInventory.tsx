@@ -67,29 +67,29 @@ function getExpiryDate(item: InventoryItem): string {
 const StatusBadge = memo(function StatusBadge({ status, qty }: { status: InventoryItem['stockStatus']; qty: number }) {
   if (qty < 5) {
     return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 border border-red-100 dark:border-red-900/30">
-        <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-status-critical/5 dark:bg-status-critical/20 text-status-critical dark:text-status-critical border border-status-critical/10 dark:border-status-critical/20">
+        <span className="w-1.5 h-1.5 rounded-full bg-status-critical animate-pulse" />
         Critical
       </span>
     );
   }
   if (status === 'Low Stock') {
     return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-50 dark:bg-orange-950/30 text-orange-700 dark:text-orange-300 border border-orange-100 dark:border-orange-900/30">
-        <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-status-warning/5 dark:bg-status-warning/20 text-status-warning dark:text-status-warning border border-status-warning/10 dark:border-status-warning/20">
+        <span className="w-1.5 h-1.5 rounded-full bg-status-warning animate-pulse" />
         Low Stock
       </span>
     );
   }
   if (status === 'Overstock') {
     return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 border border-blue-100 dark:border-blue-900/30">
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-status-info/5 dark:bg-status-info/20 text-status-info dark:text-status-info border border-status-info/10 dark:border-status-info/20">
         Overstock
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300 border border-green-100 dark:border-green-900/30">
+    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-status-ok/5 dark:bg-status-ok/20 text-status-ok dark:text-status-ok border border-status-ok/10 dark:border-status-ok/20">
       Normal
     </span>
   );
@@ -297,33 +297,33 @@ export function ManageInventory() {
       label: 'Total Items',
       value: items.length,
       icon: Package,
-      iconBg: 'bg-blue-50 dark:bg-blue-950/30',
-      iconColor: 'text-blue-500',
-      valueCls: 'text-blue-700',
+      iconBg: 'bg-status-info/5 dark:bg-status-info/20',
+      iconColor: 'text-status-info',
+      valueCls: 'text-status-info',
     },
     {
       label: 'Low Stock',
       value: items.filter(i => i.stockStatus === 'Low Stock').length,
       icon: AlertTriangle,
-      iconBg: 'bg-orange-50 dark:bg-orange-950/30',
-      iconColor: 'text-orange-500',
-      valueCls: 'text-orange-600',
+      iconBg: 'bg-status-warning/5 dark:bg-status-warning/20',
+      iconColor: 'text-status-warning',
+      valueCls: 'text-status-warning',
     },
     {
       label: 'Overstock',
       value: items.filter(i => i.stockStatus === 'Overstock').length,
       icon: TrendingUp,
-      iconBg: 'bg-blue-50 dark:bg-blue-950/30',
-      iconColor: 'text-blue-500',
-      valueCls: 'text-blue-600',
+      iconBg: 'bg-status-info/5 dark:bg-status-info/20',
+      iconColor: 'text-status-info',
+      valueCls: 'text-status-info',
     },
     {
       label: 'Normal',
       value: items.filter(i => i.stockStatus === 'Normal').length,
       icon: CheckCircle,
-      iconBg: 'bg-green-50 dark:bg-green-950/30',
-      iconColor: 'text-green-500',
-      valueCls: 'text-green-700',
+      iconBg: 'bg-status-ok/5 dark:bg-status-ok/20',
+      iconColor: 'text-status-ok',
+      valueCls: 'text-status-ok',
     },
   ];
 
@@ -557,13 +557,13 @@ export function ManageInventory() {
                   <div className="absolute left-2 top-0 bottom-0 w-px bg-gray-100 dark:bg-slate-800" />
                   {historyItem.recentMovements.map((mv) => (
                     <div key={mv.id} className="relative flex gap-3 pb-4">
-                      <div className={`absolute -left-[13px] top-0.5 w-3.5 h-3.5 rounded-full border-2 border-white shadow-sm flex-shrink-0 ${mv.type === 'Stock In' ? 'bg-green-500' : 'bg-red-500'}`} />
+                      <div className={`absolute -left-[13px] top-0.5 w-3.5 h-3.5 rounded-full border-2 border-white shadow-sm flex-shrink-0 ${mv.type === 'Stock In' ? 'bg-status-ok' : 'bg-status-critical'}`} />
                       <div className="flex-1 ml-2 bg-gray-50 dark:bg-slate-800 rounded-lg p-3 border border-gray-100 dark:border-white/10">
                         <div className="flex items-center justify-between">
-                          <span className={`text-xs font-bold ${mv.type === 'Stock In' ? 'text-green-700' : 'text-red-700'}`}>
+                          <span className={`text-xs font-bold ${mv.type === 'Stock In' ? 'text-status-ok' : 'text-status-critical'}`}>
                             {mv.type === 'Stock In' ? '+' : '-'}{mv.quantity} units
                           </span>
-                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${mv.type === 'Stock In' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${mv.type === 'Stock In' ? 'bg-status-ok/10 text-status-ok' : 'bg-status-critical/10 text-status-critical'}`}>
                             {mv.type}
                           </span>
                         </div>
@@ -633,7 +633,7 @@ export function ManageInventory() {
                       <span className="text-xs font-semibold text-gray-400 dark:text-slate-500">{row.label}</span>
                       <span className={`text-xs font-semibold ${
                         row.label === 'Status'
-                          ? selectedItem.stockStatus === 'Low Stock' ? 'text-orange-600' : selectedItem.stockStatus === 'Overstock' ? 'text-blue-600' : 'text-green-700'
+                          ? selectedItem.stockStatus === 'Low Stock' ? 'text-status-warning' : selectedItem.stockStatus === 'Overstock' ? 'text-status-info' : 'text-status-ok'
                           : 'text-gray-800 dark:text-slate-200'
                       }`}>{row.value}</span>
                     </div>
@@ -652,10 +652,10 @@ export function ManageInventory() {
                       <div className="absolute left-2 top-0 bottom-0 w-px bg-gray-100 dark:bg-slate-800" />
                       {selectedItem.recentMovements.map((mv) => (
                         <div key={mv.id} className="relative pb-4">
-                          <div className={`absolute -left-[13px] top-1 w-3 h-3 rounded-full border-2 border-white ${mv.type === 'Stock In' ? 'bg-green-500' : 'bg-red-500'}`} />
+                          <div className={`absolute -left-[13px] top-1 w-3 h-3 rounded-full border-2 border-white ${mv.type === 'Stock In' ? 'bg-status-ok' : 'bg-status-critical'}`} />
                           <div className="ml-2">
                             <div className="flex items-center gap-2">
-                              <span className={`text-xs font-bold ${mv.type === 'Stock In' ? 'text-green-700' : 'text-red-700'}`}>
+                              <span className={`text-xs font-bold ${mv.type === 'Stock In' ? 'text-status-ok' : 'text-status-critical'}`}>
                                 {mv.type === 'Stock In' ? '+' : '-'}{mv.quantity}
                               </span>
                               <span className="text-xs text-gray-400 dark:text-slate-500">{mv.type}</span>
@@ -945,7 +945,7 @@ export function ManageInventory() {
 
                     {/* Stock Qty */}
                     <td className="px-5 py-3.5">
-                      <span className={`text-sm font-bold ${item.qty < 10 ? 'text-red-600' : item.qty > 300 ? 'text-blue-600' : 'text-gray-800 dark:text-slate-200'}`}>
+                      <span className={`text-sm font-bold ${item.qty < 10 ? 'text-status-critical' : item.qty > 300 ? 'text-status-info' : 'text-gray-800 dark:text-slate-200'}`}>
                         {item.qty}
                       </span>
                     </td>

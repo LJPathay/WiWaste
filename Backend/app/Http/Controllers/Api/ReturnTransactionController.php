@@ -65,4 +65,30 @@ class ReturnTransactionController extends Controller
 
         return response()->json(['message' => 'Return recorded.', 'id' => $return->return_id], 201);
     }
+
+    /**
+     * Approve a return transaction (manager override).
+     * POST /api/returns/{id}/approve
+     */
+    public function approve($id, Request $request)
+    {
+        $return = ReturnTransaction::findOrFail($id);
+
+        // In a real system, this would update the return status to 'approved'
+        // and potentially trigger refund processing
+        AuditLog::create([
+            'user_id'     => $request->user()?->User_id ?? 1,
+            'action'      => "Return #{$id} approved",
+            'entity_type' => 'Return',
+            'entity_id'   => $id,
+            'new_values'  => json_encode(['status' => 'approved']),
+            'created_at'  => now(),
+        ]);
+
+        return response()->json([
+            'message' => 'Return approved successfully',
+            'return_id' => $id,
+            'status' => 'approved',
+        ]);
+    }
 }

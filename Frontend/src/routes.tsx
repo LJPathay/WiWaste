@@ -1,6 +1,6 @@
 import { lazy, Suspense } from "react";
 import type { ComponentType } from "react";
-import { createBrowserRouter, Navigate } from "react-router";
+import { createBrowserRouter } from "react-router";
 import { MainLayout } from "./components/layout/MainLayout";
 import { AuthLayout } from "./components/layout/AuthLayout";
 import { DashboardLayout } from "./components/layout/DashboardLayout";

@@ -132,7 +132,7 @@ const NavItems = memo(function NavItems({
                     compact ? 'justify-center px-2' : ''
                   } ${
                     active
-                      ? 'bg-[#006a61] text-white'
+                      ? 'bg-brand text-white'
                       : 'text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-white/10'
                   }`}
                   aria-label={item.label}
@@ -373,7 +373,7 @@ export function DashboardLayout() {
                   {headerStyle === 'quick-access' && (
                     <>
                       <div className="flex items-center gap-2 overflow-x-auto py-1 scrollbar-none min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#006a61]/10 dark:bg-[#006a61]/20 text-[#006a61] dark:text-[#7ef0cf] text-xs font-bold shrink-0 border border-[#006a61]/20">
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-brand/10 dark:bg-brand/20 text-brand dark:text-[#7ef0cf] text-xs font-bold shrink-0 border border-brand/20">
                           <TrendingUp className="h-3.5 w-3.5" />
                           <span>Most Visited:</span>
                         </div>
@@ -388,7 +388,7 @@ export function DashboardLayout() {
                                 to={page.to}
                                 className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all shrink-0 border ${
                                   isActive
-                                    ? 'bg-[#006a61] text-white border-[#006a61] shadow-xs font-semibold'
+                                    ? 'bg-brand text-white border-brand shadow-xs font-semibold'
                                     : 'bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-slate-700'
                                 }`}
                               >
@@ -438,7 +438,7 @@ export function DashboardLayout() {
                         Welcome back, {session.name}
                       </span>
                       <span className="h-4 w-px bg-slate-300 dark:bg-white/20" />
-                      <span className="text-xs font-semibold text-[#006a61] dark:text-[#7ef0cf]">
+                      <span className="text-xs font-semibold text-brand dark:text-[#7ef0cf]">
                         Enterprise Retail Solution
                       </span>
                     </div>

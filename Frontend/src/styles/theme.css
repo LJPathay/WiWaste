@@ -43,6 +43,18 @@
     --sidebar-accent-foreground: oklch(0.205 0 0);
     --sidebar-border: oklch(0.922 0 0);
     --sidebar-ring: oklch(0.708 0 0);
+
+    /* ── Semantic status tokens ── */
+    --color-status-critical: 220 38% 46%;
+    --color-status-warning: 32 95% 44%;
+    --color-status-ok: 142 71% 45%;
+    --color-status-info: 221 83% 53%;
+
+    /* ── KPI color tokens ── */
+    --color-kpi-leakage: 0 84% 60%;
+    --color-kpi-credits: 142 71% 45%;
+    --color-kpi-batches: 262 83% 58%;
+    --color-kpi-forecast: 199 89% 48%;
 }
 
 .dark {
@@ -80,6 +92,18 @@
     --sidebar-accent-foreground: oklch(0.985 0 0);
     --sidebar-border: oklch(0.269 0 0);
     --sidebar-ring: oklch(0.439 0 0);
+
+    /* ── Semantic status tokens (dark) ── */
+    --color-status-critical: 0 72% 51%;
+    --color-status-warning: 32 90% 50%;
+    --color-status-ok: 142 71% 55%;
+    --color-status-info: 217 91% 60%;
+
+    /* ── KPI color tokens (dark) ── */
+    --color-kpi-leakage: 0 72% 51%;
+    --color-kpi-credits: 142 71% 55%;
+    --color-kpi-batches: 263 70% 65%;
+    --color-kpi-forecast: 199 80% 55%;
 }
 
 @theme inline {
@@ -125,6 +149,15 @@
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-ring: var(--sidebar-ring);
+    /* ── Semantic status tokens ── */
+    --color-status-critical: rgb(var(--color-status-critical));
+    --color-status-warning: rgb(var(--color-status-warning));
+    --color-status-ok: rgb(var(--color-status-ok));
+    --color-status-info: rgb(var(--color-status-info));
+    --color-kpi-leakage: rgb(var(--color-kpi-leakage));
+    --color-kpi-credits: rgb(var(--color-kpi-credits));
+    --color-kpi-batches: rgb(var(--color-kpi-batches));
+    --color-kpi-forecast: rgb(var(--color-kpi-forecast));
 }
 
 @layer base {

@@ -28,7 +28,7 @@ export function AuthLayout() {
             {isAuthed && (
               <Link
                 to="/dashboard"
-                className="text-sm font-medium text-[#006a61] hover:underline dark:text-[#7ef0cf]"
+                className="text-sm font-medium text-brand hover:underline dark:text-[#7ef0cf]"
               >
                 Go to Dashboard →
               </Link>

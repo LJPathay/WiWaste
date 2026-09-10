@@ -122,7 +122,7 @@ export function DashboardOverview() {
     amount: item.leakageAmount,
   }));
 
-  const LEAKAGE_COLORS = ['#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16'];
+  const LEAKAGE_COLORS = ['rgb(var(--color-kpi-leakage))', '#f97316', '#f59e0b', '#eab308', 'rgb(var(--color-status-ok))'];
 
   const paymentBreakdown = ['Cash', 'E-wallet', 'Credit Card', 'Debit Card'].map((method) => ({
     method,
@@ -161,12 +161,12 @@ export function DashboardOverview() {
       value: currencyFormatter.format(totalLeakage),
       note: `${topLeakage.category} is the largest driver`,
       icon: ShieldAlert,
-      iconBg: 'bg-rose-500/10 dark:bg-rose-400/10',
-      iconColor: 'text-rose-600 dark:text-rose-400',
-      ringColor: 'ring-rose-400',
-      alertBg: 'bg-rose-50 dark:bg-rose-500/15',
-      alertText: 'text-rose-700 dark:text-rose-300',
-      alertDot: 'bg-rose-500',
+      iconBg: 'bg-kpi-leakage/10 dark:bg-kpi-leakage/10',
+      iconColor: 'text-kpi-leakage dark:text-kpi-leakage',
+      ringColor: 'ring-kpi-leakage',
+      alertBg: 'bg-kpi-leakage/5 dark:bg-kpi-leakage/15',
+      alertText: 'text-kpi-leakage dark:text-kpi-leakage',
+      alertDot: 'bg-kpi-leakage',
       change: '-1.1%',
       up: false,
       critical: `${topLeakage.category} is leaking ${currencyFormatter.format(topLeakage.leakageAmount)} — highest this month`,
@@ -198,12 +198,12 @@ export function DashboardOverview() {
       value: criticalBatches + highRiskBatches,
       note: `${criticalBatches} critical · ${highRiskBatches} high-risk`,
       icon: PackageCheck,
-      iconBg: 'bg-violet-500/10 dark:bg-violet-400/10',
-      iconColor: 'text-violet-600 dark:text-violet-400',
-      ringColor: 'ring-violet-400',
-      alertBg: 'bg-violet-50 dark:bg-violet-500/15',
-      alertText: 'text-violet-700 dark:text-violet-300',
-      alertDot: 'bg-violet-500',
+      iconBg: 'bg-kpi-batches/10 dark:bg-kpi-batches/10',
+      iconColor: 'text-kpi-batches dark:text-kpi-batches',
+      ringColor: 'ring-kpi-batches',
+      alertBg: 'bg-kpi-batches/5 dark:bg-kpi-batches/15',
+      alertText: 'text-kpi-batches dark:text-kpi-batches',
+      alertDot: 'bg-kpi-batches',
       change: '+1',
       up: false,
       critical:
@@ -218,12 +218,12 @@ export function DashboardOverview() {
       value: `${averageConfidence}%`,
       note: `${forecastChart.length} monthly demand points`,
       icon: TrendingUp,
-      iconBg: 'bg-sky-500/10 dark:bg-sky-400/10',
-      iconColor: 'text-sky-600 dark:text-sky-400',
-      ringColor: 'ring-sky-400',
-      alertBg: 'bg-sky-50 dark:bg-sky-500/15',
-      alertText: 'text-sky-700 dark:text-sky-300',
-      alertDot: 'bg-sky-500',
+      iconBg: 'bg-kpi-forecast/10 dark:bg-kpi-forecast/10',
+      iconColor: 'text-kpi-forecast dark:text-kpi-forecast',
+      ringColor: 'ring-kpi-forecast',
+      alertBg: 'bg-kpi-forecast/5 dark:bg-kpi-forecast/15',
+      alertText: 'text-kpi-forecast dark:text-kpi-forecast',
+      alertDot: 'bg-kpi-forecast',
       change: '+2.3%',
       up: true,
       critical:
@@ -256,12 +256,12 @@ export function DashboardOverview() {
     {
       title: `Reduce ${topLeakage.category.toLowerCase()} losses`,
       body: topLeakage.source,
-      border: 'border-l-rose-400',
-      bg: 'bg-rose-50 dark:bg-rose-500/10',
-      title_color: 'text-rose-900 dark:text-rose-100',
-      body_color: 'text-rose-800/80 dark:text-rose-200/70',
+      border: 'border-l-kpi-leakage',
+      bg: 'bg-kpi-leakage/5 dark:bg-kpi-leakage/10',
+      title_color: 'text-kpi-leakage dark:text-kpi-leakage',
+      body_color: 'text-kpi-leakage/80 dark:text-kpi-leakage/70',
       badge: 'ACTION',
-      badge_color: 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300',
+      badge_color: 'bg-kpi-leakage/10 text-kpi-leakage dark:bg-kpi-leakage/20 dark:text-kpi-leakage',
     },
     {
       title: 'Recover vendor credits',
@@ -321,7 +321,7 @@ export function DashboardOverview() {
                     className={`inline-flex items-center justify-center h-6 w-6 rounded-full text-xs font-semibold ${
                       card.up
                         ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400'
-                        : 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400'
+                        : 'bg-kpi-leakage/5 text-kpi-leakage dark:bg-kpi-leakage/10 dark:text-kpi-leakage'
                     }`}
                   >
                     {card.up ? '▲' : '▼'}
@@ -489,10 +489,10 @@ export function DashboardOverview() {
                 <h3 className="text-lg font-bold text-[#0b1c30] dark:text-slate-100">Leakage by Category</h3>
               </div>
               <div className="flex items-center gap-2">
-                <span className="rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700 dark:bg-rose-500/10 dark:text-rose-400">
+                <span className="rounded-full bg-kpi-leakage/5 px-3 py-1 text-xs font-semibold text-kpi-leakage dark:bg-kpi-leakage/10 dark:text-kpi-leakage">
                   {currencyFormatter.format(totalLeakage)}
                 </span>
-                <Link to="/dashboard/leakage" className="flex items-center gap-1 text-xs font-semibold text-[#006a61] dark:text-[#7ef0cf] hover:underline">
+                <Link to="/dashboard/leakage" className="flex items-center gap-1 text-xs font-semibold text-brand dark:text-[#7ef0cf] hover:underline">
                   Full view <ChevronRight className="h-3 w-3" />
                 </Link>
               </div>

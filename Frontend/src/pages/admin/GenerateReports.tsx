@@ -182,7 +182,7 @@ export function GenerateReports() {
       render: (row) => (
         <div>
           <div className="font-semibold text-slate-900 dark:text-slate-100">{row.product_name}</div>
-          <div className="text-[10px] text-slate-400 font-mono mt-0.5">SKU #{row.product_id}</div>
+          <div className="text-[9px] text-slate-400 font-mono mt-0.5">SKU #{row.product_id}</div>
         </div>
       ),
     },
@@ -191,7 +191,7 @@ export function GenerateReports() {
       header: 'Order Qty',
       align: 'numeric',
       render: (row) => (
-        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+        <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
           row.order_qty > 0
             ? 'bg-[#006a61]/10 text-[#006a61] dark:bg-[#7ef0cf]/10 dark:text-[#7ef0cf]'
             : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
@@ -256,8 +256,8 @@ export function GenerateReports() {
       pinned: true,
       truncate: true,
       render: (row) => (
-        <div className="flex items-center gap-2">
-          <FileText className="h-4 w-4 text-slate-400 shrink-0" />
+        <div className="flex items-center gap-1.5">
+          <FileText className="h-3.5 w-3.5 text-slate-400 shrink-0" />
           <span className="font-semibold text-slate-900 dark:text-slate-100">{row.reportName}</span>
         </div>
       ),
@@ -341,34 +341,34 @@ export function GenerateReports() {
   const filteredRevenue = filteredSales.reduce((sum, transaction) => sum + (transaction.total_amount ?? 0), 0);
 
   return (
-    <div className="space-y-8 w-full font-sans">
+    <div className="space-y-4 w-full font-sans">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Generate Reports</h1>
+        <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Generate Reports</h1>
       </div>
 
       {/* Report Cards Grid */}
       <div>
-        <h2 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4">Available Reports</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+        <h2 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Available Reports</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
           {REPORT_CARDS.map(card => {
             const isGenerating = generatingIds.has(card.id);
             return (
               <div
                 key={card.id}
-                className="bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm p-5 flex flex-col gap-3 hover:shadow-md transition-shadow"
+                className="bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm p-3 flex flex-col gap-2 hover:shadow-md transition-shadow"
               >
-                <div className="flex items-start gap-3">
-                  <span className="text-2xl leading-none mt-0.5">{card.icon}</span>
+                <div className="flex items-start gap-2">
+                  <span className="h-7 w-7 flex items-center justify-center text-base leading-none mt-0.5">{card.icon}</span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 leading-snug">{card.title}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">{card.description}</p>
+                    <p className="text-xs font-semibold text-slate-800 dark:text-slate-100 leading-snug">{card.title}</p>
+                    <p className="text-[9px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">{card.description}</p>
                   </div>
                 </div>
                 <button
                   onClick={() => handleGenerate(card)}
                   disabled={isGenerating}
-                  className="mt-auto inline-flex items-center justify-center gap-2 bg-[#006a61] hover:bg-[#00574f] text-white px-4 py-2 rounded-lg text-xs font-semibold transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+                  className="mt-auto inline-flex items-center justify-center gap-1.5 h-8 text-xs px-3 bg-[#006a61] hover:bg-[#00574f] text-white rounded-lg font-semibold transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                   {isGenerating ? (
                     <>
@@ -389,70 +389,70 @@ export function GenerateReports() {
       </div>
 
       {/* ── Optimized Replenishment (Sprint 4 — GA) ───────────────────── */}
-      <div className="flex items-center gap-4 pt-2">
+      <div className="flex items-center gap-3 pt-1">
         <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
-        <h2 className="text-base font-bold text-slate-700 dark:text-slate-300 whitespace-nowrap flex items-center gap-2">
-          <Cpu className="h-4 w-4 text-[#006a61]" />
+        <h2 className="text-sm font-bold text-slate-700 dark:text-slate-300 whitespace-nowrap flex items-center gap-2">
+          <Cpu className="h-3.5 w-3.5 text-[#006a61]" />
           Optimized Replenishment
         </h2>
         <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
       </div>
 
-      <div className="bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm p-5 space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+      <div className="bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm p-4 space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-end gap-2">
           <div className="flex-1">
-            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1.5">Budget (₱)</label>
+            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Budget (₱)</label>
             <div className="relative">
-              <Wallet className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Wallet className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
               <input
                 type="number"
                 min={1}
                 value={optBudget}
                 onChange={e => setOptBudget(Math.max(0, Number(e.target.value)))}
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 pl-9 pr-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-700 dark:text-slate-200"
+                className="h-8 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 pl-9 pr-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-700 dark:text-slate-200"
               />
             </div>
           </div>
           <button
             onClick={runOptimizer}
             disabled={optLoading || optBudget <= 0}
-            className="inline-flex items-center justify-center gap-2 bg-[#006a61] hover:bg-[#00574f] text-white px-5 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+            className="inline-flex items-center justify-center gap-1.5 h-8 text-xs px-3 bg-[#006a61] hover:bg-[#00574f] text-white rounded-lg font-semibold transition-all disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {optLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Cpu className="h-4 w-4" />}
+            {optLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Cpu className="h-3.5 w-3.5" />}
             {optLoading ? 'Optimizing…' : 'Run Optimization'}
           </button>
         </div>
 
         {optError && (
-          <div className="flex items-center gap-3 rounded-lg border border-rose-200 dark:border-rose-500/20 bg-rose-50 dark:bg-rose-500/5 px-4 py-3">
-            <AlertTriangle className="h-4 w-4 text-rose-500 shrink-0" />
-            <p className="text-xs text-rose-700 dark:text-rose-300">{optError}</p>
+          <div className="flex items-center gap-2 rounded-lg border border-rose-200 dark:border-rose-500/20 bg-rose-50 dark:bg-rose-500/5 px-3 py-2">
+            <AlertTriangle className="h-3.5 w-3.5 text-rose-500 shrink-0" />
+            <p className="text-[9px] text-rose-700 dark:text-rose-300">{optError}</p>
           </div>
         )}
 
         {optPlan && !optError && (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="rounded-lg border border-slate-200 dark:border-white/10 p-4">
-                <div className="flex items-center gap-2 text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  <Wallet className="h-3.5 w-3.5 text-[#006a61]" /> Total Order Value
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="rounded-lg border border-slate-200 dark:border-white/10 p-3">
+                <div className="flex items-center gap-1.5 text-[9px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                  <Wallet className="h-3 w-3 text-[#006a61]" /> Total Order Value
                 </div>
-                <div className="mt-1.5 text-lg font-black text-slate-900 dark:text-slate-100">
+                <div className="mt-1 text-base font-black text-slate-900 dark:text-slate-100">
                   {formatCurrency(optPlan.total_order_value)}
-                  <span className="text-xs font-semibold text-slate-400"> / {formatCurrency(optPlan.budget)}</span>
+                  <span className="text-[9px] font-semibold text-slate-400"> / {formatCurrency(optPlan.budget)}</span>
                 </div>
               </div>
-              <div className="rounded-lg border border-slate-200 dark:border-white/10 p-4">
-                <div className="flex items-center gap-2 text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  <Target className="h-3.5 w-3.5 text-[#006a61]" /> Fitness
+              <div className="rounded-lg border border-slate-200 dark:border-white/10 p-3">
+                <div className="flex items-center gap-1.5 text-[9px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                  <Target className="h-3 w-3 text-[#006a61]" /> Fitness
                 </div>
-                <div className="mt-1.5 text-lg font-black text-slate-900 dark:text-slate-100">{optPlan.fitness.toLocaleString()}</div>
+                <div className="mt-1 text-base font-black text-slate-900 dark:text-slate-100">{optPlan.fitness.toLocaleString()}</div>
               </div>
-              <div className="rounded-lg border border-slate-200 dark:border-white/10 p-4">
-                <div className="flex items-center gap-2 text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-[#006a61]" /> Confidence
+              <div className="rounded-lg border border-slate-200 dark:border-white/10 p-3">
+                <div className="flex items-center gap-1.5 text-[9px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                  <CheckCircle2 className="h-3 w-3 text-[#006a61]" /> Confidence
                 </div>
-                <div className="mt-1.5 text-lg font-black text-slate-900 dark:text-slate-100">{Math.round(optPlan.confidence * 100)}%</div>
+                <div className="mt-1 text-base font-black text-slate-900 dark:text-slate-100">{Math.round(optPlan.confidence * 100)}%</div>
               </div>
             </div>
 
@@ -464,22 +464,22 @@ export function GenerateReports() {
               hoverActions={false}
             />
 
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
-              <p className="text-[11px] text-slate-400">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-1">
+              <p className="text-[9px] text-slate-400">
                 Generated {new Date(optPlan.generated_at).toLocaleString()} · {optPlan.generations_run} generations.
               </p>
               <div className="flex flex-col sm:flex-row gap-2">
                 <button
                   onClick={approvePlan}
                   disabled={optApproving}
-                  className="inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-xs font-semibold transition-all disabled:opacity-60"
+                  className="inline-flex items-center justify-center gap-1.5 h-8 text-xs px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold transition-all disabled:opacity-60"
                 >
                   {optApproving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
                   {optApproving ? 'Approving…' : 'Approve Plan'}
                 </button>
                 <Link
                   to="/inventory/recommendations"
-                  className="inline-flex items-center justify-center gap-2 border border-[#006a61] text-[#006a61] dark:text-[#7ef0cf] px-4 py-2 rounded-lg text-xs font-semibold hover:bg-[#006a61]/5 transition-all"
+                  className="inline-flex items-center justify-center gap-1.5 h-8 text-xs px-3 border border-[#006a61] text-[#006a61] dark:text-[#7ef0cf] rounded-lg font-semibold hover:bg-[#006a61]/5 transition-all"
                 >
                   Review in Recommendations
                   <ArrowRight className="h-3.5 w-3.5" />
@@ -491,11 +491,11 @@ export function GenerateReports() {
       </div>
 
       {/* ── Point-of-Sale Reports ─────────────────────────────────────── */}
-      <div className="flex items-center gap-4 pt-2">
+      <div className="flex items-center gap-3 pt-1">
         <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
-        <h2 className="text-base font-bold text-slate-700 dark:text-slate-300 whitespace-nowrap flex items-center gap-2">
-          <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-[#006a61]/10 text-[#006a61] dark:bg-[#7ef0cf]/10 dark:text-[#7ef0cf]">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+        <h2 className="text-sm font-bold text-slate-700 dark:text-slate-300 whitespace-nowrap flex items-center gap-2">
+          <span className="inline-flex h-4 w-4 items-center justify-center rounded-md bg-[#006a61]/10 text-[#006a61] dark:bg-[#7ef0cf]/10 dark:text-[#7ef0cf]">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
               <line x1="3" y1="6" x2="21" y2="6" />
               <path d="M16 10a4 4 0 01-8 0" />
@@ -507,15 +507,15 @@ export function GenerateReports() {
       </div>
 
       <div>
-        <h2 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4">Sales Transaction Filters</h2>
+        <h2 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Sales Transaction Filters</h2>
         <div className="bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm p-4">
-          <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-3 items-end">
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-2 items-end">
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">Payment Method</label>
               <select
                 value={paymentFilter}
                 onChange={e => setPaymentFilter(e.target.value as 'all' | PaymentMethod)}
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-850 dark:text-slate-100"
+                className="h-8 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-850 dark:text-slate-100"
               >
                 <option value="all">All payment methods</option>
                 {paymentMethods.map(method => (
@@ -528,7 +528,7 @@ export function GenerateReports() {
               <select
                 value={cashierFilter}
                 onChange={e => setCashierFilter(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-850 dark:text-slate-100"
+                className="h-8 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-850 dark:text-slate-100"
               >
                 <option value="all">All cashiers</option>
                 {cashierOptions.map(cashier => (
@@ -536,12 +536,12 @@ export function GenerateReports() {
                 ))}
               </select>
             </div>
-            <div className="rounded-lg bg-slate-50 dark:bg-slate-900 px-4 py-2">
-              <div className="text-xs text-slate-500 dark:text-slate-400">Filtered Revenue</div>
-              <div className="text-right text-sm font-bold text-slate-900 dark:text-slate-100">{formatCurrency(filteredRevenue)}</div>
+            <div className="rounded-lg bg-slate-50 dark:bg-slate-900 px-3 py-2">
+              <div className="text-[9px] text-slate-500 dark:text-slate-400">Filtered Revenue</div>
+              <div className="text-right text-xs font-bold text-slate-900 dark:text-slate-100">{formatCurrency(filteredRevenue)}</div>
             </div>
           </div>
-          <div className="mt-4">
+          <div className="mt-3">
             <DataTable
               columns={salesColumns}
               data={filteredSales}
@@ -555,7 +555,7 @@ export function GenerateReports() {
 
       {/* Recent Compilations Table */}
       <div>
-        <h2 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4">Recent Compilations</h2>
+        <h2 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Recent Compilations</h2>
         <DataTable
           columns={compilationColumns}
           data={compilations}
@@ -563,7 +563,7 @@ export function GenerateReports() {
           emptyMessage="No compilations found."
           hoverActions={false}
           pagination={
-            <div className="px-6 py-3 text-xs text-slate-400">
+            <div className="px-4 py-2 text-[9px] text-slate-400">
               {compilations.length} report{compilations.length !== 1 ? 's' : ''} compiled
             </div>
           }
@@ -571,7 +571,7 @@ export function GenerateReports() {
       </div>
 
       <div>
-        <h2 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4">Returns Oversight</h2>
+        <h2 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Returns Oversight</h2>
         <DataTable
           columns={returnColumns}
           data={returnsData}

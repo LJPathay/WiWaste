@@ -1,265 +1,348 @@
 import { Link } from "react-router";
-import { motion } from "motion/react";
-import { ArrowRight, BarChart3, AlertTriangle, ShieldCheck, Search, Package } from "lucide-react";
-import { ImageWithFallback } from "../components/figma/ImageWithFallback";
-const imgImage = "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1080&q=80";
-const imgImage1 = "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1080&q=80";
+import { ArrowRight, BarChart3, AlertTriangle, ShieldCheck, Search, Package, CheckCircle, Zap, Users, Lock, Globe, Award } from "lucide-react";
 
 export function Home() {
-    return (
-        <div className="flex flex-col w-full">
-            {/* Hero Section */}
-            <section className="relative pt-24 pb-32 overflow-hidden bg-gradient-to-r from-[#fcf8fa] to-white">
-                <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 relative">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.5 }}
-                            className="flex flex-col items-start z-10"
-                        >
-                            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#eae7e9] border border-[#c6c6cd] mb-8">
-                                <span className="w-2 h-2 rounded-full bg-[#006a61]"></span>
-                                <span className="text-xs font-semibold tracking-widest text-[#45464d] uppercase">Enterprise Retail Solution</span>
-                            </div>
+  return (
+    <div className="flex flex-col w-full">
+      {/* Hero Section */}
+      <section className="relative pt-20 pb-24 overflow-hidden bg-gradient-to-b from-[#f4f7fb] via-white to-white dark:from-slate-950 dark:via-slate-900 dark:to-slate-900">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 relative">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+            <div className="flex flex-col items-start lg:items-start z-10 text-center lg:text-left">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#006a61]/10 border border-[#006a61]/20 mb-6">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#006a61]"></span>
+                <span className="text-xs font-semibold tracking-widest text-[#006a61] uppercase">Inventory Intelligence Platform</span>
+              </div>
 
-                            <h1 className="text-5xl lg:text-6xl font-bold tracking-tight text-black leading-tight mb-6">
-                                Transform Hidden Losses <br className="hidden lg:block" />
-                                <span>into </span>
-                                <span className="text-[#006a61]">Net Profit.</span>
-                            </h1>
+              <h1 className="text-4xl lg:text-5xl xl:text-6xl font-bold tracking-tight text-[#0F172A] dark:text-slate-50 leading-tight mb-6">
+                Transform Hidden Losses
+                <br />
+                <span className="text-[#006a61]">into Net Profit.</span>
+              </h1>
 
-                            <p className="text-lg text-[#45464d] mb-10 max-w-xl leading-relaxed">
-                                The precision inventory intelligence platform built for Philippine minimarts and groceries. Detect anomalies from informal staff coordination, track wastage from weather-based demand shifts, and reclaim your margins before they disappear.
-                            </p>
+              <p className="text-base lg:text-lg text-[#475569] dark:text-slate-400 mb-8 max-w-xl leading-relaxed mx-auto lg:mx-0">
+                The precision inventory intelligence platform built for Philippine minimarts and groceries. Detect anomalies, track wastage, and reclaim margins before they disappear.
+              </p>
 
-                            <div className="flex flex-wrap items-center gap-4 mb-12">
-                                <Link to="/pricing" className="inline-flex items-center gap-2 bg-[#006a61] hover:bg-[#00524b] text-white px-8 py-4 rounded font-semibold text-sm tracking-wide transition-colors">
-                                    Request Demo <ArrowRight className="w-4 h-4" />
-                                </Link>
-                                <Link to="/" className="inline-flex items-center justify-center bg-transparent border border-[#c6c6cd] hover:bg-gray-50 text-[#1b1b1d] px-8 py-4 rounded font-semibold text-sm tracking-wide transition-colors">
-                                    Explore Platform
-                                </Link>
-                            </div>
+              <div className="flex flex-col sm:flex-row items-center gap-4 mb-12 w-full lg:w-auto">
+                <Link to="/pricing" className="inline-flex items-center justify-center gap-2 bg-[#006a61] hover:bg-[#00524b] text-white px-7 py-3.5 rounded-xl font-semibold text-sm tracking-wide transition-all shadow-sm hover:shadow-md">
+                  Start Free Trial <ArrowRight className="w-4 h-4" />
+                </Link>
+                <Link to="/pricing" className="inline-flex items-center justify-center bg-transparent border border-[#E2E8F0] dark:border-white/20 hover:bg-slate-50 dark:hover:bg-white/5 text-[#0F172A] dark:text-slate-100 px-7 py-3.5 rounded-xl font-semibold text-sm tracking-wide transition-all">
+                  View Pricing
+                </Link>
+              </div>
 
-                            <div className="flex items-center gap-4 pt-8 border-t border-[#c6c6cd] w-full max-w-md">
-                                <div className="flex -space-x-2">
-                                    <div className="w-8 h-8 rounded-full bg-[#dcd9db] border border-[#fcf8fa] flex items-center justify-center text-xs font-medium text-[#1b1b1d]">J</div>
-                                    <div className="w-8 h-8 rounded-full bg-[#dcd9db] border border-[#fcf8fa] flex items-center justify-center text-xs font-medium text-[#1b1b1d]">M</div>
-                                    <div className="w-8 h-8 rounded-full bg-[#dcd9db] border border-[#fcf8fa] flex items-center justify-center text-xs font-medium text-[#1b1b1d]">A</div>
-                                </div>
-                                <p className="text-sm text-[#45464d]">Trusted by 500+ Owner/Administrators</p>
-                            </div>
-                        </motion.div>
+              <div className="flex items-center justify-center lg:justify-start gap-6 pt-8 border-t border-[#E2E8F0] dark:border-white/10 w-full max-w-md lg:max-w-none">
+                <div className="flex -space-x-2">
+                  <div className="w-8 h-8 rounded-full bg-[#006a61]/10 border-2 border-white dark:border-slate-900 flex items-center justify-center text-xs font-medium text-[#006a61]">JC</div>
+                  <div className="w-8 h-8 rounded-full bg-teal-100 dark:bg-teal-900/30 border-2 border-white dark:border-slate-900 flex items-center justify-center text-xs font-medium text-teal-700 dark:text-teal-300">MS</div>
+                  <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/30 border-2 border-white dark:border-slate-900 flex items-center justify-center text-xs font-medium text-amber-700 dark:text-amber-300">AR</div>
+                </div>
+                <div className="text-sm text-[#475569] dark:text-slate-400">
+                  <span className="font-semibold text-[#0F172A] dark:text-slate-100">500+</span> retailers trust WiWaste
+                </div>
+              </div>
+            </div>
 
-                        <motion.div
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ duration: 0.7, delay: 0.2 }}
-                            className="relative w-full z-0 flex items-center justify-center"
-                        >
-                            <motion.div
-                                animate={{ y: [-8, 8, -8] }}
-                                transition={{ repeat: Infinity, duration: 6, ease: "easeInOut" }}
-                                className="relative w-full aspect-[4/3] max-w-[800px] mx-auto lg:ml-auto rounded-xl shadow-2xl overflow-hidden border border-[#c6c6cd]/50 bg-white"
-                            >
-                                <ImageWithFallback src={imgImage} alt="LossLogic Dashboard showing recovered value and anomalies" className="w-full h-full object-cover object-left-top" />
-                            </motion.div>
-                        </motion.div>
+            <div className="relative w-full z-0 flex items-center justify-center">
+              <div className="relative w-full aspect-[4/3] max-w-[700px] mx-auto lg:ml-auto rounded-2xl shadow-2xl overflow-hidden border border-[#E2E8F0] dark:border-white/10 bg-white dark:bg-slate-800">
+                <div className="absolute inset-0 bg-gradient-to-br from-[#006a61]/5 via-transparent to-transparent"></div>
+                <div className="relative p-6 h-full flex flex-col">
+                  <div className="flex items-center gap-2 mb-6">
+                    <div className="flex -space-x-1.5">
+                      <div className="w-3 h-3 rounded-full bg-red-400"></div>
+                      <div className="w-3 h-3 rounded-full bg-amber-400"></div>
+                      <div className="w-3 h-3 rounded-full bg-green-400"></div>
                     </div>
-                </div>
-            </section>
-
-            {/* Logos Section */}
-            <section className="bg-[#f6f3f5] border-y border-[#c6c6cd] py-12">
-                <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
-                    <p className="text-center text-xs font-semibold tracking-[1.2px] text-[#45464d] uppercase mb-8">
-                        Securing operations for local leaders
-                    </p>
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        whileInView={{ opacity: 1 }}
-                        viewport={{ once: true }}
-                        className="flex flex-wrap justify-center gap-12 md:gap-24 items-center"
-                    >
-                        <motion.div initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} whileHover={{ scale: 1.05 }} className="flex items-center gap-2 font-bold text-xl text-black cursor-pointer opacity-70 grayscale hover:grayscale-0 hover:opacity-100 transition-all duration-300"><span className="w-5 h-5 bg-black block" style={{ clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)' }}></span>MetroMart Davao</motion.div>
-                        <motion.div initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} whileHover={{ scale: 1.05 }} className="flex items-center gap-2 font-bold text-xl text-black cursor-pointer opacity-70 grayscale hover:grayscale-0 hover:opacity-100 transition-all duration-300"><span className="w-5 h-4 bg-black block"></span>Sari-Sari Plus</motion.div>
-                        <motion.div initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} whileHover={{ scale: 1.05 }} className="flex items-center gap-2 font-bold text-xl text-black cursor-pointer opacity-70 grayscale hover:grayscale-0 hover:opacity-100 transition-all duration-300"><span className="w-5 h-4 bg-black rounded-full block"></span>Cebu Retail Group</motion.div>
-                        <motion.div initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} whileHover={{ scale: 1.05 }} className="flex items-center gap-2 font-bold text-xl text-black cursor-pointer opacity-70 grayscale hover:grayscale-0 hover:opacity-100 transition-all duration-300"><span className="w-4 h-5 bg-black block" style={{ clipPath: 'polygon(0 0, 100% 0, 80% 100%, 20% 100%)' }}></span>Manila StockHoldings</motion.div>
-                    </motion.div>
-                </div>
-            </section>
-
-            {/* Precision Tools Section */}
-            <section id="features" className="py-24 bg-white">
-                <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="text-center max-w-2xl mx-auto mb-16">
-                        <h2 className="text-4xl font-bold text-black mb-6">Precision Tools for Loss Prevention</h2>
-                        <p className="text-lg text-[#45464d]">
-                            Ditch the spreadsheets. Our platform provides a single source of truth for your inventory lifecycle, highlighting discrepancies instantly.
-                        </p>
+                    <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">inventory-dashboard.wiwaste.ph</span>
+                  </div>
+                  <div className="flex-1 grid grid-cols-2 gap-4">
+                    <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200/50 dark:border-white/5">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Recovered Value</span>
+                        <Zap className="w-4 h-4 text-[#006a61]"></Zap>
+                      </div>
+                      <div className="text-2xl font-bold text-[#0F172A] dark:text-slate-50">₱2.4M</div>
+                      <div className="text-xs text-green-600 dark:text-green-400 mt-1">+18% vs last month</div>
                     </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <motion.div
-                            initial={{ opacity: 0, y: 30 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true, margin: "-100px" }}
-                            whileHover={{ y: -5 }}
-                            transition={{ duration: 0.5 }}
-                            className="md:col-span-2 rounded-2xl border border-[#c6c6cd]/50 bg-[#fcf8fa] p-8 flex flex-col md:flex-row gap-8 overflow-hidden relative"
-                        >
-                            <div className="flex-1 z-10">
-                                <div className="w-10 h-10 rounded bg-[#131b2e] flex items-center justify-center mb-6 text-white">
-                                    <BarChart3 className="w-5 h-5" />
-                                </div>
-                                <h3 className="text-2xl font-bold text-black mb-4">Real-Time Inventory Ledger</h3>
-                                <p className="text-[#45464d] mb-8">
-                                    Continuous synchronization across all retail nodes. Instantly verify theoretical stock versus actual counts without manual reconciliation, keeping even informal staff coordination in check.
-                                </p>
-                                <ul className="space-y-3">
-                                    <li className="flex items-center gap-3 text-sm text-[#1b1b1d]"><ShieldCheck className="w-4 h-4 text-[#006a61]" /> API integration with POS</li>
-                                    <li className="flex items-center gap-3 text-sm text-[#1b1b1d]"><ShieldCheck className="w-4 h-4 text-[#006a61]" /> Immutable audit trails</li>
-                                </ul>
-                            </div>
-                            <div className="flex-1 rounded-xl overflow-hidden shadow-md border border-[#c6c6cd]">
-                                <ImageWithFallback src="https://images.unsplash.com/photo-1666875753105-c63a6f3bdc86?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxkYXRhJTIwYW5hbHl0aWNzJTIwZGFzaGJvYXJkfGVufDF8fHx8MTc4MDY0MTQzMnww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral" alt="Data analytics dashboard showing inventory ledger" className="w-full h-full object-cover" />
-                            </div>
-                        </motion.div>
-
-                        <div className="flex flex-col gap-6">
-                            <motion.div
-                                initial={{ opacity: 0, x: 30 }}
-                                whileInView={{ opacity: 1, x: 0 }}
-                                viewport={{ once: true, margin: "-100px" }}
-                                whileHover={{ y: -5 }}
-                                transition={{ duration: 0.5, delay: 0.2 }}
-                                className="rounded-2xl border border-[#c6c6cd]/50 bg-white p-8 shadow-sm"
-                            >
-                                <div className="flex justify-between items-start mb-6">
-                                    <div className="w-10 h-10 rounded bg-red-50 text-red-600 flex items-center justify-center font-bold">
-                                        <AlertTriangle className="w-5 h-5" />
-                                    </div>
-                                    <span className="text-[10px] font-semibold bg-[#f6f3f5] px-2 py-1 rounded uppercase tracking-wider text-[#45464d]">Automated</span>
-                                </div>
-                                <h3 className="text-xl font-bold text-black mb-3">Wastage Log</h3>
-                                <p className="text-sm text-[#45464d]">
-                                    Categorize and quantify unavoidable losses from weather-based spoilage or power outages instantly to maintain accurate margin calculations.
-                                </p>
-                            </motion.div>
-
-                            <motion.div
-                                initial={{ opacity: 0, x: 30 }}
-                                whileInView={{ opacity: 1, x: 0 }}
-                                viewport={{ once: true, margin: "-100px" }}
-                                whileHover={{ y: -5 }}
-                                transition={{ duration: 0.5, delay: 0.4 }}
-                                className="rounded-2xl border border-[#c6c6cd]/50 bg-white p-8 shadow-sm"
-                            >
-                                <div className="w-10 h-10 rounded bg-teal-50 text-teal-600 flex items-center justify-center mb-6">
-                                    <Search className="w-5 h-5" />
-                                </div>
-                                <h3 className="text-xl font-bold text-black mb-3">Predictive Analytics</h3>
-                                <p className="text-sm text-[#45464d]">
-                                    Identify seasonal and typhoon-driven shrink patterns and proactive reordering signals before they impact the bottom line.
-                                </p>
-                            </motion.div>
-                        </div>
+                    <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200/50 dark:border-white/5">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Wastage Prevented</span>
+                        <ShieldCheck className="w-4 h-4 text-green-500"></ShieldCheck>
+                      </div>
+                      <div className="text-2xl font-bold text-[#0F172A] dark:text-slate-50">1,234</div>
+                      <div className="text-xs text-green-600 dark:text-green-400 mt-1">items saved this quarter</div>
                     </div>
-                </div>
-            </section>
-
-            {/* Deep Dive Dark Section */}
-            <section className="relative py-24 bg-black overflow-hidden">
-                <div className="absolute inset-0 opacity-20 pointer-events-none">
-                    <ImageWithFallback src={imgImage1} alt="Abstract Background" className="w-full h-full object-cover mix-blend-overlay" />
-                </div>
-
-                <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-                        <div>
-                            <h2 className="text-4xl font-bold text-white mb-6">Root Cause Visibility.<br />Zero Guesswork.</h2>
-                            <p className="text-lg text-gray-300 mb-10 max-w-lg">
-                                When numbers don't align, generic dashboards aren't enough. LossLogic Pro provides forensic drill-downs into every SKU, tracing movement from receiving dock to point-of-sale.
-                            </p>
-
-                            <div className="space-y-8">
-                                <div className="pl-4 border-l-2 border-[#006a61]">
-                                    <h4 className="text-xl font-semibold text-white mb-2">Vendor Reconciliation</h4>
-                                    <p className="text-sm text-gray-400">Automatically flag discrepancies between ASN (Advance Shipping Notice) and actual received quantities.</p>
-                                </div>
-                                <div className="pl-4 border-l-2 border-gray-700">
-                                    <h4 className="text-xl font-semibold text-white mb-2">Transfer Shrink</h4>
-                                    <p className="text-sm text-gray-400">Monitor stock integrity during inter-store transfers with geo-fenced status updates.</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div>
-                            <div className="bg-[#131b2e]/80 backdrop-blur-md rounded-xl border border-gray-800 p-6 shadow-2xl">
-                                <div className="flex justify-between items-center mb-6">
-                                    <h5 className="text-xs font-semibold tracking-wider text-gray-400 uppercase">Anomaly Investigation: SKU-8472</h5>
-                                    <span className="bg-red-900/50 text-red-400 text-[10px] font-bold px-2 py-1 rounded">High Priority</span>
-                                </div>
-
-                                <div className="space-y-4">
-                                    <motion.div initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} className="bg-white/5 border border-gray-700 rounded-lg p-4 flex justify-between items-center">
-                                        <div className="flex items-center gap-3">
-                                            <Search className="w-4 h-4 text-gray-400" />
-                                            <span className="text-sm text-gray-200">Received (Dock A)</span>
-                                        </div>
-                                        <span className="font-mono text-sm text-white">500 units</span>
-                                    </motion.div>
-
-                                    <motion.div initial={{ height: 0 }} whileInView={{ height: 16 }} viewport={{ once: true }} transition={{ duration: 0.4, delay: 0.2 }} className="w-px bg-gray-700 ml-6"></motion.div>
-
-                                    <motion.div initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: 0.4 }} className="bg-white/5 border border-gray-700 rounded-lg p-4 flex justify-between items-center">
-                                        <div className="flex items-center gap-3">
-                                            <Package className="w-4 h-4 text-gray-400" />
-                                            <span className="text-sm text-gray-200">Sold (POS Data)</span>
-                                        </div>
-                                        <span className="font-mono text-sm text-white">482 units</span>
-                                    </motion.div>
-
-                                    <motion.div initial={{ height: 0 }} whileInView={{ height: 16 }} viewport={{ once: true }} transition={{ duration: 0.4, delay: 0.6 }} className="w-px bg-gray-700 ml-6"></motion.div>
-
-                                    <motion.div
-                                        initial={{ opacity: 0, scale: 0.95 }}
-                                        whileInView={{ opacity: 1, scale: 1 }}
-                                        viewport={{ once: true }}
-                                        transition={{ delay: 0.8, type: "spring", stiffness: 200 }}
-                                        className="bg-red-900/20 border border-red-900/50 rounded-lg p-4 flex justify-between items-center"
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <AlertTriangle className="w-4 h-4 text-red-400" />
-                                            <span className="text-sm text-red-400 font-medium">Unaccounted Variance</span>
-                                        </div>
-                                        <span className="font-mono text-sm text-red-400 font-bold">18 units</span>
-                                    </motion.div>
-                                </div>
-                            </div>
-                        </div>
+                    <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200/50 dark:border-white/5">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Active SKUs</span>
+                        <Package className="w-4 h-4 text-[#006a61]"></Package>
+                      </div>
+                      <div className="text-2xl font-bold text-[#0F172A] dark:text-slate-50">8,542</div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">across 12 locations</div>
                     </div>
-                </div>
-            </section>
-
-            {/* CTA Section */}
-            <section className="py-24 bg-white text-center">
-                <div className="max-w-3xl mx-auto px-4">
-                    <h2 className="text-3xl md:text-4xl font-bold text-black mb-6">Ready to secure your margins?</h2>
-                    <p className="text-lg text-[#45464d] mb-10">
-                        Join hundreds of retail operators using LossLogic Pro to turn inventory visibility into a competitive advantage.
-                    </p>
-                    <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                        <Link to="/pricing" className="w-full sm:w-auto bg-[#006a61] hover:bg-[#00524b] text-white px-8 py-4 rounded font-semibold text-sm tracking-wide transition-colors">
-                            Request a Custom Demo
-                        </Link>
-                        <Link to="/pricing" className="w-full sm:w-auto bg-[#fcf8fa] hover:bg-gray-100 border border-[#c6c6cd] text-[#1b1b1d] px-8 py-4 rounded font-semibold text-sm tracking-wide transition-colors">
-                            View Pricing Plans
-                        </Link>
+                    <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200/50 dark:border-white/5">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Forecast Accuracy</span>
+                        <BarChart3 className="w-4 h-4 text-[#006a61]"></BarChart3>
+                      </div>
+                      <div className="text-2xl font-bold text-[#0F172A] dark:text-slate-50">94.2%</div>
+                      <div className="text-xs text-green-600 dark:text-green-400 mt-1">demand prediction</div>
                     </div>
+                  </div>
                 </div>
-            </section>
+              </div>
+            </div>
+          </div>
         </div>
-    );
+      </section>
+
+      {/* Trust/Logos Section */}
+      <section className="bg-white dark:bg-slate-900 border-y border-[#E2E8F0] dark:border-white/10 py-12">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
+          <p className="text-center text-xs font-semibold tracking-[1.2px] text-[#64748B] dark:text-slate-500 uppercase mb-8">
+            Trusted by retail leaders across the Philippines
+          </p>
+          <div className="flex flex-wrap justify-center gap-8 md:gap-16 lg:gap-24 items-center opacity-60 hover:opacity-100 transition-opacity">
+            <div className="flex items-center gap-2 font-medium text-lg text-[#0F172A] dark:text-slate-100">
+              <span className="w-5 h-5 bg-[#006a61] block rounded"></span>
+              MetroMart Davao
+            </div>
+            <div className="flex items-center gap-2 font-medium text-lg text-[#0F172A] dark:text-slate-100">
+              <span className="w-5 h-5 bg-teal-600 block rounded"></span>
+              Sari-Sari Plus
+            </div>
+            <div className="flex items-center gap-2 font-medium text-lg text-[#0F172A] dark:text-slate-100">
+              <span className="w-5 h-5 bg-amber-600 block rounded-full"></span>
+              Cebu Retail Group
+            </div>
+            <div className="flex items-center gap-2 font-medium text-lg text-[#0F172A] dark:text-slate-100">
+              <span className="w-5 h-5 bg-indigo-600 block"></span>
+              Manila StockHoldings
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section id="features" className="py-24 bg-white dark:bg-slate-900">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <h2 className="text-3xl lg:text-4xl font-bold text-[#0F172A] dark:text-slate-50 mb-6">Precision Tools for Loss Prevention</h2>
+            <p className="text-lg text-[#475569] dark:text-slate-400">
+              Ditch the spreadsheets. Our platform provides a single source of truth for your inventory lifecycle, highlighting discrepancies instantly.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Feature 1 - Full width on mobile, 2/3 on desktop */}
+            <div className="md:col-span-2 rounded-2xl border border-[#E2E8F0] dark:border-white/10 bg-slate-50 dark:bg-slate-800/50 p-6 lg:p-8 flex flex-col lg:flex-row gap-8 overflow-hidden relative hover:border-[#006a61]/30 dark:hover:border-teal-500/30 transition-all duration-300">
+              <div className="flex-1 z-10">
+                <div className="w-12 h-12 rounded-xl bg-[#006a61] flex items-center justify-center mb-6 text-white">
+                  <BarChart3 className="w-6 h-6" />
+                </div>
+                <h3 className="text-xl lg:text-2xl font-bold text-[#0F172A] dark:text-slate-50 mb-4">Real-Time Inventory Ledger</h3>
+                <p className="text-[#475569] dark:text-slate-400 mb-6">
+                  Continuous synchronization across all retail nodes. Instantly verify theoretical stock versus actual counts without manual reconciliation.
+                </p>
+                <ul className="space-y-3">
+                  <li className="flex items-center gap-3 text-sm text-[#0F172A] dark:text-slate-100"><CheckCircle className="w-4 h-4 text-[#006a61]" /> API integration with POS systems</li>
+                  <li className="flex items-center gap-3 text-sm text-[#0F172A] dark:text-slate-100"><CheckCircle className="w-4 h-4 text-[#006a61]" /> Immutable audit trails</li>
+                  <li className="flex items-center gap-3 text-sm text-[#0F172A] dark:text-slate-100"><CheckCircle className="w-4 h-4 text-[#006a61]" /> Multi-location stock visibility</li>
+                </ul>
+              </div>
+              <div className="flex-1 rounded-xl overflow-hidden shadow-lg border border-[#E2E8F0] dark:border-white/5 bg-slate-100 dark:bg-slate-800">
+                <div className="aspect-video bg-gradient-to-br from-[#006a61]/10 to-transparent flex items-center justify-center">
+                  <BarChart3 className="w-16 h-16 text-[#006a61]/30" />
+                </div>
+              </div>
+            </div>
+
+            {/* Feature 2 & 3 - Stacked */}
+            <div className="flex flex-col gap-6">
+              <div className="rounded-2xl border border-[#E2E8F0] dark:border-white/10 bg-white dark:bg-slate-800/50 p-6 shadow-sm hover:border-[#006a61]/30 dark:hover:border-teal-500/30 hover:shadow-md transition-all duration-300">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="w-12 h-12 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 flex items-center justify-center font-bold">
+                    <AlertTriangle className="w-6 h-6" />
+                  </div>
+                  <span className="text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded uppercase tracking-wider text-slate-500 dark:text-slate-400">Automated</span>
+                </div>
+                <h3 className="text-lg font-bold text-[#0F172A] dark:text-slate-50 mb-2">Wastage Log & Categorization</h3>
+                <p className="text-sm text-[#475569] dark:text-slate-400">
+                  Categorize and quantify unavoidable losses from weather-based spoilage or power outages instantly to maintain accurate margin calculations.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-[#E2E8F0] dark:border-white/10 bg-white dark:bg-slate-800/50 p-6 shadow-sm hover:border-[#006a61]/30 dark:hover:border-teal-500/30 hover:shadow-md transition-all duration-300">
+                <div className="w-12 h-12 rounded-xl bg-teal-50 dark:bg-teal-900/20 text-teal-600 dark:text-teal-400 flex items-center justify-center mb-4">
+                  <Search className="w-6 h-6" />
+                </div>
+                <h3 className="text-lg font-bold text-[#0F172A] dark:text-slate-50 mb-2">Predictive Analytics & Forecasting</h3>
+                <p className="text-sm text-[#475569] dark:text-slate-400">
+                  Identify seasonal and typhoon-driven shrink patterns and proactive reordering signals before they impact the bottom line.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Additional Features Row */}
+      <section className="py-24 bg-slate-50 dark:bg-slate-900/50 border-y border-[#E2E8F0] dark:border-white/10">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <h2 className="text-3xl lg:text-4xl font-bold text-[#0F172A] dark:text-slate-50 mb-6">Built for Philippine Retail Reality</h2>
+            <p className="text-lg text-[#475569] dark:text-slate-400">
+              Features designed specifically for the challenges of local minimart and grocery operations.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              { icon: Package, title: "FEFO Tracking", desc: "First-Expired-First-Out batch management with expiry alerts and auto-markdown suggestions.", color: "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400" },
+              { icon: Users, title: "Multi-Store Ops", desc: "Centralized control across branches with inter-store transfers and geo-fenced receiving.", color: "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" },
+              { icon: Lock, title: "Vendor Reconciliation", desc: "Auto-flag discrepancies between ASN and actual received quantities with credit tracking.", color: "bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400" },
+              { icon: Award, title: "Compliance Ready", desc: "BIR-ready reports, audit trails, and role-based access for regulatory peace of mind.", color: "bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400" },
+            ].map((feature, i) => (
+              <div key={i} className="rounded-2xl border border-[#E2E8F0] dark:border-white/10 bg-white dark:bg-slate-800/50 p-6 hover:border-[#006a61]/30 dark:hover:border-teal-500/30 hover:shadow-lg transition-all duration-300">
+                <div className={`w-12 h-12 rounded-xl ${feature.color} flex items-center justify-center mb-4`}>
+                  <feature.icon className="w-6 h-6" />
+                </div>
+                <h3 className="text-lg font-bold text-[#0F172A] dark:text-slate-50 mb-2">{feature.title}</h3>
+                <p className="text-sm text-[#475569] dark:text-slate-400">{feature.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works / Deep Dive Section */}
+      <section className="relative py-24 bg-[#0F172A] dark:bg-slate-950 overflow-hidden">
+        <div className="absolute inset-0 opacity-5 pointer-events-none">
+          <div className="absolute inset-0 bg-gradient-to-br from-[#006a61]/10 via-transparent to-transparent"></div>
+        </div>
+
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+            <div>
+              <h2 className="text-3xl lg:text-4xl font-bold text-white mb-6">Root Cause Visibility.<br />Zero Guesswork.</h2>
+              <p className="text-lg text-slate-300 mb-10 max-w-lg">
+                When numbers don't align, generic dashboards aren't enough. WiWaste provides forensic drill-downs into every SKU, tracing movement from receiving dock to point-of-sale.
+              </p>
+
+              <div className="space-y-6">
+                <div className="pl-4 border-l-2 border-[#006a61]">
+                  <h4 className="text-lg font-semibold text-white mb-2">Vendor Reconciliation</h4>
+                  <p className="text-sm text-slate-400">Automatically flag discrepancies between ASN (Advance Shipping Notice) and actual received quantities.</p>
+                </div>
+                <div className="pl-4 border-l-2 border-slate-700">
+                  <h4 className="text-lg font-semibold text-white mb-2">Transfer Shrink Monitoring</h4>
+                  <p className="text-sm text-slate-400">Monitor stock integrity during inter-store transfers with geo-fenced status updates.</p>
+                </div>
+                <div className="pl-4 border-l-2 border-slate-700">
+                  <h4 className="text-lg font-semibold text-white mb-2">Weather-Aware Forecasting</h4>
+                  <p className="text-sm text-slate-400">Typhoon and seasonal demand models trained on Philippine retail patterns.</p>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div className="bg-slate-900/80 backdrop-blur-md rounded-2xl border border-slate-700 p-6 shadow-2xl">
+                <div className="flex justify-between items-center mb-6">
+                  <h5 className="text-xs font-semibold tracking-wider text-slate-400 uppercase">Anomaly Investigation: SKU-PH-8472</h5>
+                  <span className="bg-red-900/50 text-red-400 text-[10px] font-bold px-2 py-1 rounded">High Priority</span>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4 flex justify-between items-center">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+                        <Package className="w-4 h-4 text-emerald-400" />
+                      </div>
+                      <span className="text-sm text-slate-200">Received (Dock A)</span>
+                    </div>
+                    <span className="font-mono text-sm text-white">500 units</span>
+                  </div>
+
+                  <div className="w-px bg-slate-700 ml-10 h-4"></div>
+
+                  <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4 flex justify-between items-center">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                        <BarChart3 className="w-4 h-4 text-blue-400" />
+                      </div>
+                      <span className="text-sm text-slate-200">Sold (POS Data)</span>
+                    </div>
+                    <span className="font-mono text-sm text-white">482 units</span>
+                  </div>
+
+                  <div className="w-px bg-slate-700 ml-10 h-4"></div>
+
+                  <div className="bg-red-900/20 border border-red-900/50 rounded-lg p-4 flex justify-between items-center">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center">
+                        <AlertTriangle className="w-4 h-4 text-red-400" />
+                      </div>
+                      <span className="text-sm text-red-400 font-medium">Unaccounted Variance</span>
+                    </div>
+                    <span className="font-mono text-sm text-red-400 font-bold">18 units</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Stats Bar */}
+      <section className="py-16 bg-white dark:bg-slate-900 border-y border-[#E2E8F0] dark:border-white/10">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 text-center">
+            {[
+              { value: "2.4M+", label: "Pesos Recovered", icon: Zap },
+              { value: "94%", label: "Forecast Accuracy", icon: BarChart3 },
+              { value: "500+", label: "Active Retailers", icon: Users },
+              { value: "12", label: "Locations Supported", icon: Globe },
+            ].map((stat, i) => (
+              <div key={i} className="flex flex-col items-center">
+                <div className="w-14 h-14 rounded-xl bg-[#006a61]/10 flex items-center justify-center mb-4 text-[#006a61]">
+                  <stat.icon className="w-7 h-7" />
+                </div>
+                <div className="text-3xl lg:text-4xl font-bold text-[#0F172A] dark:text-slate-50">{stat.value}</div>
+                <div className="text-sm text-[#475569] dark:text-slate-400 mt-1">{stat.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-24 bg-white dark:bg-slate-900 text-center">
+        <div className="max-w-3xl mx-auto px-4">
+          <h2 className="text-3xl lg:text-4xl font-bold text-[#0F172A] dark:text-slate-50 mb-6">Ready to secure your margins?</h2>
+          <p className="text-lg text-[#475569] dark:text-slate-400 mb-10">
+            Join hundreds of retail operators using WiWaste to turn inventory visibility into a competitive advantage.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link to="/pricing" className="w-full sm:w-auto bg-[#006a61] hover:bg-[#00524b] text-white px-8 py-4 rounded-xl font-semibold text-sm tracking-wide transition-all shadow-sm hover:shadow-md">
+              Request a Custom Demo
+            </Link>
+            <Link to="/pricing" className="w-full sm:w-auto bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-[#E2E8F0] dark:border-white/10 text-[#0F172A] dark:text-slate-100 px-8 py-4 rounded-xl font-semibold text-sm tracking-wide transition-all">
+              View Pricing Plans
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="bg-slate-50 dark:bg-slate-950 border-t border-[#E2E8F0] dark:border-white/10 py-12">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <p className="text-sm text-[#64748B] dark:text-slate-500">
+            © 2025 WiWaste. Built for Philippine retail. All rights reserved.
+          </p>
+        </div>
+      </footer>
+    </div>
+  );
 }

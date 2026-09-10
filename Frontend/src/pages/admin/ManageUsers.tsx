@@ -424,17 +424,17 @@ export function ManageUsers() {
   ];
 
   if (loading) return (
-    <div className="flex flex-col items-center justify-center h-64 gap-4">
-      <div className="relative w-16 h-16">
-        <div className="absolute inset-0 rounded-full border-4 border-slate-200 dark:border-slate-800"></div>
-        <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-[#006a61] border-r-[#006a61] animate-spin"></div>
-        <div className="absolute inset-2 flex items-center justify-center">
-          <Users className="h-8 w-8 text-[#006a61] dark:text-[#7ef0cf] animate-pulse" />
+    <div className="flex flex-col items-center justify-center h-56 gap-3">
+      <div className="relative w-12 h-12">
+        <div className="absolute inset-0 rounded-full border-3 border-slate-200 dark:border-slate-800"></div>
+        <div className="absolute inset-0 rounded-full border-3 border-transparent border-t-[#006a61] border-r-[#006a61] animate-spin"></div>
+        <div className="absolute inset-1.5 flex items-center justify-center">
+          <Users className="h-6 w-6 text-[#006a61] dark:text-[#7ef0cf] animate-pulse" />
         </div>
       </div>
       <div className="text-center">
-        <p className="text-slate-600 dark:text-slate-400 font-semibold">Loading users...</p>
-        <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Fetching user accounts</p>
+        <p className="text-slate-600 dark:text-slate-400 font-semibold text-sm">Loading users...</p>
+        <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Fetching user accounts</p>
       </div>
     </div>
   );
@@ -444,17 +444,17 @@ export function ManageUsers() {
     const errorCode = error.match(/\((\d+)\)/)?.[1] || 'Unknown';
     const errorMessage = errorCode === '2002' ? "There's no connection (2002)" : `Connection error (${errorCode})`;
     return (
-      <div className="p-6 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800/40 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Users className="h-6 w-6 text-red-600 dark:text-red-400 shrink-0" />
+      <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800/40 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <Users className="h-5 w-5 text-red-600 dark:text-red-400 shrink-0" />
           <div>
-            <p className="font-semibold text-red-700 dark:text-red-300">Failed to load users</p>
-            <p className="text-sm text-red-600 dark:text-red-400">{errorMessage}</p>
+            <p className="font-semibold text-red-700 dark:text-red-300 text-sm">Failed to load users</p>
+            <p className="text-xs text-red-600 dark:text-red-400">{errorMessage}</p>
           </div>
         </div>
         <button
           onClick={() => refetch()}
-          className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg transition-all shrink-0"
+          className="h-8 px-3 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg transition-all shrink-0"
         >
           Try Again
         </button>
@@ -463,11 +463,11 @@ export function ManageUsers() {
   }
 
   return (
-    <div className="space-y-6 w-full font-sans">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-4 w-full font-sans">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Manage Users</h1>
+            <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Manage Users</h1>
             <UITooltip>
               <TooltipTrigger asChild>
                 <Info className="h-5 w-5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
@@ -480,7 +480,7 @@ export function ManageUsers() {
         </div>
         <button
           onClick={() => { resetForm(); setIsAddOpen(true); }}
-          className="inline-flex items-center gap-2 rounded-lg bg-[#006a61] text-white px-4 py-2.5 text-xs font-semibold hover:bg-[#00574f] shadow-sm transition-all"
+          className="inline-flex h-8 items-center gap-2 rounded-lg bg-[#006a61] text-white px-3 text-xs font-semibold hover:bg-[#00574f] shadow-sm transition-all"
         >
           <Plus className="h-4 w-4" />
           Add User
@@ -531,8 +531,8 @@ export function ManageUsers() {
           );
         }}
         pagination={
-          <div className="px-4 py-3 bg-slate-50 dark:bg-slate-900/50">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
+          <div className="px-3.5 py-2.5 bg-slate-50 dark:bg-slate-900/50">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
               <div>
                 {filteredUsers.length === 0 ? (
                   <span>Showing 0 of 0 Users</span>
@@ -559,10 +559,10 @@ export function ManageUsers() {
         }
         className="border-0"
       >
-        <div className="p-4 border-b border-slate-200 dark:border-white/10 space-y-3">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            <div className="flex flex-wrap items-center gap-1.5 bg-slate-100 dark:bg-slate-900 p-1 rounded-lg">
-              <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 px-2 uppercase tracking-wider">Status:</span>
+        <div className="p-3.5 border-b border-slate-200 dark:border-white/10 space-y-2.5">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-lg">
+              <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 px-2 uppercase tracking-wider">Status:</span>
               {[
                 { id: 'all', label: 'All Accounts', count: allCount },
                 { id: 'Active', label: 'Active', count: activeCount },
@@ -575,7 +575,7 @@ export function ManageUsers() {
                   <button
                     key={tab.id}
                     onClick={() => setStatusFilter(tab.id as 'all' | 'Active' | 'Inactive' | 'Quarantined')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                    className={`flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
                       isSelected
                         ? tab.id === 'Quarantined'
                           ? 'bg-amber-500 text-white shadow-sm'
@@ -586,7 +586,7 @@ export function ManageUsers() {
                     {TabIcon && <TabIcon className="h-3.5 w-3.5" />}
                     <span>{tab.label}</span>
                     {tab.count > 0 && (
-                      <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                      <span className={`px-1.5 py-0.2 rounded-full text-[9px] ${
                         isSelected && tab.id === 'Quarantined'
                           ? 'bg-amber-700 text-amber-100'
                           : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
@@ -599,13 +599,13 @@ export function ManageUsers() {
               })}
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-1.5">
-                <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Role:</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-1">
+                <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Role:</span>
                 <select
                   value={roleFilter}
                   onChange={e => setRoleFilter(e.target.value as 'all' | 'Admin' | 'Inventory' | 'Business Owner')}
-                  className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-xs font-medium rounded-lg px-3 py-2 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#006a61]"
+                  className="h-8 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-xs font-medium rounded-lg px-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#006a61]"
                 >
                   <option value="all">All Roles</option>
                   <option value="Admin">Admin</option>
@@ -614,14 +614,14 @@ export function ManageUsers() {
                 </select>
               </div>
 
-              <div className="relative max-w-xs w-full sm:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <div className="relative max-w-xs w-full sm:w-56">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                 <input
                   type="text"
                   placeholder="Search name, username, email..."
                   value={search}
                   onChange={e => setSearch(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-white/10 pl-9 pr-3 py-2 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-700 dark:text-slate-200"
+                  className="h-8 w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-white/10 pl-8 pr-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-700 dark:text-slate-200"
                 />
               </div>
 
@@ -638,17 +638,17 @@ export function ManageUsers() {
         </div>
 
         {showEmptyNotification && (
-          <div className="fixed bottom-6 right-6 z-40 animate-in fade-in slide-in-from-right-4 duration-300">
-            <div className="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 rounded-lg shadow-lg p-4 max-w-sm flex items-start gap-3 overflow-hidden">
+          <div className="fixed bottom-4 right-4 z-40 animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 rounded-lg shadow-lg p-3 max-w-sm flex items-start gap-2.5 overflow-hidden">
               <div className="absolute bottom-0 left-0 h-1 bg-blue-600 dark:bg-blue-400 transition-all" style={{ width: `${(notificationCountdown / 20) * 100}%` }}></div>
-              <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+              <AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
               <div className="flex-1">
                 <p className="text-sm font-semibold text-blue-700 dark:text-blue-300">Hmm, the table is empty</p>
                 <p className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">Input some data to get started</p>
               </div>
               <button
                 onClick={() => { setShowEmptyNotification(false); setShowTutorial(true); }}
-                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded transition-all shrink-0"
+                className="h-8 px-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded transition-all shrink-0"
               >
                 Quick Guide
               </button>
@@ -658,27 +658,27 @@ export function ManageUsers() {
       </DataTable>
 
       {isAddOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-lg p-6 relative shadow-2xl my-8">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-3 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-lg p-4 relative shadow-2xl my-6">
             <button
               onClick={() => setIsAddOpen(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1"
+              className="absolute top-3 right-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5"
             >
-              <X className="h-5 w-5" />
+              <X className="h-4 w-4" />
             </button>
-            <div className="flex items-center gap-2 mb-4 border-b border-slate-100 dark:border-white/5 pb-3">
-              <div className="p-2 rounded-lg bg-[#006a61]/10 text-[#006a61] dark:text-[#7ef0cf]">
-                <Plus className="h-5 w-5" />
+            <div className="flex items-center gap-2 mb-3 border-b border-slate-100 dark:border-white/5 pb-2.5">
+              <div className="p-1.5 rounded-lg bg-[#006a61]/10 text-[#006a61] dark:text-[#7ef0cf]">
+                <Plus className="h-4 w-4" />
               </div>
               <div>
-                <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Add New User</h2>
+                <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Add New User</h2>
                 <p className="text-xs text-slate-500">Create a new user account with role permissions.</p>
               </div>
             </div>
 
-            <form onSubmit={handleAddUser} className="space-y-4">
+            <form onSubmit={handleAddUser} className="space-y-3">
               <div>
-                <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-1">
+                <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">
                   Full Name <span className="text-rose-500">*</span>
                 </label>
                 <input
@@ -687,21 +687,21 @@ export function ManageUsers() {
                   placeholder="e.g. Jane Doe"
                   value={form.Full_name}
                   onChange={e => setForm(prev => ({ ...prev, Full_name: e.target.value }))}
-                  className={`w-full bg-slate-50 dark:bg-slate-800 border px-3 py-2 rounded-lg text-xs focus:outline-none focus:ring-1 text-slate-900 dark:text-slate-100 ${
+                  className={`h-8 w-full bg-slate-50 dark:bg-slate-800 border px-3 rounded-lg text-xs focus:outline-none focus:ring-1 text-slate-900 dark:text-slate-100 ${
                     isDuplicateName
                       ? 'border-rose-500 focus:ring-rose-500'
                       : 'border-slate-200 dark:border-white/10 focus:ring-[#006a61]'
                   }`}
                 />
                 {isDuplicateName && (
-                  <p className="text-rose-500 text-[11px] font-semibold mt-1 flex items-center gap-1">
+                  <p className="text-rose-500 text-[10px] font-semibold mt-1 flex items-center gap-1">
                     <AlertTriangle className="h-3 w-3" /> Full Name already exists in the system.
                   </p>
                 )}
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-1">
+                <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">
                   Username <span className="text-rose-500">*</span>
                 </label>
                 <input
@@ -710,21 +710,21 @@ export function ManageUsers() {
                   placeholder="e.g. jdoe"
                   value={form.username}
                   onChange={e => setForm(prev => ({ ...prev, username: e.target.value.toLowerCase().replace(/\s+/g, '') }))}
-                  className={`w-full bg-slate-50 dark:bg-slate-800 border px-3 py-2 rounded-lg text-xs font-mono focus:outline-none focus:ring-1 text-slate-900 dark:text-slate-100 ${
+                  className={`h-8 w-full bg-slate-50 dark:bg-slate-800 border px-3 rounded-lg text-xs font-mono focus:outline-none focus:ring-1 text-slate-900 dark:text-slate-100 ${
                     isDuplicateUsername
                       ? 'border-rose-500 focus:ring-rose-500'
                       : 'border-slate-200 dark:border-white/10 focus:ring-[#006a61]'
                   }`}
                 />
                 {isDuplicateUsername && (
-                  <p className="text-rose-500 text-[11px] font-semibold mt-1 flex items-center gap-1">
+                  <p className="text-rose-500 text-[10px] font-semibold mt-1 flex items-center gap-1">
                     <AlertTriangle className="h-3 w-3" /> Username is already taken.
                   </p>
                 )}
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-1">
+                <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">
                   Email Address
                 </label>
                 <input
@@ -732,13 +732,13 @@ export function ManageUsers() {
                   placeholder="e.g. jane@wiwaste.com"
                   value={form.email}
                   onChange={e => setForm(prev => ({ ...prev, email: e.target.value }))}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 py-2 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100"
+                  className="h-8 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100"
                 />
               </div>
 
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wide">
+                  <label className="block text-sm font-bold text-slate-600 dark:text-slate-400">
                     Password <span className="text-rose-500">*</span>
                   </label>
                   <button
@@ -749,7 +749,7 @@ export function ManageUsers() {
                       setForm(prev => ({ ...prev, password: defaultPwd }));
                       setShowAddPassword(true);
                     }}
-                    className="text-[11px] font-semibold text-[#006a61] dark:text-[#7ef0cf] hover:underline flex items-center gap-1 cursor-pointer"
+                    className="text-[10px] font-semibold text-[#006a61] dark:text-[#7ef0cf] hover:underline flex items-center gap-1 cursor-pointer"
                   >
                     <Lock className="h-3 w-3" /> Use Default Password
                   </button>
@@ -761,7 +761,7 @@ export function ManageUsers() {
                     placeholder="Enter strong password..."
                     value={form.password}
                     onChange={e => setForm(prev => ({ ...prev, password: e.target.value }))}
-                    className={`w-full bg-slate-50 dark:bg-slate-800 border pr-10 pl-3 py-2 rounded-lg text-xs focus:outline-none focus:ring-1 text-slate-900 dark:text-slate-100 ${
+                    className={`h-8 w-full bg-slate-50 dark:bg-slate-800 border pr-10 pl-3 rounded-lg text-xs focus:outline-none focus:ring-1 text-slate-900 dark:text-slate-100 ${
                       form.password && !isPasswordValid
                         ? 'border-amber-400 focus:ring-amber-400'
                         : 'border-slate-200 dark:border-white/10 focus:ring-[#006a61]'
@@ -770,24 +770,24 @@ export function ManageUsers() {
                   <button
                     type="button"
                     onClick={() => setShowAddPassword(prev => !prev)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-0.5"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-0.5"
                     title={showAddPassword ? "Hide password" : "Show password"}
                   >
-                    {showAddPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {showAddPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                   </button>
                 </div>
 
-                <div className="mt-2.5 p-3 rounded-lg bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-white/5 space-y-1.5">
-                  <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider block mb-1">
+                <div className="mt-2 p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-white/5 space-y-1">
+                  <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider block mb-1">
                     Password Policy Requirements:
                   </span>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
                     {passwordRules.map(rule => (
-                      <div key={rule.id} className="flex items-center gap-1.5 text-[11px]">
+                      <div key={rule.id} className="flex items-center gap-1.5 text-[10px]">
                         {rule.met ? (
-                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                          <CheckCircle2 className="h-3 w-3 text-emerald-500 shrink-0" />
                         ) : (
-                          <Circle className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                          <Circle className="h-3 w-3 text-slate-400 shrink-0" />
                         )}
                         <span className={rule.met ? 'text-emerald-700 dark:text-emerald-400 font-medium' : 'text-slate-500 dark:text-slate-400'}>
                           {rule.label}
@@ -799,22 +799,22 @@ export function ManageUsers() {
               </div>
 
               <div className="relative">
-                <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-1">
+                <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">
                   Assign Role <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
                   <button
                     type="button"
                     onClick={() => setRoleDropdownOpen(prev => !prev)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 py-2.5 rounded-lg text-xs flex items-center justify-between focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100"
+                    className="h-8 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 rounded-lg text-xs flex items-center justify-between focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100"
                   >
                     <div className="flex items-center gap-2">
                       {React.createElement(ROLE_CONFIG[form.role].icon, {
-                        className: `h-4 w-4 ${ROLE_CONFIG[form.role].iconColor}`
+                        className: `h-3.5 w-3.5 ${ROLE_CONFIG[form.role].iconColor}`
                       })}
                       <span className="font-medium">{ROLE_CONFIG[form.role].label}</span>
                     </div>
-                    <ChevronDown className="h-4 w-4 text-slate-400" />
+                    <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
                   </button>
 
                   {roleDropdownOpen && (
@@ -832,17 +832,17 @@ export function ManageUsers() {
                               setForm(prev => ({ ...prev, role: roleKey }));
                               setRoleDropdownOpen(false);
                             }}
-                            className={`w-full text-left px-3 py-2.5 flex items-start gap-2.5 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors ${
+                            className={`w-full text-left px-3 py-2 flex items-start gap-2.5 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors ${
                               isSelected ? 'bg-[#006a61]/5 dark:bg-[#006a61]/20' : ''
                             }`}
                           >
-                            <ItemIcon className={`h-4 w-4 mt-0.5 shrink-0 ${item.iconColor}`} />
+                            <ItemIcon className={`h-3.5 w-3.5 mt-0.5 shrink-0 ${item.iconColor}`} />
                             <div className="flex-1">
                               <div className="flex items-center justify-between">
                                 <span className="font-semibold text-xs text-slate-900 dark:text-slate-100">{item.label}</span>
                                 {isSelected && <Check className="h-3.5 w-3.5 text-[#006a61] dark:text-[#7ef0cf]" />}
                               </div>
-                              <span className="text-[11px] text-slate-500 dark:text-slate-400">{item.description}</span>
+                              <span className="text-[10px] text-slate-500 dark:text-slate-400">{item.description}</span>
                             </div>
                           </button>
                         );
@@ -853,13 +853,13 @@ export function ManageUsers() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-1">
+                <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">
                   Initial Status
                 </label>
                 <select
                   value={form.status}
                   onChange={e => setForm(prev => ({ ...prev, status: e.target.value as 'Active' | 'Inactive' | 'Quarantined' }))}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 py-2 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100"
+                  className="h-8 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100"
                 >
                   <option value="Active">Active</option>
                   <option value="Inactive">Inactive</option>
@@ -867,8 +867,8 @@ export function ManageUsers() {
               </div>
 
               {formError && (
-                <div className="p-3 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/50 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 shrink-0" />
+                <div className="p-2.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/50 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2">
+                  <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
                   <span>{formError}</span>
                 </div>
               )}
@@ -876,7 +876,7 @@ export function ManageUsers() {
               <button
                 type="submit"
                 disabled={submitting || isDuplicateName || isDuplicateUsername || !isPasswordValid}
-                className="w-full bg-[#006a61] hover:bg-[#00574f] text-white py-2.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                className="h-8 w-full bg-[#006a61] hover:bg-[#00574f] text-white rounded-lg text-xs font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
               >
                 {submitting ? 'Adding User...' : 'Add User'}
               </button>
@@ -886,24 +886,24 @@ export function ManageUsers() {
       )}
 
       {isEditOpen && editingUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-lg p-6 relative shadow-2xl my-8">
-            <button onClick={() => { setIsEditOpen(false); setViewingUser(null); }} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1">
-              <X className="h-5 w-5" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-3 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-lg p-4 relative shadow-2xl my-6">
+            <button onClick={() => { setIsEditOpen(false); setViewingUser(null); }} className="absolute top-3 right-3 text-slate-400 hover:text-slate-600 p-0.5">
+              <X className="h-4 w-4" />
             </button>
-            <div className="flex items-center gap-2 mb-4 border-b border-slate-100 dark:border-white/5 pb-3">
-              <div className="p-2 rounded-lg bg-[#006a61]/10 text-[#006a61] dark:text-[#7ef0cf]">
-                <Edit2 className="h-5 w-5" />
+            <div className="flex items-center gap-2 mb-3 border-b border-slate-100 dark:border-white/5 pb-2.5">
+              <div className="p-1.5 rounded-lg bg-[#006a61]/10 text-[#006a61] dark:text-[#7ef0cf]">
+                <Edit2 className="h-4 w-4" />
               </div>
               <div>
-                <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Edit User Details</h2>
+                <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Edit User Details</h2>
                 <p className="text-xs text-slate-500">Update account for @{editingUser.username}</p>
               </div>
             </div>
 
-            <form onSubmit={handleEditUser} className="space-y-4">
+            <form onSubmit={handleEditUser} className="space-y-3">
               <div>
-                <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-1">
+                <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">
                   Full Name
                 </label>
                 <input
@@ -911,30 +911,30 @@ export function ManageUsers() {
                   required
                   value={form.Full_name}
                   onChange={e => setForm(prev => ({ ...prev, Full_name: e.target.value }))}
-                  className={`w-full bg-slate-50 dark:bg-slate-800 border px-3 py-2 rounded-lg text-xs focus:outline-none focus:ring-1 text-slate-900 dark:text-slate-100 ${
+                  className={`h-8 w-full bg-slate-50 dark:bg-slate-800 border px-3 rounded-lg text-xs focus:outline-none focus:ring-1 text-slate-900 dark:text-slate-100 ${
                     isDuplicateName ? 'border-rose-500 focus:ring-rose-500' : 'border-slate-200 dark:border-white/10 focus:ring-[#006a61]'
                   }`}
                 />
                 {isDuplicateName && (
-                  <p className="text-rose-500 text-[11px] font-semibold mt-1">Full Name already exists.</p>
+                  <p className="text-rose-500 text-[10px] font-semibold mt-1">Full Name already exists.</p>
                 )}
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-1">
+                <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">
                   Email Address
                 </label>
                 <input
                   type="email"
                   value={form.email}
                   onChange={e => setForm(prev => ({ ...prev, email: e.target.value }))}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 py-2 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100"
+                  className="h-8 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100"
                 />
               </div>
 
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wide">
+                  <label className="block text-sm font-bold text-slate-600 dark:text-slate-400">
                     New Password <span className="text-slate-400 font-normal">(Leave blank to keep current)</span>
                   </label>
                   {editingUser && (
@@ -945,7 +945,7 @@ export function ManageUsers() {
                         setForm(prev => ({ ...prev, password: defaultPwd }));
                         setShowEditPassword(true);
                       }}
-                      className="text-[11px] font-semibold text-[#006a61] dark:text-[#7ef0cf] hover:underline flex items-center gap-1 cursor-pointer"
+                      className="text-[10px] font-semibold text-[#006a61] dark:text-[#7ef0cf] hover:underline flex items-center gap-1 cursor-pointer"
                     >
                       <Lock className="h-3 w-3" /> Use Default Password
                     </button>
@@ -957,19 +957,19 @@ export function ManageUsers() {
                     placeholder="Optional new password..."
                     value={form.password}
                     onChange={e => setForm(prev => ({ ...prev, password: e.target.value }))}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 pr-10 pl-3 py-2 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100"
+                    className="h-8 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 pr-10 pl-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100"
                   />
                   <button
                     type="button"
                     onClick={() => setShowEditPassword(prev => !prev)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-0.5"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-0.5"
                     title={showEditPassword ? "Hide password" : "Show password"}
                   >
-                    {showEditPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {showEditPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                   </button>
                 </div>
                 {form.password && (
-                  <div className="mt-2 p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-white/5 space-y-1">
+                  <div className="mt-2 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-white/5 space-y-1">
                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Policy:</span>
                     <div className="grid grid-cols-2 gap-1 text-[10px]">
                       {passwordRules.map(rule => (
@@ -984,56 +984,56 @@ export function ManageUsers() {
               </div>
 
               <div className="relative">
-                <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-1">
+                <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">
                   Role
                 </label>
                 <button
                   type="button"
                   onClick={() => setRoleDropdownOpen(prev => !prev)}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 py-2 rounded-lg text-xs flex items-center justify-between focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100"
+                  className="h-8 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 rounded-lg text-xs flex items-center justify-between focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100"
                 >
                   <div className="flex items-center gap-2">
                     {React.createElement(ROLE_CONFIG[form.role].icon, {
-                      className: `h-4 w-4 ${ROLE_CONFIG[form.role].iconColor}`
+                      className: `h-3.5 w-3.5 ${ROLE_CONFIG[form.role].iconColor}`
                     })}
                     <span className="font-medium">{ROLE_CONFIG[form.role].label}</span>
                   </div>
-                  <ChevronDown className="h-4 w-4 text-slate-400" />
+                  <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
                 </button>
 
-                {roleDropdownOpen && (
-                  <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white dark:bg-slate-850 rounded-xl border border-slate-200 dark:border-white/10 shadow-xl overflow-hidden py-1">
-                    {(Object.keys(ROLE_CONFIG) as Array<keyof typeof ROLE_CONFIG>).map(roleKey => {
-                      const item = ROLE_CONFIG[roleKey];
-                      const ItemIcon = item.icon;
-                      const isSelected = form.role === roleKey;
-                      return (
-                        <button
-                          key={roleKey}
-                          type="button"
-                          onClick={() => { setForm(prev => ({ ...prev, role: roleKey })); setRoleDropdownOpen(false); }}
-                          className={`w-full text-left px-3 py-2 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-white/5 ${isSelected ? 'bg-[#006a61]/10' : ''}`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <ItemIcon className={`h-4 w-4 ${item.iconColor}`} />
-                            <span className="font-medium text-xs">{item.label}</span>
-                          </div>
-                          {isSelected && <Check className="h-3.5 w-3.5 text-[#006a61]" />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+{roleDropdownOpen && (
+                    <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white dark:bg-slate-850 rounded-xl border border-slate-200 dark:border-white/10 shadow-xl overflow-hidden py-1">
+                      {(Object.keys(ROLE_CONFIG) as Array<keyof typeof ROLE_CONFIG>).map(roleKey => {
+                        const item = ROLE_CONFIG[roleKey];
+                        const ItemIcon = item.icon;
+                        const isSelected = form.role === roleKey;
+                        return (
+                          <button
+                            key={roleKey}
+                            type="button"
+                            onClick={() => { setForm(prev => ({ ...prev, role: roleKey })); setRoleDropdownOpen(false); }}
+                            className={`w-full text-left px-3 py-1.5 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-white/5 ${isSelected ? 'bg-[#006a61]/10' : ''}`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <ItemIcon className={`h-3.5 w-3.5 ${item.iconColor}`} />
+                              <span className="font-medium text-xs">{item.label}</span>
+                            </div>
+                            {isSelected && <Check className="h-3.5 w-3.5 text-[#006a61]" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-1">
+                <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">
                   Status
                 </label>
                 <select
                   value={form.status}
                   onChange={e => setForm(prev => ({ ...prev, status: e.target.value as 'Active' | 'Inactive' | 'Quarantined' }))}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 py-2 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100"
+                  className="h-8 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100"
                 >
                   <option value="Active">Active</option>
                   <option value="Inactive">Inactive</option>
@@ -1048,7 +1048,7 @@ export function ManageUsers() {
               <button
                 type="submit"
                 disabled={submitting || isDuplicateName || (Boolean(form.password) && !isPasswordValid)}
-                className="w-full bg-[#006a61] hover:bg-[#00574f] text-white py-2.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-50 shadow-sm"
+                className="h-8 w-full bg-[#006a61] hover:bg-[#00574f] text-white rounded-lg text-xs font-semibold transition-all disabled:opacity-50 shadow-sm"
               >
                 {submitting ? 'Saving Changes...' : 'Save Changes'}
               </button>
@@ -1058,49 +1058,49 @@ export function ManageUsers() {
       )}
 
       {viewingUser && !isEditOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-md p-6 relative shadow-2xl my-8">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-3 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-md p-4 relative shadow-2xl my-6">
             <button
               onClick={() => setViewingUser(null)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1"
+              className="absolute top-3 right-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5"
             >
-              <X className="h-5 w-5" />
+              <X className="h-4 w-4" />
             </button>
-            <div className="flex items-center gap-3 mb-6 border-b border-slate-100 dark:border-white/5 pb-4">
-              <div className="p-3 rounded-full bg-[#006a61]/10 text-[#006a61] dark:text-[#7ef0cf]">
-                <Users className="h-6 w-6" />
+            <div className="flex items-center gap-2.5 mb-4 border-b border-slate-100 dark:border-white/5 pb-3">
+              <div className="p-2 rounded-full bg-[#006a61]/10 text-[#006a61] dark:text-[#7ef0cf]">
+                <Users className="h-5 w-5" />
               </div>
               <div>
-                <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">{viewingUser.name}</h2>
+                <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">{viewingUser.name}</h2>
                 <p className="text-xs text-slate-500">User Account Details</p>
               </div>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div>
-                <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Full Name</label>
-                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 mt-1">{viewingUser.name}</p>
+                <label className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Full Name</label>
+                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 mt-0.5">{viewingUser.name}</p>
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Username</label>
-                <p className="text-sm font-mono text-slate-700 dark:text-slate-300 mt-1">@{viewingUser.username}</p>
+                <label className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Username</label>
+                <p className="text-sm font-mono text-slate-700 dark:text-slate-300 mt-0.5">@{viewingUser.username}</p>
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Email Address</label>
-                <p className="text-sm text-slate-700 dark:text-slate-300 mt-1 break-all">{viewingUser.email || 'Not provided'}</p>
+                <label className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Email Address</label>
+                <p className="text-sm text-slate-700 dark:text-slate-300 mt-0.5 break-all">{viewingUser.email || 'Not provided'}</p>
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Role</label>
-                <div className="mt-1">
+                <label className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Role</label>
+                <div className="mt-0.5">
                   {(() => {
                     const RoleIcon = ROLE_CONFIG[viewingUser.role as keyof typeof ROLE_CONFIG]?.icon ?? Users;
                     const roleConfig = ROLE_CONFIG[viewingUser.role as keyof typeof ROLE_CONFIG];
                     return (
-                      <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-xs">
-                        <RoleIcon className={`h-4 w-4 ${roleConfig?.iconColor ?? 'text-slate-500'}`} />
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-xs">
+                        <RoleIcon className={`h-3.5 w-3.5 ${roleConfig?.iconColor ?? 'text-slate-500'}`} />
                         <span>{viewingUser.role}</span>
                       </div>
                     );
@@ -1109,8 +1109,8 @@ export function ManageUsers() {
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Account Status</label>
-                <div className="mt-1">
+                <label className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Account Status</label>
+                <div className="mt-0.5">
                   <select
                     value={viewingUser.status}
                     onChange={async (e) => {
@@ -1123,7 +1123,7 @@ export function ManageUsers() {
                         alert(err instanceof Error ? err.message : 'Failed to update status');
                       }
                     }}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 py-2 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100 cursor-pointer"
+                    className="h-8 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100 cursor-pointer"
                   >
                     <option value="Active">Active</option>
                     <option value="Inactive">Inactive</option>
@@ -1134,8 +1134,8 @@ export function ManageUsers() {
 
               {viewingUser.created_at && (
                 <div>
-                  <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Account Created</label>
-                  <p className="text-sm text-slate-700 dark:text-slate-300 mt-1">
+                  <label className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Account Created</label>
+                  <p className="text-sm text-slate-700 dark:text-slate-300 mt-0.5">
                     {new Date(viewingUser.created_at).toLocaleDateString('en-US', {
                       year: 'numeric',
                       month: 'long',
@@ -1148,7 +1148,7 @@ export function ManageUsers() {
               )}
             </div>
 
-            <div className="mt-6 pt-4 border-t border-slate-100 dark:border-white/5 flex items-center gap-2">
+            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-white/5 flex items-center gap-2">
               {viewingUser.status !== 'Quarantined' && (
                 <button
                   onClick={() => {
@@ -1156,7 +1156,7 @@ export function ManageUsers() {
                     setViewingUser(null);
                     setTimeout(() => openEdit(userToEdit), 0);
                   }}
-                  className="flex-1 px-3 py-2 rounded-lg bg-[#006a61] hover:bg-[#00574f] text-white text-xs font-semibold transition-all inline-flex items-center justify-center gap-1"
+                  className="h-8 flex-1 px-3 rounded-lg bg-[#006a61] hover:bg-[#00574f] text-white text-xs font-semibold transition-all inline-flex items-center justify-center gap-1"
                 >
                   <Edit2 className="h-3.5 w-3.5" /> Edit
                 </button>
@@ -1167,7 +1167,7 @@ export function ManageUsers() {
                     setQuarantineModalUser(viewingUser);
                     setViewingUser(null);
                   }}
-                  className="flex-1 px-3 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold transition-all inline-flex items-center justify-center gap-1"
+                  className="h-8 flex-1 px-3 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold transition-all inline-flex items-center justify-center gap-1"
                 >
                   <Lock className="h-3.5 w-3.5" /> Quarantine
                 </button>
@@ -1179,7 +1179,7 @@ export function ManageUsers() {
                       setReactivateModalUser(viewingUser);
                       setViewingUser(null);
                     }}
-                    className="flex-1 px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition-all inline-flex items-center justify-center gap-1"
+                    className="h-8 flex-1 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition-all inline-flex items-center justify-center gap-1"
                   >
                     <RotateCcw className="h-3.5 w-3.5" /> Reactivate
                   </button>
@@ -1188,7 +1188,7 @@ export function ManageUsers() {
                       setDeleteModalUser(viewingUser);
                       setViewingUser(null);
                     }}
-                    className="flex-1 px-3 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold transition-all inline-flex items-center justify-center gap-1"
+                    className="h-8 flex-1 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold transition-all inline-flex items-center justify-center gap-1"
                   >
                     <Trash2 className="h-3.5 w-3.5" /> Delete
                   </button>
@@ -1200,14 +1200,14 @@ export function ManageUsers() {
       )}
 
       {quarantineModalUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-xl border border-amber-200 dark:border-amber-800/40 w-full max-w-md p-6 relative shadow-2xl">
-            <button onClick={() => setQuarantineModalUser(null)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-3">
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-amber-200 dark:border-amber-800/40 w-full max-w-md p-4 relative shadow-2xl">
+            <button onClick={() => setQuarantineModalUser(null)} className="absolute top-3 right-3 text-slate-400 hover:text-slate-600">
               <X className="h-4 w-4" />
             </button>
-            <div className="flex items-center gap-3 mb-3">
-              <div className="p-3 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400">
-                <Lock className="h-6 w-6" />
+            <div className="flex items-center gap-2.5 mb-2.5">
+              <div className="p-2.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400">
+                <Lock className="h-5 w-5" />
               </div>
               <div>
                 <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Quarantine User Account</h3>
@@ -1215,7 +1215,7 @@ export function ManageUsers() {
               </div>
             </div>
 
-            <p className="text-xs text-slate-600 dark:text-slate-300 mb-4 leading-relaxed">
+            <p className="text-xs text-slate-600 dark:text-slate-300 mb-3 leading-relaxed">
               Are you sure you want to quarantine <strong className="text-slate-900 dark:text-slate-100">{quarantineModalUser.name}</strong> (@{quarantineModalUser.username})?
               <br /><br />
               This user will be placed on the <strong className="text-amber-600 dark:text-amber-400">Quarantined Users</strong> list and all account privileges will be suspended until reactivated or permanently deleted.
@@ -1224,14 +1224,14 @@ export function ManageUsers() {
             <div className="flex items-center justify-end gap-2">
               <button
                 onClick={() => setQuarantineModalUser(null)}
-                className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-all"
+                className="h-8 px-3 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-all"
               >
                 Cancel
               </button>
               <button
                 onClick={handleQuarantineConfirm}
                 disabled={submitting}
-                className="px-4 py-2 text-xs font-semibold bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-all shadow-sm disabled:opacity-50"
+                className="h-8 px-3 text-xs font-semibold bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-all shadow-sm disabled:opacity-50"
               >
                 {submitting ? 'Quarantining...' : 'Quarantine User'}
               </button>
@@ -1241,14 +1241,14 @@ export function ManageUsers() {
       )}
 
       {reactivateModalUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-xl border border-emerald-200 dark:border-emerald-800/40 w-full max-w-md p-6 relative shadow-2xl">
-            <button onClick={() => setReactivateModalUser(null)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-3">
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-emerald-200 dark:border-emerald-800/40 w-full max-w-md p-4 relative shadow-2xl">
+            <button onClick={() => setReactivateModalUser(null)} className="absolute top-3 right-3 text-slate-400 hover:text-slate-600">
               <X className="h-4 w-4" />
             </button>
-            <div className="flex items-center gap-3 mb-3">
-              <div className="p-3 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400">
-                <RotateCcw className="h-6 w-6" />
+            <div className="flex items-center gap-2.5 mb-2.5">
+              <div className="p-2.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400">
+                <RotateCcw className="h-5 w-5" />
               </div>
               <div>
                 <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Reactivate Quarantined User</h3>
@@ -1256,7 +1256,7 @@ export function ManageUsers() {
               </div>
             </div>
 
-            <p className="text-xs text-slate-600 dark:text-slate-300 mb-4 leading-relaxed">
+            <p className="text-xs text-slate-600 dark:text-slate-300 mb-3 leading-relaxed">
               Are you sure you want to reactivate <strong className="text-slate-900 dark:text-slate-100">{reactivateModalUser.name}</strong> (@{reactivateModalUser.username})?
               <br /><br />
               This will restore their account status to <strong className="text-emerald-600 dark:text-emerald-400">Active</strong> and re-enable system authorization.
@@ -1265,14 +1265,14 @@ export function ManageUsers() {
             <div className="flex items-center justify-end gap-2">
               <button
                 onClick={() => setReactivateModalUser(null)}
-                className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-all"
+                className="h-8 px-3 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-all"
               >
                 Cancel
               </button>
               <button
                 onClick={handleReactivateConfirm}
                 disabled={submitting}
-                className="px-4 py-2 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-all shadow-sm disabled:opacity-50"
+                className="h-8 px-3 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-all shadow-sm disabled:opacity-50"
               >
                 {submitting ? 'Reactivating...' : 'Reactivate Account'}
               </button>
@@ -1284,14 +1284,14 @@ export function ManageUsers() {
       <Tutorial steps={tutorialSteps} isOpen={showTutorial} onClose={() => setShowTutorial(false)} />
 
       {deleteModalUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-xl border border-rose-200 dark:border-rose-800/40 w-full max-w-md p-6 relative shadow-2xl">
-            <button onClick={() => setDeleteModalUser(null)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-3">
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-rose-200 dark:border-rose-800/40 w-full max-w-md p-4 relative shadow-2xl">
+            <button onClick={() => setDeleteModalUser(null)} className="absolute top-3 right-3 text-slate-400 hover:text-slate-600">
               <X className="h-4 w-4" />
             </button>
-            <div className="flex items-center gap-3 mb-3">
-              <div className="p-3 rounded-full bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400">
-                <AlertTriangle className="h-6 w-6" />
+            <div className="flex items-center gap-2.5 mb-2.5">
+              <div className="p-2.5 rounded-full bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400">
+                <AlertTriangle className="h-5 w-5" />
               </div>
               <div>
                 <h3 className="text-base font-bold text-rose-600 dark:text-rose-400">Permanent Deletion</h3>
@@ -1299,7 +1299,7 @@ export function ManageUsers() {
               </div>
             </div>
 
-            <p className="text-xs text-slate-600 dark:text-slate-300 mb-4 leading-relaxed">
+            <p className="text-xs text-slate-600 dark:text-slate-300 mb-3 leading-relaxed">
               Are you sure you want to permanently delete <strong className="text-slate-900 dark:text-slate-100">{deleteModalUser.name}</strong> (@{deleteModalUser.username})?
               <br /><br />
               <span className="text-rose-600 dark:text-rose-400 font-semibold">
@@ -1310,14 +1310,14 @@ export function ManageUsers() {
             <div className="flex items-center justify-end gap-2">
               <button
                 onClick={() => setDeleteModalUser(null)}
-                className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-all"
+                className="h-8 px-3 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-all"
               >
                 Cancel
               </button>
               <button
                 onClick={handleDeleteConfirm}
                 disabled={submitting}
-                className="px-4 py-2 text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition-all shadow-sm disabled:opacity-50 flex items-center gap-1.5"
+                className="h-8 px-3 text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition-all shadow-sm disabled:opacity-50 flex items-center gap-1.5"
               >
                 <Trash2 className="h-3.5 w-3.5" />
                 {submitting ? 'Deleting...' : 'Permanently Delete'}

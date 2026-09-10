@@ -29,10 +29,10 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden">
-      <div className="px-6 py-4 border-b border-slate-200 dark:border-white/10">
+      <div className="px-4 py-3 border-b border-slate-200 dark:border-white/10">
         <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100">{title}</h2>
       </div>
-      <div className="p-6">{children}</div>
+      <div className="p-4">{children}</div>
     </div>
   );
 }
@@ -50,10 +50,10 @@ function AlertRow({
   onChange: (v: boolean) => void;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 py-3 border-b border-slate-100 dark:border-white/5 last:border-0">
+    <div className="flex items-start justify-between gap-3 py-2 border-b border-slate-100 dark:border-white/5 last:border-0">
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-slate-800 dark:text-slate-100">{label}</p>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{description}</p>
+        <p className="text-xs font-medium text-slate-800 dark:text-slate-100">{label}</p>
+        <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">{description}</p>
       </div>
       <Toggle checked={checked} onChange={onChange} />
     </div>
@@ -169,17 +169,17 @@ export function SystemSettings() {
   };
 
   return (
-    <div className="space-y-6 w-full font-sans">
+    <div className="space-y-4 w-full font-sans">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">System Settings</h1>
+            <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">System Settings</h1>
             <UITooltip>
               <TooltipTrigger asChild>
-                <Info className="h-5 w-5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
+                <Info className="h-4 w-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
               </TooltipTrigger>
-              <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
+              <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs text-xs">
                 Configure your store profile, alert preferences and data management options.
               </TooltipContent>
             </UITooltip>
@@ -188,11 +188,11 @@ export function SystemSettings() {
         <button
           onClick={handleSaveConfig}
           disabled={saveLoading}
-          className="inline-flex items-center gap-2 rounded-lg bg-[#006a61] hover:bg-[#00574f] text-white px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-lg bg-[#006a61] hover:bg-[#00574f] text-white px-3 h-8 text-xs font-semibold transition-colors disabled:opacity-60"
         >
           {saveLoading ? (
             <>
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
               Saving…
             </>
           ) : (
@@ -206,13 +206,13 @@ export function SystemSettings() {
 
       {/* ── Store Profile ── */}
       <SectionCard title="Store Profile">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <FormField label="Store Name">
             <input
               type="text"
               value={profile.storeName}
               onChange={e => setProfile(p => ({ ...p, storeName: e.target.value }))}
-              className={inputCls}
+              className="h-8 text-xs px-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#006a61]/20 focus:border-[#006a61] transition-colors"
               placeholder="WiWaste Store"
             />
           </FormField>
@@ -221,7 +221,7 @@ export function SystemSettings() {
               type="email"
               value={profile.storeEmail}
               onChange={e => setProfile(p => ({ ...p, storeEmail: e.target.value }))}
-              className={inputCls}
+              className="h-8 text-xs px-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#006a61]/20 focus:border-[#006a61] transition-colors"
               placeholder="owner@wiwaste.com"
             />
           </FormField>
@@ -230,7 +230,7 @@ export function SystemSettings() {
               type="tel"
               value={profile.storePhone}
               onChange={e => setProfile(p => ({ ...p, storePhone: e.target.value }))}
-              className={inputCls}
+              className="h-8 text-xs px-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#006a61]/20 focus:border-[#006a61] transition-colors"
               placeholder="(02) 8123 4567"
             />
           </FormField>
@@ -239,7 +239,7 @@ export function SystemSettings() {
               type="text"
               value={profile.storeAddress}
               onChange={e => setProfile(p => ({ ...p, storeAddress: e.target.value }))}
-              className={inputCls}
+              className="h-8 text-xs px-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#006a61]/20 focus:border-[#006a61] transition-colors"
               placeholder="123 Eco Street, Quezon City"
             />
           </FormField>
@@ -247,7 +247,7 @@ export function SystemSettings() {
             <select
               value={profile.currency}
               onChange={e => setProfile(p => ({ ...p, currency: e.target.value }))}
-              className={inputCls}
+              className="h-8 text-xs px-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#006a61]/20 focus:border-[#006a61] transition-colors"
             >
               <option value="PHP">PHP — Philippine Peso</option>
               <option value="USD">USD — US Dollar</option>
@@ -259,7 +259,7 @@ export function SystemSettings() {
             <select
               value={profile.timezone}
               onChange={e => setProfile(p => ({ ...p, timezone: e.target.value }))}
-              className={inputCls}
+              className="h-8 text-xs px-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#006a61]/20 focus:border-[#006a61] transition-colors"
             >
               <option value="Asia/Manila">Asia/Manila (UTC+8)</option>
               <option value="Asia/Singapore">Asia/Singapore (UTC+8)</option>
@@ -272,16 +272,16 @@ export function SystemSettings() {
 
       {/* ── Header Element Customization ── */}
       <SectionCard title="Header Element & Navigation Customization">
-        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
           Choose which element is displayed on the main top navigation header bar across all pages.
         </p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           {/* Quick Access Bar */}
           <button
             type="button"
             onClick={() => handleSelectHeaderStyle('quick-access')}
-            className={`p-4 rounded-xl border text-left flex flex-col justify-between gap-3 transition-all cursor-pointer ${
+            className={`p-3.5 rounded-xl border text-left flex flex-col justify-between gap-2.5 transition-all cursor-pointer ${
               headerStyle === 'quick-access'
                 ? 'border-[#006a61] bg-[#006a61]/10 dark:bg-[#006a61]/20 ring-2 ring-[#006a61]/30 shadow-sm'
                 : 'border-slate-200 dark:border-white/10 bg-slate-50/60 dark:bg-slate-900/60 hover:border-[#006a61] hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -289,17 +289,17 @@ export function SystemSettings() {
           >
             <div className="flex items-center justify-between w-full">
               <span className="p-2 rounded-lg bg-teal-500/10 text-[#006a61] dark:text-[#7ef0cf]">
-                <TrendingUp className="h-5 w-5" />
+                <TrendingUp className="h-4 w-4" />
               </span>
               {headerStyle === 'quick-access' && (
                 <div className="p-0.5 rounded-full bg-[#006a61] text-white">
-                  <Check className="h-3.5 w-3.5" />
+                  <Check className="h-3 w-3" />
                 </div>
               )}
             </div>
             <div>
               <h4 className="font-bold text-xs text-slate-900 dark:text-slate-100">Quick Access Bar</h4>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-normal">
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 leading-normal">
                 Displays shortcut pills for your top most visited pages with icons.
               </p>
             </div>
@@ -309,7 +309,7 @@ export function SystemSettings() {
           <button
             type="button"
             onClick={() => handleSelectHeaderStyle('action-text')}
-            className={`p-4 rounded-xl border text-left flex flex-col justify-between gap-3 transition-all cursor-pointer ${
+            className={`p-3.5 rounded-xl border text-left flex flex-col justify-between gap-2.5 transition-all cursor-pointer ${
               headerStyle === 'action-text'
                 ? 'border-[#006a61] bg-[#006a61]/10 dark:bg-[#006a61]/20 ring-2 ring-[#006a61]/30 shadow-sm'
                 : 'border-slate-200 dark:border-white/10 bg-slate-50/60 dark:bg-slate-900/60 hover:border-[#006a61] hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -317,17 +317,17 @@ export function SystemSettings() {
           >
             <div className="flex items-center justify-between w-full">
               <span className="p-2 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
-                <Activity className="h-5 w-5" />
+                <Activity className="h-4 w-4" />
               </span>
               {headerStyle === 'action-text' && (
                 <div className="p-0.5 rounded-full bg-[#006a61] text-white">
-                  <Check className="h-3.5 w-3.5" />
+                  <Check className="h-3 w-3" />
                 </div>
               )}
             </div>
             <div>
               <h4 className="font-bold text-xs text-slate-900 dark:text-slate-100">Backup Text / Actions</h4>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-normal">
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 leading-normal">
                 Displays real-time action logs (e.g. Added product, user, supplier or saved changes).
               </p>
             </div>
@@ -337,7 +337,7 @@ export function SystemSettings() {
           <button
             type="button"
             onClick={() => handleSelectHeaderStyle('welcome-text')}
-            className={`p-4 rounded-xl border text-left flex flex-col justify-between gap-3 transition-all cursor-pointer ${
+            className={`p-3.5 rounded-xl border text-left flex flex-col justify-between gap-2.5 transition-all cursor-pointer ${
               headerStyle === 'welcome-text'
                 ? 'border-[#006a61] bg-[#006a61]/10 dark:bg-[#006a61]/20 ring-2 ring-[#006a61]/30 shadow-sm'
                 : 'border-slate-200 dark:border-white/10 bg-slate-50/60 dark:bg-slate-900/60 hover:border-[#006a61] hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -345,17 +345,17 @@ export function SystemSettings() {
           >
             <div className="flex items-center justify-between w-full">
               <span className="p-2 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                <Sparkles className="h-5 w-5" />
+                <Sparkles className="h-4 w-4" />
               </span>
               {headerStyle === 'welcome-text' && (
                 <div className="p-0.5 rounded-full bg-[#006a61] text-white">
-                  <Check className="h-3.5 w-3.5" />
+                  <Check className="h-3 w-3" />
                 </div>
               )}
             </div>
             <div>
               <h4 className="font-bold text-xs text-slate-900 dark:text-slate-100">Welcome Text</h4>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-normal">
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 leading-normal">
                 Displays the default user welcome greeting and system tagline.
               </p>
             </div>
@@ -365,7 +365,7 @@ export function SystemSettings() {
 
       {/* ── Smart Alerts ── */}
       <SectionCard title="Smart Alerts">
-        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
           Enable or disable automated notifications sent to Owner/Administrators.
         </p>
         <div className="divide-y divide-slate-100 dark:divide-white/5">
@@ -410,24 +410,24 @@ export function SystemSettings() {
 
       {/* ── Data Management ── */}
       <SectionCard title="Data Management">
-        <p className="text-xs text-slate-500 dark:text-slate-400 mb-5">
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
           Manage your inventory and waste data. These actions are irreversible — proceed with caution.
         </p>
-        <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex flex-col sm:flex-row gap-2">
           {/* Export Data */}
           <button
             onClick={handleExport}
             disabled={exportLoading}
-            className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 px-4 py-2.5 text-sm font-semibold transition-colors disabled:opacity-60"
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 px-3 h-8 text-xs font-semibold transition-colors disabled:opacity-60"
           >
             {exportLoading ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 Exporting…
               </>
             ) : (
               <>
-                <Upload className="h-4 w-4" />
+                <Upload className="h-3.5 w-3.5" />
                 Export Data
               </>
             )}
@@ -437,16 +437,16 @@ export function SystemSettings() {
           <button
             onClick={handleDownloadLogs}
             disabled={downloadLoading}
-            className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 px-4 py-2.5 text-sm font-semibold transition-colors disabled:opacity-60"
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 px-3 h-8 text-xs font-semibold transition-colors disabled:opacity-60"
           >
             {downloadLoading ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 Downloading…
               </>
             ) : (
               <>
-                <Download className="h-4 w-4" />
+                <Download className="h-3.5 w-3.5" />
                 Download Logs
               </>
             )}
@@ -456,23 +456,23 @@ export function SystemSettings() {
           <button
             onClick={handlePurge}
             disabled={purgeLoading}
-            className="inline-flex items-center justify-center gap-2 rounded-lg border border-rose-200 dark:border-rose-500/30 bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 px-4 py-2.5 text-sm font-semibold transition-colors disabled:opacity-60"
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-rose-200 dark:border-rose-500/30 bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 px-3 h-8 text-xs font-semibold transition-colors disabled:opacity-60"
           >
             {purgeLoading ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 Purging…
               </>
             ) : (
               <>
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="h-3.5 w-3.5" />
                 Purge Old Records
               </>
             )}
           </button>
         </div>
 
-        <div className="mt-4 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 px-4 py-3 text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
+        <div className="mt-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 px-3 py-2.5 text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
           <span className="font-bold">Warning:</span> Purging old records permanently removes waste logs older than 90 days. This action cannot be undone.
         </div>
       </SectionCard>

@@ -3,6 +3,9 @@ import { Plus, Search, Eye, X, CheckCircle, Package, Loader2 } from 'lucide-reac
 import { Toast, useToast, ConfirmDialog } from '../../components/ui/Toast';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { purchaseOrders as poApi, suppliers as supplierApi, products as productApi, type PaginatedResponse, type ApiProduct, type ApiSupplier } from '../../services/api';
+import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
+import { ActionButton } from '../../components/shared/DataTableActions';
+import { Pagination } from '../../components/ui/pagination';
 
 const currencyFormatter = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 });
 
@@ -69,13 +72,11 @@ export function PurchaseOrders() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  // Modal state
   const [showCreate, setShowCreate] = useState(false);
   const [showReceive, setShowReceive] = useState<{ open: boolean; order: PurchaseOrder | null }>({ open: false, order: null });
   const [showDetail, setShowDetail] = useState<{ open: boolean; order: PurchaseOrder | null }>({ open: false, order: null });
   const [confirmCancel, setConfirmCancel] = useState<{ open: boolean; order: PurchaseOrder | null }>({ open: false, order: null });
 
-  // Form state
   const [suppliers, setSuppliers] = useState<SupplierOption[]>([]);
   const [products, setProducts] = useState<ProductOption[]>([]);
   const [formData, setFormData] = useState({ supplier_id: 0, notes: '', items: [] as PurchaseOrderLineItem[] });
@@ -159,6 +160,54 @@ export function PurchaseOrders() {
     } catch { error('Failed to cancel purchase order.'); }
   }
 
+  const columns: DataTableColumn<PurchaseOrder>[] = [
+    {
+      key: 'po_number',
+      header: 'PO Number',
+      pinned: true,
+      truncate: true,
+      minWidth: '120px',
+    },
+    {
+      key: 'supplier',
+      header: 'Supplier',
+      truncate: true,
+      minWidth: '120px',
+    },
+    {
+      key: 'user',
+      header: 'Created By',
+      truncate: true,
+      minWidth: '100px',
+    },
+    {
+      key: 'total_amount',
+      header: 'Total',
+      numeric: true,
+      minWidth: '100px',
+      render: (row) => (
+        <span className="font-semibold text-slate-800 dark:text-slate-200">{currencyFormatter.format(row.total_amount)}</span>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      align: 'center',
+      minWidth: '100px',
+      render: (row) => (
+        <span className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-medium ${statusColor[row.status] ?? ''}`}>{row.status}</span>
+      ),
+    },
+    {
+      key: 'created_at',
+      header: 'Date',
+      minWidth: '100px',
+      render: (row) => (
+        <span className="text-slate-500">{new Date(row.created_at).toLocaleDateString()}</span>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-6 w-full">
       <div className="flex items-center justify-between gap-4">
@@ -181,7 +230,7 @@ export function PurchaseOrders() {
         </button>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm">
+      <div className="bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden">
         <div className="p-4 flex flex-col sm:flex-row sm:items-center gap-3 border-b border-slate-200 dark:border-white/10">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -199,65 +248,48 @@ export function PurchaseOrders() {
           </select>
         </div>
 
-        {loading ? (
-          <div className="p-12 text-center text-slate-400"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></div>
-        ) : orders.length === 0 ? (
-          <div className="p-12 text-center text-slate-400">No purchase orders found.</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left">
-              <thead className="bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-white/10">
-                <tr>
-                  <th className="px-6 py-3 font-semibold">PO Number</th>
-                  <th className="px-6 py-3 font-semibold">Supplier</th>
-                  <th className="px-6 py-3 font-semibold">Created By</th>
-                  <th className="px-6 py-3 font-semibold">Total</th>
-                  <th className="px-6 py-3 font-semibold">Status</th>
-                  <th className="px-6 py-3 font-semibold">Date</th>
-                  <th className="px-6 py-3 text-center font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-                {orders.map(po => (
-                  <tr key={po.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                    <td className="px-6 py-4 font-medium text-slate-800 dark:text-slate-200">{po.po_number}</td>
-                    <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{po.supplier}</td>
-                    <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{po.user}</td>
-                    <td className="px-6 py-4 font-semibold text-slate-800 dark:text-slate-200">{currencyFormatter.format(po.total_amount)}</td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-medium ${statusColor[po.status] ?? ''}`}>{po.status}</span>
-                    </td>
-                    <td className="px-6 py-4 text-slate-500">{new Date(po.created_at).toLocaleDateString()}</td>
-                    <td className="px-6 py-4 text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <button onClick={() => setShowDetail({ open: true, order: po })} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500" title="View"><Eye className="h-4 w-4" /></button>
-                        {(po.status === 'Draft' || po.status === 'Ordered') && (
-                          <button onClick={() => setConfirmCancel({ open: true, order: po })} className="p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-500/10 text-slate-500 hover:text-rose-600" title="Cancel"><X className="h-4 w-4" /></button>
-                        )}
-                        {(po.status === 'Ordered' || po.status === 'Partially Received') && (
-                          <button onClick={() => setShowReceive({ open: true, order: po })} className="p-1.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-500/10 text-slate-500 hover:text-emerald-600" title="Receive Stock"><Package className="h-4 w-4" /></button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {totalPages > 1 && (
-          <div className="px-6 py-3 border-t border-slate-200 dark:border-white/10 flex items-center justify-between text-xs text-slate-500">
-            <span>Page {page} of {totalPages}</span>
-            <div className="flex gap-2">
-              <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="px-3 py-1 rounded border border-slate-200 dark:border-white/10 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-800">Prev</button>
-              <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} className="px-3 py-1 rounded border border-slate-200 dark:border-white/10 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-800">Next</button>
-            </div>
-          </div>
-        )}
+        <DataTable
+          columns={columns}
+          data={orders as unknown as Record<string, unknown>[]}
+          rowKey={(row) => row.id as unknown as number}
+          loading={loading}
+          emptyMessage="No purchase orders found."
+          className="border-0"
+          actions={(row) => (
+            <>
+              <ActionButton
+                icon={<Eye className="h-4 w-4" />}
+                label="View"
+                onClick={() => setShowDetail({ open: true, order: row as unknown as PurchaseOrder })}
+              />
+              {(row.status === 'Draft' || row.status === 'Ordered') && (
+                <ActionButton
+                  icon={<X className="h-4 w-4" />}
+                  label="Cancel"
+                  variant="danger"
+                  onClick={() => setConfirmCancel({ open: true, order: row as unknown as PurchaseOrder })}
+                />
+              )}
+              {(row.status === 'Ordered' || row.status === 'Partially Received') && (
+                <ActionButton
+                  icon={<Package className="h-4 w-4" />}
+                  label="Receive Stock"
+                  onClick={() => setShowReceive({ open: true, order: row as unknown as PurchaseOrder })}
+                />
+              )}
+            </>
+          )}
+          pagination={
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              label="orders"
+            />
+          }
+        />
       </div>
 
-      {/* Create Modal */}
       {showCreate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowCreate(false)}>
           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto m-4" onClick={e => e.stopPropagation()}>
@@ -313,7 +345,6 @@ export function PurchaseOrders() {
         </div>
       )}
 
-      {/* Detail Modal */}
       {showDetail.open && showDetail.order && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowDetail({ open: false, order: null })}>
           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto m-4" onClick={e => e.stopPropagation()}>
@@ -349,7 +380,6 @@ export function PurchaseOrders() {
         </div>
       )}
 
-      {/* Receive Modal */}
       {showReceive.open && showReceive.order && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowReceive({ open: false, order: null })}>
           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg m-4" onClick={e => e.stopPropagation()}>
@@ -396,7 +426,6 @@ export function PurchaseOrders() {
         </div>
       )}
 
-      {/* Cancel Confirm */}
       {confirmCancel.open && confirmCancel.order && (
         <ConfirmDialog
           message={`Are you sure you want to cancel purchase order "${confirmCancel.order.po_number}"?`}

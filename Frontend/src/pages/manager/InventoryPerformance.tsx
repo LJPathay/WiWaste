@@ -3,10 +3,28 @@ import { Award, Download, Info, Loader2 } from 'lucide-react';
 import { Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ComposedChart, Line, ReferenceLine } from 'recharts';
 import { Toast, useToast } from '../../components/ui/Toast';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
+import { DataTable } from '../../components/shared/DataTable';
+import type { DataTableColumn } from '../../components/shared/DataTable';
 import { inventoryAnalytics } from '../../services/api';
 import type { ApiTurnoverResponse } from '../../services/api';
 
 const currencyFormatter = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 });
+
+interface TurnoverRow {
+  product_id: string;
+  product_name: string;
+  category: string;
+  total_sold: number;
+  turnover_rate: number;
+  status: string;
+}
+
+const columns: DataTableColumn<TurnoverRow>[] = [
+  { key: 'product_name', header: 'Month', pinned: true, minWidth: '100px', truncate: true },
+  { key: 'turnover_rate', header: 'Turnover Rate', numeric: true, minWidth: '100px', align: 'numeric' },
+  { key: 'total_sold', header: 'Dead Stock Items', numeric: true, minWidth: '100px', align: 'numeric' },
+  { key: 'status', header: 'Performance', align: 'center', minWidth: '100px' },
+];
 
 export function InventoryPerformance() {
   const { toasts, dismiss, success } = useToast();
@@ -117,6 +135,14 @@ export function InventoryPerformance() {
           </div>
         </div>
       </div>
+
+      <DataTable
+        columns={columns}
+        data={products}
+        rowKey={(row) => row.product_id}
+        loading={loading}
+        emptyMessage="No turnover data available."
+      />
 
       <Toast toasts={toasts} onDismiss={dismiss} />
     </div>

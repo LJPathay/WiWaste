@@ -1,5 +1,5 @@
-import React, { useState, useEffect, memo } from 'react';
-import { Search, Plus, Info, Loader2, ChevronLeft, ChevronRight, Package, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, Plus, Info, Loader2, Package, AlertCircle } from 'lucide-react';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { Tutorial } from '../../components/ui/Tutorial';
 import { Modal, FormField, inputCls, useToast, Toast, ConfirmDialog } from '../../components/ui/Toast';
@@ -11,6 +11,9 @@ import {
   type ApiProduct,
   type CreateProductPayload,
 } from '../../services/api';
+import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
+import { ActionButton } from '../../components/shared/DataTableActions';
+import { Pagination } from '../../components/ui/pagination';
 
 const currencyFormatter = new Intl.NumberFormat('en-PH', {
   style: 'currency',
@@ -19,71 +22,6 @@ const currencyFormatter = new Intl.NumberFormat('en-PH', {
 });
 
 const ITEMS_PER_PAGE = 5;
-
-const ProductRow = memo(function ProductRow({
-  p, isSelected, onToggleSelect, onEdit, onArchive
-}: {
-  p: ApiProduct;
-  isSelected: boolean;
-  onToggleSelect: (id: number) => void;
-  onEdit: (p: ApiProduct) => void;
-  onArchive: (p: ApiProduct) => void;
-}) {
-  return (
-    <tr className={`hover:bg-slate-50/20 dark:hover:bg-white/5 transition-colors ${isSelected ? 'bg-teal-50/30 dark:bg-teal-900/10' : ''} ${p.status === 'Discontinued' ? 'opacity-60 bg-slate-50/40 dark:bg-slate-900/30' : ''}`}>
-      <td className="w-10 px-4 py-4 text-center">
-        <input
-          type="checkbox"
-          checked={isSelected}
-          onChange={() => onToggleSelect(p.id)}
-          className="rounded border-slate-300 dark:border-slate-700 text-[#006a61] focus:ring-[#006a61] cursor-pointer"
-        />
-      </td>
-      <td className="px-6 py-4 font-medium text-slate-900 dark:text-slate-100">{p.name}</td>
-      <td className="px-6 py-4 font-mono text-slate-600 dark:text-slate-400">{p.sku ?? '—'}</td>
-      <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{p.category}</td>
-      <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{p.supplier ?? '—'}</td>
-      <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{currencyFormatter.format(p.cost_price)}</td>
-      <td className="px-6 py-4 font-semibold text-emerald-700 dark:text-emerald-400">{currencyFormatter.format(p.selling_price)}</td>
-      <td className="px-6 py-4">
-        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-          p.stock <= 0
-            ? 'bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-400'
-            : p.stock <= p.reorder_level
-            ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400'
-            : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400'
-        }`}>
-          {p.stock} units ({p.stock_status})
-        </span>
-      </td>
-      <td className="px-6 py-4">
-        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-          p.status === 'Discontinued'
-            ? 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-400'
-            : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400'
-        }`}>
-          {p.status ?? 'Active'}
-        </span>
-      </td>
-      <td className="px-6 py-4 text-right flex items-center justify-end gap-3">
-        <button
-          onClick={() => onEdit(p)}
-          className="text-xs font-bold text-[#006a61] dark:text-[#7ef0cf] hover:underline"
-        >
-          Edit
-        </button>
-        <button
-          onClick={() => onArchive(p)}
-          className={`text-xs font-bold hover:underline ${
-            p.status === 'Discontinued' ? 'text-emerald-600' : 'text-slate-500 hover:text-slate-700'
-          }`}
-        >
-          {p.status === 'Discontinued' ? 'Re-activate' : 'Archive'}
-        </button>
-      </td>
-    </tr>
-  );
-});
 
 export function ManageProducts() {
   const { toasts, dismiss, success, error: toastError } = useToast();
@@ -186,7 +124,6 @@ export function ManageProducts() {
   const categories = categoryList ?? [];
   const suppliers = supplierList ?? [];
 
-  // Show empty notification when table is empty and no filters applied
   useEffect(() => {
     const isFiltered = statusFilter !== 'all' || categoryFilter !== 'All' || search !== '';
     if (products.length === 0 && !isFiltered && !pLoading && !pError) {
@@ -197,7 +134,6 @@ export function ManageProducts() {
     }
   }, [products.length, statusFilter, categoryFilter, search, pLoading, pError]);
 
-  // Countdown timer for notification
   useEffect(() => {
     if (!showEmptyNotification) return;
     const interval = setInterval(() => {
@@ -206,7 +142,6 @@ export function ManageProducts() {
     return () => clearInterval(interval);
   }, [showEmptyNotification]);
 
-  // Reset pagination on filter or search changes
   useEffect(() => {
     setCurrentPage(1);
   }, [search, statusFilter, categoryFilter]);
@@ -246,44 +181,13 @@ export function ManageProducts() {
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
-  // Pagination calculations
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / ITEMS_PER_PAGE));
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, filteredProducts.length);
   const paginatedProducts = filteredProducts.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
-  // Checkbox Selection Logic
-  const isAllSelected = paginatedProducts.length > 0 && paginatedProducts.every(p => selectedIds.includes(p.id));
-
-  const toggleSelectAll = () => {
-    if (isAllSelected) {
-      const pageIds = new Set(paginatedProducts.map(p => p.id));
-      setSelectedIds(prev => prev.filter(id => !pageIds.has(id)));
-    } else {
-      const pageIds = paginatedProducts.map(p => p.id);
-      setSelectedIds(prev => Array.from(new Set([...prev, ...pageIds])));
-    }
-  };
-
-  const toggleSelectRow = (id: number) => {
-    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
-  };
-
-  const handleBulkArchive = async () => {
-    if (selectedIds.length === 0) return;
-    setIsBulkArchiving(true);
-    try {
-      await Promise.all(selectedIds.map(id => productsApi.delete(id)));
-      selectedIds.forEach(id => removeItem(id));
-      success(`Successfully archived ${selectedIds.length} products.`);
-      setSelectedIds([]);
-      setShowBulkArchiveConfirm(false);
-      refetchProducts();
-    } catch (err) {
-      toastError(err instanceof Error ? err.message : 'Failed to archive selected products.');
-    } finally {
-      setIsBulkArchiving(false);
-    }
+  const toggleSelectAll = (keys: Set<string | number>) => {
+    setSelectedIds(Array.from(keys) as number[]);
   };
 
   const activeCount = products.filter(p => p.status !== 'Discontinued').length;
@@ -411,6 +315,109 @@ export function ManageProducts() {
     setArchiving(null);
   };
 
+  const handleBulkArchive = async () => {
+    if (selectedIds.length === 0) return;
+    setIsBulkArchiving(true);
+    try {
+      await Promise.all(selectedIds.map(id => productsApi.delete(id)));
+      selectedIds.forEach(id => removeItem(id));
+      success(`Successfully archived ${selectedIds.length} products.`);
+      setSelectedIds([]);
+      setShowBulkArchiveConfirm(false);
+      refetchProducts();
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : 'Failed to archive selected products.');
+    } finally {
+      setIsBulkArchiving(false);
+    }
+  };
+
+  const columns: DataTableColumn<ApiProduct>[] = [
+    {
+      key: 'name',
+      header: 'Product Name',
+      pinned: true,
+      truncate: true,
+      minWidth: '180px',
+    },
+    {
+      key: 'sku',
+      header: 'SKU / Barcode',
+      truncate: true,
+      minWidth: '120px',
+    },
+    {
+      key: 'category',
+      header: 'Category',
+      truncate: true,
+      minWidth: '100px',
+    },
+    {
+      key: 'supplier',
+      header: 'Supplier',
+      truncate: true,
+      minWidth: '120px',
+    },
+    {
+      key: 'cost_price',
+      header: 'Cost Price',
+      numeric: true,
+      minWidth: '90px',
+      render: (row) => currencyFormatter.format(row.cost_price as number),
+    },
+    {
+      key: 'selling_price',
+      header: 'Selling Price',
+      numeric: true,
+      minWidth: '100px',
+      render: (row) => (
+        <span className="font-semibold text-emerald-700 dark:text-emerald-400">
+          {currencyFormatter.format(row.selling_price as number)}
+        </span>
+      ),
+    },
+    {
+      key: 'stock',
+      header: 'Stock Level',
+      numeric: true,
+      minWidth: '100px',
+      render: (row) => {
+        const p = row as ApiProduct;
+        return (
+          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+            p.stock <= 0
+              ? 'bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-400'
+              : p.stock <= p.reorder_level
+              ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400'
+              : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400'
+          }`}>
+            {p.stock} units ({p.stock_status})
+          </span>
+        );
+      },
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      align: 'center',
+      minWidth: '80px',
+      render: (row) => {
+        const p = row as ApiProduct;
+        return (
+          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+            p.status === 'Discontinued'
+              ? 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-400'
+              : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400'
+          }`}>
+            {p.status ?? 'Active'}
+          </span>
+        );
+      },
+    },
+  ];
+
+  const selectedKeys = new Set(selectedIds);
+
   if (pLoading) return (
     <div className="flex flex-col items-center justify-center h-64 gap-4">
       <div className="relative w-16 h-16">
@@ -475,12 +482,9 @@ export function ManageProducts() {
         </button>
       </div>
 
-      {/* Main Table Container */}
-      <div className="bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden">
-        {/* Filter and Search Bar */}
-        <div className="p-4 border-b border-slate-200 dark:border-white/10 space-y-3">
+      <div className="space-y-0">
+        <div className="bg-white dark:bg-slate-950 rounded-t-xl border border-b-0 border-slate-200 dark:border-white/10 shadow-sm p-4 space-y-3">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            {/* Status Tabs */}
             <div className="flex flex-wrap items-center gap-1.5 bg-slate-100 dark:bg-slate-900 p-1 rounded-lg">
               <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 px-2 uppercase tracking-wider">Status:</span>
               {[
@@ -510,7 +514,6 @@ export function ManageProducts() {
               })}
             </div>
 
-            {/* Category Dropdown & Search & Reset */}
             <div className="flex flex-wrap items-center gap-3">
               <div className="flex items-center gap-1.5">
                 <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Category:</span>
@@ -549,9 +552,8 @@ export function ManageProducts() {
           </div>
         </div>
 
-        {/* Bulk Action Bar */}
         {selectedIds.length > 0 && (
-          <div className="bg-[#006a61]/10 border-b border-[#006a61]/20 px-6 py-2.5 flex items-center justify-between text-xs animate-fadeIn">
+          <div className="bg-[#006a61]/10 border-x border-slate-200 dark:border-white/10 px-6 py-2.5 flex items-center justify-between text-xs animate-fadeIn">
             <div className="flex items-center gap-2 text-[#006a61] dark:text-[#7ef0cf] font-semibold">
               <span className="px-2 py-0.5 rounded-full bg-[#006a61] text-white font-bold text-[11px]">
                 {selectedIds.length}
@@ -577,50 +579,50 @@ export function ManageProducts() {
           </div>
         )}
 
-        <table className="w-full text-xs text-left">
-          <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-450 border-b border-slate-200 dark:border-white/10 font-bold">
-            <tr>
-              <th className="w-10 px-4 py-3 text-center">
-                <input
-                  type="checkbox"
-                  checked={isAllSelected}
-                  onChange={toggleSelectAll}
-                  className="rounded border-slate-300 dark:border-slate-700 text-[#006a61] focus:ring-[#006a61] cursor-pointer"
-                  title="Select / Deselect all on current page"
+        <DataTable
+          columns={columns}
+          data={paginatedProducts as Record<string, unknown>[]}
+          rowKey={(row) => row.id as number}
+          selectable
+          selectedKeys={selectedKeys}
+          onSelectionChange={toggleSelectAll}
+          emptyMessage="No products found."
+          rowClassName={(row) => {
+            const p = row as unknown as ApiProduct;
+            return [
+              p.status === 'Discontinued' ? 'opacity-60 bg-slate-50/40 dark:bg-slate-900/30' : '',
+            ].filter(Boolean).join(' ');
+          }}
+          actions={(row) => {
+            const p = row as unknown as ApiProduct;
+            return (
+              <>
+                <ActionButton
+                  icon={<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>}
+                  label="Edit"
+                  onClick={() => openEdit(p)}
                 />
-              </th>
-              <th className="px-6 py-3">Product Name</th>
-              <th className="px-6 py-3">SKU / Barcode</th>
-              <th className="px-6 py-3">Category</th>
-              <th className="px-6 py-3">Supplier</th>
-              <th className="px-6 py-3">Cost Price</th>
-              <th className="px-6 py-3">Selling Price</th>
-              <th className="px-6 py-3">Stock Level</th>
-              <th className="px-6 py-3">Status</th>
-              <th className="px-6 py-3 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-200 dark:divide-white/5">
-            {paginatedProducts.length === 0 ? (
-              <tr>
-                <td colSpan={10} className="px-6 py-10 text-center text-slate-400">No products found.</td>
-              </tr>
-            ) : (
-              paginatedProducts.map(p => (
-                <ProductRow
-                  key={p.id}
-                  p={p}
-                  isSelected={selectedIds.includes(p.id)}
-                  onToggleSelect={toggleSelectRow}
-                  onEdit={openEdit}
-                  onArchive={(product) => setArchiving({ id: product.id, name: product.name, status: product.status })}
+                <ActionButton
+                  icon={<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>}
+                  label={p.status === 'Discontinued' ? 'Re-activate' : 'Archive'}
+                  variant={p.status === 'Discontinued' ? 'default' : 'danger'}
+                  onClick={() => setArchiving({ id: p.id, name: p.name, status: p.status })}
                 />
-              ))
-            )}
-          </tbody>
-        </table>
+              </>
+            );
+          }}
+          pagination={
+            <Pagination
+              page={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              totalItems={filteredProducts.length}
+              perPage={ITEMS_PER_PAGE}
+              label="products"
+            />
+          }
+        />
 
-        {/* Empty State Notification */}
         {showEmptyNotification && (
           <div className="fixed bottom-6 right-6 z-40 animate-in fade-in slide-in-from-right-4 duration-300">
             <div className="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 rounded-lg shadow-lg p-4 max-w-sm flex items-start gap-3 overflow-hidden">
@@ -639,54 +641,8 @@ export function ManageProducts() {
             </div>
           </div>
         )}
-
-        {/* Table Footer Showing Entry Count & Pagination Controls */}
-        <div className="px-6 py-3 bg-slate-50/50 dark:bg-slate-900/50 border-t border-slate-200 dark:border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
-          <span>
-            {filteredProducts.length === 0 ? (
-              <>Showing <strong className="font-semibold text-slate-800 dark:text-slate-200">0</strong> of <strong className="font-semibold text-slate-800 dark:text-slate-200">0</strong> Products</>
-            ) : totalPages === 1 ? (
-              <>Showing <strong className="font-semibold text-slate-800 dark:text-slate-200">{filteredProducts.length}</strong> of <strong className="font-semibold text-slate-800 dark:text-slate-200">{filteredProducts.length}</strong> Products</>
-            ) : (
-              <>
-                Showing <strong className="font-semibold text-slate-800 dark:text-slate-200">{startIndex + 1}</strong> to{' '}
-                <strong className="font-semibold text-slate-800 dark:text-slate-200">{endIndex}</strong> of{' '}
-                <strong className="font-semibold text-slate-800 dark:text-slate-200">{filteredProducts.length}</strong> Products
-              </>
-            )}
-          </span>
-
-          {totalPages > 1 && (
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="p-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 disabled:opacity-40 disabled:hover:bg-transparent transition-all"
-                title="Previous Page"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-
-              <span className="px-2 font-medium text-slate-700 dark:text-slate-300">
-                Page {currentPage} of {totalPages}
-              </span>
-
-              <button
-                type="button"
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="p-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 disabled:opacity-40 disabled:hover:bg-transparent transition-all"
-                title="Next Page"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
-          )}
-        </div>
       </div>
 
-      {/* Add Product Modal */}
       {showAddModal && (
         <Modal title="Add New Product" onClose={() => setShowAddModal(false)}>
           <form onSubmit={handleAddProduct} className="space-y-4">
@@ -751,7 +707,6 @@ export function ManageProducts() {
         </Modal>
       )}
 
-      {/* Edit Product Modal */}
       {showEditModal && selectedProduct && (
         <Modal title="Edit Product" onClose={() => setShowEditModal(false)}>
           <form onSubmit={handleEditProduct} className="space-y-4">
@@ -831,7 +786,6 @@ export function ManageProducts() {
         />
       )}
 
-      {/* Tutorial Component */}
       <Tutorial steps={tutorialSteps} isOpen={showTutorial} onClose={() => setShowTutorial(false)} />
 
       <Toast toasts={toasts} onDismiss={dismiss} />

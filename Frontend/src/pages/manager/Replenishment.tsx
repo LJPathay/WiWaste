@@ -4,12 +4,83 @@ import { AlertCircle, AlertTriangle, ArrowRight, CheckCircle2, Cpu, Info, Loader
 import { Toast, useToast } from '../../components/ui/Toast';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { optimization, type ApiOptimizationPlan } from '../../services/api';
+import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
 
 const currencyFormatter = new Intl.NumberFormat('en-PH', {
   style: 'currency',
   currency: 'PHP',
   maximumFractionDigits: 0,
 });
+
+const columns: DataTableColumn<ApiOptimizationPlan['plan'][number]>[] = [
+  {
+    key: 'product_name',
+    header: 'Product',
+    pinned: true,
+    truncate: true,
+    minWidth: '180px',
+    render: (row) => (
+      <div>
+        <div className="font-semibold text-slate-900 dark:text-slate-100">{row.product_name}</div>
+        <div className="text-[10px] text-slate-400 font-mono mt-0.5">SKU #{row.product_id}</div>
+      </div>
+    ),
+  },
+  {
+    key: 'current_stock',
+    header: 'Current Stock',
+    numeric: true,
+    minWidth: '100px',
+    render: (row) => (
+      <div>
+        <div className="font-bold text-slate-700 dark:text-slate-300">{row.current_stock} units</div>
+        <div className="text-[10px] text-slate-400 mt-0.5">Forecast {Math.round(row.forecast_demand)}</div>
+      </div>
+    ),
+  },
+  {
+    key: 'forecast_demand',
+    header: 'Forecast Demand',
+    numeric: true,
+    minWidth: '100px',
+    render: (row) => (
+      <span className="font-semibold text-slate-800 dark:text-slate-200">{Math.round(row.forecast_demand)} units</span>
+    ),
+  },
+  {
+    key: 'order_qty',
+    header: 'Order Qty',
+    numeric: true,
+    minWidth: '80px',
+    render: (row) => (
+      <span className={`px-2.5 py-1 rounded-lg font-bold ${
+        row.order_qty > 0
+          ? 'bg-[#006a61]/10 text-[#006a61] dark:bg-[#7ef0cf]/10 dark:text-[#7ef0cf]'
+          : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
+      }`}>
+        {row.order_qty > 0 ? `+${row.order_qty}` : '—'}
+      </span>
+    ),
+  },
+  {
+    key: 'unit_cost',
+    header: 'Unit Cost',
+    numeric: true,
+    minWidth: '100px',
+    render: (row) => (
+      <span className="text-slate-600 dark:text-slate-400">{currencyFormatter.format(row.unit_cost)}</span>
+    ),
+  },
+  {
+    key: 'order_value',
+    header: 'Order Value',
+    numeric: true,
+    minWidth: '100px',
+    render: (row) => (
+      <span className="font-bold text-slate-900 dark:text-slate-100">{currencyFormatter.format(row.order_value)}</span>
+    ),
+  },
+];
 
 export function Replenishment() {
   const { toasts, dismiss, success } = useToast();
@@ -190,8 +261,8 @@ export function Replenishment() {
 
       {/* Plan Table */}
       {plan && !error && (
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden">
-          <div className="p-4 flex flex-col sm:flex-row sm:items-center gap-4 border-b border-slate-200 dark:border-white/10">
+        <>
+          <div className="flex items-center gap-4">
             <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">Recommended Order Quantities</h3>
             <div className="relative max-w-xs w-full sm:ml-auto">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -204,59 +275,15 @@ export function Replenishment() {
               />
             </div>
           </div>
-
-          {filtered.length === 0 ? (
-            <div className="py-16 text-center">
-              <AlertCircle className="mx-auto h-8 w-8 text-slate-300" />
-              <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
-                {plan.plan.length === 0
-                  ? 'No SKUs to reorder under this budget. Try a larger budget or a longer horizon.'
-                  : 'No items match your search.'}
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs text-left">
-                <thead className="bg-slate-50 dark:bg-slate-950 text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-white/10">
-                  <tr>
-                    <th className="px-6 py-3 font-semibold">Product</th>
-                    <th className="px-6 py-3 font-semibold">Current Stock</th>
-                    <th className="px-6 py-3 font-semibold">Forecast Demand</th>
-                    <th className="px-6 py-3 font-semibold">Order Qty</th>
-                    <th className="px-6 py-3 font-semibold">Unit Cost</th>
-                    <th className="px-6 py-3 font-semibold text-right">Order Value</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-                  {filtered.map(item => (
-                    <tr key={item.product_id} className="hover:bg-slate-50/50 dark:hover:bg-white/5">
-                      <td className="px-6 py-4">
-                        <div className="font-semibold text-slate-900 dark:text-slate-100">{item.product_name}</div>
-                        <div className="text-[10px] text-slate-400 font-mono mt-0.5">SKU #{item.product_id}</div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="font-bold text-slate-700 dark:text-slate-300">{item.current_stock} units</div>
-                        <div className="text-[10px] text-slate-400 mt-0.5">Forecast {Math.round(item.forecast_demand)}</div>
-                      </td>
-                      <td className="px-6 py-4 font-semibold text-slate-800 dark:text-slate-200">{Math.round(item.forecast_demand)} units</td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2.5 py-1 rounded-lg font-bold ${
-                          item.order_qty > 0
-                            ? 'bg-[#006a61]/10 text-[#006a61] dark:bg-[#7ef0cf]/10 dark:text-[#7ef0cf]'
-                            : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
-                        }`}>
-                          {item.order_qty > 0 ? `+${item.order_qty}` : '—'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{currencyFormatter.format(item.unit_cost)}</td>
-                      <td className="px-6 py-4 text-right font-bold text-slate-900 dark:text-slate-100">{currencyFormatter.format(item.order_value)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+          <DataTable
+            columns={columns}
+            data={filtered as Record<string, unknown>[]}
+            rowKey={(row) => row.product_id as string | number}
+            emptyMessage={plan.plan.length === 0
+              ? 'No SKUs to reorder under this budget. Try a larger budget or a longer horizon.'
+              : 'No items match your search.'}
+          />
+        </>
       )}
 
       {!plan && !error && (

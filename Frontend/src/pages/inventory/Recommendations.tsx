@@ -1,7 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import { Info, Search, CheckCircle, TrendingDown, Clock, ChevronRight, X } from 'lucide-react';
+import { Info, Search, CheckCircle, TrendingDown, Clock, ChevronRight, X, Check } from 'lucide-react';
 import { Toast, useToast, ConfirmDialog, Modal } from '../../components/ui/Toast';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
+import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
+import { ActionButton } from '../../components/shared/DataTableActions';
+import { Pagination } from '../../components/ui/pagination';
+
 type MockRecommendation = {
   recommendation_id: number;
   product_name: string;
@@ -47,6 +51,78 @@ const WORKFLOW_STEPS = [
   { label: 'Promo Activated', active: false },
 ];
 
+const PAGE_SIZE = 5;
+
+const columns: DataTableColumn<MockRecommendation>[] = [
+  {
+    key: 'product_name',
+    header: 'Product',
+    pinned: true,
+    truncate: true,
+    minWidth: '180px',
+    render: (row) => (
+      <div>
+        <div className="font-semibold text-[#0F172A] dark:text-slate-100">{row.product_name}</div>
+        <div className="text-[10px] font-mono text-[#64748B] dark:text-slate-400">{row.sku}</div>
+      </div>
+    ),
+  },
+  {
+    key: 'recommendation_type',
+    header: 'Type',
+    align: 'center',
+    minWidth: '100px',
+    render: (row) => {
+      const { label, cls } = getTypeLabel(row.recommendation_type);
+      return (
+        <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${cls}`}>
+          {label}
+        </span>
+      );
+    },
+  },
+  {
+    key: 'current_stock',
+    header: 'Cur. Stock',
+    numeric: true,
+    minWidth: '100px',
+  },
+  {
+    key: 'recommended_stock',
+    header: 'Rec. Stock',
+    numeric: true,
+    minWidth: '120px',
+    render: (row) => (
+      <span className="font-semibold text-[#0F766E]">{row.recommended_stock}</span>
+    ),
+  },
+  {
+    key: 'confidence_score',
+    header: 'Confidence',
+    numeric: true,
+    minWidth: '80px',
+    render: (row) => (
+      <span className="font-mono text-xs font-bold text-[#0F172A] dark:text-slate-100">
+        {Math.round(row.confidence_score * 100)}%
+      </span>
+    ),
+  },
+  {
+    key: 'status',
+    header: 'Status',
+    align: 'center',
+    minWidth: '100px',
+    render: (row) => {
+      const { label, cls } = getStatusBadge(row.status);
+      return (
+        <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${cls}`}>
+          {label}
+        </span>
+      );
+    },
+  },
+];
+
 export function Recommendations() {
   const { toasts, dismiss, success } = useToast();
 
@@ -58,6 +134,7 @@ export function Recommendations() {
   const [rejectReason, setRejectReason] = useState('');
   const [confirmApprove, setConfirmApprove] = useState<number | null>(null);
   const [processing, setProcessing] = useState(false);
+  const [page, setPage] = useState(1);
 
   const filtered = useMemo(() => {
     let list = mockRecs;
@@ -73,6 +150,9 @@ export function Recommendations() {
     }
     return list;
   }, [mockRecs, search, statusFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const pendingCount = mockRecs.filter(r => r.status === 'pending').length;
   const approvedCount = mockRecs.filter(r => r.status === 'approved').length;
@@ -236,13 +316,13 @@ export function Recommendations() {
             type="text"
             placeholder="Search product or SKU..."
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={e => { setSearch(e.target.value); setPage(1); }}
             className="w-full pl-9 pr-3 py-2.5 text-sm rounded-lg border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 text-[#374151] dark:text-slate-300 dark:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all shadow-sm"
           />
         </div>
         <select
           value={statusFilter}
-          onChange={e => setStatusFilter(e.target.value)}
+          onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
           className="px-3 py-2.5 text-sm rounded-lg border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 text-[#374151] dark:text-slate-300 dark:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30"
         >
           <option value="">All Status</option>
@@ -263,82 +343,46 @@ export function Recommendations() {
           </div>
         </div>
       ) : (
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-[#E5E7EB] dark:border-white/10 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="bg-slate-50 dark:bg-slate-800 text-xs font-semibold text-[#64748B] dark:text-slate-400 border-b border-[#E5E7EB] dark:border-white/10 uppercase tracking-wider">
-                <tr>
-                  <th className="px-5 py-3">Product</th>
-                  <th className="px-5 py-3">Type</th>
-                  <th className="px-5 py-3">Cur. Stock</th>
-                  <th className="px-5 py-3">Rec. Stock</th>
-                  <th className="px-5 py-3">Confidence</th>
-                  <th className="px-5 py-3">Status</th>
-                  <th className="px-5 py-3 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#F1F5F9] dark:divide-white/5">
-                {filtered.map(r => {
-                  const { label: typeLabel, cls: typeCls } = getTypeLabel(r.recommendation_type);
-                  const { label: statusLabel, cls: statusCls } = getStatusBadge(r.status);
-
-                  return (
-                    <tr
-                      key={r.recommendation_id}
-                      className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
-                      onClick={() => setSelectedRec(r)}
-                    >
-                      <td className="px-5 py-3.5">
-                        <div className="font-semibold text-[#0F172A] dark:text-slate-100">{r.product_name}</div>
-                        <div className="text-[10px] font-mono text-[#64748B] dark:text-slate-400">{r.sku}</div>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${typeCls}`}>
-                          {typeLabel}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5 font-semibold text-[#0F172A] dark:text-slate-100">{r.current_stock}</td>
-                      <td className="px-5 py-3.5 font-semibold text-[#0F766E]">{r.recommended_stock}</td>
-                      <td className="px-5 py-3.5">
-                        <span className="font-mono text-xs font-bold text-[#0F172A] dark:text-slate-100">
-                          {Math.round(r.confidence_score * 100)}%
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${statusCls}`}>
-                          {statusLabel}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5 text-right">
-                        {r.status === 'pending' ? (
-                          <span className="inline-flex gap-2">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setConfirmApprove(r.recommendation_id); }}
-                              className="text-xs font-semibold text-white bg-[#0F766E] hover:bg-[#0b5c56] rounded-lg px-3 py-1.5 transition-all"
-                            >
-                              Approve
-                            </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setRejectingId(r.recommendation_id); }}
-                              className="text-xs font-semibold text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg px-3 py-1.5 transition-all"
-                            >
-                              Reject
-                            </button>
-                          </span>
-                        ) : (
-                          <span className="text-xs text-[#64748B] dark:text-slate-400">
-                            {r.status === 'approved' ? 'Approved' : 'Rejected'}
-                            {r.reviewed_by ? ` by ${r.reviewed_by}` : ''}
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <DataTable
+          columns={columns}
+          data={paginated}
+          rowKey={(row) => row.recommendation_id}
+          onRowClick={(row) => setSelectedRec(row)}
+          hoverActions
+          emptyMessage="No recommendations found."
+          actions={(row) =>
+            row.status === 'pending' ? (
+              <>
+                <ActionButton
+                  icon={<Check className="h-3.5 w-3.5" />}
+                  label="Approve"
+                  onClick={() => setConfirmApprove(row.recommendation_id)}
+                />
+                <ActionButton
+                  icon={<X className="h-3.5 w-3.5" />}
+                  label="Reject"
+                  variant="danger"
+                  onClick={() => setRejectingId(row.recommendation_id)}
+                />
+              </>
+            ) : (
+              <span className="text-xs text-[#64748B] dark:text-slate-400 pr-1 whitespace-nowrap">
+                {row.status === 'approved' ? 'Approved' : 'Rejected'}
+                {row.reviewed_by ? ` by ${row.reviewed_by}` : ''}
+              </span>
+            )
+          }
+          pagination={
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              totalItems={filtered.length}
+              perPage={PAGE_SIZE}
+              label="recommendations"
+            />
+          }
+        />
       )}
 
       {selectedRec && (

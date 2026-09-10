@@ -14,6 +14,9 @@ import {
   Filter,
 } from 'lucide-react';
 import { Toast, useToast, Modal, FormField, inputCls } from '../../components/ui/Toast';
+import { DataTable } from '../../components/shared/DataTable';
+import type { DataTableColumn } from '../../components/shared/DataTable';
+import { Pagination } from '../../components/ui/pagination';
 import { inventory as inventoryApi } from '../../services/api';
 import { useOptimisticList } from '../../hooks/useOptimisticList';
 import { useDebounce } from '../../hooks/useDebounce';
@@ -290,7 +293,80 @@ export function ManageInventory() {
 
   const totalPages = Math.ceil(filtered.length / pageSize);
   const paginatedItems = filtered.slice((page - 1) * pageSize, page * pageSize);
-  const showPagination = totalPages > 1;
+
+  const columns: DataTableColumn<InventoryItem>[] = [
+    {
+      key: 'itemName',
+      header: 'Item',
+      pinned: true,
+      truncate: true,
+      minWidth: '180px',
+      render: (row) => (
+        <div>
+          <div className="font-bold text-gray-900 dark:text-slate-100 group-hover:text-[#0F766E] transition-colors">{row.itemName}</div>
+          <div className="text-gray-400 dark:text-slate-500 font-mono mt-0.5">{row.sku}</div>
+        </div>
+      ),
+    },
+    {
+      key: 'category',
+      header: 'Category',
+      truncate: true,
+      minWidth: '100px',
+      render: (row) => (
+        <span className="text-gray-600 dark:text-slate-300">{row.category}</span>
+      ),
+    },
+    {
+      key: 'qty',
+      header: 'Stock Qty',
+      numeric: true,
+      minWidth: '80px',
+      render: (row) => (
+        <span className={`text-sm font-bold ${row.qty < 10 ? 'text-status-critical' : row.qty > 300 ? 'text-status-info' : 'text-gray-800 dark:text-slate-200'}`}>
+          {row.qty}
+        </span>
+      ),
+    },
+    {
+      key: 'stockStatus',
+      header: 'Stock Status',
+      align: 'center',
+      minWidth: '100px',
+      render: (row) => <StatusBadge status={row.stockStatus} qty={row.qty} />,
+    },
+    {
+      key: 'expirationDate',
+      header: 'Nearest Expiry',
+      minWidth: '100px',
+      render: (row) => (
+        <span className="text-gray-500 dark:text-slate-400">{getExpiryDate(row)}</span>
+      ),
+    },
+    {
+      key: 'lastUpdated',
+      header: 'Last Movement',
+      minWidth: '100px',
+      render: (row) => (
+        <span className="text-gray-500 dark:text-slate-400">{row.lastUpdated}</span>
+      ),
+    },
+  ];
+
+  const emptyState = (
+    <div className="flex flex-col items-center justify-center py-16 gap-3">
+      <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-slate-800 flex items-center justify-center">
+        <Package className="h-7 w-7 text-gray-300 dark:text-slate-600" />
+      </div>
+      <p className="text-sm font-semibold text-gray-400 dark:text-slate-500">No inventory items match your search</p>
+      <button
+        onClick={() => { setSearch(''); setCategoryFilter(''); setStatusFilter(''); }}
+        className="mt-1 px-4 py-2 rounded-lg border border-gray-200 dark:border-white/10 text-xs font-semibold text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 dark:bg-slate-800 transition-colors"
+      >
+        Clear Filters
+      </button>
+    </div>
+  );
 
   const kpiData = [
     {
@@ -331,7 +407,6 @@ export function ManageInventory() {
     <div className="min-h-screen bg-[#F8FAFC] dark:bg-slate-950 p-6 space-y-6">
       <Toast toasts={toasts} onDismiss={dismiss} />
 
-      {/* ── Receive Stock Modal ── */}
       {showAddModal && (
         <Modal title="Receive Stock" onClose={() => setShowAddModal(false)} size="md">
           <form onSubmit={handleReceiveStock} className="space-y-4">
@@ -351,7 +426,7 @@ export function ManageInventory() {
                   placeholder="Type to search products..."
                 />
                 {showDropdown && addSearch && (
-                  <div className="absolute left-0 right-0 top-full mt-1 z-20 max-h-48 overflow-y-auto rounded-xl border border-[#E5E7EB] dark:border-white/10 dark:border-white/10 bg-white dark:bg-slate-900 dark:bg-slate-800 shadow-lg">
+                  <div className="absolute left-0 right-0 top-full mt-1 z-20 max-h-48 overflow-y-auto rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 shadow-lg">
                     {items
                       .filter(i =>
                         i.itemName.toLowerCase().includes(addSearch.toLowerCase()) ||
@@ -456,7 +531,6 @@ export function ManageInventory() {
         </Modal>
       )}
 
-      {/* ── Adjust Stock Modal ── */}
       {adjustItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
@@ -534,7 +608,6 @@ export function ManageInventory() {
         </div>
       )}
 
-      {/* ── History Panel Modal ── */}
       {historyItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
@@ -580,17 +653,14 @@ export function ManageInventory() {
         </div>
       )}
 
-      {/* ── Item Detail Modal ── */}
       {selectedItem && (
         <Modal title={selectedItem.itemName} onClose={() => setSelectedItem(null)} size="lg">
           <div className="space-y-4">
-            {/* Modal sub-header */}
             <div className="flex items-center gap-3 pb-2 border-b border-gray-100 dark:border-white/10">
               <span className="font-mono text-xs text-gray-400 dark:text-slate-500 bg-gray-100 dark:bg-slate-800 px-2 py-1 rounded">{selectedItem.sku}</span>
               <span className="text-xs font-semibold text-[#0F766E] bg-[#0F766E]/10 px-2.5 py-1 rounded-full">{selectedItem.category}</span>
             </div>
 
-            {/* Tabs */}
             <div className="flex gap-2 border-b border-slate-200 dark:border-white/10">
               {[
                 { id: 'details', label: 'Details', icon: Package },
@@ -616,10 +686,8 @@ export function ManageInventory() {
               })}
             </div>
 
-            {/* Tab Content */}
             {activeTab === 'details' && (
               <div className="grid grid-cols-2 gap-5">
-                {/* Left column: details */}
                 <div className="space-y-1">
                   {[
                     { label: 'Supplier', value: selectedItem.supplier },
@@ -640,7 +708,6 @@ export function ManageInventory() {
                   ))}
                 </div>
 
-                {/* Right column: movement timeline */}
                 <div>
                   <p className="text-xs font-bold text-gray-500 dark:text-slate-400 mb-3 uppercase tracking-wide">Stock Movement Timeline</p>
                   {historyLoading ? (
@@ -793,9 +860,6 @@ export function ManageInventory() {
         </Modal>
       )}
 
-      {/* ══════════════════════════════════════════
-          PAGE HEADER
-      ══════════════════════════════════════════ */}
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100 tracking-tight">Manage Inventory</h1>
@@ -810,9 +874,6 @@ export function ManageInventory() {
         </button>
       </div>
 
-      {/* ══════════════════════════════════════════
-          KPI STRIP
-      ══════════════════════════════════════════ */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {kpiData.map(kpi => {
           const Icon = kpi.icon;
@@ -833,11 +894,7 @@ export function ManageInventory() {
         })}
       </div>
 
-      {/* ══════════════════════════════════════════
-          SEARCH & FILTER BAR
-      ══════════════════════════════════════════ */}
       <div className="bg-white dark:bg-slate-900 border border-[#E5E7EB] dark:border-white/10 rounded-xl p-4 shadow-sm flex flex-col sm:flex-row items-center gap-3">
-        {/* Search */}
         <div className="relative flex-1 w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-slate-500 pointer-events-none" />
           <input
@@ -849,7 +906,6 @@ export function ManageInventory() {
           />
         </div>
 
-        {/* Category filter */}
         <div className="relative">
           <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 dark:text-slate-500 pointer-events-none" />
           <select
@@ -864,7 +920,6 @@ export function ManageInventory() {
           </select>
         </div>
 
-        {/* Status filter */}
         <select
           value={statusFilter}
           onChange={e => setStatusFilter(e.target.value)}
@@ -876,7 +931,6 @@ export function ManageInventory() {
           <option value="Overstock">Overstock</option>
         </select>
 
-        {/* Export CSV */}
         <button
           onClick={handleExportCSV}
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-gray-200 dark:border-white/10 text-sm font-semibold text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 dark:bg-slate-800 hover:border-gray-300 transition-all flex-shrink-0"
@@ -886,124 +940,26 @@ export function ManageInventory() {
         </button>
       </div>
 
-      {/* ══════════════════════════════════════════
-          INVENTORY TABLE
-      ══════════════════════════════════════════ */}
-      <div className="bg-white dark:bg-slate-900 border border-[#E5E7EB] dark:border-white/10 rounded-xl shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-white/10">
-          <span className="text-sm font-bold text-gray-800 dark:text-slate-200">
-            Inventory Items
-            <span className="ml-2 text-xs font-normal text-gray-400 dark:text-slate-500">({filtered.length} of {items.length})</span>
-          </span>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="bg-gray-50 dark:bg-slate-800 text-gray-500 dark:text-slate-400 border-b border-gray-100 dark:border-white/10">
-                <th className="px-5 py-3 text-left font-semibold tracking-wide">Item</th>
-                <th className="px-5 py-3 text-left font-semibold tracking-wide">Category</th>
-                <th className="px-5 py-3 text-left font-semibold tracking-wide">Stock Qty</th>
-                <th className="px-5 py-3 text-left font-semibold tracking-wide">Stock Status</th>
-                <th className="px-5 py-3 text-left font-semibold tracking-wide">Nearest Expiry</th>
-                <th className="px-5 py-3 text-left font-semibold tracking-wide">Last Movement</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedItems.length === 0 ? (
-                <tr>
-                  <td colSpan={6}>
-                    <div className="flex flex-col items-center justify-center py-16 gap-3">
-                      <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-slate-800 flex items-center justify-center">
-                        <Package className="h-7 w-7 text-gray-300 dark:text-slate-600" />
-                      </div>
-                      <p className="text-sm font-semibold text-gray-400 dark:text-slate-500">No inventory items match your search</p>
-                      <button
-                        onClick={() => { setSearch(''); setCategoryFilter(''); setStatusFilter(''); }}
-                        className="mt-1 px-4 py-2 rounded-lg border border-gray-200 dark:border-white/10 text-xs font-semibold text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 dark:bg-slate-800 transition-colors"
-                      >
-                        Clear Filters
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                paginatedItems.map((item, idx) => (
-                  <tr
-                    key={item.id}
-                    onClick={() => { setSelectedItem(item); setActiveTab('details'); }}
-                    className={`group cursor-pointer transition-colors hover:bg-[#0F766E]/5 ${idx % 2 === 1 ? 'bg-gray-50 dark:bg-slate-800/50' : 'bg-white dark:bg-slate-900'}`}
-                  >
-                    {/* Item */}
-                    <td className="px-5 py-3.5">
-                      <div className="font-bold text-gray-900 dark:text-slate-100 group-hover:text-[#0F766E] transition-colors">{item.itemName}</div>
-                      <div className="text-gray-400 dark:text-slate-500 font-mono mt-0.5">{item.sku}</div>
-                    </td>
-
-                    {/* Category */}
-                    <td className="px-5 py-3.5 text-gray-600 dark:text-slate-300">{item.category}</td>
-
-                    {/* Stock Qty */}
-                    <td className="px-5 py-3.5">
-                      <span className={`text-sm font-bold ${item.qty < 10 ? 'text-status-critical' : item.qty > 300 ? 'text-status-info' : 'text-gray-800 dark:text-slate-200'}`}>
-                        {item.qty}
-                      </span>
-                    </td>
-
-                    {/* Stock Status */}
-                    <td className="px-5 py-3.5">
-                      <StatusBadge status={item.stockStatus} qty={item.qty} />
-                    </td>
-
-                    {/* Nearest Expiry */}
-                    <td className="px-5 py-3.5 text-gray-500 dark:text-slate-400">{getExpiryDate(item)}</td>
-
-                    {/* Last Movement */}
-                    <td className="px-5 py-3.5 text-gray-500 dark:text-slate-400">{item.lastUpdated}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-</table>
-          </div>
-
-          {showPagination && (
-            <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-slate-800">
-              <span className="text-xs text-gray-500 dark:text-slate-400">
-                Page {page} of {totalPages}
-              </span>
-              <div className="flex gap-1">
-                <button
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                  className="rounded-lg px-3 py-1.5 text-xs font-medium text-[#0F766E] hover:bg-[#0F766E]/10 disabled:opacity-30 disabled:pointer-events-none transition-colors"
-                >
-                  Prev
-                </button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                  <button
-                    key={p}
-                    onClick={() => setPage(p)}
-                    className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                      p === page
-                        ? 'bg-[#0F766E] text-white'
-                        : 'text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700'
-                    }`}
-                  >
-                    {p}
-                  </button>
-                ))}
-                <button
-                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages}
-                  className="rounded-lg px-3 py-1.5 text-xs font-medium text-[#0F766E] hover:bg-[#0F766E]/10 disabled:opacity-30 disabled:pointer-events-none transition-colors"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+      <DataTable
+        columns={columns}
+        data={paginatedItems as unknown as Record<string, unknown>[]}
+        rowKey={(row) => (row as unknown as InventoryItem).id}
+        onRowClick={(row) => { setSelectedItem(row as unknown as InventoryItem); setActiveTab('details'); }}
+        emptyState={emptyState}
+        className="border border-[#E5E7EB] dark:border-white/10"
+        pagination={
+          totalPages > 1 ? (
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              totalItems={filtered.length}
+              perPage={pageSize}
+              label="items"
+            />
+          ) : undefined
+        }
+      />
     </div>
   );
 }

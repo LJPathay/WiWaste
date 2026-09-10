@@ -3,6 +3,7 @@ import { Info } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { Toast, useToast, ConfirmDialog } from '../../components/ui/Toast';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
+import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
 
 const OVERSTOCK_TREND_DATA = [
   { month: 'Jan', exposure: 125000 },
@@ -54,6 +55,65 @@ const actionColor: Record<string, string> = {
   Liquidate: 'bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400',
   'Donate / Write-off': 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
 };
+
+const columns: DataTableColumn<OverstockItem>[] = [
+  {
+    key: 'name',
+    header: 'Product',
+    pinned: true,
+    truncate: true,
+    minWidth: '180px',
+    render: (row) => (
+      <div>
+        <div className="font-medium text-slate-800 dark:text-slate-100">{row.name}</div>
+        <div className="text-slate-500 dark:text-slate-400">{row.category}</div>
+      </div>
+    ),
+  },
+  {
+    key: 'qtyOnHand',
+    header: 'Qty on Hand',
+    numeric: true,
+    minWidth: '100px',
+  },
+  {
+    key: 'reorderPoint',
+    header: 'Reorder Point',
+    numeric: true,
+    minWidth: '100px',
+  },
+  {
+    key: 'excessQty',
+    header: 'Excess Qty',
+    numeric: true,
+    minWidth: '80px',
+    render: (row) => (
+      <span className="text-red-500 font-semibold">+{row.excessQty.toLocaleString()}</span>
+    ),
+  },
+  {
+    key: 'exposure',
+    header: 'Exposure',
+    numeric: true,
+    minWidth: '100px',
+    render: (row) => (
+      <span className="font-semibold text-slate-800 dark:text-slate-100">
+        {currencyFormatter.format(row.excessQty * row.unitCost)}
+      </span>
+    ),
+  },
+  {
+    key: 'recommendedAction',
+    header: 'Recommended Action',
+    truncate: true,
+    minWidth: '150px',
+    render: (row) => (
+      <span className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-medium ${actionColor[row.recommendedAction] ?? 'bg-slate-100 text-slate-600'}`}>
+        {row.recommendedAction}
+      </span>
+    ),
+  },
+];
 
 export function OverstockRisks() {
   const { toasts, dismiss, success } = useToast();
@@ -161,51 +221,26 @@ export function OverstockRisks() {
           <input type="text" placeholder="Search items…" value={search} onChange={(e) => setSearch(e.target.value)}
             className="w-full sm:w-64 rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-700 px-3 py-1.5 text-xs text-slate-700 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#006a61]" />
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="bg-slate-50 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400 uppercase tracking-wide">
-                <th className="px-4 py-3 text-left font-medium">Item</th>
-                <th className="px-4 py-3 text-left font-medium">Category</th>
-                <th className="px-4 py-3 text-right font-medium">Qty On Hand</th>
-                <th className="px-4 py-3 text-right font-medium">Reorder Pt.</th>
-                <th className="px-4 py-3 text-right font-medium">Excess Qty</th>
-                <th className="px-4 py-3 text-right font-medium">Exposure</th>
-                <th className="px-4 py-3 text-center font-medium">Recommended Action</th>
-                <th className="px-4 py-3 text-center font-medium">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-              {filtered.length === 0 ? (
-                <tr><td colSpan={8} className="px-4 py-8 text-center text-slate-400">No items match your search.</td></tr>
-              ) : (
-                filtered.map((item) => (
-                  <tr key={item.id} className={`transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/30 ${item.applied ? 'opacity-60' : ''}`}>
-                    <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-100">{item.name}</td>
-                    <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{item.category}</td>
-                    <td className="px-4 py-3 text-right text-slate-700 dark:text-slate-300">{item.qtyOnHand.toLocaleString()}</td>
-                    <td className="px-4 py-3 text-right text-slate-700 dark:text-slate-300">{item.reorderPoint.toLocaleString()}</td>
-                    <td className="px-4 py-3 text-right font-semibold text-red-500">+{item.excessQty.toLocaleString()}</td>
-                    <td className="px-4 py-3 text-right font-semibold text-slate-800 dark:text-slate-100">{currencyFormatter.format(item.excessQty * item.unitCost)}</td>
-                    <td className="px-4 py-3 text-center">
-                      <span className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-medium ${actionColor[item.recommendedAction] ?? 'bg-slate-100 text-slate-600'}`}>{item.recommendedAction}</span>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      {item.applied ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 px-2.5 py-0.5 text-[11px] font-semibold">
-                          <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-                          Applied
-                        </span>
-                      ) : (
-                        <button onClick={() => openConfirm(item)} className="rounded-lg bg-[#006a61] hover:bg-[#00574f] text-white px-3 py-1.5 text-[11px] font-semibold transition-colors">Apply Action</button>
-                      )}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          className="border-0 rounded-none shadow-none bg-transparent"
+          columns={columns}
+          data={filtered}
+          rowKey={(row) => row.id}
+          showHeader={true}
+          emptyMessage="No items match your search."
+          hoverActions={false}
+          rowClassName={(row) => row.applied ? 'opacity-60' : ''}
+          actions={(row) => (
+            row.applied ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 px-2.5 py-0.5 text-[11px] font-semibold">
+                <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                Applied
+              </span>
+            ) : (
+              <button onClick={() => openConfirm(row)} className="rounded-lg bg-[#006a61] hover:bg-[#00574f] text-white px-3 py-1.5 text-[11px] font-semibold transition-colors">Apply Action</button>
+            )
+          )}
+        />
         <div className="px-4 py-3 border-t border-slate-100 dark:border-white/10 text-xs text-slate-400">Showing {filtered.length} of {items.length} items</div>
       </div>
       <Toast toasts={toasts} onDismiss={dismiss} />

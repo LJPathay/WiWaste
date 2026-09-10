@@ -1,10 +1,41 @@
 import { useState } from 'react';
 import { Printer, Receipt } from 'lucide-react';
+import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
+import { ActionButton } from '../../components/shared/DataTableActions';
 import { formatCurrency, initialSalesTransactions, type SalesTransaction } from '../../utils/cashierData';
 
 export function CashierHistory() {
   const [selectedReceipt, setSelectedReceipt] = useState<SalesTransaction | null>(null);
   const cashierTransactions = initialSalesTransactions.filter(t => t.user_id === 'cashier-001');
+
+  const columns: DataTableColumn<SalesTransaction>[] = [
+    {
+      key: 'transaction_id',
+      header: 'Transaction ID',
+      pinned: true,
+      truncate: true,
+      minWidth: '120px',
+    },
+    {
+      key: 'transaction_date',
+      header: 'Time',
+      minWidth: '100px',
+    },
+    {
+      key: 'payment_method',
+      header: 'Payment Method',
+      minWidth: '100px',
+    },
+    {
+      key: 'total_amount',
+      header: 'Total',
+      numeric: true,
+      minWidth: '100px',
+      render: (row) => (
+        <span className="font-bold text-slate-900 dark:text-slate-100">{formatCurrency(row.total_amount)}</span>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-6 w-full font-sans">
@@ -14,40 +45,19 @@ export function CashierHistory() {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-6">
-        <div className="bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left">
-              <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400">
-                <tr>
-                  <th className="px-5 py-3 font-semibold">Transaction ID</th>
-                  <th className="px-5 py-3 font-semibold">Time</th>
-                  <th className="px-5 py-3 font-semibold">Payment Method</th>
-                  <th className="px-5 py-3 font-semibold text-right">Total</th>
-                  <th className="px-5 py-3 font-semibold text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-                {cashierTransactions.map(transaction => (
-                  <tr key={transaction.transaction_id}>
-                    <td className="px-5 py-4 font-mono text-slate-700 dark:text-slate-300">{transaction.transaction_id}</td>
-                    <td className="px-5 py-4 text-slate-600 dark:text-slate-400">{transaction.transaction_date}</td>
-                    <td className="px-5 py-4 text-slate-600 dark:text-slate-400">{transaction.payment_method}</td>
-                    <td className="px-5 py-4 text-right font-bold text-slate-900 dark:text-slate-100">{formatCurrency(transaction.total_amount)}</td>
-                    <td className="px-5 py-4 text-right">
-                      <button
-                        onClick={() => setSelectedReceipt(transaction)}
-                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#006a61] dark:text-[#7ef0cf] hover:underline"
-                      >
-                        <Printer className="h-3.5 w-3.5" />
-                        Reprint
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <DataTable
+          columns={columns}
+          data={cashierTransactions}
+          rowKey={(row) => row.transaction_id}
+          hoverActions
+          actions={(row) => (
+            <ActionButton
+              icon={<Printer className="h-3.5 w-3.5" />}
+              label="View Receipt"
+              onClick={() => setSelectedReceipt(row)}
+            />
+          )}
+        />
 
         <div className="bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm p-5">
           <div className="flex items-center justify-between gap-3 mb-4">

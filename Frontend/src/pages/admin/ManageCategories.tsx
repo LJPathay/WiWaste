@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Search, Plus, Edit2, Archive, Info, Loader2,
-  ChevronLeft, ChevronRight, Check, Grid, Sparkles,
+  Check, Grid, Sparkles,
   CupSoda, Coffee, Utensils, Apple, Beef, Cookie,
   Pill, HeartPulse, Home, Recycle,
   Shirt, Tag, Tv, Flame, Wheat, AlertCircle
@@ -11,6 +11,9 @@ import { Tutorial } from '../../components/ui/Tutorial';
 import { Toast, useToast, ConfirmDialog, Modal, FormField, inputCls } from '../../components/ui/Toast';
 import { useOptimisticList } from '../../hooks/useOptimisticList';
 import { categories as categoriesApi, type ApiCategory } from '../../services/api';
+import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
+import { ActionButton } from '../../components/shared/DataTableActions';
+import { Pagination } from '../../components/ui/pagination';
 
 const ITEMS_PER_PAGE = 5;
 
@@ -32,10 +35,6 @@ const PRESET_CATEGORIES = [
   'Others',
 ];
 
-/**
- * Automated Category Icon Resolver
- * Maps category name keywords to representative icons and colors
- */
 const getCategoryIcon = (categoryName: string = '') => {
   const lower = (categoryName || '').toLowerCase().trim();
   
@@ -82,7 +81,6 @@ const getCategoryIcon = (categoryName: string = '') => {
     return { icon: Flame, label: 'Chemicals & Fuel', color: 'text-red-600 bg-red-50 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800/50' };
   }
 
-  // Default fallback
   return { icon: Tag, label: 'General', color: 'text-slate-600 bg-slate-100 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700' };
 };
 
@@ -145,12 +143,10 @@ export function ManageCategories() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<ApiCategory | null>(null);
   
-  // Multi-category addition state
   const [names, setNames] = useState<string[]>(['']);
   const [selectedTypes, setSelectedTypes] = useState<string[]>(['']);
   const [editName, setEditName] = useState('');
   
-  // Visual Tile Picker Modal state
   const [tilePickerRowIndex, setTilePickerRowIndex] = useState<number | null>(null);
   const [tileSearch, setTileSearch] = useState('');
   
@@ -161,7 +157,6 @@ export function ManageCategories() {
 
   const categories = categoryList ?? [];
 
-  // Show empty notification when table is empty and no search applied
   useEffect(() => {
     if (categories.length === 0 && search === '' && !loading && !fetchError) {
       setShowEmptyNotification(true);
@@ -171,7 +166,6 @@ export function ManageCategories() {
     }
   }, [categories.length, search, loading, fetchError]);
 
-  // Countdown timer for notification
   useEffect(() => {
     if (!showEmptyNotification) return;
     const interval = setInterval(() => {
@@ -180,13 +174,11 @@ export function ManageCategories() {
     return () => clearInterval(interval);
   }, [showEmptyNotification]);
 
-  // Multi-category add duplicate & validation checks
   const existingNamesLower = new Set(categories.map(c => c?.name?.toLowerCase().trim()).filter(Boolean));
   
   const hasEmptyAddNames = names.every(n => !n.trim());
   const duplicateExistingAdd = names.some(n => n.trim() && existingNamesLower.has(n.trim().toLowerCase()));
   
-  // Check duplicates within the modal rows themselves
   const filledAddNames = names.map(n => n.trim().toLowerCase()).filter(Boolean);
   const hasInternalDuplicates = new Set(filledAddNames).size !== filledAddNames.length;
 
@@ -206,13 +198,11 @@ export function ManageCategories() {
       return 0;
     });
 
-  // Pagination calculations
   const totalPages = Math.max(1, Math.ceil(filteredCategories.length / ITEMS_PER_PAGE));
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, filteredCategories.length);
   const paginatedCategories = filteredCategories.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
-  // Checkbox Selection Logic
   const isAllSelected = paginatedCategories.length > 0 && paginatedCategories.every(c => selectedIds.includes(c.id));
 
   const toggleSelectAll = () => {
@@ -382,6 +372,34 @@ export function ManageCategories() {
     setIsEditOpen(true);
   };
 
+  const columns: DataTableColumn<ApiCategory>[] = [
+    {
+      key: 'name',
+      header: 'Category Name',
+      pinned: true,
+      truncate: true,
+      minWidth: '200px',
+      render: (row) => {
+        const { icon: CatIcon, color: catColor } = getCategoryIcon(row.name);
+        return (
+          <div className="flex items-center gap-2">
+            <span className="font-semibold">{row.name}</span>
+            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${catColor}`}>
+              <CatIcon className="h-3 w-3" />
+            </span>
+          </div>
+        );
+      },
+    },
+    {
+      key: 'product_count',
+      header: 'Product Count',
+      numeric: true,
+      minWidth: '100px',
+      render: (row) => <span>{row.product_count ?? 0} SKUs</span>,
+    },
+  ];
+
   if (loading) return (
     <div className="flex flex-col items-center justify-center h-64 gap-4">
       <div className="relative w-16 h-16">
@@ -423,7 +441,6 @@ export function ManageCategories() {
 
   return (
     <div className="space-y-6 w-full font-sans">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
@@ -447,9 +464,7 @@ export function ManageCategories() {
         </button>
       </div>
 
-      {/* Main Table Container */}
       <div className="bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden">
-        {/* Filter and Search Bar */}
         <div className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 dark:border-white/10">
           <div className="flex items-center gap-2">
             <span className="px-3 py-1 bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-lg">
@@ -483,7 +498,6 @@ export function ManageCategories() {
           </div>
         </div>
 
-        {/* Bulk Action Bar */}
         {selectedIds.length > 0 && (
           <div className="bg-[#006a61]/10 border-b border-[#006a61]/20 px-6 py-2.5 flex items-center justify-between text-xs animate-fadeIn">
             <div className="flex items-center gap-2 text-[#006a61] dark:text-[#7ef0cf] font-semibold">
@@ -512,137 +526,62 @@ export function ManageCategories() {
           </div>
         )}
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs text-left">
-            <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-450 border-b border-slate-200 dark:border-white/10 font-bold">
-              <tr>
-                <th className="w-10 px-4 py-3 text-center">
-                  <input
-                    type="checkbox"
-                    checked={isAllSelected}
-                    onChange={toggleSelectAll}
-                    className="rounded border-slate-300 dark:border-slate-700 text-[#006a61] focus:ring-[#006a61] cursor-pointer"
-                    title="Select / Deselect all on current page"
-                  />
-                </th>
-                <th className="px-6 py-3">Category Name</th>
-                <th className="px-6 py-3">Product Count</th>
-                <th className="px-6 py-3 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200 dark:divide-white/5">
-              {paginatedCategories.length === 0 ? (
-                <tr><td colSpan={4} className="px-6 py-12 text-center text-slate-400">No categories found.</td></tr>
-              ) : paginatedCategories.map((cat) => {
-                const { icon: CatIcon, color: catColor } = getCategoryIcon(cat.name);
-                const isSelected = selectedIds.includes(cat.id);
-                return (
-                  <tr key={cat.id} className={`hover:bg-slate-50/20 dark:hover:bg-white/5 transition-colors ${isSelected ? 'bg-teal-50/30 dark:bg-teal-900/10' : ''}`}>
-                    <td className="w-10 px-4 py-4 text-center">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => toggleSelectRow(cat.id)}
-                        className="rounded border-slate-300 dark:border-slate-700 text-[#006a61] focus:ring-[#006a61] cursor-pointer"
-                      />
-                    </td>
-                    <td className="px-6 py-4 font-medium text-slate-900 dark:text-slate-100">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold">{cat.name}</span>
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${catColor}`}>
-                          <CatIcon className="h-3 w-3" />
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-slate-700 dark:text-slate-300">{cat.product_count ?? 0} SKUs</td>
-                    <td className="px-6 py-4 text-right flex items-center justify-end gap-3">
-                      <button
-                        onClick={() => openEdit(cat)}
-                        className="inline-flex items-center gap-1 text-xs font-bold text-[#006a61] dark:text-[#7ef0cf] hover:underline"
-                      >
-                        <Edit2 className="h-3.5 w-3.5" /> Edit
-                      </button>
-                      <button
-                        onClick={() => { setDeletingId(cat.id); setDeleteName(cat.name); }}
-                        className="inline-flex items-center gap-1 text-xs font-bold text-red-500 hover:text-red-700 hover:underline"
-                      >
-                        <Archive className="h-3.5 w-3.5" /> Delete
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Empty State Notification */}
-        {showEmptyNotification && (
-          <div className="fixed bottom-6 right-6 z-40 animate-in fade-in slide-in-from-right-4 duration-300">
-            <div className="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 rounded-lg shadow-lg p-4 max-w-sm flex items-start gap-3 overflow-hidden">
-              <div className="absolute bottom-0 left-0 h-1 bg-blue-600 dark:bg-blue-400 transition-all" style={{ width: `${(notificationCountdown / 20) * 100}%` }}></div>
-              <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-blue-700 dark:text-blue-300">Hmm, the table is empty</p>
-                <p className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">Input some data to get started</p>
-              </div>
-              <button
-                onClick={() => { setShowEmptyNotification(false); setShowTutorial(true); }}
-                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded transition-all shrink-0"
-              >
-                Quick Guide
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Table Footer Showing Entry Count & Pagination Controls */}
-        <div className="px-6 py-3 bg-slate-50/50 dark:bg-slate-900/50 border-t border-slate-200 dark:border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
-          <span>
-            {filteredCategories.length === 0 ? (
-              <>Showing <strong className="font-semibold text-slate-800 dark:text-slate-200">0</strong> of <strong className="font-semibold text-slate-800 dark:text-slate-200">0</strong> Categories</>
-            ) : totalPages === 1 ? (
-              <>Showing <strong className="font-semibold text-slate-800 dark:text-slate-200">{filteredCategories.length}</strong> of <strong className="font-semibold text-slate-800 dark:text-slate-200">{filteredCategories.length}</strong> Categories</>
-            ) : (
-              <>
-                Showing <strong className="font-semibold text-slate-800 dark:text-slate-200">{startIndex + 1}</strong> to{' '}
-                <strong className="font-semibold text-slate-800 dark:text-slate-200">{endIndex}</strong> of{' '}
-                <strong className="font-semibold text-slate-800 dark:text-slate-200">{filteredCategories.length}</strong> Categories
-              </>
-            )}
-          </span>
-
-          {totalPages > 1 && (
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="p-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 disabled:opacity-40 disabled:hover:bg-transparent transition-all"
-                title="Previous Page"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-
-              <span className="px-2 font-medium text-slate-700 dark:text-slate-300">
-                Page {currentPage} of {totalPages}
-              </span>
-
-              <button
-                type="button"
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="p-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 disabled:opacity-40 disabled:hover:bg-transparent transition-all"
-                title="Next Page"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
+        <DataTable<ApiCategory>
+          columns={columns}
+          data={paginatedCategories as (ApiCategory & Record<string, unknown>)[]}
+          rowKey={(row) => row.id}
+          selectable
+          selectedKeys={new Set(selectedIds)}
+          onSelectionChange={(keys) => setSelectedIds(Array.from(keys) as number[])}
+          emptyMessage="No categories found."
+          hoverActions
+          actions={(row) => (
+            <>
+              <ActionButton
+                icon={<Edit2 className="h-3.5 w-3.5" />}
+                label="Edit"
+                onClick={() => openEdit(row)}
+              />
+              <ActionButton
+                icon={<Archive className="h-3.5 w-3.5" />}
+                label="Delete"
+                variant="danger"
+                onClick={() => { setDeletingId(row.id); setDeleteName(row.name); }}
+              />
+            </>
           )}
-        </div>
+          pagination={
+            <Pagination
+              page={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              totalItems={filteredCategories.length}
+              perPage={ITEMS_PER_PAGE}
+              label="categories"
+            />
+          }
+        />
       </div>
 
-      {/* Add Modal (Supports 1 or Multi-category Addition) */}
+      {showEmptyNotification && (
+        <div className="fixed bottom-6 right-6 z-40 animate-in fade-in slide-in-from-right-4 duration-300">
+          <div className="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 rounded-lg shadow-lg p-4 max-w-sm flex items-start gap-3 overflow-hidden">
+            <div className="absolute bottom-0 left-0 h-1 bg-blue-600 dark:bg-blue-400 transition-all" style={{ width: `${(notificationCountdown / 20) * 100}%` }}></div>
+            <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-blue-700 dark:text-blue-300">Hmm, the table is empty</p>
+              <p className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">Input some data to get started</p>
+            </div>
+            <button
+              onClick={() => { setShowEmptyNotification(false); setShowTutorial(true); }}
+              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded transition-all shrink-0"
+            >
+              Quick Guide
+            </button>
+          </div>
+        </div>
+      )}
+
       {isAddOpen && (
         <Modal title="Add New Category" onClose={() => setIsAddOpen(false)}>
           <form onSubmit={handleAdd} className="space-y-4">
@@ -693,7 +632,6 @@ export function ManageCategories() {
                         )}
                       </div>
 
-                      {/* Custom Input when "Others" is selected */}
                       {isOthersSelected && (
                         <div className="relative flex items-center">
                           <input
@@ -717,7 +655,6 @@ export function ManageCategories() {
                         </div>
                       )}
 
-                      {/* Icon preview for preset category */}
                       {!isOthersSelected && trimmed && (() => {
                         const { icon: CatIcon, color: catColor } = getCategoryIcon(rowName);
                         return (
@@ -761,7 +698,6 @@ export function ManageCategories() {
         </Modal>
       )}
 
-      {/* Edit Modal */}
       {isEditOpen && editingCategory && (
         <Modal title="Edit Category" onClose={() => setIsEditOpen(false)}>
           <form onSubmit={handleEdit} className="space-y-4">
@@ -812,7 +748,6 @@ export function ManageCategories() {
         />
       )}
 
-      {/* ── Visual Category Tile Picker Modal ── */}
       {tilePickerRowIndex !== null && (
         <Modal
           title="Select Category Type"
@@ -883,12 +818,9 @@ export function ManageCategories() {
         </Modal>
       )}
 
-      {/* Tutorial Component */}
       <Tutorial steps={tutorialSteps} isOpen={showTutorial} onClose={() => setShowTutorial(false)} />
 
       <Toast toasts={toasts} onDismiss={dismiss} />
     </div>
   );
 }
-
-

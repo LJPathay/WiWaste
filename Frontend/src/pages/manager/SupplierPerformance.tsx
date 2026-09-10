@@ -3,6 +3,7 @@ import { Info } from 'lucide-react';
 import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, LineChart, Line, LabelList } from 'recharts';
 import { Toast, useToast, ConfirmDialog } from '../../components/ui/Toast';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
+import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
 
 interface PerformanceMock {
   id: string;
@@ -39,6 +40,14 @@ const TREND_DATA = [
 ];
 
 const currencyFormatter = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 });
+
+const supplierColumns: DataTableColumn<PerformanceMock>[] = [
+  { key: 'name', header: 'Supplier', pinned: true, truncate: true, minWidth: '150px' },
+  { key: 'delivery', header: 'Delivery Rate', numeric: true, minWidth: '100px', render: (row) => `${row.delivery}%` },
+  { key: 'returns', header: 'Return Rate', numeric: true, minWidth: '100px', render: (row) => `${row.returns}%` },
+  { key: 'leadTime', header: 'Avg Lead Time', numeric: true, minWidth: '100px', render: (row) => `${row.leadTime} days` },
+  { key: 'credits', header: 'Pending Credits', minWidth: '120px', render: (row) => row.credits > 0 ? currencyFormatter.format(row.credits) : '—' },
+];
 
 export function SupplierPerformance() {
   const { toasts, dismiss, success } = useToast();
@@ -141,51 +150,33 @@ export function SupplierPerformance() {
       </div>
 
       {/* Supplier table */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-200 dark:border-white/10">
-          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">Supplier Details</h3>
-        </div>
-        <table className="w-full text-xs text-left">
-          <thead className="bg-slate-50 dark:bg-slate-950 text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-white/10">
-            <tr>
-              <th className="px-6 py-3 font-semibold">Supplier</th>
-              <th className="px-6 py-3 font-semibold">On-Time %</th>
-              <th className="px-6 py-3 font-semibold">Return Rate</th>
-              <th className="px-6 py-3 font-semibold">Lead Time</th>
-              <th className="px-6 py-3 font-semibold">Pending Credits</th>
-              <th className="px-6 py-3 font-semibold text-right">Action</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-            {suppliers.map((s) => (
-              <tr key={s.id} className="hover:bg-slate-50/50 dark:hover:bg-white/5">
-                <td className="px-6 py-4 font-semibold text-slate-800 dark:text-slate-100">{s.name}</td>
-                <td className="px-6 py-4 text-slate-700 dark:text-slate-300">{s.delivery}%</td>
-                <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{s.returns}%</td>
-                <td className="px-6 py-4 text-slate-500 dark:text-slate-400">{s.leadTime} days</td>
-                <td className="px-6 py-4 font-semibold text-slate-800 dark:text-slate-200">{s.credits > 0 ? currencyFormatter.format(s.credits) : '—'}</td>
-                <td className="px-6 py-4 text-right">
-                  {s.credits > 0 ? (
-                    <button
-                      onClick={() => !s.creditPending && setConfirm({ open: true, supplierId: s.id, name: s.name })}
-                      disabled={s.creditPending}
-                      className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
-                        s.creditPending
-                          ? 'bg-slate-100 dark:bg-slate-800 text-slate-400'
-                          : 'bg-[#006a61] hover:bg-[#00574f] text-white'
-                      }`}
-                    >
-                      {s.creditPending ? 'Requested' : 'Request Credits'}
-                    </button>
-                  ) : (
-                    <span className="text-slate-300 dark:text-slate-600 text-xs">No credits</span>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        columns={supplierColumns}
+        data={suppliers}
+        rowKey={(row) => row.id}
+        actions={(row) => (
+          <>
+            {row.credits > 0 ? (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!row.creditPending) setConfirm({ open: true, supplierId: row.id, name: row.name });
+                }}
+                disabled={row.creditPending}
+                className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
+                  row.creditPending
+                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-400'
+                    : 'bg-[#006a61] hover:bg-[#00574f] text-white'
+                }`}
+              >
+                {row.creditPending ? 'Requested' : 'Request Credits'}
+              </button>
+            ) : (
+              <span className="text-slate-300 dark:text-slate-600 text-xs">No credits</span>
+            )}
+          </>
+        )}
+      />
 
       <Toast toasts={toasts} onDismiss={dismiss} />
     </div>

@@ -1,31 +1,48 @@
-"use client";
+import * as React from "react"
+import { cn } from "./utils"
 
-import * as React from "react";
-import * as SwitchPrimitive from "@radix-ui/react-switch";
+const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableElement>>(
+  ({ className, ...props }, ref) => (
+    <div className="relative w-full overflow-auto">
+      <table ref={ref} className={cn("w-full caption-bottom text-xs", className)} {...props} />
+    </div>
+  )
+)
+Table.displayName = "Table"
 
-import { cn } from "./utils";
+const TableHeader = React.forwardRef<HTMLTableSectionElement, React.HTMLAttributes<HTMLTableSectionElement>>(
+  ({ className, ...props }, ref) => (
+    <thead ref={ref} className={cn("[&_tr]:border-b", className)} {...props} />
+  )
+)
+TableHeader.displayName = "TableHeader"
 
-function Switch({
-    className,
-    ...props
-}: React.ComponentProps<typeof SwitchPrimitive.Root>) {
-    return (
-        <SwitchPrimitive.Root
-            data-slot="switch"
-            className={cn(
-                "peer data-[state=checked]:bg-primary data-[state=unchecked]:bg-switch-background focus-visible:border-ring focus-visible:ring-ring/50 dark:data-[state=unchecked]:bg-input/80 inline-flex h-[1.15rem] w-8 shrink-0 items-center rounded-full border border-transparent transition-all outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50",
-                className,
-            )}
-            {...props}
-        >
-            <SwitchPrimitive.Thumb
-                data-slot="switch-thumb"
-                className={cn(
-                    "bg-card dark:data-[state=unchecked]:bg-card-foreground dark:data-[state=checked]:bg-primary-foreground pointer-events-none block size-4 rounded-full ring-0 transition-transform data-[state=checked]:translate-x-[calc(100%-2px)] data-[state=unchecked]:translate-x-0",
-                )}
-            />
-        </SwitchPrimitive.Root>
-    );
-}
+const TableBody = React.forwardRef<HTMLTableSectionElement, React.HTMLAttributes<HTMLTableSectionElement>>(
+  ({ className, ...props }, ref) => (
+    <tbody ref={ref} className={cn("[&_tr:last-child]:border-0", className)} {...props} />
+  )
+)
+TableBody.displayName = "TableBody"
 
-export { Switch };
+const TableRow = React.forwardRef<HTMLTableRowElement, React.HTMLAttributes<HTMLTableRowElement>>(
+  ({ className, ...props }, ref) => (
+    <tr ref={ref} className={cn("border-b border-slate-100 dark:border-white/5 transition-colors hover:bg-slate-50/50 dark:hover:bg-white/5 data-[state=selected]:bg-teal-50/30 dark:data-[state=selected]:bg-teal-900/10", className)} {...props} />
+  )
+)
+TableRow.displayName = "TableRow"
+
+const TableHead = React.forwardRef<HTMLTableCellElement, React.ThHTMLAttributes<HTMLTableCellElement>>(
+  ({ className, ...props }, ref) => (
+    <th ref={ref} className={cn("h-10 px-4 text-left align-middle font-semibold text-slate-500 dark:text-slate-400 [&:has([role=checkbox])]:pr-0", className)} {...props} />
+  )
+)
+TableHead.displayName = "TableHead"
+
+const TableCell = React.forwardRef<HTMLTableCellElement, React.TdHTMLAttributes<HTMLTableCellElement>>(
+  ({ className, ...props }, ref) => (
+    <td ref={ref} className={cn("px-4 py-3 align-middle [&:has([role=checkbox])]:pr-0", className)} {...props} />
+  )
+)
+TableCell.displayName = "TableCell"
+
+export { Table, TableHeader, TableBody, TableRow, TableHead, TableCell }

@@ -2,6 +2,7 @@ import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis
 import { AlertTriangle, ArrowLeft, PhilippinePeso, FileCheck, Info, TimerReset, XCircle } from 'lucide-react';
 import { Link } from 'react-router';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
+import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
 
 const currencyFormatter = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 });
 
@@ -22,6 +23,24 @@ function getDeadlineRisk(daysUntilDeadline: number) {
   if (daysUntilDeadline < 0) return { label: 'Missed', color: '#ef4444', tone: 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300', border: 'border-l-rose-500' };
   if (daysUntilDeadline <= 10) return { label: 'Urgent', color: '#f59e0b', tone: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300', border: 'border-l-amber-500' };
   return { label: 'Open', color: '#14b8a6', tone: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300', border: 'border-l-teal-400' };
+}
+
+const columns: DataTableColumn<typeof MOCK_VENDOR_RETURNS[number]>[] = [
+  { key: 'vendorId', header: 'Return ID', pinned: true, truncate: true, minWidth: '100px' },
+  { key: 'vendorName', header: 'Reason', truncate: true, minWidth: '150px' },
+  { key: 'returnItems', header: 'Processed By', truncate: true, minWidth: '100px', render: (row) => row.returnItems.slice(0, 2).join(', ') + (row.returnItems.length > 2 ? ` +${row.returnItems.length - 2}` : '') },
+  { key: 'returnDeadline', header: 'Date', minWidth: '100px', render: (row) => {
+    const days = getDaysUntil(row.returnDeadline);
+    const cls = days < 0 ? 'text-rose-600 dark:text-rose-400' : days <= 10 ? 'text-amber-600 dark:text-amber-400' : 'text-teal-600 dark:text-teal-400';
+    return <span className={`font-semibold ${cls}`}>{days < 0 ? `${Math.abs(days)}d overdue` : `${days}d left`}</span>;
+  }},
+  { key: 'eligibleCredit', header: 'Refund', numeric: true, minWidth: '100px', render: (row) => currencyFormatter.format(row.eligibleCredit) },
+];
+
+function getActionLabel(daysUntilDeadline: number) {
+  if (daysUntilDeadline < 0) return { label: 'Request Exception', color: 'text-rose-700 bg-rose-50 dark:bg-rose-500/10 dark:text-rose-300' };
+  if (daysUntilDeadline <= 10) return { label: 'File Claim Now', color: 'text-amber-700 bg-amber-50 dark:bg-amber-500/10 dark:text-amber-300' };
+  return { label: 'Prepare Docs', color: 'text-teal-700 bg-teal-50 dark:bg-teal-500/10 dark:text-teal-300' };
 }
 
 export function VendorCreditsPage() {
@@ -137,60 +156,19 @@ export function VendorCreditsPage() {
           <FileCheck className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
           <h3 className="text-lg font-bold text-[#0b1c30] dark:text-slate-100">Return-Window Detections</h3>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[800px] text-sm">
-            <thead className="bg-slate-50 dark:bg-slate-800/50">
-              <tr>
-                <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Vendor</th>
-                <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Status</th>
-                <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Credit</th>
-                <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Deadline</th>
-                <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Return Items</th>
-                <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {vendorReturns.map((vendor) => {
-                const daysUntilDeadline = getDaysUntil(vendor.returnDeadline);
-                const risk = getDeadlineRisk(daysUntilDeadline);
-                const actionLabel = daysUntilDeadline < 0
-                  ? 'Request Exception'
-                  : daysUntilDeadline <= 10
-                  ? 'File Claim Now'
-                  : 'Prepare Docs';
-                const actionColor = daysUntilDeadline < 0
-                  ? 'text-rose-700 bg-rose-50 dark:bg-rose-500/10 dark:text-rose-300'
-                  : daysUntilDeadline <= 10
-                  ? 'text-amber-700 bg-amber-50 dark:bg-amber-500/10 dark:text-amber-300'
-                  : 'text-teal-700 bg-teal-50 dark:bg-teal-500/10 dark:text-teal-300';
-                return (
-                  <tr key={vendor.vendorId} className="border-t border-slate-100 dark:border-white/5 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                    <td className="px-5 py-4 font-bold text-[#0b1c30] dark:text-slate-100">{vendor.vendorName}</td>
-                    <td className="px-5 py-4">
-                      <span className={`rounded-full px-3 py-0.5 text-xs font-bold ${risk.tone}`}>{risk.label}</span>
-                    </td>
-                    <td className="px-5 py-4 font-semibold text-emerald-700 dark:text-emerald-400">{currencyFormatter.format(vendor.eligibleCredit)}</td>
-                    <td className="px-5 py-4">
-                      <span className={`font-semibold ${
-                        daysUntilDeadline < 0 ? 'text-rose-600 dark:text-rose-400' :
-                        daysUntilDeadline <= 10 ? 'text-amber-600 dark:text-amber-400' :
-                        'text-teal-600 dark:text-teal-400'
-                      }`}>
-                        {daysUntilDeadline < 0 ? `${Math.abs(daysUntilDeadline)}d overdue` : `${daysUntilDeadline}d left`}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4 text-slate-600 dark:text-slate-400 max-w-[160px] truncate" title={vendor.returnItems.join(', ')}>
-                      {vendor.returnItems.slice(0, 2).join(', ')}{vendor.returnItems.length > 2 ? ` +${vendor.returnItems.length - 2}` : ''}
-                    </td>
-                    <td className="px-5 py-4">
-                      <span className={`rounded-full px-3 py-0.5 text-xs font-bold ${actionColor}`}>{actionLabel}</span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          columns={columns}
+          data={vendorReturns as (typeof MOCK_VENDOR_RETURNS[number] & Record<string, unknown>)[]}
+          rowKey={(row) => row.vendorId}
+          horizontalScroll
+          showHeader
+          emptyMessage="No return windows detected."
+          actions={(row) => {
+            const daysUntilDeadline = getDaysUntil(row.returnDeadline);
+            const { label, color } = getActionLabel(daysUntilDeadline);
+            return <span className={`rounded-full px-3 py-0.5 text-xs font-bold ${color}`}>{label}</span>;
+          }}
+        />
       </section>
     </div>
   );

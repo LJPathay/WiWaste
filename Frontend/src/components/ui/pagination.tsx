@@ -6,18 +6,19 @@ interface PaginationProps {
   onPageChange: (page: number) => void;
   totalItems?: number;
   perPage?: number;
+  label?: string;
 }
 
-export function Pagination({ page, totalPages, onPageChange, totalItems, perPage = 20 }: PaginationProps) {
+export function Pagination({ page, totalPages, onPageChange, totalItems, perPage = 20, label = 'items' }: PaginationProps) {
   if (totalPages <= 1) return null;
 
   const from = (page - 1) * perPage + 1;
   const to = Math.min(page * perPage, totalItems ?? page * perPage);
 
   return (
-    <div className="flex items-center justify-between px-6 py-3 border-t border-slate-200 dark:border-white/10 text-xs text-slate-500">
+    <div className="flex items-center justify-between px-6 py-3 text-xs text-slate-500">
       {totalItems != null && (
-        <span>Showing {from}–{to} of {totalItems} items</span>
+        <span>Showing {from}–{to} of {totalItems} {label}</span>
       )}
       <div className="flex items-center gap-1 ml-auto">
         <button

@@ -179,6 +179,39 @@ export const dashboard = {
   overview: () => request<ApiDashboard>('/dashboard/overview'),
 };
 
+// ─── Owner Dashboard Analytics ──────────────────────────
+export interface ApiOwnerAnalytics {
+  sales_trend: Array<{ date: string; value: number }>;
+  wastage_trend: Array<{ date: string; value: number }>;
+  leakage_by_category: Array<{
+    category: string;
+    value: number;
+    quantity: number;
+    percentage: number;
+  }>;
+  inventory_health: {
+    healthy: number;
+    low_stock: number;
+    overstock: number;
+    expiring_soon: number;
+    expired: number;
+  };
+  top_wasted_products: Array<{
+    product_id: number;
+    name: string;
+    loss: number;
+    quantity: number;
+  }>;
+}
+
+export const ownerDashboard = {
+  overview: () => request<ApiDashboard>('/dashboard/overview'),
+  analytics: (params?: { period?: string }) => {
+    const qs = params?.period ? `?period=${params.period}` : '';
+    return request<ApiOwnerAnalytics>(`/dashboard/owner-analytics${qs}`);
+  },
+};
+
 // ─── Types ──────────────────────────────────────────────
 export interface ApiUser {
   id: number;
@@ -360,6 +393,17 @@ export interface ApiDashboard {
   active_suppliers: number;
   today_sales: number;
   recent_wastage: number;
+  // Business Health KPIs
+  sales_this_month: number;
+  sales_last_month: number;
+  gross_profit_this_month: number;
+  gross_profit_last_month: number;
+  wastage_this_month: number;
+  wastage_last_month: number;
+  inventory_value: number;
+  // Risk counts
+  critical_fefo_count: number;
+  high_risk_fefo_count: number;
 }
 
 export interface ApiDashboardSummary {

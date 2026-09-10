@@ -21,6 +21,9 @@ import {
   PhilippinePeso,
   Activity,
   Receipt,
+  Brain,
+  PackageCheck,
+  Truck,
   type LucideIcon,
 } from 'lucide-react';
 import { ThemeToggle } from '../ThemeToggle';
@@ -37,36 +40,45 @@ type SidebarGroup = { group: string; items: SidebarItem[] };
 const sidebarGroupsByRole: Record<UserRole, SidebarGroup[]> = {
   owner: [
     {
-      group: 'Overview',
+      group: 'OVERVIEW',
       items: [
         { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
       ],
     },
     {
-      group: 'Management',
+      group: 'MANAGEMENT',
       items: [
         { to: '/owner/users', label: 'Manage Users', icon: Users },
         { to: '/owner/products', label: 'Manage Products', icon: Package },
         { to: '/owner/categories', label: 'Manage Categories', icon: Layers },
-        { to: '/owner/suppliers', label: 'Manage Suppliers', icon: TrendingUp },
-        { to: '/owner/settings', label: 'System Settings', icon: Settings },
+        { to: '/owner/suppliers', label: 'Manage Suppliers', icon: Truck },
         { to: '/owner/purchase-orders', label: 'Purchase Orders', icon: Package },
+        { to: '/owner/settings', label: 'System Settings', icon: Settings },
         { to: '/owner/audit-logs', label: 'Audit Logs', icon: Activity },
       ],
     },
     {
-      group: 'Analytics & Reports',
+      group: 'INVENTORY INTELLIGENCE',
       items: [
-        { to: '/dashboard/predictive', label: 'Predictive Analytics', icon: TrendingUp },
-        { to: '/dashboard/leakage', label: 'Leakage Detection', icon: AlertTriangle },
-        { to: '/dashboard/fefo', label: 'FEFO Tracking', icon: Layers },
-        { to: '/dashboard/vendors', label: 'Vendor Credits', icon: PhilippinePeso },
-        { to: '/owner/performance', label: 'Inventory Performance', icon: Package },
+        { to: '/owner/performance', label: 'Inventory Performance', icon: TrendingUp },
+        { to: '/dashboard/fefo', label: 'FEFO Tracking', icon: PackageCheck },
         { to: '/owner/overstock', label: 'Overstock Risks', icon: AlertTriangle },
         { to: '/owner/replenishment', label: 'Replenishment', icon: CheckCircle },
+      ],
+    },
+    {
+      group: 'BUSINESS ANALYTICS',
+      items: [
+        { to: '/dashboard/predictive', label: 'Predictive Analytics', icon: Brain },
+        { to: '/dashboard/leakage', label: 'Leakage Detection', icon: ShieldAlert },
         { to: '/owner/supplier-performance', label: 'Supplier Performance', icon: Users },
+        { to: '/dashboard/vendors', label: 'Vendor Credits', icon: PhilippinePeso },
+      ],
+    },
+    {
+      group: 'REPORTS',
+      items: [
         { to: '/owner/reports', label: 'Generate Reports', icon: FileText },
-        { to: '/owner/executive-reports', label: 'Executive Reports', icon: FileText },
       ],
     },
   ],

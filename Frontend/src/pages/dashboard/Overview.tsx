@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link } from 'react-router';
 import {
   Area,
   AreaChart,
@@ -32,11 +32,14 @@ import {
   Users,
   Settings,
   Truck,
+  PhilippinePeso,
+  Brain,
+  Activity,
+  AlertTriangle,
 } from 'lucide-react';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { useDashboardData } from '../../hooks/useDashboardData';
 import { useKpiHighlight } from '../../hooks/useKpiHighlight';
-import { getVendorReturns } from '../../utils/mockAuthAndFeatures';
 import { initialSalesTransactions } from '../../utils/cashierData';
 
 const currencyFormatter = new Intl.NumberFormat('en-PH', {
@@ -45,22 +48,15 @@ const currencyFormatter = new Intl.NumberFormat('en-PH', {
   maximumFractionDigits: 0,
 });
 
-function PhpIcon({ className }: { className?: string }) {
-  return (
-    <span
-      className={`inline-flex items-center justify-center font-black leading-none select-none ${className ?? ''}`}
-      style={{ fontSize: '1.1em' }}
-    >
-      ₱
-    </span>
-  );
-}
-
 const AVAILABLE_SHORTCUTS = [
-  { id: 'predictive', label: 'Predictive Analytics', description: 'Forecast demand and detect seasonal anomalies.', to: '/dashboard/predictive', icon: TrendingUp },
-  { id: 'leakage', label: 'Leakage Detection', description: 'Find categories leaking the most margin.', to: '/dashboard/leakage', icon: BarChart3 },
-  { id: 'fefo', label: 'FEFO Tracking', description: 'Monitor batches by expiry priority order.', to: '/dashboard/fefo', icon: PackageCheck },
-  { id: 'vendors', label: 'Vendor Credits', description: 'Track and recover eligible supplier credits.', to: '/dashboard/vendors', icon: PhpIcon },
+  { id: 'sales', label: 'Sales', description: 'View sales transactions and revenue.', to: '/cashier/history', icon: TrendingUp },
+  { id: 'inventory', label: 'Inventory', description: 'Manage stock levels and products.', to: '/inventory/manage', icon: Package },
+  { id: 'wastage', label: 'Wastage', description: 'Track and record inventory losses.', to: '/inventory/wastage', icon: Trash2 },
+  { id: 'purchase-orders', label: 'Purchase Orders', description: 'Manage supplier orders.', to: '/owner/purchase-orders', icon: Truck },
+  { id: 'reports', label: 'Reports', description: 'Generate business reports.', to: '/owner/reports', icon: BarChart3 },
+  { id: 'audit-logs', label: 'Audit Logs', description: 'Review system activity.', to: '/owner/audit-logs', icon: Activity },
+  { id: 'predictive', label: 'Predictive Analytics', description: 'Forecast demand and detect anomalies.', to: '/dashboard/predictive', icon: Brain },
+  { id: 'leakage', label: 'Leakage Detection', description: 'Find categories leaking margin.', to: '/dashboard/leakage', icon: ShieldAlert },
 ];
 
 function SectionDivider({ title }: { title: string }) {
@@ -72,9 +68,10 @@ function SectionDivider({ title }: { title: string }) {
   );
 }
 
+const LEAKAGE_COLORS = ['#006a61', '#f97316', '#f59e0b', '#eab308', '#22c55e'];
+
 export function DashboardOverview() {
-  const { data, overview, loading } = useDashboardData();
-  const navigate = useNavigate();
+  const { data, overview, ownerAnalytics, loading } = useDashboardData();
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [shortcuts, setShortcuts] = useState(AVAILABLE_SHORTCUTS.slice(0, 3));
   const [tempShortcuts, setTempShortcuts] = useState(AVAILABLE_SHORTCUTS.slice(0, 3));
@@ -82,6 +79,8 @@ export function DashboardOverview() {
   const [clickedKpi, setClickedKpi] = useState<number | null>(null);
   const kpiTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const highlightedKpi = useKpiHighlight(5000);
+  const [salesPeriod, setSalesPeriod] = useState('30');
+  const [leakageViewMode, setLeakageViewMode] = useState<'value' | 'quantity' | 'percentage'>('value');
 
   const activeKpi = clickedKpi ?? highlightedKpi;
 
@@ -111,19 +110,144 @@ export function DashboardOverview() {
 
   if (!data) return <div className="p-8 text-slate-700 dark:text-slate-200">No data</div>;
 
-  const forecastChart = data.predictiveAnalytics.wasteVolumeForecast.map((item) => ({
-    month: item.month.replace(' 2026', ''),
-    forecast: item.predicted,
-    confidence: item.confidence * 100,
-  }));
+  // ── Business Health KPI Calculations ─────────────────────────────────────────
+  const salesThisMonth = overview?.sales_this_month ?? 0;
+  const salesLastMonth = overview?.sales_last_month ?? 0;
+  const salesChange = salesLastMonth > 0 ? ((salesThisMonth - salesLastMonth) / salesLastMonth * 100).toFixed(1) : '0';
+  const salesUp = salesThisMonth >= salesLastMonth;
 
-  const leakageChart = data.profitLeakage.map((item) => ({
+  const grossProfit = overview?.gross_profit_this_month ?? 0;
+  const grossProfitLast = overview?.gross_profit_last_month ?? 0;
+  const profitChange = grossProfitLast > 0 ? ((grossProfit - grossProfitLast) / grossProfitLast * 100).toFixed(1) : '0';
+  const profitUp = grossProfit >= grossProfitLast;
+
+  const wastageThisMonth = overview?.wastage_this_month ?? 0;
+  const wastageLastMonth = overview?.wastage_last_month ?? 0;
+  const wastageChange = wastageLastMonth > 0 ? ((wastageThisMonth - wastageLastMonth) / wastageLastMonth * 100).toFixed(1) : '0';
+  const wastageUp = wastageThisMonth <= wastageLastMonth;
+
+  const inventoryValue = overview?.inventory_value ?? 0;
+
+  const kpiCards = [
+    {
+      label: 'Sales This Month',
+      value: currencyFormatter.format(salesThisMonth),
+      note: 'Revenue from completed transactions',
+      icon: TrendingUp,
+      iconBg: 'bg-emerald-500/10',
+      iconColor: 'text-emerald-600',
+      ringColor: 'ring-emerald-400',
+      change: `${salesUp ? '↑' : '↓'} ${Math.abs(Number(salesChange))}% vs last month`,
+      up: salesUp,
+      route: '/owner/reports',
+    },
+    {
+      label: 'Gross Profit',
+      value: currencyFormatter.format(grossProfit),
+      note: 'After cost of goods sold',
+      icon: PhilippinePeso,
+      iconBg: 'bg-teal-500/10',
+      iconColor: 'text-teal-600',
+      ringColor: 'ring-teal-400',
+      change: `${profitUp ? '↑' : '↓'} ${Math.abs(Number(profitChange))}% vs last month`,
+      up: profitUp,
+      route: '/owner/reports',
+    },
+    {
+      label: 'Wastage This Month',
+      value: currencyFormatter.format(wastageThisMonth),
+      note: 'Expiry waste is the primary driver',
+      icon: ShieldAlert,
+      iconBg: 'bg-rose-500/10',
+      iconColor: 'text-rose-600',
+      ringColor: 'ring-rose-400',
+      change: `${wastageUp ? '↓' : '↑'} ${Math.abs(Number(wastageChange))}% vs last month`,
+      up: wastageUp,
+      route: '/dashboard/leakage',
+    },
+    {
+      label: 'Inventory Value',
+      value: currencyFormatter.format(inventoryValue),
+      note: 'Current stock at cost price',
+      icon: Package,
+      iconBg: 'bg-sky-500/10',
+      iconColor: 'text-sky-600',
+      ringColor: 'ring-sky-400',
+      change: 'Current value',
+      up: true,
+      route: '/owner/performance',
+    },
+  ];
+
+  // ── Priority Action Queue ─────────────────────────────────────────────────
+  const criticalBatches = overview?.critical_fefo_count ?? 0;
+  const highRiskBatches = overview?.high_risk_fefo_count ?? 0;
+  const totalLeakage = ownerAnalytics?.leakage_by_category?.reduce((sum, item) => sum + item.value, 0) ?? 0;
+  const topLeakage = ownerAnalytics?.leakage_by_category?.[0] ?? { category: 'N/A', value: 0, percentage: 0 };
+  const vendorReturnsList = data.vendorReturns ?? [];
+  const totalCredits = vendorReturnsList.reduce((sum, item) => sum + (item.eligibleCredit ?? 0), 0);
+  const expiredVendorWindows = vendorReturnsList.filter((v) => v.returnDeadline?.getTime?.() < Date.now()).length;
+
+  const priorityActions = [
+    {
+      severity: 'URGENT',
+      severityColor: 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300',
+      borderColor: 'border-l-rose-500',
+      bgColor: 'bg-rose-50 dark:bg-rose-500/10',
+      titleColor: 'text-rose-900 dark:text-rose-100',
+      bodyColor: 'text-rose-800/80 dark:text-rose-200/70',
+      title: `Move expiring batches today`,
+      problem: `${criticalBatches} critical, ${highRiskBatches} high-risk batches at risk.`,
+      financialImpact: `Potential loss: ${currencyFormatter.format(totalLeakage)}`,
+      action: 'Prioritize these batches for immediate sale or markdown.',
+      route: '/dashboard/fefo',
+      routeLabel: 'View FEFO',
+    },
+    {
+      severity: 'ACTION',
+      severityColor: 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300',
+      borderColor: 'border-l-amber-500',
+      bgColor: 'bg-amber-50 dark:bg-amber-500/10',
+      titleColor: 'text-amber-900 dark:text-amber-100',
+      bodyColor: 'text-amber-800/80 dark:text-amber-200/70',
+      title: `Reduce ${topLeakage.category?.toLowerCase() ?? 'category'} losses`,
+      problem: `${topLeakage.category} is the largest leakage source.`,
+      financialImpact: `${currencyFormatter.format(topLeakage.value)} leaked this month`,
+      action: 'Investigate root causes and implement category-specific controls.',
+      route: '/dashboard/leakage',
+      routeLabel: 'View Leakage',
+    },
+    {
+      severity: 'REVIEW',
+      severityColor: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300',
+      borderColor: 'border-l-emerald-500',
+      bgColor: 'bg-emerald-50 dark:bg-emerald-500/10',
+      titleColor: 'text-emerald-900 dark:text-emerald-100',
+      bodyColor: 'text-emerald-800/80 dark:text-emerald-200/70',
+      title: 'Recover vendor credits',
+      problem: `${currencyFormatter.format(totalCredits)} remains eligible across supplier return windows.`,
+      financialImpact: `${expiredVendorWindows} return window${expiredVendorWindows > 1 ? 's' : ''} expired`,
+      action: 'File claims before remaining windows close.',
+      route: '/dashboard/vendors',
+      routeLabel: 'Review Credits',
+    },
+  ];
+
+  // ── Analytics Data ────────────────────────────────────────────────────────
+  const salesTrendData = ownerAnalytics?.sales_trend ?? [];
+  const wastageTrendData = ownerAnalytics?.wastage_trend ?? [];
+  const leakageByCategory = ownerAnalytics?.leakage_by_category ?? [];
+  const inventoryHealth = ownerAnalytics?.inventory_health ?? { healthy: 0, low_stock: 0, overstock: 0, expiring_soon: 0, expired: 0 };
+  const averageConfidence = 87;
+
+  const leakageChartData = leakageByCategory.map((item) => ({
     name: item.category,
-    amount: item.leakageAmount,
+    amount: item.value,
+    quantity: item.quantity,
+    percentage: item.percentage,
   }));
 
-  const LEAKAGE_COLORS = ['rgb(var(--color-kpi-leakage))', '#f97316', '#f59e0b', '#eab308', 'rgb(var(--color-status-ok))'];
-
+  // ── Payment Breakdown ─────────────────────────────────────────────────────
   const paymentBreakdown = ['Cash', 'E-wallet', 'Credit Card', 'Debit Card'].map((method) => ({
     method,
     revenue: initialSalesTransactions
@@ -132,109 +256,6 @@ export function DashboardOverview() {
   }));
   const paymentRevenue = paymentBreakdown.reduce((sum, item) => sum + item.revenue, 0);
 
-  // ── Single-source metrics ─────────────────────────────────────────────────
-  // N1: Monthly Leakage — authoritative from profitLeakage data → ₱39,150
-  const totalLeakage = data.profitLeakage.reduce((sum, item) => sum + item.leakageAmount, 0);
-
-  // N2: Total Recoverable Credits — from getVendorReturns → ₱23,600
-  const vendorReturnsList = getVendorReturns('owner');
-  const totalCredits = vendorReturnsList.reduce((sum, item) => sum + item.eligibleCredit, 0);
-
-  // N3: Forecast Confidence — aligned with Demand Forecasts page → 87%
-  const averageConfidence = 87;
-
-  // N9: Critical FEFO Batches — card is labeled to avoid ambiguity:
-  //     "X critical, Y high-risk" so 2 total = 1 critical + 1 high-risk
-  const criticalBatches = data.batchFEFO.filter((b) => b.daysToExpiry <= 7).length;
-  const highRiskBatches = data.batchFEFO.filter((b) => b.daysToExpiry > 7 && b.daysToExpiry <= 15).length;
-
-  const topLeakage = data.profitLeakage.reduce(
-    (highest, item) => (item.leakageAmount > highest.leakageAmount ? item : highest),
-    data.profitLeakage[0]
-  );
-  const nextBatch = [...data.batchFEFO].sort((a, b) => a.daysToExpiry - b.daysToExpiry)[0];
-  const expiredVendorWindows = vendorReturnsList.filter((v) => v.returnDeadline.getTime() < Date.now()).length;
-
-  const kpiCards = [
-    {
-      label: 'Monthly Leakage',
-      value: currencyFormatter.format(totalLeakage),
-      note: `${topLeakage.category} is the largest driver`,
-      icon: ShieldAlert,
-      iconBg: 'bg-kpi-leakage/10 dark:bg-kpi-leakage/10',
-      iconColor: 'text-kpi-leakage dark:text-kpi-leakage',
-      ringColor: 'ring-kpi-leakage',
-      alertBg: 'bg-kpi-leakage/5 dark:bg-kpi-leakage/15',
-      alertText: 'text-kpi-leakage dark:text-kpi-leakage',
-      alertDot: 'bg-kpi-leakage',
-      change: '-1.1%',
-      up: false,
-      critical: `${topLeakage.category} is leaking ${currencyFormatter.format(topLeakage.leakageAmount)} — highest this month`,
-      isCritical: true,
-      route: '/dashboard/leakage',
-    },
-    {
-      label: 'Recoverable Credits',
-      value: currencyFormatter.format(totalCredits),
-      note: `${expiredVendorWindows} return window needs attention`,
-      icon: PhpIcon,
-      iconBg: 'bg-emerald-500/10 dark:bg-emerald-400/10',
-      iconColor: 'text-emerald-600 dark:text-emerald-400',
-      ringColor: 'ring-emerald-400',
-      alertBg: 'bg-emerald-50 dark:bg-emerald-500/15',
-      alertText: 'text-emerald-700 dark:text-emerald-300',
-      alertDot: 'bg-emerald-500',
-      change: '+5.8%',
-      up: true,
-      critical:
-        expiredVendorWindows > 0
-          ? `${expiredVendorWindows} return window${expiredVendorWindows > 1 ? 's' : ''} expired — act now to recover ${currencyFormatter.format(totalCredits)}`
-          : `${currencyFormatter.format(totalCredits)} eligible across all supplier windows`,
-      isCritical: expiredVendorWindows > 0,
-      route: '/dashboard/vendors',
-    },
-    {
-      label: 'Critical / High-Risk Batches',
-      value: criticalBatches + highRiskBatches,
-      note: `${criticalBatches} critical · ${highRiskBatches} high-risk`,
-      icon: PackageCheck,
-      iconBg: 'bg-kpi-batches/10 dark:bg-kpi-batches/10',
-      iconColor: 'text-kpi-batches dark:text-kpi-batches',
-      ringColor: 'ring-kpi-batches',
-      alertBg: 'bg-kpi-batches/5 dark:bg-kpi-batches/15',
-      alertText: 'text-kpi-batches dark:text-kpi-batches',
-      alertDot: 'bg-kpi-batches',
-      change: '+1',
-      up: false,
-      critical:
-        criticalBatches + highRiskBatches > 0
-          ? `${criticalBatches} critical, ${highRiskBatches} high-risk — ${nextBatch.batchId} expires in ${nextBatch.daysToExpiry}d`
-          : `${nextBatch.batchId} expires in ${nextBatch.daysToExpiry} days`,
-      isCritical: criticalBatches + highRiskBatches > 0,
-      route: '/dashboard/fefo',
-    },
-    {
-      label: 'Forecast Confidence',
-      value: `${averageConfidence}%`,
-      note: `${forecastChart.length} monthly demand points`,
-      icon: TrendingUp,
-      iconBg: 'bg-kpi-forecast/10 dark:bg-kpi-forecast/10',
-      iconColor: 'text-kpi-forecast dark:text-kpi-forecast',
-      ringColor: 'ring-kpi-forecast',
-      alertBg: 'bg-kpi-forecast/5 dark:bg-kpi-forecast/15',
-      alertText: 'text-kpi-forecast dark:text-kpi-forecast',
-      alertDot: 'bg-kpi-forecast',
-      change: '+2.3%',
-      up: true,
-      critical:
-        averageConfidence < 70
-          ? `Low confidence — only ${averageConfidence}% avg across forecasts`
-          : `${averageConfidence}% avg confidence across ${forecastChart.length} months`,
-      isCritical: averageConfidence < 70,
-      route: '/dashboard/predictive',
-    },
-  ];
-
   const adminStats = [
     { label: 'Active SKUs', value: overview?.active_skus ?? 248, icon: Package, link: '/owner/products', note: 'Real-time' },
     { label: 'Registered Users', value: overview?.total_users ?? 9, icon: Users, link: '/owner/users', note: 'Real-time' },
@@ -242,57 +263,30 @@ export function DashboardOverview() {
     { label: 'System Settings', value: '—', icon: Settings, link: '/owner/settings', note: '' },
   ];
 
-  const priorityActions = [
-    {
-      title: `Move ${nextBatch.batchId} today`,
-      body: `Only ${nextBatch.daysToExpiry} days before expiry. Recommended price is ${currencyFormatter.format(nextBatch.recommendedPrice)}.`,
-      border: 'border-l-amber-400',
-      bg: 'bg-amber-50 dark:bg-amber-500/10',
-      title_color: 'text-amber-900 dark:text-amber-100',
-      body_color: 'text-amber-800/80 dark:text-amber-200/70',
-      badge: 'URGENT',
-      badge_color: 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300',
-    },
-    {
-      title: `Reduce ${topLeakage.category.toLowerCase()} losses`,
-      body: topLeakage.source,
-      border: 'border-l-kpi-leakage',
-      bg: 'bg-kpi-leakage/5 dark:bg-kpi-leakage/10',
-      title_color: 'text-kpi-leakage dark:text-kpi-leakage',
-      body_color: 'text-kpi-leakage/80 dark:text-kpi-leakage/70',
-      badge: 'ACTION',
-      badge_color: 'bg-kpi-leakage/10 text-kpi-leakage dark:bg-kpi-leakage/20 dark:text-kpi-leakage',
-    },
-    {
-      title: 'Recover vendor credits',
-      body: `${currencyFormatter.format(totalCredits)} remains eligible across supplier return windows.`,
-      border: 'border-l-emerald-400',
-      bg: 'bg-emerald-50 dark:bg-emerald-500/10',
-      title_color: 'text-emerald-900 dark:text-emerald-100',
-      body_color: 'text-emerald-800/80 dark:text-emerald-200/70',
-      badge: 'REVIEW',
-      badge_color: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300',
-    },
-  ];
+  const CHART_TOOLTIP_STYLE = {
+    borderRadius: '12px',
+    border: '1px solid #e2e8f0',
+    boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
+  };
 
   return (
     <div className="space-y-10">
       {/* Page Header */}
       <div className="flex items-center gap-2">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Dashboard Overview</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Dashboard</h1>
         <UITooltip>
           <TooltipTrigger asChild>
             <Info className="h-5 w-5 ml-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help self-center" />
           </TooltipTrigger>
           <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
-            All metrics draw from a single data source. Numbers displayed here match the values shown on each sub-page.
+            Business performance overview. All metrics draw from a single data source.
           </TooltipContent>
         </UITooltip>
       </div>
 
-      {/* ─── SECTION 1: BUSINESS HEALTH ─────────────────────────────────────── */}
+      {/* ─── SECTION 1: BUSINESS PERFORMANCE ─────────────────────────────────────── */}
       <section>
-        <SectionDivider title="Business Health" />
+        <SectionDivider title="Business Performance" />
 
         {/* KPI Cards */}
         <div ref={kpiSectionRef} className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-6">
@@ -300,17 +294,10 @@ export function DashboardOverview() {
             const Icon = card.icon;
             const isActive = activeKpi === idx;
             return (
-              <button
+              <Link
                 key={card.label}
-                onClick={() => {
-                  if (kpiTimerRef.current) clearTimeout(kpiTimerRef.current);
-                  setClickedKpi(idx);
-                  kpiTimerRef.current = setTimeout(() => {
-                    setClickedKpi(null);
-                    navigate(card.route);
-                  }, 800);
-                }}
-                className={`group relative overflow-hidden rounded-3xl border bg-white/70 backdrop-blur-xl p-5 shadow-sm transition-all hover:-translate-y-1 hover:shadow-md hover:bg-white/80 cursor-pointer text-left dark:bg-white/5 dark:hover:bg-white/8 ${
+                to={card.route}
+                className={`group relative overflow-hidden rounded-3xl border bg-white/70 backdrop-blur-xl p-5 shadow-sm transition-all hover:-translate-y-1 hover:shadow-md hover:bg-white/80 text-left dark:bg-white/5 dark:hover:bg-white/8 ${
                   isActive
                     ? `ring-2 ${card.ringColor} border-transparent scale-[1.02] shadow-lg`
                     : 'border-white/60 dark:border-white/10'
@@ -321,7 +308,7 @@ export function DashboardOverview() {
                     className={`inline-flex items-center justify-center h-6 w-6 rounded-full text-xs font-semibold ${
                       card.up
                         ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400'
-                        : 'bg-kpi-leakage/5 text-kpi-leakage dark:bg-kpi-leakage/10 dark:text-kpi-leakage'
+                        : 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400'
                     }`}
                   >
                     {card.up ? '▲' : '▼'}
@@ -336,20 +323,14 @@ export function DashboardOverview() {
                 </div>
                 <div className="mt-4 flex items-center justify-between gap-2">
                   <div className="text-xs leading-5 text-slate-500 dark:text-slate-400">{card.note}</div>
-                  <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">{card.change}</span>
+                  <span className={`text-xs font-semibold ${card.up ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                    {card.change}
+                  </span>
                 </div>
-                <div className={`overflow-hidden transition-all duration-300 ${isActive ? 'max-h-16 mt-3 opacity-100' : 'max-h-0 mt-0 opacity-0'}`}>
-                  <div className={`flex items-center gap-2 rounded-xl px-3 py-2 ${card.alertBg}`}>
-                    <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${card.alertDot} ${card.isCritical ? 'animate-pulse' : ''}`} />
-                    <span className={`text-[11px] font-medium leading-4 ${card.alertText}`}>{card.critical}</span>
-                  </div>
+                <div className="absolute bottom-2 right-3 flex items-center gap-1 text-[11px] font-bold text-brand dark:text-[#7ef0cf] opacity-0 group-hover:opacity-100 transition-opacity">
+                  View <ChevronRight className="h-3 w-3" />
                 </div>
-                {isActive && (
-                  <div className="absolute bottom-2 right-3 text-[10px] font-bold text-slate-400 dark:text-slate-500 animate-pulse">
-                    navigating…
-                  </div>
-                )}
-              </button>
+              </Link>
             );
           })}
         </div>
@@ -375,15 +356,24 @@ export function DashboardOverview() {
               {priorityActions.map((action) => (
                 <div
                   key={action.title}
-                  className={`rounded-2xl border-l-4 ${action.border} ${action.bg} p-4 transition-all hover:translate-x-0.5`}
+                  className={`rounded-2xl border-l-4 ${action.borderColor} ${action.bgColor} p-4 transition-all hover:translate-x-0.5`}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <div className={`text-sm font-semibold ${action.title_color}`}>{action.title}</div>
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold tracking-widest ${action.badge_color}`}>
-                      {action.badge}
+                    <div className={`text-sm font-semibold ${action.titleColor}`}>{action.title}</div>
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold tracking-widest ${action.severityColor}`}>
+                      {action.severity}
                     </span>
                   </div>
-                  <p className={`mt-1 text-xs leading-5 ${action.body_color}`}>{action.body}</p>
+                  <p className={`mt-1 text-xs leading-5 ${action.bodyColor}`}>{action.problem}</p>
+                  {action.financialImpact && (
+                    <p className={`mt-1 text-xs font-semibold ${action.bodyColor}`}>{action.financialImpact}</p>
+                  )}
+                  <div className="mt-3 flex items-center justify-between">
+                    <span className={`text-[11px] ${action.bodyColor}`}>{action.action}</span>
+                    <Link to={action.route} className="text-[11px] font-bold text-brand dark:text-[#7ef0cf] hover:underline flex items-center gap-0.5">
+                      {action.routeLabel} <ChevronRight className="h-3 w-3" />
+                    </Link>
+                  </div>
                 </div>
               ))}
             </div>
@@ -434,65 +424,44 @@ export function DashboardOverview() {
         </div>
       </section>
 
-      {/* ─── SECTION 2: PREDICTIVE SUMMARY ──────────────────────────────────── */}
+      {/* ─── SECTION 2: RISKS / LEAKAGE ──────────────────────────────────────────── */}
       <section>
-        <SectionDivider title="Predictive Summary" />
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.3fr_0.7fr] mb-6">
-          {/* Forecast chart */}
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-slate-900">
-            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <h3 className="text-lg font-bold text-[#0b1c30] dark:text-slate-100">Demand Forecast Trend</h3>
-                <UITooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="h-4 w-4 text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 cursor-help" />
-                  </TooltipTrigger>
-                  <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
-                    ARIMA-projected waste volume with model confidence
-                  </TooltipContent>
-                </UITooltip>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700 dark:bg-sky-500/10 dark:text-sky-400">
-                  {averageConfidence}% avg confidence
-                </span>
-                <Link to="/dashboard/predictive" className="flex items-center gap-1 text-xs font-semibold text-[#006a61] dark:text-[#7ef0cf] hover:underline">
-                  Full view <ChevronRight className="h-3 w-3" />
-                </Link>
-              </div>
-            </div>
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={forecastChart}>
-                  <defs>
-                    <linearGradient id="dashboardForecastFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.32} />
-                      <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0.02} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e8edf5" />
-                  <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#94a3b8" />
-                  <YAxis tick={{ fontSize: 12 }} stroke="#94a3b8" />
-                  <Tooltip
-                    contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 24px rgba(0,0,0,0.08)' }}
-                  />
-                  <Area type="linear" dataKey="forecast" stroke="#0ea5e9" fill="url(#dashboardForecastFill)" strokeWidth={3} />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Leakage bar chart */}
+        <SectionDivider title="Leakage & Risks" />
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+          {/* Leakage by Category */}
           <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-slate-900">
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <h3 className="text-lg font-bold text-[#0b1c30] dark:text-slate-100">Leakage by Category</h3>
+                <UITooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 text-slate-400 hover:text-rose-600 cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
+                    Financial losses broken down by product category
+                  </TooltipContent>
+                </UITooltip>
               </div>
               <div className="flex items-center gap-2">
-                <span className="rounded-full bg-kpi-leakage/5 px-3 py-1 text-xs font-semibold text-kpi-leakage dark:bg-kpi-leakage/10 dark:text-kpi-leakage">
+                <div className="flex rounded-lg border border-slate-200 dark:border-white/10 overflow-hidden">
+                  {(['value', 'quantity', 'percentage'] as const).map((mode) => (
+                    <button
+                      key={mode}
+                      onClick={() => setLeakageViewMode(mode)}
+                      className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors ${
+                        leakageViewMode === mode
+                          ? 'bg-brand text-white'
+                          : 'bg-slate-50 dark:bg-slate-800 text-slate-500 hover:bg-slate-100'
+                      }`}
+                    >
+                      {mode}
+                    </button>
+                  ))}
+                </div>
+                <span className="rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700 dark:bg-rose-500/10 dark:text-rose-400">
                   {currencyFormatter.format(totalLeakage)}
                 </span>
-                <Link to="/dashboard/leakage" className="flex items-center gap-1 text-xs font-semibold text-brand dark:text-[#7ef0cf] hover:underline">
+                <Link to="/dashboard/leakage" className="flex items-center gap-1 text-xs font-semibold text-brand hover:underline">
                   Full view <ChevronRight className="h-3 w-3" />
                 </Link>
               </div>
@@ -501,8 +470,8 @@ export function DashboardOverview() {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={leakageChart}
-                    dataKey="amount"
+                    data={leakageChartData}
+                    dataKey={leakageViewMode === 'value' ? 'amount' : leakageViewMode === 'quantity' ? 'quantity' : 'percentage'}
                     nameKey="name"
                     cx="50%"
                     cy="50%"
@@ -512,40 +481,206 @@ export function DashboardOverview() {
                     label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                     labelLine={false}
                   >
-                    {leakageChart.map((entry, index) => (
+                    {leakageChartData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={LEAKAGE_COLORS[index % LEAKAGE_COLORS.length]} />
                     ))}
                   </Pie>
                   <Tooltip
-                    formatter={(value: number) => currencyFormatter.format(value)}
-                    contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 24px rgba(0,0,0,0.08)' }}
+                    formatter={(value) => leakageViewMode === 'value' ? currencyFormatter.format(value) : value}
+                    contentStyle={CHART_TOOLTIP_STYLE}
                   />
                   <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '11px' }} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
           </div>
-        </div>
 
-        {/* Payment breakdown */}
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-slate-900">
-          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <h3 className="text-lg font-bold text-[#0b1c30] dark:text-slate-100">Revenue by Payment Method</h3>
-              <UITooltip>
-                <TooltipTrigger asChild>
-                  <Info className="h-4 w-4 text-slate-400 hover:text-[#006a61] cursor-help" />
-                </TooltipTrigger>
-                <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
-                  Revenue share from completed POS transactions
-                </TooltipContent>
-              </UITooltip>
+          {/* Inventory Health */}
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-slate-900">
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-bold text-[#0b1c30] dark:text-slate-100">Inventory Health</h3>
+                <UITooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 text-slate-400 hover:text-sky-600 cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
+                    Distribution of inventory by health status
+                  </TooltipContent>
+                </UITooltip>
+              </div>
+              <Link to="/owner/performance" className="flex items-center gap-1 text-xs font-semibold text-brand hover:underline">
+                Full view <ChevronRight className="h-3 w-3" />
+              </Link>
             </div>
-            <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">
-              {currencyFormatter.format(paymentRevenue)} total
-            </span>
+            <div className="grid grid-cols-5 gap-3">
+              {[
+                { label: 'Healthy', count: inventoryHealth.healthy, color: 'bg-emerald-500', textColor: 'text-emerald-700', route: '/owner/performance' },
+                { label: 'Low Stock', count: inventoryHealth.low_stock, color: 'bg-amber-500', textColor: 'text-amber-700', route: '/inventory/manage' },
+                { label: 'Overstock', count: inventoryHealth.overstock, color: 'bg-blue-500', textColor: 'text-blue-700', route: '/owner/overstock' },
+                { label: 'Expiring', count: inventoryHealth.expiring_soon, color: 'bg-orange-500', textColor: 'text-orange-700', route: '/dashboard/fefo' },
+                { label: 'Expired', count: inventoryHealth.expired, color: 'bg-rose-500', textColor: 'text-rose-700', route: '/dashboard/fefo' },
+              ].map((item) => (
+                <Link
+                  key={item.label}
+                  to={item.route}
+                  className="rounded-2xl border border-slate-100 dark:border-white/5 p-4 text-center hover:shadow-md transition-all hover:-translate-y-0.5"
+                >
+                  <div className={`inline-block h-3 w-3 rounded-full ${item.color} mb-2`} />
+                  <div className="text-2xl font-bold text-[#0b1c30] dark:text-slate-100">{item.count}</div>
+                  <div className={`text-[10px] font-semibold uppercase tracking-wider ${item.textColor}`}>{item.label}</div>
+                </Link>
+              ))}
+            </div>
           </div>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        </div>
+      </section>
+
+      {/* ─── SECTION 3: PREDICTIVE INSIGHTS ──────────────────────────────────────── */}
+      <section>
+        <SectionDivider title="Predictive Insights" />
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+          {/* Sales & Revenue Trend */}
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-slate-900">
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-bold text-[#0b1c30] dark:text-slate-100">Sales & Revenue Trend</h3>
+                <UITooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 text-slate-400 hover:text-emerald-600 cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
+                    Daily revenue from completed POS transactions
+                  </TooltipContent>
+                </UITooltip>
+              </div>
+              <div className="flex items-center gap-2">
+                <select
+                  value={salesPeriod}
+                  onChange={(e) => setSalesPeriod(e.target.value)}
+                  className="px-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-800"
+                >
+                  <option value="7">Last 7 days</option>
+                  <option value="30">Last 30 days</option>
+                  <option value="90">3 months</option>
+                </select>
+                <Link to="/owner/reports" className="flex items-center gap-1 text-xs font-semibold text-brand hover:underline">
+                  Full view <ChevronRight className="h-3 w-3" />
+                </Link>
+              </div>
+            </div>
+            <div className="h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={salesTrendData}>
+                  <defs>
+                    <linearGradient id="salesFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#006a61" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#006a61" stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e8edf5" />
+                  <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="#94a3b8" />
+                  <YAxis tick={{ fontSize: 11 }} stroke="#94a3b8" tickFormatter={(v) => `₱${(v / 1000).toFixed(0)}k`} />
+                  <Tooltip
+                    formatter={(value) => currencyFormatter.format(Number(value))}
+                    contentStyle={CHART_TOOLTIP_STYLE}
+                  />
+                  <Area type="monotone" dataKey="value" stroke="#006a61" fill="url(#salesFill)" strokeWidth={2.5} name="Revenue" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Wastage Trend */}
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-slate-900">
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-bold text-[#0b1c30] dark:text-slate-100">Wastage Trend</h3>
+                <UITooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 text-slate-400 hover:text-rose-600 cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
+                    Monetary value of inventory waste over time
+                  </TooltipContent>
+                </UITooltip>
+              </div>
+              <Link to="/dashboard/leakage" className="flex items-center gap-1 text-xs font-semibold text-brand hover:underline">
+                View Details <ChevronRight className="h-3 w-3" />
+              </Link>
+            </div>
+            <div className="h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={wastageTrendData}>
+                  <defs>
+                    <linearGradient id="wastageFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e8edf5" />
+                  <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="#94a3b8" />
+                  <YAxis tick={{ fontSize: 10 }} stroke="#94a3b8" tickFormatter={(v) => `₱${(v / 1000).toFixed(0)}k`} />
+                  <Tooltip
+                    formatter={(value) => currencyFormatter.format(Number(value))}
+                    contentStyle={CHART_TOOLTIP_STYLE}
+                  />
+                  <Area type="monotone" dataKey="value" stroke="#ef4444" fill="url(#wastageFill)" strokeWidth={2} name="Wastage" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── SECTION 4: DETAILED REPORTING ────────────────────────────────────────── */}
+      <section>
+        <SectionDivider title="Detailed Reporting" />
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+          {/* Demand Forecast Summary */}
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-slate-900">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-bold text-[#0b1c30] dark:text-slate-100">Demand Forecast</h3>
+                <UITooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 text-slate-400 hover:text-sky-600 cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
+                    ARIMA-projected demand for the next period
+                  </TooltipContent>
+                </UITooltip>
+              </div>
+              <span className="rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700 dark:bg-sky-500/10 dark:text-sky-400">
+                {averageConfidence}% confidence
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+              Predicted waste volume with model confidence. Used for purchase order planning and FEFO prioritization.
+            </p>
+            <Link to="/dashboard/predictive" className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-brand hover:underline">
+              Full Predictive Analytics <ChevronRight className="h-3 w-3" />
+            </Link>
+          </div>
+
+          {/* Revenue by Payment Method */}
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-slate-900">
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-bold text-[#0b1c30] dark:text-slate-100">Revenue by Payment Method</h3>
+                <UITooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 text-slate-400 hover:text-[#006a61] cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
+                    Revenue share from completed POS transactions
+                  </TooltipContent>
+                </UITooltip>
+              </div>
+              <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">
+                {currencyFormatter.format(paymentRevenue)} total
+              </span>
+            </div>
             <div className="h-48">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={paymentBreakdown} layout="vertical">
@@ -554,36 +689,17 @@ export function DashboardOverview() {
                   <YAxis dataKey="method" type="category" tick={{ fontSize: 12 }} stroke="#94a3b8" width={80} />
                   <Tooltip
                     formatter={(value) => currencyFormatter.format(Number(value))}
-                    contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 24px rgba(0,0,0,0.08)' }}
+                    contentStyle={CHART_TOOLTIP_STYLE}
                   />
                   <Bar dataKey="revenue" radius={[0, 12, 12, 0]} fill="#006a61" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
-            <div className="space-y-2">
-              {paymentBreakdown.map((item) => {
-                const share = paymentRevenue > 0 ? Math.round((item.revenue / paymentRevenue) * 100) : 0;
-                return (
-                  <div key={item.method} className="rounded-xl border border-slate-200 dark:border-white/10 p-3 bg-slate-50 dark:bg-slate-800/50">
-                    <div className="flex items-center justify-between gap-4 mb-1">
-                      <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">{item.method}</span>
-                      <span className="text-sm font-bold text-slate-900 dark:text-slate-100">{currencyFormatter.format(item.revenue)}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="h-1.5 flex-1 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
-                        <div className="h-full rounded-full bg-[#006a61]" style={{ width: `${share}%` }} />
-                      </div>
-                      <span className="w-9 text-right text-xs font-semibold text-slate-500 dark:text-slate-400">{share}%</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
           </div>
         </div>
       </section>
 
-      {/* ─── SECTION 3: SYSTEM ADMINISTRATION ───────────────────────────────── */}
+      {/* ─── SECTION 5: SYSTEM ADMINISTRATION ───────────────────────────────────────── */}
       <section>
         <SectionDivider title="System Administration" />
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">

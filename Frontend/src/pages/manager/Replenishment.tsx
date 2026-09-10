@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { AlertCircle, AlertTriangle, CheckCircle2, Cpu, Info, Loader2, RefreshCw, Search, ShoppingCart, Target, Wallet } from 'lucide-react';
+import { Link } from 'react-router';
+import { AlertCircle, AlertTriangle, ArrowRight, CheckCircle2, Cpu, Info, Loader2, RefreshCw, Search, ShoppingCart, Target, Wallet } from 'lucide-react';
 import { Toast, useToast } from '../../components/ui/Toast';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { optimization, type ApiOptimizationPlan } from '../../services/api';
@@ -71,9 +72,17 @@ export function Replenishment() {
           </UITooltip>
         </div>
         {plan && orderableItems > 0 && (
-          <div className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-500/20 px-4 py-2 rounded-xl flex items-center gap-2 text-xs font-semibold">
-            <CheckCircle2 className="h-4 w-4" />
-            {orderableItems} SKU{orderableItems !== 1 ? 's' : ''} to reorder
+          <div className="flex items-center gap-3">
+            <div className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-500/20 px-4 py-2 rounded-xl flex items-center gap-2 text-xs font-semibold">
+              <CheckCircle2 className="h-4 w-4" />
+              {orderableItems} SKU{orderableItems !== 1 ? 's' : ''} to reorder
+            </div>
+            <Link
+              to="/owner/purchase-orders"
+              className="inline-flex items-center gap-2 text-xs font-semibold text-brand hover:underline"
+            >
+              Create Purchase Order <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
           </div>
         )}
       </div>

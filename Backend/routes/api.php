@@ -91,6 +91,7 @@ Route::put('/settings',  [SettingsController::class, 'update']);
 
 // Dashboard
 Route::get('/dashboard/overview', [DashboardController::class, 'overview']);
+Route::get('/dashboard/owner-analytics', [DashboardController::class, 'ownerAnalytics']);
 
 // Purchase Orders
 Route::get('/purchase-orders',             [PurchaseOrderController::class, 'index']);

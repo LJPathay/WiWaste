@@ -4,7 +4,7 @@ import { Link } from 'react-router';
 import { Toast, useToast } from '../../components/ui/Toast';
 import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
 import { formatCurrency, paymentMethods, type PaymentMethod } from '../../utils/cashierData';
-import { reports as reportsApi, sales, returns, optimization, type ApiOptimizationPlan, type ApiReplenishmentPlanItem, type ApiSalesTransaction, type ApiReturn } from '../../services/api';
+import { reports as reportsApi, sales, returns, optimization, type ApiOptimizationPlan, type ApiReplenishmentPlanItem, type ApiSalesTransaction, type ApiReturn, type ApiReport } from '../../services/api';
 
 interface ReportCard {
   id: string;

@@ -28,6 +28,7 @@ use App\Http\Controllers\Api\ShiftController;
 use App\Http\Controllers\Api\AlertController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\ForecastAccuracyController;
+use App\Http\Controllers\Api\StockReceivingController;
 
 /*
 |--------------------------------------------------------------------------
@@ -58,6 +59,14 @@ Route::get('/products/lookup/{code}', [ProductController::class, 'lookup']);
 Route::get('/inventory',             [InventoryController::class, 'index']);
 Route::post('/inventory/stock-in',   [InventoryController::class, 'stockIn']);
 Route::post('/inventory/stock-out',  [InventoryController::class, 'stockOut']);
+Route::get('/inventory/movements',   [InventoryController::class, 'allMovements']);
+
+// Stock Receiving (PO-based receiving)
+Route::get('/stock-receiving',                       [StockReceivingController::class, 'index']);
+Route::post('/stock-receiving',                      [StockReceivingController::class, 'store']);
+Route::post('/stock-receiving/{id}/receive',         [StockReceivingController::class, 'receive']);
+Route::post('/stock-receiving/{id}/reject',          [StockReceivingController::class, 'reject']);
+Route::post('/stock-receiving/{id}/discard',         [StockReceivingController::class, 'discard']);
 
 // Wastage
 Route::get('/wastage',  [WastageRecordController::class, 'index']);

@@ -135,7 +135,7 @@ class SalesTransactionController extends Controller
                 StockMovement::create([
                     'product_id'    => $item['product_id'],
                     'user_id'       => $userId,
-                    'movement_type' => 'Stock Out',
+                    'movement_type' => 'Sale',
                     'quantity'      => $item['quantity'],
                     'remarks'       => 'Sale - Txn #' . $transaction->transaction_id,
                     'movement_date' => now(),

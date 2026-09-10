@@ -9,6 +9,8 @@ use App\Models\SalesItem;
 use App\Models\StockMovement;
 use App\Models\WastageRecord;
 use App\Models\FEFOBatch;
+use App\Models\SalesTransaction;
+use App\Models\ReturnTransaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -111,18 +113,58 @@ class InventoryAnalyticsController extends Controller
     public function dashboardSummary()
     {
         return Cache::remember('analytics.dashboard_summary', 300, function () {
+            $lowStockItems = Inventory::with('product.category')
+                ->where('stock_status', 'Low Stock')
+                ->orderBy('current_stock')
+                ->limit(5)
+                ->get()
+                ->map(fn ($i) => [
+                    'product_id'    => $i->product_id,
+                    'product_name'  => $i->product?->product_name,
+                    'category'      => $i->product?->category?->Category_name ?? '',
+                    'current_stock' => $i->current_stock,
+                    'reorder_level' => $i->product?->reorder_level,
+                    'selling_price' => (float) ($i->product?->selling_price ?? 0),
+                ]);
+
+            $expiringSoon = Product::whereNotNull('expiration_date')
+                ->where('expiration_date', '>=', now())
+                ->where('expiration_date', '<=', now()->addDays(30))
+                ->orderBy('expiration_date')
+                ->limit(5)
+                ->get()
+                ->map(fn ($p) => [
+                    'product_id'      => $p->product_id,
+                    'product_name'    => $p->product_name,
+                    'expiration_date' => $p->expiration_date,
+                    'days_until'      => now()->diffInDays($p->expiration_date),
+                ]);
+
+            $totalStockValue = DB::selectOne("
+                SELECT COALESCE(SUM(i.current_stock * COALESCE(p.cost_price, 0)), 0) AS total
+                FROM Inventory i
+                JOIN Product p ON i.product_id = p.product_id
+                WHERE p.status = 'Active'
+            ");
+
             return [
                 'low_stock_count'       => Inventory::where('stock_status', 'Low Stock')->count(),
+                'low_stock_items'       => $lowStockItems,
                 'expiring_soon_count'   => Product::whereNotNull('expiration_date')
                     ->where('expiration_date', '>=', now())
                     ->where('expiration_date', '<=', now()->addDays(30))
                     ->count(),
+                'expiring_soon_items'   => $expiringSoon,
                 'today_movements'       => StockMovement::whereDate('movement_date', today())->count(),
+                'today_sales_count'     => SalesTransaction::whereDate('transaction_date', today())->count(),
+                'today_wastage_count'   => WastageRecord::whereDate('date_recorded', today())->count(),
+                'today_returns_count'   => ReturnTransaction::whereDate('return_date', today())->count(),
                 'pending_wastage_count' => WastageRecord::whereDate('date_recorded', today())->count(),
                 'critical_fefo_count'   => FEFOBatch::where('status', 'active')
                     ->where('expiry_date', '>=', now())
                     ->where('expiry_date', '<=', now()->addDays(7))
                     ->count(),
+                'total_stock_value'     => (float) ($totalStockValue?->total ?? 0),
             ];
         });
     }

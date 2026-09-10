@@ -184,12 +184,26 @@ class DashboardController extends Controller
             LIMIT 10
         ", [$startDate]);
 
+        // Payment method breakdown
+        $paymentBreakdown = SalesTransaction::where('status', 'Completed')
+            ->where('transaction_date', '>=', $startDate)
+            ->select('payment_method', DB::raw('SUM(total_amount) as revenue'))
+            ->groupBy('payment_method')
+            ->get();
+
+        // Average forecast confidence
+        $avgConfidence = DB::table('Forecast_Result')
+            ->where('created_at', '>=', now()->subDays(30))
+            ->avg('confidence');
+
         return response()->json([
             'sales_trend' => $salesTrend,
             'wastage_trend' => $wastageTrend,
             'leakage_by_category' => $leakageByCategory,
             'inventory_health' => $inventoryHealth,
             'top_wasted_products' => $topWastedProducts,
+            'payment_breakdown' => $paymentBreakdown,
+            'forecast_confidence' => $avgConfidence ? round((float) $avgConfidence, 1) : null,
         ]);
     }
 }

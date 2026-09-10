@@ -404,7 +404,7 @@ export function ManageInventory() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] dark:bg-slate-950 p-6 space-y-6">
+    <div className="min-h-screen bg-[#F8FAFC] dark:bg-slate-950 space-y-3">
       <Toast toasts={toasts} onDismiss={dismiss} />
 
       {showAddModal && (
@@ -533,10 +533,10 @@ export function ManageInventory() {
 
       {adjustItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-white/10">
+          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-white/10">
               <div>
-                <h3 className="text-sm font-bold text-gray-900 dark:text-slate-100">Adjust Stock</h3>
+                <h3 className="text-base font-bold text-gray-900 dark:text-slate-100">Adjust Stock</h3>
                 <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">{adjustItem.itemName}</p>
               </div>
               <button
@@ -546,7 +546,7 @@ export function ManageInventory() {
                 <X className="h-4 w-4 text-gray-500 dark:text-slate-400" />
               </button>
             </div>
-            <div className="p-5 space-y-4">
+            <div className="p-4 space-y-3">
               <div>
                 <label className="block text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1.5">Item Name</label>
                 <input
@@ -591,14 +591,14 @@ export function ManageInventory() {
               <div className="flex gap-3 pt-1">
                 <button
                   onClick={() => { setAdjustItem(null); setAdjustQty(''); setAdjustRemarks(''); }}
-                  className="flex-1 py-2 rounded-lg border border-gray-200 dark:border-white/10 text-xs font-semibold text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 dark:bg-slate-800 transition-colors"
+                  className="flex-1 h-8 text-xs rounded-lg border border-gray-200 dark:border-white/10 font-semibold text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 dark:bg-slate-800 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleConfirmAdjust}
                   disabled={processing || !adjustQty || Number(adjustQty) <= 0}
-                  className="flex-1 py-2 rounded-lg bg-[#0F766E] hover:bg-[#0d6560] disabled:opacity-50 text-white text-xs font-semibold transition-colors"
+                  className="flex-1 h-8 text-xs rounded-lg bg-[#0F766E] hover:bg-[#0d6560] disabled:opacity-50 text-white font-semibold transition-colors"
                 >
                   {processing ? 'Processing...' : 'Confirm Adjustment'}
                 </button>
@@ -610,17 +610,17 @@ export function ManageInventory() {
 
       {historyItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-white/10">
+          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-white/10">
               <div>
-                <h3 className="text-sm font-bold text-gray-900 dark:text-slate-100">Stock Movement History</h3>
+                <h3 className="text-base font-bold text-gray-900 dark:text-slate-100">Stock Movement History</h3>
                 <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">{historyItem.itemName}</p>
               </div>
               <button onClick={() => setHistoryItem(null)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:bg-slate-800 transition-colors">
                 <X className="h-4 w-4 text-gray-500 dark:text-slate-400" />
               </button>
             </div>
-            <div className="p-5 max-h-96 overflow-y-auto space-y-3">
+            <div className="p-4 max-h-96 overflow-y-auto space-y-3">
 {historyLoading ? (
             <div className="text-center py-10 text-gray-400 dark:text-slate-500 text-sm">Loading movements...</div>
           ) : historyItem.recentMovements.length === 0 ? (
@@ -687,7 +687,7 @@ export function ManageInventory() {
             </div>
 
             {activeTab === 'details' && (
-              <div className="grid grid-cols-2 gap-5">
+              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   {[
                     { label: 'Supplier', value: selectedItem.supplier },
@@ -862,39 +862,39 @@ export function ManageInventory() {
 
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100 tracking-tight">Manage Inventory</h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">Track, adjust, and audit your full product catalogue</p>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-slate-100 tracking-tight">Manage Inventory</h1>
+          <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">Track, adjust, and audit your full product catalogue</p>
         </div>
         <button
           onClick={() => setShowAddModal(true)}
-          className="inline-flex items-center gap-2 rounded-xl bg-[#0F766E] hover:bg-[#0d6560] active:scale-95 text-white px-4 py-2.5 text-sm font-semibold transition-all shadow-sm"
+          className="inline-flex items-center gap-2 rounded-lg bg-[#0F766E] hover:bg-[#0d6560] active:scale-95 text-white h-8 text-xs px-3 font-semibold transition-all shadow-sm"
         >
           <Plus className="h-4 w-4" />
           Receive Stock
         </button>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {kpiData.map(kpi => {
           const Icon = kpi.icon;
           return (
             <div
               key={kpi.label}
-              className="bg-white dark:bg-slate-900 border border-[#E5E7EB] dark:border-white/10 rounded-xl p-4 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow"
+              className="bg-white dark:bg-slate-900 border border-[#E5E7EB] dark:border-white/10 rounded-xl p-3 shadow-sm flex items-center gap-3 hover:shadow-md transition-shadow"
             >
-              <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${kpi.iconBg}`}>
-                <Icon className={`h-5 w-5 ${kpi.iconColor}`} />
+              <div className={`h-7 w-7 rounded-xl flex items-center justify-center flex-shrink-0 ${kpi.iconBg}`}>
+                <Icon className={`h-3.5 w-3.5 ${kpi.iconColor}`} />
               </div>
               <div>
-                <div className={`text-2xl font-bold ${kpi.valueCls}`}>{kpi.value}</div>
-                <div className="text-xs text-gray-500 dark:text-slate-400 font-medium mt-0.5">{kpi.label}</div>
+                <div className={`text-sm font-bold ${kpi.valueCls}`}>{kpi.value}</div>
+                <div className="text-[9px] text-gray-500 dark:text-slate-400 font-medium mt-0.5">{kpi.label}</div>
               </div>
             </div>
           );
         })}
       </div>
 
-      <div className="bg-white dark:bg-slate-900 border border-[#E5E7EB] dark:border-white/10 rounded-xl p-4 shadow-sm flex flex-col sm:flex-row items-center gap-3">
+      <div className="bg-white dark:bg-slate-900 border border-[#E5E7EB] dark:border-white/10 rounded-xl p-3.5 shadow-sm flex flex-col sm:flex-row items-center gap-3">
         <div className="relative flex-1 w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-slate-500 pointer-events-none" />
           <input
@@ -902,7 +902,7 @@ export function ManageInventory() {
             placeholder="Search by name, SKU, or category…"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 text-sm rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-slate-800 text-gray-700 dark:text-slate-300 placeholder-gray-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition"
+            className="w-full pl-10 pr-4 h-8 text-xs px-2.5 rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-slate-800 text-gray-700 dark:text-slate-300 placeholder-gray-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition"
           />
         </div>
 
@@ -911,7 +911,7 @@ export function ManageInventory() {
           <select
             value={categoryFilter}
             onChange={e => setCategoryFilter(e.target.value)}
-            className="pl-8 pr-8 py-2.5 text-sm rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-slate-800 text-gray-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition appearance-none cursor-pointer"
+            className="pl-8 pr-8 h-8 text-xs rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-slate-800 text-gray-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition appearance-none cursor-pointer"
           >
             <option value="">All Categories</option>
             {uniqueCategories.map(c => (
@@ -923,7 +923,7 @@ export function ManageInventory() {
         <select
           value={statusFilter}
           onChange={e => setStatusFilter(e.target.value)}
-          className="px-3 py-2.5 text-sm rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-slate-800 text-gray-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition appearance-none cursor-pointer"
+          className="px-3 h-8 text-xs rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-slate-800 text-gray-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition appearance-none cursor-pointer"
         >
           <option value="">All Status</option>
           <option value="Normal">Normal</option>
@@ -933,7 +933,7 @@ export function ManageInventory() {
 
         <button
           onClick={handleExportCSV}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-gray-200 dark:border-white/10 text-sm font-semibold text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 dark:bg-slate-800 hover:border-gray-300 transition-all flex-shrink-0"
+          className="inline-flex items-center gap-2 h-8 text-xs px-3 rounded-lg border border-gray-200 dark:border-white/10 font-semibold text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 dark:bg-slate-800 hover:border-gray-300 transition-all flex-shrink-0"
         >
           <Download className="h-4 w-4" />
           Export CSV

@@ -199,7 +199,7 @@ export function RecordWastage() {
   ];
 
   return (
-    <div className="space-y-6 w-full bg-[#F8FAFC] dark:bg-slate-950 min-h-full font-sans">
+    <div className="space-y-3 w-full bg-[#F8FAFC] dark:bg-slate-950 min-h-full font-sans">
       <Toast toasts={toasts} onDismiss={dismiss} />
 
       {confirmData && (
@@ -213,7 +213,7 @@ export function RecordWastage() {
 
       <div className="flex flex-col gap-1">
         <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-bold text-[#0F172A] dark:text-slate-100">Record Wastage</h1>
+          <h1 className="text-xl font-bold text-[#0F172A] dark:text-slate-100">Record Wastage</h1>
           <UITooltip>
             <TooltipTrigger asChild>
               <Info className="h-4 w-4 text-slate-400 hover:text-slate-600 cursor-help" />
@@ -223,57 +223,57 @@ export function RecordWastage() {
             </TooltipContent>
           </UITooltip>
         </div>
-        <p className="text-sm text-[#64748B] dark:text-slate-400">
+        <p className="text-xs text-[#64748B] dark:text-slate-400">
           Log inventory losses for audit, analytics, and cost recovery tracking
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="rounded-xl border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-950/20 p-4 flex items-center gap-4 shadow-sm">
-          <div className="rounded-lg p-2.5 bg-red-100 dark:bg-red-900/30 flex-shrink-0">
-            <TrendingDown className="h-5 w-5 text-red-600 dark:text-red-400" />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="rounded-xl border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-950/20 p-3 flex items-center gap-3 shadow-sm">
+          <div className="rounded-lg h-7 w-7 bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0">
+            <TrendingDown className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-red-500 dark:text-red-400 uppercase tracking-wider">Today's Loss</p>
-            <p className="text-xl font-black text-red-700 dark:text-red-300 mt-0.5">{currencyFormatter.format(todayLoss)}</p>
+            <p className="text-[9px] font-semibold text-red-500 dark:text-red-400 uppercase tracking-wider">Today's Loss</p>
+            <p className="text-sm font-black text-red-700 dark:text-red-300 mt-0.5">{currencyFormatter.format(todayLoss)}</p>
           </div>
         </div>
-        <div className="rounded-xl border border-orange-100 dark:border-orange-900/30 bg-orange-50 dark:bg-orange-950/20 p-4 flex items-center gap-4 shadow-sm">
-          <div className="rounded-lg p-2.5 bg-orange-100 dark:bg-orange-900/30 flex-shrink-0">
-            <BarChart2 className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+        <div className="rounded-xl border border-orange-100 dark:border-orange-900/30 bg-orange-50 dark:bg-orange-950/20 p-3 flex items-center gap-3 shadow-sm">
+          <div className="rounded-lg h-7 w-7 bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center flex-shrink-0">
+            <BarChart2 className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-orange-500 dark:text-orange-400 uppercase tracking-wider">Weekly Loss</p>
-            <p className="text-xl font-black text-orange-700 dark:text-orange-300 mt-0.5">{currencyFormatter.format(weeklyLoss)}</p>
+            <p className="text-[9px] font-semibold text-orange-500 dark:text-orange-400 uppercase tracking-wider">Weekly Loss</p>
+            <p className="text-sm font-black text-orange-700 dark:text-orange-300 mt-0.5">{currencyFormatter.format(weeklyLoss)}</p>
           </div>
         </div>
-        <div className="rounded-xl border border-amber-100 dark:border-amber-900/30 bg-amber-50 dark:bg-amber-950/20 p-4 flex items-center gap-4 shadow-sm">
-          <div className="rounded-lg p-2.5 bg-amber-100 dark:bg-amber-900/30 flex-shrink-0">
-            <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+        <div className="rounded-xl border border-amber-100 dark:border-amber-900/30 bg-amber-50 dark:bg-amber-950/20 p-3 flex items-center gap-3 shadow-sm">
+          <div className="rounded-lg h-7 w-7 bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0">
+            <AlertTriangle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider">Monthly Loss</p>
-            <p className="text-xl font-black text-amber-700 dark:text-amber-300 mt-0.5">{currencyFormatter.format(monthlyLoss)}</p>
+            <p className="text-[9px] font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider">Monthly Loss</p>
+            <p className="text-sm font-black text-amber-700 dark:text-amber-300 mt-0.5">{currencyFormatter.format(monthlyLoss)}</p>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-[400px_1fr] gap-6 items-start">
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-[#E5E7EB] dark:border-white/10 shadow-sm p-6 h-fit">
-          <div className="flex items-center gap-2 mb-5">
-            <div className="rounded-lg p-1.5 bg-red-50">
-              <Trash2 className="h-4 w-4 text-red-600" />
+      <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-[400px_1fr] gap-4 items-start">
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-[#E5E7EB] dark:border-white/10 shadow-sm p-3.5 h-fit">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="rounded-lg h-7 w-7 bg-red-50 flex items-center justify-center">
+              <Trash2 className="h-3.5 w-3.5 text-red-600" />
             </div>
             <h2 className="text-sm font-bold text-[#0F172A] dark:text-slate-100">Log Wastage Record</h2>
           </div>
 
-          <form onSubmit={handleRecord} className="space-y-4">
+          <form onSubmit={handleRecord} className="space-y-3">
             <div className="relative" ref={dropdownRef}>
               <label className="block text-xs font-semibold text-[#374151] dark:text-slate-300 mb-1.5">
                 Search Registered Product Catalog
               </label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
                 <input
                   type="text"
                   placeholder="Type product name or SKU (e.g. Biogesic)..."
@@ -284,10 +284,10 @@ export function RecordWastage() {
                     setSelectedProductId(null);
                     setShowDropdown(true);
                   }}
-                  className="w-full pl-9 pr-8 py-2.5 rounded-lg border border-[#E5E7EB] dark:border-white/10 text-sm text-[#0F172A] dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all"
+                  className="w-full pl-9 pr-8 h-8 rounded-lg border border-[#E5E7EB] dark:border-white/10 text-xs text-[#0F172A] dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all"
                   required
                 />
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
               </div>
 
               {showDropdown && (
@@ -302,7 +302,7 @@ export function RecordWastage() {
                         key={p.id}
                         type="button"
                         onClick={() => handleSelectProduct(p)}
-                        className="w-full text-left p-3 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-between transition-colors text-xs"
+                        className="w-full text-left p-2 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-between transition-colors text-xs"
                       >
                         <div>
                           <p className="font-semibold text-slate-900 dark:text-slate-100">{p.name}</p>
@@ -318,37 +318,37 @@ export function RecordWastage() {
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-[#374151] dark:text-slate-300 mb-1.5">Quantity</label>
+                <label className="block text-xs font-semibold text-[#374151] dark:text-slate-300 mb-1">Quantity</label>
                 <input
                   type="number"
                   min="1"
                   placeholder="e.g. 5"
                   value={qty}
                   onChange={(e) => setQty(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-lg border border-[#E5E7EB] dark:border-white/10 text-sm text-[#0F172A] dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all"
+                  className="w-full px-3 h-8 rounded-lg border border-[#E5E7EB] dark:border-white/10 text-xs text-[#0F172A] dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all"
                   required
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[#374151] dark:text-slate-300 mb-1.5">Unit Cost (&#8369;)</label>
+                <label className="block text-xs font-semibold text-[#374151] dark:text-slate-300 mb-1">Unit Cost (&#8369;)</label>
                 <input
                   type="number"
                   placeholder="Auto-filled"
                   value={unitCost || ''}
                   onChange={(e) => setUnitCost(Number(e.target.value))}
-                  className="w-full px-3 py-2.5 rounded-lg border border-[#E5E7EB] dark:border-white/10 text-sm text-[#0F172A] dark:text-slate-100 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all"
+                  className="w-full px-3 h-8 rounded-lg border border-[#E5E7EB] dark:border-white/10 text-xs text-[#0F172A] dark:text-slate-100 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[#374151] dark:text-slate-300 mb-1.5">Wastage Reason</label>
+              <label className="block text-xs font-semibold text-[#374151] dark:text-slate-300 mb-1">Wastage Reason</label>
               <select
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-lg border border-[#E5E7EB] dark:border-white/10 text-sm text-[#0F172A] dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all"
+                className="w-full px-3 h-8 rounded-lg border border-[#E5E7EB] dark:border-white/10 text-xs text-[#0F172A] dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all"
               >
                 <option value="Expired on Shelf">Expired on Shelf</option>
                 <option value="Damaged / Broken">Damaged / Broken</option>

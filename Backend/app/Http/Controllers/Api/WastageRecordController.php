@@ -67,7 +67,7 @@ class WastageRecordController extends Controller
             StockMovement::create([
                 'product_id'    => $data['product_id'],
                 'user_id'       => $userId,
-                'movement_type' => 'Stock Out',
+                'movement_type' => 'Wastage',
                 'quantity'      => $data['quantity'],
                 'remarks'       => 'Wastage: ' . $data['wastage_type'],
                 'movement_date' => now(),

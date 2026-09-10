@@ -190,7 +190,7 @@ export function Recommendations() {
   };
 
   return (
-    <div className="space-y-6 w-full min-h-full">
+    <div className="space-y-3 w-full min-h-full">
       <Toast toasts={toasts} onDismiss={dismiss} />
 
       {confirmApprove !== null && (
@@ -245,7 +245,7 @@ export function Recommendations() {
 
       <div className="flex flex-col gap-1">
         <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-bold text-[#0F172A] dark:text-slate-100">System Recommendations</h1>
+          <h1 className="text-xl font-bold text-[#0F172A] dark:text-slate-100">System Recommendations</h1>
           <UITooltip>
             <TooltipTrigger asChild>
               <Info className="h-4 w-4 text-slate-400 dark:text-slate-500 hover:text-slate-600 cursor-help" />
@@ -255,12 +255,12 @@ export function Recommendations() {
             </TooltipContent>
           </UITooltip>
         </div>
-        <p className="text-sm text-[#64748B] dark:text-slate-400 dark:text-slate-500">
+        <p className="text-xs text-[#64748B] dark:text-slate-400 dark:text-slate-500">
           Review and act on system-generated stock actions to optimise inventory levels and reduce waste
         </p>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-xl border border-[#E5E7EB] dark:border-white/10 shadow-sm px-5 py-4">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-[#E5E7EB] dark:border-white/10 shadow-sm px-4 py-3">
         <p className="text-[10px] font-semibold text-[#64748B] dark:text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3">Approval Workflow</p>
         <div className="flex items-center flex-wrap gap-1">
           {WORKFLOW_STEPS.map((step, idx) => (
@@ -279,37 +279,37 @@ export function Recommendations() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="rounded-xl border border-orange-100 dark:border-orange-900/30 bg-orange-50 dark:bg-orange-950/20 p-4 flex items-center gap-4 shadow-sm">
-          <div className="rounded-lg p-2.5 bg-orange-100 dark:bg-orange-900/40 flex-shrink-0">
-            <Clock className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="rounded-xl border border-orange-100 dark:border-orange-900/30 bg-orange-50 dark:bg-orange-950/20 p-3 flex items-center gap-3 shadow-sm">
+          <div className="h-7 w-7 rounded-lg bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center flex-shrink-0">
+            <Clock className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-orange-500 dark:text-orange-400 uppercase tracking-wider">Pending Review</p>
-            <p className="text-2xl font-black text-orange-700 dark:text-orange-300 mt-0.5">{pendingCount}</p>
+            <p className="text-[9px] font-semibold text-orange-500 dark:text-orange-400 uppercase tracking-wider">Pending Review</p>
+            <p className="text-sm font-black text-orange-700 dark:text-orange-300 mt-0.5">{pendingCount}</p>
           </div>
         </div>
-        <div className="rounded-xl border border-emerald-100 dark:border-emerald-900/30 bg-emerald-50 dark:bg-emerald-950/20 p-4 flex items-center gap-4 shadow-sm">
-          <div className="rounded-lg p-2.5 bg-emerald-100 dark:bg-emerald-900/40 flex-shrink-0">
-            <CheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+        <div className="rounded-xl border border-emerald-100 dark:border-emerald-900/30 bg-emerald-50 dark:bg-emerald-950/20 p-3 flex items-center gap-3 shadow-sm">
+          <div className="h-7 w-7 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center flex-shrink-0">
+            <CheckCircle className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Approved</p>
-            <p className="text-2xl font-black text-emerald-700 dark:text-emerald-300 mt-0.5">{approvedCount}</p>
+            <p className="text-[9px] font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Approved</p>
+            <p className="text-sm font-black text-emerald-700 dark:text-emerald-300 mt-0.5">{approvedCount}</p>
           </div>
         </div>
-        <div className="rounded-xl border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-950/20 p-4 flex items-center gap-4 shadow-sm">
-          <div className="rounded-lg p-2.5 bg-red-100 dark:bg-red-900/40 flex-shrink-0">
-            <TrendingDown className="h-5 w-5 text-red-600 dark:text-red-400" />
+        <div className="rounded-xl border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-950/20 p-3 flex items-center gap-3 shadow-sm">
+          <div className="h-7 w-7 rounded-lg bg-red-100 dark:bg-red-900/40 flex items-center justify-center flex-shrink-0">
+            <TrendingDown className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-red-500 dark:text-red-400 uppercase tracking-wider">Rejected</p>
-            <p className="text-2xl font-black text-red-700 dark:text-red-300 mt-0.5">{rejectedCount}</p>
+            <p className="text-[9px] font-semibold text-red-500 dark:text-red-400 uppercase tracking-wider">Rejected</p>
+            <p className="text-sm font-black text-red-700 dark:text-red-300 mt-0.5">{rejectedCount}</p>
           </div>
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex flex-col sm:flex-row gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 dark:text-slate-500 pointer-events-none" />
           <input
@@ -317,13 +317,13 @@ export function Recommendations() {
             placeholder="Search product or SKU..."
             value={search}
             onChange={e => { setSearch(e.target.value); setPage(1); }}
-            className="w-full pl-9 pr-3 py-2.5 text-sm rounded-lg border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 text-[#374151] dark:text-slate-300 dark:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all shadow-sm"
+            className="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 text-[#374151] dark:text-slate-300 dark:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all shadow-sm"
           />
         </div>
         <select
           value={statusFilter}
           onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
-          className="px-3 py-2.5 text-sm rounded-lg border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 text-[#374151] dark:text-slate-300 dark:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30"
+          className="px-3 py-2 text-xs rounded-lg border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 text-[#374151] dark:text-slate-300 dark:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30"
         >
           <option value="">All Status</option>
           <option value="pending">Pending</option>
@@ -333,13 +333,13 @@ export function Recommendations() {
       </div>
 
       {filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-4 bg-white dark:bg-slate-900 rounded-xl border border-[#E5E7EB] dark:border-white/10 shadow-sm">
-          <div className="rounded-full bg-emerald-50 dark:bg-emerald-950/30 p-5">
-            <CheckCircle className="h-10 w-10 text-[#0F766E]" />
+        <div className="flex flex-col items-center justify-center py-12 gap-3 bg-white dark:bg-slate-900 rounded-xl border border-[#E5E7EB] dark:border-white/10 shadow-sm">
+          <div className="rounded-full bg-emerald-50 dark:bg-emerald-950/30 p-3">
+            <CheckCircle className="h-6 w-6 text-[#0F766E]" />
           </div>
           <div className="text-center">
-            <p className="text-base font-bold text-[#0F172A] dark:text-slate-100">No recommendations found</p>
-            <p className="text-sm text-[#64748B] dark:text-slate-400 mt-1">Try adjusting your search or filters.</p>
+            <p className="text-sm font-bold text-[#0F172A] dark:text-slate-100">No recommendations found</p>
+            <p className="text-xs text-[#64748B] dark:text-slate-400 mt-1">Try adjusting your search or filters.</p>
           </div>
         </div>
       ) : (
@@ -391,16 +391,16 @@ export function Recommendations() {
           onClose={() => setSelectedRec(null)}
           title={`Recommendation: ${selectedRec.product_name}`}
         >
-          <div className="space-y-6">
-            <div className="flex items-center justify-between border-b border-[#F1F5F9] dark:border-white/10 pb-4">
-              <p className="text-sm font-semibold text-[#0F172A] dark:text-slate-100">Recommendation Details</p>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between border-b border-[#F1F5F9] dark:border-white/10 pb-3">
+              <p className="text-sm font-bold text-[#0F172A] dark:text-slate-100">Recommendation Details</p>
               <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${getTypeLabel(selectedRec.recommendation_type).cls}`}>
                 {getTypeLabel(selectedRec.recommendation_type).label}
               </span>
             </div>
 
-            <div className="grid grid-cols-2 gap-6">
-              <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-3">
                 <div>
                   <p className="text-xs text-[#64748B] dark:text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider">SKU</p>
                   <p className="text-sm font-mono font-semibold text-[#0F172A] dark:text-slate-100 mt-0.5">{selectedRec.sku}</p>
@@ -414,8 +414,8 @@ export function Recommendations() {
                   <p className="text-lg font-bold text-[#0F172A] dark:text-slate-100 mt-0.5">{selectedRec.current_stock}</p>
                 </div>
                 {selectedRec.rejection_reason && (
-                  <div className="rounded-xl bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 p-4">
-                    <p className="text-[11px] font-bold text-red-700 dark:text-red-300 mb-1">Rejection Reason</p>
+                  <div className="rounded-xl bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 p-3">
+                    <p className="text-[9px] font-bold text-red-700 dark:text-red-300 mb-1">Rejection Reason</p>
                     <p className="text-xs text-red-800 dark:text-red-200">{selectedRec.rejection_reason}</p>
                   </div>
                 )}

@@ -25,6 +25,7 @@ import {
   PackageCheck,
   Truck,
   ShieldAlert,
+  ArrowUpDown,
   type LucideIcon,
 } from 'lucide-react';
 import { ThemeToggle } from '../ThemeToggle';
@@ -95,6 +96,8 @@ const sidebarGroupsByRole: Record<UserRole, SidebarGroup[]> = {
       items: [
         { to: '/inventory/manage', label: 'Manage Inventory', icon: Package },
         { to: '/inventory/wastage', label: 'Record Wastage', icon: AlertTriangle },
+        { to: '/inventory/stock-receiving', label: 'Stock Receiving', icon: Truck },
+        { to: '/inventory/movements', label: 'Stock Movements', icon: ArrowUpDown },
       ],
     },
     {
@@ -102,6 +105,13 @@ const sidebarGroupsByRole: Record<UserRole, SidebarGroup[]> = {
       items: [
         { to: '/inventory/fefo', label: 'FEFO Tracking', icon: CheckCircle },
         { to: '/inventory/recommendations', label: 'Recommendations', icon: Eye },
+      ],
+    },
+    {
+      group: 'Management',
+      items: [
+        { to: '/inventory/suppliers', label: 'Suppliers', icon: Users },
+        { to: '/inventory/reports', label: 'Reports', icon: FileText },
       ],
     },
   ],
@@ -322,8 +332,8 @@ export function DashboardLayout() {
   };
 
   return (
-    <ErrorBoundary><div className="min-h-screen bg-[#f4f7fb] text-[#1b1b1d] font-['Inter',sans-serif] transition-colors duration-200 dark:bg-slate-950 dark:text-slate-100">
-      <div className="flex min-h-screen w-full">
+    <ErrorBoundary><div className="h-screen bg-[#f4f7fb] text-[#1b1b1d] font-['Inter',sans-serif] transition-colors duration-200 dark:bg-slate-950 dark:text-slate-100 overflow-hidden">
+      <div className="flex h-screen w-full overflow-hidden">
 
         {/* ── Desktop Sidebar ── */}
         <aside
@@ -360,7 +370,7 @@ export function DashboardLayout() {
         )}
 
         {/* ── Main Content ── */}
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
           {/* Top bar for mobile */}
           <header className="md:hidden sticky top-0 z-30 flex h-14 items-center justify-between border-b border-gray-200/50 dark:border-white/10 bg-white/60 dark:bg-slate-950/60 backdrop-blur-md px-4 transition-colors duration-200">
             <button

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ReturnTransaction;
 use App\Models\SalesItem;
 use App\Models\Inventory;
+use App\Models\StockMovement;
 use App\Models\AuditLog;
 use Illuminate\Http\Request;
 
@@ -52,6 +53,16 @@ class ReturnTransactionController extends Controller
                 $inventory->last_updated   = now();
                 $inventory->save();
             }
+
+            StockMovement::create([
+                'product_id'    => $saleItem->product_id,
+                'user_id'       => $data['user_id'],
+                'movement_type' => 'Return',
+                'quantity'      => $data['quantity_returned'],
+                'remarks'       => 'Return from sale: ' . ($data['reason'] ?? ''),
+                'movement_date' => now(),
+                'sale_item_id'  => $data['sale_item_id'],
+            ]);
         }
 
         AuditLog::create([

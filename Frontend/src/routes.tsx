@@ -40,6 +40,10 @@ const RecordWastage = lazyPage(() => import("./pages/inventory/RecordWastage"), 
 const ManageInventory = lazyPage(() => import("./pages/inventory/ManageInventory"), "ManageInventory");
 const FEFOTracking = lazyPage(() => import("./pages/inventory/FEFOTracking"), "FEFOTracking");
 const Recommendations = lazyPage(() => import("./pages/inventory/Recommendations"), "Recommendations");
+const StockReceiving = lazyPage(() => import("./pages/inventory/StockReceiving"), "StockReceiving");
+const StockMovements = lazyPage(() => import("./pages/inventory/StockMovements"), "StockMovements");
+const InventorySuppliers = lazyPage(() => import("./pages/inventory/Suppliers"), "Suppliers");
+const InventoryReports = lazyPage(() => import("./pages/inventory/Reports"), "Reports");
 const POSTerminal = lazyPage(() => import("./pages/cashier/POSTerminal"), "POSTerminal");
 const ReturnsRefunds = lazyPage(() => import("./pages/cashier/ReturnsRefunds"), "ReturnsRefunds");
 const CashierHistory = lazyPage(() => import("./pages/cashier/CashierHistory"), "CashierHistory");
@@ -99,6 +103,10 @@ export const router = createBrowserRouter([
             { path: "inventory/manage", Component: ManageInventory },
             { path: "inventory/fefo", Component: FEFOTracking },
             { path: "inventory/recommendations", Component: Recommendations },
+            { path: "inventory/stock-receiving", Component: StockReceiving },
+            { path: "inventory/movements", Component: StockMovements },
+            { path: "inventory/suppliers", Component: InventorySuppliers },
+            { path: "inventory/reports", Component: InventoryReports },
         ],
     },
 

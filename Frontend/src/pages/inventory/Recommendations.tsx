@@ -190,7 +190,7 @@ export function Recommendations() {
   };
 
   return (
-    <div className="space-y-6 w-full bg-[#F8FAFC] dark:bg-slate-950 min-h-full">
+    <div className="space-y-6 w-full min-h-full">
       <Toast toasts={toasts} onDismiss={dismiss} />
 
       {confirmApprove !== null && (

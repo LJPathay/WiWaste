@@ -121,9 +121,9 @@ export function DataTable<T extends Record<string, unknown>>({
   }
 
   return (
-    <div className={cn("bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden", className)}>
-      <div className={cn(horizontalScroll && "overflow-x-auto")}>
-        <Table ref={tableRef} className={cn(pinnedCol && "min-w-[800px]")}>
+    <div className={cn("w-full bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden", className)}>
+      <div className={cn(horizontalScroll && "w-full overflow-x-auto")}>
+        <Table ref={tableRef} className={cn("w-full", pinnedCol && "min-w-[800px]")}>
           {showHeader && (
             <TableHeader className="sticky top-0 z-20 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-white/10">
               <TableRow className="hover:bg-transparent">

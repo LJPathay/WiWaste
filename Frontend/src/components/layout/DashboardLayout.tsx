@@ -24,6 +24,7 @@ import {
   Brain,
   PackageCheck,
   Truck,
+  ShieldAlert,
   type LucideIcon,
 } from 'lucide-react';
 import { ThemeToggle } from '../ThemeToggle';
@@ -458,7 +459,7 @@ export function DashboardLayout() {
                 </header>
 
                 {/* Page content */}
-                <div className="theme-content min-w-0 flex-1 overflow-hidden relative px-4 py-6 sm:px-6 lg:pl-6 lg:pr-8 lg:py-8 transition-colors duration-200">
+                <div className="theme-content min-w-0 flex-1 relative p-6 bg-white dark:bg-slate-900 transition-colors duration-200">
                   <Breadcrumb />
                   <Outlet />
                 </div>

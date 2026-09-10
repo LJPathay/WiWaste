@@ -5,22 +5,9 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>WiWaste</title>
-    <link rel="stylesheet" href="/src/styles/splash.css" />
   </head>
   <body>
-    <div id="splash">
-      <img src="/images/Logo_full.PNG" alt="WiWaste" />
-      <div id="splash-bar"><div id="splash-fill"></div></div>
-    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-    <script>
-      window.__hideSplash = function () {
-        var s = document.getElementById('splash');
-        if (!s) return;
-        s.classList.add('hide');
-        setTimeout(function () { s.remove(); }, 350);
-      };
-    </script>
   </body>
 </html>

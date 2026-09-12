@@ -21,6 +21,11 @@ import {
   PhilippinePeso,
   Activity,
   Receipt,
+  Brain,
+  PackageCheck,
+  Truck,
+  ShieldAlert,
+  ArrowUpDown,
   type LucideIcon,
 } from 'lucide-react';
 import { ThemeToggle } from '../ThemeToggle';
@@ -37,36 +42,45 @@ type SidebarGroup = { group: string; items: SidebarItem[] };
 const sidebarGroupsByRole: Record<UserRole, SidebarGroup[]> = {
   owner: [
     {
-      group: 'Overview',
+      group: 'OVERVIEW',
       items: [
         { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
       ],
     },
     {
-      group: 'Management',
+      group: 'MANAGEMENT',
       items: [
         { to: '/owner/users', label: 'Manage Users', icon: Users },
         { to: '/owner/products', label: 'Manage Products', icon: Package },
         { to: '/owner/categories', label: 'Manage Categories', icon: Layers },
-        { to: '/owner/suppliers', label: 'Manage Suppliers', icon: TrendingUp },
-        { to: '/owner/settings', label: 'System Settings', icon: Settings },
+        { to: '/owner/suppliers', label: 'Manage Suppliers', icon: Truck },
         { to: '/owner/purchase-orders', label: 'Purchase Orders', icon: Package },
+        { to: '/owner/settings', label: 'System Settings', icon: Settings },
         { to: '/owner/audit-logs', label: 'Audit Logs', icon: Activity },
       ],
     },
     {
-      group: 'Analytics & Reports',
+      group: 'INVENTORY INTELLIGENCE',
       items: [
-        { to: '/dashboard/predictive', label: 'Predictive Analytics', icon: TrendingUp },
-        { to: '/dashboard/leakage', label: 'Leakage Detection', icon: AlertTriangle },
-        { to: '/dashboard/fefo', label: 'FEFO Tracking', icon: Layers },
-        { to: '/dashboard/vendors', label: 'Vendor Credits', icon: PhilippinePeso },
-        { to: '/owner/performance', label: 'Inventory Performance', icon: Package },
+        { to: '/owner/performance', label: 'Inventory Performance', icon: TrendingUp },
+        { to: '/dashboard/fefo', label: 'FEFO Tracking', icon: PackageCheck },
         { to: '/owner/overstock', label: 'Overstock Risks', icon: AlertTriangle },
         { to: '/owner/replenishment', label: 'Replenishment', icon: CheckCircle },
+      ],
+    },
+    {
+      group: 'BUSINESS ANALYTICS',
+      items: [
+        { to: '/dashboard/predictive', label: 'Predictive Analytics', icon: Brain },
+        { to: '/dashboard/leakage', label: 'Leakage Detection', icon: ShieldAlert },
         { to: '/owner/supplier-performance', label: 'Supplier Performance', icon: Users },
+        { to: '/dashboard/vendors', label: 'Vendor Credits', icon: PhilippinePeso },
+      ],
+    },
+    {
+      group: 'REPORTS',
+      items: [
         { to: '/owner/reports', label: 'Generate Reports', icon: FileText },
-        { to: '/owner/executive-reports', label: 'Executive Reports', icon: FileText },
       ],
     },
   ],
@@ -82,6 +96,8 @@ const sidebarGroupsByRole: Record<UserRole, SidebarGroup[]> = {
       items: [
         { to: '/inventory/manage', label: 'Manage Inventory', icon: Package },
         { to: '/inventory/wastage', label: 'Record Wastage', icon: AlertTriangle },
+        { to: '/inventory/stock-receiving', label: 'Stock Receiving', icon: Truck },
+        { to: '/inventory/movements', label: 'Stock Movements', icon: ArrowUpDown },
       ],
     },
     {
@@ -89,6 +105,13 @@ const sidebarGroupsByRole: Record<UserRole, SidebarGroup[]> = {
       items: [
         { to: '/inventory/fefo', label: 'FEFO Tracking', icon: CheckCircle },
         { to: '/inventory/recommendations', label: 'Recommendations', icon: Eye },
+      ],
+    },
+    {
+      group: 'Management',
+      items: [
+        { to: '/inventory/suppliers', label: 'Suppliers', icon: Users },
+        { to: '/inventory/reports', label: 'Reports', icon: FileText },
       ],
     },
   ],
@@ -132,7 +155,7 @@ const NavItems = memo(function NavItems({
                     compact ? 'justify-center px-2' : ''
                   } ${
                     active
-                      ? 'bg-[#006a61] text-white'
+                      ? 'bg-brand text-white'
                       : 'text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-white/10'
                   }`}
                   aria-label={item.label}
@@ -309,8 +332,8 @@ export function DashboardLayout() {
   };
 
   return (
-    <ErrorBoundary><div className="min-h-screen bg-[#f4f7fb] text-[#1b1b1d] font-['Inter',sans-serif] transition-colors duration-200 dark:bg-slate-950 dark:text-slate-100">
-      <div className="flex min-h-screen w-full">
+    <ErrorBoundary><div className="h-screen bg-[#f4f7fb] text-[#1b1b1d] font-['Inter',sans-serif] transition-colors duration-200 dark:bg-slate-950 dark:text-slate-100 overflow-hidden">
+      <div className="flex h-screen w-full overflow-hidden">
 
         {/* ── Desktop Sidebar ── */}
         <aside
@@ -347,7 +370,7 @@ export function DashboardLayout() {
         )}
 
         {/* ── Main Content ── */}
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
           {/* Top bar for mobile */}
           <header className="md:hidden sticky top-0 z-30 flex h-14 items-center justify-between border-b border-gray-200/50 dark:border-white/10 bg-white/60 dark:bg-slate-950/60 backdrop-blur-md px-4 transition-colors duration-200">
             <button
@@ -373,7 +396,7 @@ export function DashboardLayout() {
                   {headerStyle === 'quick-access' && (
                     <>
                       <div className="flex items-center gap-2 overflow-x-auto py-1 scrollbar-none min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#006a61]/10 dark:bg-[#006a61]/20 text-[#006a61] dark:text-[#7ef0cf] text-xs font-bold shrink-0 border border-[#006a61]/20">
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-brand/10 dark:bg-brand/20 text-brand dark:text-[#7ef0cf] text-xs font-bold shrink-0 border border-brand/20">
                           <TrendingUp className="h-3.5 w-3.5" />
                           <span>Most Visited:</span>
                         </div>
@@ -388,7 +411,7 @@ export function DashboardLayout() {
                                 to={page.to}
                                 className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all shrink-0 border ${
                                   isActive
-                                    ? 'bg-[#006a61] text-white border-[#006a61] shadow-xs font-semibold'
+                                    ? 'bg-brand text-white border-brand shadow-xs font-semibold'
                                     : 'bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-slate-700'
                                 }`}
                               >
@@ -438,7 +461,7 @@ export function DashboardLayout() {
                         Welcome back, {session.name}
                       </span>
                       <span className="h-4 w-px bg-slate-300 dark:bg-white/20" />
-                      <span className="text-xs font-semibold text-[#006a61] dark:text-[#7ef0cf]">
+                      <span className="text-xs font-semibold text-brand dark:text-[#7ef0cf]">
                         Enterprise Retail Solution
                       </span>
                     </div>
@@ -446,7 +469,7 @@ export function DashboardLayout() {
                 </header>
 
                 {/* Page content */}
-                <div className="theme-content min-w-0 flex-1 overflow-hidden relative px-4 py-6 sm:px-6 lg:pl-6 lg:pr-8 lg:py-8 transition-colors duration-200">
+                <div className="theme-content min-w-0 flex-1 relative p-6 bg-white dark:bg-slate-900 transition-colors duration-200">
                   <Breadcrumb />
                   <Outlet />
                 </div>

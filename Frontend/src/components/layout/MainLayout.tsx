@@ -19,19 +19,19 @@ export function MainLayout() {
                     <nav className="hidden md:flex items-center gap-8">
                         <Link
                             to="/#features"
-                            className={`text-sm font-medium transition-colors hover:text-[#006a61] dark:hover:text-[#7ef0cf] ${location.pathname === '/' && location.hash === '#features' ? 'text-[#006a61] dark:text-[#7ef0cf]' : 'text-[#45464d] dark:text-slate-300'}`}
+                            className={`text-sm font-medium transition-colors hover:text-brand dark:hover:text-[#7ef0cf] ${location.pathname === '/' && location.hash === '#features' ? 'text-brand dark:text-[#7ef0cf]' : 'text-[#45464d] dark:text-slate-300'}`}
                         >
                             Features
                         </Link>
                         <Link
                             to="/solutions"
-                            className={`text-sm font-medium transition-colors hover:text-[#006a61] dark:hover:text-[#7ef0cf] ${location.pathname === '/solutions' ? 'text-[#006a61] dark:text-[#7ef0cf]' : 'text-[#45464d] dark:text-slate-300'}`}
+                            className={`text-sm font-medium transition-colors hover:text-brand dark:hover:text-[#7ef0cf] ${location.pathname === '/solutions' ? 'text-brand dark:text-[#7ef0cf]' : 'text-[#45464d] dark:text-slate-300'}`}
                         >
                             Solutions
                         </Link>
                         <Link
                             to="/pricing"
-                            className={`text-sm font-medium transition-colors hover:text-[#006a61] dark:hover:text-[#7ef0cf] ${location.pathname === '/pricing' ? 'text-[#006a61] dark:text-[#7ef0cf]' : 'text-[#45464d] dark:text-slate-300'}`}
+                            className={`text-sm font-medium transition-colors hover:text-brand dark:hover:text-[#7ef0cf] ${location.pathname === '/pricing' ? 'text-brand dark:text-[#7ef0cf]' : 'text-[#45464d] dark:text-slate-300'}`}
                         >
                             Pricing
                         </Link>
@@ -68,26 +68,26 @@ export function MainLayout() {
                         <div>
                             <h4 className="font-semibold text-sm mb-4 text-[#1b1b1d] tracking-wider uppercase dark:text-slate-100">Product</h4>
                             <ul className="space-y-3">
-                                <li><Link to="/#features" className="text-sm text-[#45464d] hover:text-[#006a61] dark:text-slate-400 dark:hover:text-[#7ef0cf]">Features</Link></li>
-                                <li><Link to="/solutions" className="text-sm text-[#45464d] hover:text-[#006a61] dark:text-slate-400 dark:hover:text-[#7ef0cf]">Solutions</Link></li>
-                                <li><Link to="/" className="text-sm text-[#45464d] hover:text-[#006a61] dark:text-slate-400 dark:hover:text-[#7ef0cf]">Security</Link></li>
+                                <li><Link to="/#features" className="text-sm text-[#45464d] hover:text-brand dark:text-slate-400 dark:hover:text-[#7ef0cf]">Features</Link></li>
+                                <li><Link to="/solutions" className="text-sm text-[#45464d] hover:text-brand dark:text-slate-400 dark:hover:text-[#7ef0cf]">Solutions</Link></li>
+                                <li><Link to="/" className="text-sm text-[#45464d] hover:text-brand dark:text-slate-400 dark:hover:text-[#7ef0cf]">Security</Link></li>
                             </ul>
                         </div>
 
                         <div>
                             <h4 className="font-semibold text-sm mb-4 text-[#1b1b1d] tracking-wider uppercase dark:text-slate-100">Company</h4>
                             <ul className="space-y-3">
-                                <li><Link to="/" className="text-sm text-[#45464d] hover:text-[#006a61] dark:text-slate-400 dark:hover:text-[#7ef0cf]">About Us</Link></li>
-                                <li><Link to="/" className="text-sm text-[#45464d] hover:text-[#006a61] dark:text-slate-400 dark:hover:text-[#7ef0cf]">Careers</Link></li>
-                                <li><Link to="/" className="text-sm text-[#45464d] hover:text-[#006a61] dark:text-slate-400 dark:hover:text-[#7ef0cf]">Contact</Link></li>
+                                <li><Link to="/" className="text-sm text-[#45464d] hover:text-brand dark:text-slate-400 dark:hover:text-[#7ef0cf]">About Us</Link></li>
+                                <li><Link to="/" className="text-sm text-[#45464d] hover:text-brand dark:text-slate-400 dark:hover:text-[#7ef0cf]">Careers</Link></li>
+                                <li><Link to="/" className="text-sm text-[#45464d] hover:text-brand dark:text-slate-400 dark:hover:text-[#7ef0cf]">Contact</Link></li>
                             </ul>
                         </div>
 
                         <div>
                             <h4 className="font-semibold text-sm mb-4 text-[#1b1b1d] tracking-wider uppercase dark:text-slate-100">Legal</h4>
                             <ul className="space-y-3">
-                                <li><Link to="/" className="text-sm text-[#45464d] hover:text-[#006a61] dark:text-slate-400 dark:hover:text-[#7ef0cf]">Privacy Policy</Link></li>
-                                <li><Link to="/" className="text-sm text-[#45464d] hover:text-[#006a61] dark:text-slate-400 dark:hover:text-[#7ef0cf]">Terms of Service</Link></li>
+                                <li><Link to="/" className="text-sm text-[#45464d] hover:text-brand dark:text-slate-400 dark:hover:text-[#7ef0cf]">Privacy Policy</Link></li>
+                                <li><Link to="/" className="text-sm text-[#45464d] hover:text-brand dark:text-slate-400 dark:hover:text-[#7ef0cf]">Terms of Service</Link></li>
                             </ul>
                         </div>
                     </div>

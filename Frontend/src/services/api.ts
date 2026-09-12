@@ -72,6 +72,7 @@ export const categories = {
 // ─── Suppliers ──────────────────────────────────────────
 export const suppliers = {
   list: () => request<ApiSupplier[]>('/suppliers'),
+  show: (id: number) => request<ApiSupplierDetail>(`/suppliers/${id}`),
   create: (data: CreateSupplierPayload) =>
     request('/suppliers', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: number, data: Partial<CreateSupplierPayload>) =>
@@ -114,6 +115,26 @@ export const inventory = {
     request('/inventory/stock-out', { method: 'POST', body: JSON.stringify(data) }),
   movements: (id: number) =>
     request<ApiInventoryMovements>(`/inventory/${id}/movements`),
+  allMovements: (params?: {
+    search?: string;
+    movement_type?: string;
+    from_date?: string;
+    to_date?: string;
+    product_id?: number;
+    page?: number;
+    per_page?: number;
+  }) => {
+    const qs = new URLSearchParams();
+    if (params?.search) qs.set('search', params.search);
+    if (params?.movement_type) qs.set('movement_type', params.movement_type);
+    if (params?.from_date) qs.set('from_date', params.from_date);
+    if (params?.to_date) qs.set('to_date', params.to_date);
+    if (params?.product_id) qs.set('product_id', String(params.product_id));
+    if (params?.page) qs.set('page', String(params.page));
+    if (params?.per_page) qs.set('per_page', String(params.per_page));
+    const q = qs.toString();
+    return request<PaginatedResponse<ApiStockMovement>>(`/inventory/movements${q ? '?' + q : ''}`);
+  },
 };
 
 // ─── Wastage ────────────────────────────────────────────
@@ -121,6 +142,25 @@ export const wastage = {
   list: (page = 1) => request<PaginatedResponse<ApiWastage>>(`/wastage?page=${page}`),
   record: (data: CreateWastagePayload) =>
     request('/wastage', { method: 'POST', body: JSON.stringify(data) }),
+};
+
+// ─── Stock Receiving ────────────────────────────────────
+export const stockReceiving = {
+  list: (params?: { status?: string; page?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.status) qs.set('status', params.status);
+    if (params?.page) qs.set('page', String(params.page));
+    const q = qs.toString();
+    return request<PaginatedResponse<ApiStockReceiving>>(`/stock-receiving${q ? '?' + q : ''}`);
+  },
+  create: (data: CreateStockReceivingPayload) =>
+    request('/stock-receiving', { method: 'POST', body: JSON.stringify(data) }),
+  receive: (id: number, items: { product_id: number; quantity: number; unit_cost: number; batch_number?: string; expiration_date?: string }[]) =>
+    request(`/stock-receiving/${id}/receive`, { method: 'POST', body: JSON.stringify({ items }) }),
+  reject: (id: number, reason: string) =>
+    request(`/stock-receiving/${id}/reject`, { method: 'POST', body: JSON.stringify({ reason }) }),
+  discard: (id: number, reason: string) =>
+    request(`/stock-receiving/${id}/discard`, { method: 'POST', body: JSON.stringify({ reason }) }),
 };
 
 // ─── Sales (POS) ────────────────────────────────────────
@@ -179,6 +219,44 @@ export const dashboard = {
   overview: () => request<ApiDashboard>('/dashboard/overview'),
 };
 
+// ─── Owner Dashboard Analytics ──────────────────────────
+export interface ApiOwnerAnalytics {
+  sales_trend: Array<{ date: string; value: number }>;
+  wastage_trend: Array<{ date: string; value: number }>;
+  leakage_by_category: Array<{
+    category: string;
+    value: number;
+    quantity: number;
+    percentage: number;
+  }>;
+  inventory_health: {
+    healthy: number;
+    low_stock: number;
+    overstock: number;
+    expiring_soon: number;
+    expired: number;
+  };
+  top_wasted_products: Array<{
+    product_id: number;
+    name: string;
+    loss: number;
+    quantity: number;
+  }>;
+  payment_breakdown: Array<{
+    payment_method: string;
+    revenue: number;
+  }>;
+  forecast_confidence: number | null;
+}
+
+export const ownerDashboard = {
+  overview: () => request<ApiDashboard>('/dashboard/overview'),
+  analytics: (params?: { period?: string }) => {
+    const qs = params?.period ? `?period=${params.period}` : '';
+    return request<ApiOwnerAnalytics>(`/dashboard/owner-analytics${qs}`);
+  },
+};
+
 // ─── Types ──────────────────────────────────────────────
 export interface ApiUser {
   id: number;
@@ -203,6 +281,16 @@ export interface ApiSupplier {
   contact_number: string;
   address: string | null;
   product_count: number;
+}
+
+export interface ApiSupplierDetail extends ApiSupplier {
+  low_stock_count: number;
+  recent_products: Array<{
+    product_id: number;
+    product_name: string;
+    current_stock: number;
+    stock_status: string;
+  }>;
 }
 
 export interface ApiProduct {
@@ -360,14 +448,43 @@ export interface ApiDashboard {
   active_suppliers: number;
   today_sales: number;
   recent_wastage: number;
+  // Business Health KPIs
+  sales_this_month: number;
+  sales_last_month: number;
+  gross_profit_this_month: number;
+  gross_profit_last_month: number;
+  wastage_this_month: number;
+  wastage_last_month: number;
+  inventory_value: number;
+  // Risk counts
+  critical_fefo_count: number;
+  high_risk_fefo_count: number;
 }
 
 export interface ApiDashboardSummary {
   low_stock_count: number;
+  low_stock_items: Array<{
+    product_id: number;
+    product_name: string;
+    category: string;
+    current_stock: number;
+    reorder_level: number;
+    selling_price: number;
+  }>;
   expiring_soon_count: number;
+  expiring_soon_items: Array<{
+    product_id: number;
+    product_name: string;
+    expiration_date: string;
+    days_until: number;
+  }>;
   today_movements: number;
+  today_sales_count: number;
+  today_wastage_count: number;
+  today_returns_count: number;
   pending_wastage_count: number;
   critical_fefo_count: number;
+  total_stock_value: number;
 }
 
 export interface ApiFefoBatch {
@@ -439,6 +556,43 @@ export interface ApiInventoryMovements {
   product_name: string;
   current_stock: number;
   movements: ApiMovement[];
+}
+
+// ─── Stock Movement (all movements) ──────────────────────
+export interface ApiStockMovement {
+  movement_id: number;
+  product_id: number;
+  product_name: string;
+  sku: string;
+  category: string;
+  movement_type: 'Stock In' | 'Stock Out' | 'Sale' | 'Wastage' | 'Return' | 'Adjustment' | 'Damaged' | 'Expired';
+  quantity: number;
+  remarks: string | null;
+  recorded_by: string;
+  movement_date: string;
+}
+
+// ─── Stock Receiving ──────────────────────────────────────
+export interface ApiStockReceiving {
+  id: number;
+  po_number: string;
+  supplier_id: number;
+  supplier_name: string;
+  expected_date: string;
+  status: string;
+  total_amount: number;
+}
+
+export interface CreateStockReceivingPayload {
+  supplier_id: number;
+  expected_date: string;
+  items: Array<{
+    product_id: number;
+    quantity: number;
+    unit_cost: number;
+    batch_number?: string;
+    expiration_date?: string;
+  }>;
 }
 
 // ─── Purchase Orders ──────────────────────────────────────

@@ -14,6 +14,9 @@ import {
   Filter,
 } from 'lucide-react';
 import { Toast, useToast, Modal, FormField, inputCls } from '../../components/ui/Toast';
+import { DataTable } from '../../components/shared/DataTable';
+import type { DataTableColumn } from '../../components/shared/DataTable';
+import { Pagination } from '../../components/ui/pagination';
 import { inventory as inventoryApi } from '../../services/api';
 import { useOptimisticList } from '../../hooks/useOptimisticList';
 import { useDebounce } from '../../hooks/useDebounce';
@@ -67,29 +70,29 @@ function getExpiryDate(item: InventoryItem): string {
 const StatusBadge = memo(function StatusBadge({ status, qty }: { status: InventoryItem['stockStatus']; qty: number }) {
   if (qty < 5) {
     return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 border border-red-100 dark:border-red-900/30">
-        <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-status-critical/5 dark:bg-status-critical/20 text-status-critical dark:text-status-critical border border-status-critical/10 dark:border-status-critical/20">
+        <span className="w-1.5 h-1.5 rounded-full bg-status-critical animate-pulse" />
         Critical
       </span>
     );
   }
   if (status === 'Low Stock') {
     return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-50 dark:bg-orange-950/30 text-orange-700 dark:text-orange-300 border border-orange-100 dark:border-orange-900/30">
-        <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-status-warning/5 dark:bg-status-warning/20 text-status-warning dark:text-status-warning border border-status-warning/10 dark:border-status-warning/20">
+        <span className="w-1.5 h-1.5 rounded-full bg-status-warning animate-pulse" />
         Low Stock
       </span>
     );
   }
   if (status === 'Overstock') {
     return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 border border-blue-100 dark:border-blue-900/30">
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-status-info/5 dark:bg-status-info/20 text-status-info dark:text-status-info border border-status-info/10 dark:border-status-info/20">
         Overstock
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300 border border-green-100 dark:border-green-900/30">
+    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-status-ok/5 dark:bg-status-ok/20 text-status-ok dark:text-status-ok border border-status-ok/10 dark:border-status-ok/20">
       Normal
     </span>
   );
@@ -290,48 +293,120 @@ export function ManageInventory() {
 
   const totalPages = Math.ceil(filtered.length / pageSize);
   const paginatedItems = filtered.slice((page - 1) * pageSize, page * pageSize);
-  const showPagination = totalPages > 1;
+
+  const columns: DataTableColumn<InventoryItem>[] = [
+    {
+      key: 'itemName',
+      header: 'Item',
+      pinned: true,
+      truncate: true,
+      minWidth: '180px',
+      render: (row) => (
+        <div>
+          <div className="font-bold text-gray-900 dark:text-slate-100 group-hover:text-[#0F766E] transition-colors">{row.itemName}</div>
+          <div className="text-gray-400 dark:text-slate-500 font-mono mt-0.5">{row.sku}</div>
+        </div>
+      ),
+    },
+    {
+      key: 'category',
+      header: 'Category',
+      truncate: true,
+      minWidth: '100px',
+      render: (row) => (
+        <span className="text-gray-600 dark:text-slate-300">{row.category}</span>
+      ),
+    },
+    {
+      key: 'qty',
+      header: 'Stock Qty',
+      numeric: true,
+      minWidth: '80px',
+      render: (row) => (
+        <span className={`text-sm font-bold ${row.qty < 10 ? 'text-status-critical' : row.qty > 300 ? 'text-status-info' : 'text-gray-800 dark:text-slate-200'}`}>
+          {row.qty}
+        </span>
+      ),
+    },
+    {
+      key: 'stockStatus',
+      header: 'Stock Status',
+      align: 'center',
+      minWidth: '100px',
+      render: (row) => <StatusBadge status={row.stockStatus} qty={row.qty} />,
+    },
+    {
+      key: 'expirationDate',
+      header: 'Nearest Expiry',
+      minWidth: '100px',
+      render: (row) => (
+        <span className="text-gray-500 dark:text-slate-400">{getExpiryDate(row)}</span>
+      ),
+    },
+    {
+      key: 'lastUpdated',
+      header: 'Last Movement',
+      minWidth: '100px',
+      render: (row) => (
+        <span className="text-gray-500 dark:text-slate-400">{row.lastUpdated}</span>
+      ),
+    },
+  ];
+
+  const emptyState = (
+    <div className="flex flex-col items-center justify-center py-16 gap-3">
+      <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-slate-800 flex items-center justify-center">
+        <Package className="h-7 w-7 text-gray-300 dark:text-slate-600" />
+      </div>
+      <p className="text-sm font-semibold text-gray-400 dark:text-slate-500">No inventory items match your search</p>
+      <button
+        onClick={() => { setSearch(''); setCategoryFilter(''); setStatusFilter(''); }}
+        className="mt-1 px-4 py-2 rounded-lg border border-gray-200 dark:border-white/10 text-xs font-semibold text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 dark:bg-slate-800 transition-colors"
+      >
+        Clear Filters
+      </button>
+    </div>
+  );
 
   const kpiData = [
     {
       label: 'Total Items',
       value: items.length,
       icon: Package,
-      iconBg: 'bg-blue-50 dark:bg-blue-950/30',
-      iconColor: 'text-blue-500',
-      valueCls: 'text-blue-700',
+      iconBg: 'bg-status-info/5 dark:bg-status-info/20',
+      iconColor: 'text-status-info',
+      valueCls: 'text-status-info',
     },
     {
       label: 'Low Stock',
       value: items.filter(i => i.stockStatus === 'Low Stock').length,
       icon: AlertTriangle,
-      iconBg: 'bg-orange-50 dark:bg-orange-950/30',
-      iconColor: 'text-orange-500',
-      valueCls: 'text-orange-600',
+      iconBg: 'bg-status-warning/5 dark:bg-status-warning/20',
+      iconColor: 'text-status-warning',
+      valueCls: 'text-status-warning',
     },
     {
       label: 'Overstock',
       value: items.filter(i => i.stockStatus === 'Overstock').length,
       icon: TrendingUp,
-      iconBg: 'bg-blue-50 dark:bg-blue-950/30',
-      iconColor: 'text-blue-500',
-      valueCls: 'text-blue-600',
+      iconBg: 'bg-status-info/5 dark:bg-status-info/20',
+      iconColor: 'text-status-info',
+      valueCls: 'text-status-info',
     },
     {
       label: 'Normal',
       value: items.filter(i => i.stockStatus === 'Normal').length,
       icon: CheckCircle,
-      iconBg: 'bg-green-50 dark:bg-green-950/30',
-      iconColor: 'text-green-500',
-      valueCls: 'text-green-700',
+      iconBg: 'bg-status-ok/5 dark:bg-status-ok/20',
+      iconColor: 'text-status-ok',
+      valueCls: 'text-status-ok',
     },
   ];
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] dark:bg-slate-950 p-6 space-y-6">
+    <div className="min-h-screen bg-[#F8FAFC] dark:bg-slate-950 space-y-3">
       <Toast toasts={toasts} onDismiss={dismiss} />
 
-      {/* ── Receive Stock Modal ── */}
       {showAddModal && (
         <Modal title="Receive Stock" onClose={() => setShowAddModal(false)} size="md">
           <form onSubmit={handleReceiveStock} className="space-y-4">
@@ -351,7 +426,7 @@ export function ManageInventory() {
                   placeholder="Type to search products..."
                 />
                 {showDropdown && addSearch && (
-                  <div className="absolute left-0 right-0 top-full mt-1 z-20 max-h-48 overflow-y-auto rounded-xl border border-[#E5E7EB] dark:border-white/10 dark:border-white/10 bg-white dark:bg-slate-900 dark:bg-slate-800 shadow-lg">
+                  <div className="absolute left-0 right-0 top-full mt-1 z-20 max-h-48 overflow-y-auto rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 shadow-lg">
                     {items
                       .filter(i =>
                         i.itemName.toLowerCase().includes(addSearch.toLowerCase()) ||
@@ -456,13 +531,12 @@ export function ManageInventory() {
         </Modal>
       )}
 
-      {/* ── Adjust Stock Modal ── */}
       {adjustItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-white/10">
+          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-white/10">
               <div>
-                <h3 className="text-sm font-bold text-gray-900 dark:text-slate-100">Adjust Stock</h3>
+                <h3 className="text-base font-bold text-gray-900 dark:text-slate-100">Adjust Stock</h3>
                 <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">{adjustItem.itemName}</p>
               </div>
               <button
@@ -472,7 +546,7 @@ export function ManageInventory() {
                 <X className="h-4 w-4 text-gray-500 dark:text-slate-400" />
               </button>
             </div>
-            <div className="p-5 space-y-4">
+            <div className="p-4 space-y-3">
               <div>
                 <label className="block text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1.5">Item Name</label>
                 <input
@@ -517,14 +591,14 @@ export function ManageInventory() {
               <div className="flex gap-3 pt-1">
                 <button
                   onClick={() => { setAdjustItem(null); setAdjustQty(''); setAdjustRemarks(''); }}
-                  className="flex-1 py-2 rounded-lg border border-gray-200 dark:border-white/10 text-xs font-semibold text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 dark:bg-slate-800 transition-colors"
+                  className="flex-1 h-8 text-xs rounded-lg border border-gray-200 dark:border-white/10 font-semibold text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 dark:bg-slate-800 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleConfirmAdjust}
                   disabled={processing || !adjustQty || Number(adjustQty) <= 0}
-                  className="flex-1 py-2 rounded-lg bg-[#0F766E] hover:bg-[#0d6560] disabled:opacity-50 text-white text-xs font-semibold transition-colors"
+                  className="flex-1 h-8 text-xs rounded-lg bg-[#0F766E] hover:bg-[#0d6560] disabled:opacity-50 text-white font-semibold transition-colors"
                 >
                   {processing ? 'Processing...' : 'Confirm Adjustment'}
                 </button>
@@ -534,20 +608,19 @@ export function ManageInventory() {
         </div>
       )}
 
-      {/* ── History Panel Modal ── */}
       {historyItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-white/10">
+          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-white/10">
               <div>
-                <h3 className="text-sm font-bold text-gray-900 dark:text-slate-100">Stock Movement History</h3>
+                <h3 className="text-base font-bold text-gray-900 dark:text-slate-100">Stock Movement History</h3>
                 <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">{historyItem.itemName}</p>
               </div>
               <button onClick={() => setHistoryItem(null)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:bg-slate-800 transition-colors">
                 <X className="h-4 w-4 text-gray-500 dark:text-slate-400" />
               </button>
             </div>
-            <div className="p-5 max-h-96 overflow-y-auto space-y-3">
+            <div className="p-4 max-h-96 overflow-y-auto space-y-3">
 {historyLoading ? (
             <div className="text-center py-10 text-gray-400 dark:text-slate-500 text-sm">Loading movements...</div>
           ) : historyItem.recentMovements.length === 0 ? (
@@ -557,13 +630,13 @@ export function ManageInventory() {
                   <div className="absolute left-2 top-0 bottom-0 w-px bg-gray-100 dark:bg-slate-800" />
                   {historyItem.recentMovements.map((mv) => (
                     <div key={mv.id} className="relative flex gap-3 pb-4">
-                      <div className={`absolute -left-[13px] top-0.5 w-3.5 h-3.5 rounded-full border-2 border-white shadow-sm flex-shrink-0 ${mv.type === 'Stock In' ? 'bg-green-500' : 'bg-red-500'}`} />
+                      <div className={`absolute -left-[13px] top-0.5 w-3.5 h-3.5 rounded-full border-2 border-white shadow-sm flex-shrink-0 ${mv.type === 'Stock In' ? 'bg-status-ok' : 'bg-status-critical'}`} />
                       <div className="flex-1 ml-2 bg-gray-50 dark:bg-slate-800 rounded-lg p-3 border border-gray-100 dark:border-white/10">
                         <div className="flex items-center justify-between">
-                          <span className={`text-xs font-bold ${mv.type === 'Stock In' ? 'text-green-700' : 'text-red-700'}`}>
+                          <span className={`text-xs font-bold ${mv.type === 'Stock In' ? 'text-status-ok' : 'text-status-critical'}`}>
                             {mv.type === 'Stock In' ? '+' : '-'}{mv.quantity} units
                           </span>
-                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${mv.type === 'Stock In' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${mv.type === 'Stock In' ? 'bg-status-ok/10 text-status-ok' : 'bg-status-critical/10 text-status-critical'}`}>
                             {mv.type}
                           </span>
                         </div>
@@ -580,17 +653,14 @@ export function ManageInventory() {
         </div>
       )}
 
-      {/* ── Item Detail Modal ── */}
       {selectedItem && (
         <Modal title={selectedItem.itemName} onClose={() => setSelectedItem(null)} size="lg">
           <div className="space-y-4">
-            {/* Modal sub-header */}
             <div className="flex items-center gap-3 pb-2 border-b border-gray-100 dark:border-white/10">
               <span className="font-mono text-xs text-gray-400 dark:text-slate-500 bg-gray-100 dark:bg-slate-800 px-2 py-1 rounded">{selectedItem.sku}</span>
               <span className="text-xs font-semibold text-[#0F766E] bg-[#0F766E]/10 px-2.5 py-1 rounded-full">{selectedItem.category}</span>
             </div>
 
-            {/* Tabs */}
             <div className="flex gap-2 border-b border-slate-200 dark:border-white/10">
               {[
                 { id: 'details', label: 'Details', icon: Package },
@@ -616,10 +686,8 @@ export function ManageInventory() {
               })}
             </div>
 
-            {/* Tab Content */}
             {activeTab === 'details' && (
-              <div className="grid grid-cols-2 gap-5">
-                {/* Left column: details */}
+              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   {[
                     { label: 'Supplier', value: selectedItem.supplier },
@@ -633,14 +701,13 @@ export function ManageInventory() {
                       <span className="text-xs font-semibold text-gray-400 dark:text-slate-500">{row.label}</span>
                       <span className={`text-xs font-semibold ${
                         row.label === 'Status'
-                          ? selectedItem.stockStatus === 'Low Stock' ? 'text-orange-600' : selectedItem.stockStatus === 'Overstock' ? 'text-blue-600' : 'text-green-700'
+                          ? selectedItem.stockStatus === 'Low Stock' ? 'text-status-warning' : selectedItem.stockStatus === 'Overstock' ? 'text-status-info' : 'text-status-ok'
                           : 'text-gray-800 dark:text-slate-200'
                       }`}>{row.value}</span>
                     </div>
                   ))}
                 </div>
 
-                {/* Right column: movement timeline */}
                 <div>
                   <p className="text-xs font-bold text-gray-500 dark:text-slate-400 mb-3 uppercase tracking-wide">Stock Movement Timeline</p>
                   {historyLoading ? (
@@ -652,10 +719,10 @@ export function ManageInventory() {
                       <div className="absolute left-2 top-0 bottom-0 w-px bg-gray-100 dark:bg-slate-800" />
                       {selectedItem.recentMovements.map((mv) => (
                         <div key={mv.id} className="relative pb-4">
-                          <div className={`absolute -left-[13px] top-1 w-3 h-3 rounded-full border-2 border-white ${mv.type === 'Stock In' ? 'bg-green-500' : 'bg-red-500'}`} />
+                          <div className={`absolute -left-[13px] top-1 w-3 h-3 rounded-full border-2 border-white ${mv.type === 'Stock In' ? 'bg-status-ok' : 'bg-status-critical'}`} />
                           <div className="ml-2">
                             <div className="flex items-center gap-2">
-                              <span className={`text-xs font-bold ${mv.type === 'Stock In' ? 'text-green-700' : 'text-red-700'}`}>
+                              <span className={`text-xs font-bold ${mv.type === 'Stock In' ? 'text-status-ok' : 'text-status-critical'}`}>
                                 {mv.type === 'Stock In' ? '+' : '-'}{mv.quantity}
                               </span>
                               <span className="text-xs text-gray-400 dark:text-slate-500">{mv.type}</span>
@@ -793,51 +860,41 @@ export function ManageInventory() {
         </Modal>
       )}
 
-      {/* ══════════════════════════════════════════
-          PAGE HEADER
-      ══════════════════════════════════════════ */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100 tracking-tight">Manage Inventory</h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">Track, adjust, and audit your full product catalogue</p>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-slate-100 tracking-tight">Manage Inventory</h1>
+          <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">Track, adjust, and audit your full product catalogue</p>
         </div>
         <button
           onClick={() => setShowAddModal(true)}
-          className="inline-flex items-center gap-2 rounded-xl bg-[#0F766E] hover:bg-[#0d6560] active:scale-95 text-white px-4 py-2.5 text-sm font-semibold transition-all shadow-sm"
+          className="inline-flex items-center gap-2 rounded-lg bg-[#0F766E] hover:bg-[#0d6560] active:scale-95 text-white h-8 text-xs px-3 font-semibold transition-all shadow-sm"
         >
           <Plus className="h-4 w-4" />
           Receive Stock
         </button>
       </div>
 
-      {/* ══════════════════════════════════════════
-          KPI STRIP
-      ══════════════════════════════════════════ */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {kpiData.map(kpi => {
           const Icon = kpi.icon;
           return (
             <div
               key={kpi.label}
-              className="bg-white dark:bg-slate-900 border border-[#E5E7EB] dark:border-white/10 rounded-xl p-4 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow"
+              className="bg-white dark:bg-slate-900 border border-[#E5E7EB] dark:border-white/10 rounded-xl p-3 shadow-sm flex items-center gap-3 hover:shadow-md transition-shadow"
             >
-              <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${kpi.iconBg}`}>
-                <Icon className={`h-5 w-5 ${kpi.iconColor}`} />
+              <div className={`h-7 w-7 rounded-xl flex items-center justify-center flex-shrink-0 ${kpi.iconBg}`}>
+                <Icon className={`h-3.5 w-3.5 ${kpi.iconColor}`} />
               </div>
               <div>
-                <div className={`text-2xl font-bold ${kpi.valueCls}`}>{kpi.value}</div>
-                <div className="text-xs text-gray-500 dark:text-slate-400 font-medium mt-0.5">{kpi.label}</div>
+                <div className={`text-sm font-bold ${kpi.valueCls}`}>{kpi.value}</div>
+                <div className="text-[9px] text-gray-500 dark:text-slate-400 font-medium mt-0.5">{kpi.label}</div>
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* ══════════════════════════════════════════
-          SEARCH & FILTER BAR
-      ══════════════════════════════════════════ */}
-      <div className="bg-white dark:bg-slate-900 border border-[#E5E7EB] dark:border-white/10 rounded-xl p-4 shadow-sm flex flex-col sm:flex-row items-center gap-3">
-        {/* Search */}
+      <div className="bg-white dark:bg-slate-900 border border-[#E5E7EB] dark:border-white/10 rounded-xl p-3.5 shadow-sm flex flex-col sm:flex-row items-center gap-3">
         <div className="relative flex-1 w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-slate-500 pointer-events-none" />
           <input
@@ -845,17 +902,16 @@ export function ManageInventory() {
             placeholder="Search by name, SKU, or category…"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 text-sm rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-slate-800 text-gray-700 dark:text-slate-300 placeholder-gray-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition"
+            className="w-full pl-10 pr-4 h-8 text-xs px-2.5 rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-slate-800 text-gray-700 dark:text-slate-300 placeholder-gray-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition"
           />
         </div>
 
-        {/* Category filter */}
         <div className="relative">
           <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 dark:text-slate-500 pointer-events-none" />
           <select
             value={categoryFilter}
             onChange={e => setCategoryFilter(e.target.value)}
-            className="pl-8 pr-8 py-2.5 text-sm rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-slate-800 text-gray-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition appearance-none cursor-pointer"
+            className="pl-8 pr-8 h-8 text-xs rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-slate-800 text-gray-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition appearance-none cursor-pointer"
           >
             <option value="">All Categories</option>
             {uniqueCategories.map(c => (
@@ -864,11 +920,10 @@ export function ManageInventory() {
           </select>
         </div>
 
-        {/* Status filter */}
         <select
           value={statusFilter}
           onChange={e => setStatusFilter(e.target.value)}
-          className="px-3 py-2.5 text-sm rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-slate-800 text-gray-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition appearance-none cursor-pointer"
+          className="px-3 h-8 text-xs rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-slate-800 text-gray-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition appearance-none cursor-pointer"
         >
           <option value="">All Status</option>
           <option value="Normal">Normal</option>
@@ -876,134 +931,35 @@ export function ManageInventory() {
           <option value="Overstock">Overstock</option>
         </select>
 
-        {/* Export CSV */}
         <button
           onClick={handleExportCSV}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-gray-200 dark:border-white/10 text-sm font-semibold text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 dark:bg-slate-800 hover:border-gray-300 transition-all flex-shrink-0"
+          className="inline-flex items-center gap-2 h-8 text-xs px-3 rounded-lg border border-gray-200 dark:border-white/10 font-semibold text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 dark:bg-slate-800 hover:border-gray-300 transition-all flex-shrink-0"
         >
           <Download className="h-4 w-4" />
           Export CSV
         </button>
       </div>
 
-      {/* ══════════════════════════════════════════
-          INVENTORY TABLE
-      ══════════════════════════════════════════ */}
-      <div className="bg-white dark:bg-slate-900 border border-[#E5E7EB] dark:border-white/10 rounded-xl shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-white/10">
-          <span className="text-sm font-bold text-gray-800 dark:text-slate-200">
-            Inventory Items
-            <span className="ml-2 text-xs font-normal text-gray-400 dark:text-slate-500">({filtered.length} of {items.length})</span>
-          </span>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="bg-gray-50 dark:bg-slate-800 text-gray-500 dark:text-slate-400 border-b border-gray-100 dark:border-white/10">
-                <th className="px-5 py-3 text-left font-semibold tracking-wide">Item</th>
-                <th className="px-5 py-3 text-left font-semibold tracking-wide">Category</th>
-                <th className="px-5 py-3 text-left font-semibold tracking-wide">Stock Qty</th>
-                <th className="px-5 py-3 text-left font-semibold tracking-wide">Stock Status</th>
-                <th className="px-5 py-3 text-left font-semibold tracking-wide">Nearest Expiry</th>
-                <th className="px-5 py-3 text-left font-semibold tracking-wide">Last Movement</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedItems.length === 0 ? (
-                <tr>
-                  <td colSpan={6}>
-                    <div className="flex flex-col items-center justify-center py-16 gap-3">
-                      <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-slate-800 flex items-center justify-center">
-                        <Package className="h-7 w-7 text-gray-300 dark:text-slate-600" />
-                      </div>
-                      <p className="text-sm font-semibold text-gray-400 dark:text-slate-500">No inventory items match your search</p>
-                      <button
-                        onClick={() => { setSearch(''); setCategoryFilter(''); setStatusFilter(''); }}
-                        className="mt-1 px-4 py-2 rounded-lg border border-gray-200 dark:border-white/10 text-xs font-semibold text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 dark:bg-slate-800 transition-colors"
-                      >
-                        Clear Filters
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                paginatedItems.map((item, idx) => (
-                  <tr
-                    key={item.id}
-                    onClick={() => { setSelectedItem(item); setActiveTab('details'); }}
-                    className={`group cursor-pointer transition-colors hover:bg-[#0F766E]/5 ${idx % 2 === 1 ? 'bg-gray-50 dark:bg-slate-800/50' : 'bg-white dark:bg-slate-900'}`}
-                  >
-                    {/* Item */}
-                    <td className="px-5 py-3.5">
-                      <div className="font-bold text-gray-900 dark:text-slate-100 group-hover:text-[#0F766E] transition-colors">{item.itemName}</div>
-                      <div className="text-gray-400 dark:text-slate-500 font-mono mt-0.5">{item.sku}</div>
-                    </td>
-
-                    {/* Category */}
-                    <td className="px-5 py-3.5 text-gray-600 dark:text-slate-300">{item.category}</td>
-
-                    {/* Stock Qty */}
-                    <td className="px-5 py-3.5">
-                      <span className={`text-sm font-bold ${item.qty < 10 ? 'text-red-600' : item.qty > 300 ? 'text-blue-600' : 'text-gray-800 dark:text-slate-200'}`}>
-                        {item.qty}
-                      </span>
-                    </td>
-
-                    {/* Stock Status */}
-                    <td className="px-5 py-3.5">
-                      <StatusBadge status={item.stockStatus} qty={item.qty} />
-                    </td>
-
-                    {/* Nearest Expiry */}
-                    <td className="px-5 py-3.5 text-gray-500 dark:text-slate-400">{getExpiryDate(item)}</td>
-
-                    {/* Last Movement */}
-                    <td className="px-5 py-3.5 text-gray-500 dark:text-slate-400">{item.lastUpdated}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-</table>
-          </div>
-
-          {showPagination && (
-            <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-slate-800">
-              <span className="text-xs text-gray-500 dark:text-slate-400">
-                Page {page} of {totalPages}
-              </span>
-              <div className="flex gap-1">
-                <button
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                  className="rounded-lg px-3 py-1.5 text-xs font-medium text-[#0F766E] hover:bg-[#0F766E]/10 disabled:opacity-30 disabled:pointer-events-none transition-colors"
-                >
-                  Prev
-                </button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                  <button
-                    key={p}
-                    onClick={() => setPage(p)}
-                    className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                      p === page
-                        ? 'bg-[#0F766E] text-white'
-                        : 'text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700'
-                    }`}
-                  >
-                    {p}
-                  </button>
-                ))}
-                <button
-                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages}
-                  className="rounded-lg px-3 py-1.5 text-xs font-medium text-[#0F766E] hover:bg-[#0F766E]/10 disabled:opacity-30 disabled:pointer-events-none transition-colors"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+      <DataTable
+        columns={columns}
+        data={paginatedItems as unknown as Record<string, unknown>[]}
+        rowKey={(row) => (row as unknown as InventoryItem).id}
+        onRowClick={(row) => { setSelectedItem(row as unknown as InventoryItem); setActiveTab('details'); }}
+        emptyState={emptyState}
+        className="border border-[#E5E7EB] dark:border-white/10"
+        pagination={
+          totalPages > 1 ? (
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              totalItems={filtered.length}
+              perPage={pageSize}
+              label="items"
+            />
+          ) : undefined
+        }
+      />
     </div>
   );
 }

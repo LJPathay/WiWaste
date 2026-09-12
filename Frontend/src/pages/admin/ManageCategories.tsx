@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Search, Plus, Edit2, Archive, Info, Loader2,
-  ChevronLeft, ChevronRight, Check, Grid, Sparkles,
+  Check, Grid, Sparkles,
   CupSoda, Coffee, Utensils, Apple, Beef, Cookie,
   Pill, HeartPulse, Home, Recycle,
   Shirt, Tag, Tv, Flame, Wheat, AlertCircle
@@ -11,6 +11,9 @@ import { Tutorial } from '../../components/ui/Tutorial';
 import { Toast, useToast, ConfirmDialog, Modal, FormField, inputCls } from '../../components/ui/Toast';
 import { useOptimisticList } from '../../hooks/useOptimisticList';
 import { categories as categoriesApi, type ApiCategory } from '../../services/api';
+import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
+import { ActionButton } from '../../components/shared/DataTableActions';
+import { Pagination } from '../../components/ui/pagination';
 
 const ITEMS_PER_PAGE = 5;
 
@@ -32,10 +35,6 @@ const PRESET_CATEGORIES = [
   'Others',
 ];
 
-/**
- * Automated Category Icon Resolver
- * Maps category name keywords to representative icons and colors
- */
 const getCategoryIcon = (categoryName: string = '') => {
   const lower = (categoryName || '').toLowerCase().trim();
   
@@ -82,7 +81,6 @@ const getCategoryIcon = (categoryName: string = '') => {
     return { icon: Flame, label: 'Chemicals & Fuel', color: 'text-red-600 bg-red-50 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800/50' };
   }
 
-  // Default fallback
   return { icon: Tag, label: 'General', color: 'text-slate-600 bg-slate-100 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700' };
 };
 
@@ -145,12 +143,10 @@ export function ManageCategories() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<ApiCategory | null>(null);
   
-  // Multi-category addition state
   const [names, setNames] = useState<string[]>(['']);
   const [selectedTypes, setSelectedTypes] = useState<string[]>(['']);
   const [editName, setEditName] = useState('');
   
-  // Visual Tile Picker Modal state
   const [tilePickerRowIndex, setTilePickerRowIndex] = useState<number | null>(null);
   const [tileSearch, setTileSearch] = useState('');
   
@@ -161,7 +157,6 @@ export function ManageCategories() {
 
   const categories = categoryList ?? [];
 
-  // Show empty notification when table is empty and no search applied
   useEffect(() => {
     if (categories.length === 0 && search === '' && !loading && !fetchError) {
       setShowEmptyNotification(true);
@@ -171,7 +166,6 @@ export function ManageCategories() {
     }
   }, [categories.length, search, loading, fetchError]);
 
-  // Countdown timer for notification
   useEffect(() => {
     if (!showEmptyNotification) return;
     const interval = setInterval(() => {
@@ -180,13 +174,11 @@ export function ManageCategories() {
     return () => clearInterval(interval);
   }, [showEmptyNotification]);
 
-  // Multi-category add duplicate & validation checks
   const existingNamesLower = new Set(categories.map(c => c?.name?.toLowerCase().trim()).filter(Boolean));
   
   const hasEmptyAddNames = names.every(n => !n.trim());
   const duplicateExistingAdd = names.some(n => n.trim() && existingNamesLower.has(n.trim().toLowerCase()));
   
-  // Check duplicates within the modal rows themselves
   const filledAddNames = names.map(n => n.trim().toLowerCase()).filter(Boolean);
   const hasInternalDuplicates = new Set(filledAddNames).size !== filledAddNames.length;
 
@@ -206,13 +198,11 @@ export function ManageCategories() {
       return 0;
     });
 
-  // Pagination calculations
   const totalPages = Math.max(1, Math.ceil(filteredCategories.length / ITEMS_PER_PAGE));
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, filteredCategories.length);
   const paginatedCategories = filteredCategories.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
-  // Checkbox Selection Logic
   const isAllSelected = paginatedCategories.length > 0 && paginatedCategories.every(c => selectedIds.includes(c.id));
 
   const toggleSelectAll = () => {
@@ -382,18 +372,46 @@ export function ManageCategories() {
     setIsEditOpen(true);
   };
 
+  const columns: DataTableColumn<ApiCategory>[] = [
+    {
+      key: 'name',
+      header: 'Category Name',
+      pinned: true,
+      truncate: true,
+      minWidth: '200px',
+      render: (row) => {
+        const { icon: CatIcon, color: catColor } = getCategoryIcon(row.name);
+        return (
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-xs">{row.name}</span>
+            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold border ${catColor}`}>
+              <CatIcon className="h-3 w-3" />
+            </span>
+          </div>
+        );
+      },
+    },
+    {
+      key: 'product_count',
+      header: 'Product Count',
+      numeric: true,
+      minWidth: '100px',
+      render: (row) => <span className="text-xs">{row.product_count ?? 0} SKUs</span>,
+    },
+  ];
+
   if (loading) return (
-    <div className="flex flex-col items-center justify-center h-64 gap-4">
-      <div className="relative w-16 h-16">
-        <div className="absolute inset-0 rounded-full border-4 border-slate-200 dark:border-slate-800"></div>
-        <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-[#006a61] border-r-[#006a61] animate-spin"></div>
-        <div className="absolute inset-2 flex items-center justify-center">
-          <Tag className="h-8 w-8 text-[#006a61] dark:text-[#7ef0cf] animate-pulse" />
+    <div className="flex flex-col items-center justify-center h-48 gap-3">
+      <div className="relative w-12 h-12">
+        <div className="absolute inset-0 rounded-full border-3 border-slate-200 dark:border-slate-800"></div>
+        <div className="absolute inset-0 rounded-full border-3 border-transparent border-t-[#006a61] border-r-[#006a61] animate-spin"></div>
+        <div className="absolute inset-1.5 flex items-center justify-center">
+          <Tag className="h-6 w-6 text-[#006a61] dark:text-[#7ef0cf] animate-pulse" />
         </div>
       </div>
       <div className="text-center">
-        <p className="text-slate-600 dark:text-slate-400 font-semibold">Loading categories...</p>
-        <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Fetching category list</p>
+        <p className="text-slate-600 dark:text-slate-400 font-semibold text-sm">Loading categories...</p>
+        <p className="text-[9px] text-slate-400 dark:text-slate-500 mt-0.5">Fetching category list</p>
       </div>
     </div>
   );
@@ -403,17 +421,17 @@ export function ManageCategories() {
     const errorCode = fetchError.match(/\((\d+)\)/)?.[1] || 'Unknown';
     const errorMessage = errorCode === '2002' ? "There's no connection (2002)" : `Connection error (${errorCode})`;
     return (
-      <div className="p-6 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800/40 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Tag className="h-6 w-6 text-red-600 dark:text-red-400 shrink-0" />
+      <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800/40 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Tag className="h-5 w-5 text-red-600 dark:text-red-400 shrink-0" />
           <div>
-            <p className="font-semibold text-red-700 dark:text-red-300">Failed to load categories</p>
-            <p className="text-sm text-red-600 dark:text-red-400">{errorMessage}</p>
+            <p className="font-semibold text-red-700 dark:text-red-300 text-sm">Failed to load categories</p>
+            <p className="text-xs text-red-600 dark:text-red-400">{errorMessage}</p>
           </div>
         </div>
         <button
           onClick={() => refetchCategories()}
-          className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg transition-all shrink-0"
+          className="h-8 px-3 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg transition-all shrink-0"
         >
           Try Again
         </button>
@@ -422,17 +440,16 @@ export function ManageCategories() {
   }
 
   return (
-    <div className="space-y-6 w-full font-sans">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-4 w-full font-sans">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Manage Categories</h1>
+            <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Manage Categories</h1>
             <UITooltip>
               <TooltipTrigger asChild>
-                <Info className="h-5 w-5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
+                <Info className="h-4 w-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
               </TooltipTrigger>
-              <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
+              <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs text-xs">
                 Classify product inventory sectors for shelf placement index.
               </TooltipContent>
             </UITooltip>
@@ -440,28 +457,26 @@ export function ManageCategories() {
         </div>
         <button
           onClick={() => { setNames(['']); setFormError(''); setIsAddOpen(true); }}
-          className="inline-flex items-center gap-2 rounded-lg bg-[#006a61] text-white px-4 py-2 text-sm font-semibold hover:bg-[#00574f] transition-all"
+          className="inline-flex items-center gap-2 h-8 rounded-lg bg-[#006a61] text-white px-3 text-xs font-semibold hover:bg-[#00574f] transition-all"
         >
-          <Plus className="h-4 w-4" />
+          <Plus className="h-3.5 w-3.5" />
           Add Category
         </button>
       </div>
 
-      {/* Main Table Container */}
       <div className="bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden">
-        {/* Filter and Search Bar */}
-        <div className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 dark:border-white/10">
+        <div className="p-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-200 dark:border-white/10">
           <div className="flex items-center gap-2">
-            <span className="px-3 py-1 bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-lg">
+            <span className="px-2.5 py-1 bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-lg">
               All Categories ({categories.length})
             </span>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+          <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
             <select
               value={sortBy}
               onChange={e => setSortBy(e.target.value as 'name-asc' | 'name-desc' | 'products-desc' | 'products-asc' | 'id-desc')}
-              className="w-full sm:w-auto bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-xs font-medium rounded-lg px-3 py-2 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#006a61]"
+              className="w-full sm:w-auto h-8 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-xs font-medium rounded-lg px-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#006a61]"
             >
               <option value="name-asc">Sort: A - Z</option>
               <option value="name-desc">Sort: Z - A</option>
@@ -471,39 +486,38 @@ export function ManageCategories() {
             </select>
 
             <div className="relative max-w-xs w-full sm:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
               <input
                 type="text"
                 placeholder="Search category name..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-white/10 pl-9 pr-3 py-2 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-700 dark:text-slate-200"
+                className="w-full h-8 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-white/10 pl-8 pr-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-700 dark:text-slate-200"
               />
             </div>
           </div>
         </div>
 
-        {/* Bulk Action Bar */}
         {selectedIds.length > 0 && (
-          <div className="bg-[#006a61]/10 border-b border-[#006a61]/20 px-6 py-2.5 flex items-center justify-between text-xs animate-fadeIn">
+          <div className="bg-[#006a61]/10 border-b border-[#006a61]/20 px-4 py-2 flex items-center justify-between text-xs animate-fadeIn">
             <div className="flex items-center gap-2 text-[#006a61] dark:text-[#7ef0cf] font-semibold">
-              <span className="px-2 py-0.5 rounded-full bg-[#006a61] text-white font-bold text-[11px]">
+              <span className="px-1.5 py-0.5 rounded-full bg-[#006a61] text-white font-bold text-[9px]">
                 {selectedIds.length}
               </span>
               <span>{selectedIds.length === 1 ? '1 category selected' : `${selectedIds.length} categories selected`}</span>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setSelectedIds([])}
-                className="px-2.5 py-1 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium hover:underline"
+                className="px-2 py-0.5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium hover:underline text-xs"
               >
                 Deselect All
               </button>
               <button
                 type="button"
                 onClick={() => setShowBulkDeleteConfirm(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-rose-600 text-white font-semibold hover:bg-rose-700 transition-all shadow-sm"
+                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-rose-600 text-white font-semibold hover:bg-rose-700 transition-all shadow-sm text-xs"
               >
                 <Archive className="h-3.5 w-3.5" />
                 Delete Selected ({selectedIds.length})
@@ -512,141 +526,66 @@ export function ManageCategories() {
           </div>
         )}
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs text-left">
-            <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-450 border-b border-slate-200 dark:border-white/10 font-bold">
-              <tr>
-                <th className="w-10 px-4 py-3 text-center">
-                  <input
-                    type="checkbox"
-                    checked={isAllSelected}
-                    onChange={toggleSelectAll}
-                    className="rounded border-slate-300 dark:border-slate-700 text-[#006a61] focus:ring-[#006a61] cursor-pointer"
-                    title="Select / Deselect all on current page"
-                  />
-                </th>
-                <th className="px-6 py-3">Category Name</th>
-                <th className="px-6 py-3">Product Count</th>
-                <th className="px-6 py-3 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200 dark:divide-white/5">
-              {paginatedCategories.length === 0 ? (
-                <tr><td colSpan={4} className="px-6 py-12 text-center text-slate-400">No categories found.</td></tr>
-              ) : paginatedCategories.map((cat) => {
-                const { icon: CatIcon, color: catColor } = getCategoryIcon(cat.name);
-                const isSelected = selectedIds.includes(cat.id);
-                return (
-                  <tr key={cat.id} className={`hover:bg-slate-50/20 dark:hover:bg-white/5 transition-colors ${isSelected ? 'bg-teal-50/30 dark:bg-teal-900/10' : ''}`}>
-                    <td className="w-10 px-4 py-4 text-center">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => toggleSelectRow(cat.id)}
-                        className="rounded border-slate-300 dark:border-slate-700 text-[#006a61] focus:ring-[#006a61] cursor-pointer"
-                      />
-                    </td>
-                    <td className="px-6 py-4 font-medium text-slate-900 dark:text-slate-100">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold">{cat.name}</span>
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${catColor}`}>
-                          <CatIcon className="h-3 w-3" />
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-slate-700 dark:text-slate-300">{cat.product_count ?? 0} SKUs</td>
-                    <td className="px-6 py-4 text-right flex items-center justify-end gap-3">
-                      <button
-                        onClick={() => openEdit(cat)}
-                        className="inline-flex items-center gap-1 text-xs font-bold text-[#006a61] dark:text-[#7ef0cf] hover:underline"
-                      >
-                        <Edit2 className="h-3.5 w-3.5" /> Edit
-                      </button>
-                      <button
-                        onClick={() => { setDeletingId(cat.id); setDeleteName(cat.name); }}
-                        className="inline-flex items-center gap-1 text-xs font-bold text-red-500 hover:text-red-700 hover:underline"
-                      >
-                        <Archive className="h-3.5 w-3.5" /> Delete
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Empty State Notification */}
-        {showEmptyNotification && (
-          <div className="fixed bottom-6 right-6 z-40 animate-in fade-in slide-in-from-right-4 duration-300">
-            <div className="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 rounded-lg shadow-lg p-4 max-w-sm flex items-start gap-3 overflow-hidden">
-              <div className="absolute bottom-0 left-0 h-1 bg-blue-600 dark:bg-blue-400 transition-all" style={{ width: `${(notificationCountdown / 20) * 100}%` }}></div>
-              <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-blue-700 dark:text-blue-300">Hmm, the table is empty</p>
-                <p className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">Input some data to get started</p>
-              </div>
-              <button
-                onClick={() => { setShowEmptyNotification(false); setShowTutorial(true); }}
-                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded transition-all shrink-0"
-              >
-                Quick Guide
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Table Footer Showing Entry Count & Pagination Controls */}
-        <div className="px-6 py-3 bg-slate-50/50 dark:bg-slate-900/50 border-t border-slate-200 dark:border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
-          <span>
-            {filteredCategories.length === 0 ? (
-              <>Showing <strong className="font-semibold text-slate-800 dark:text-slate-200">0</strong> of <strong className="font-semibold text-slate-800 dark:text-slate-200">0</strong> Categories</>
-            ) : totalPages === 1 ? (
-              <>Showing <strong className="font-semibold text-slate-800 dark:text-slate-200">{filteredCategories.length}</strong> of <strong className="font-semibold text-slate-800 dark:text-slate-200">{filteredCategories.length}</strong> Categories</>
-            ) : (
-              <>
-                Showing <strong className="font-semibold text-slate-800 dark:text-slate-200">{startIndex + 1}</strong> to{' '}
-                <strong className="font-semibold text-slate-800 dark:text-slate-200">{endIndex}</strong> of{' '}
-                <strong className="font-semibold text-slate-800 dark:text-slate-200">{filteredCategories.length}</strong> Categories
-              </>
-            )}
-          </span>
-
-          {totalPages > 1 && (
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="p-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 disabled:opacity-40 disabled:hover:bg-transparent transition-all"
-                title="Previous Page"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-
-              <span className="px-2 font-medium text-slate-700 dark:text-slate-300">
-                Page {currentPage} of {totalPages}
-              </span>
-
-              <button
-                type="button"
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="p-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 disabled:opacity-40 disabled:hover:bg-transparent transition-all"
-                title="Next Page"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
+        <DataTable<ApiCategory>
+          columns={columns}
+          data={paginatedCategories as (ApiCategory & Record<string, unknown>)[]}
+          rowKey={(row) => row.id}
+          selectable
+          selectedKeys={new Set(selectedIds)}
+          onSelectionChange={(keys) => setSelectedIds(Array.from(keys) as number[])}
+          emptyMessage="No categories found."
+          hoverActions
+          actions={(row) => (
+            <>
+              <ActionButton
+                icon={<Edit2 className="h-3.5 w-3.5" />}
+                label="Edit"
+                onClick={() => openEdit(row)}
+              />
+              <ActionButton
+                icon={<Archive className="h-3.5 w-3.5" />}
+                label="Delete"
+                variant="danger"
+                onClick={() => { setDeletingId(row.id); setDeleteName(row.name); }}
+              />
+            </>
           )}
-        </div>
+          pagination={
+            <Pagination
+              page={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              totalItems={filteredCategories.length}
+              perPage={ITEMS_PER_PAGE}
+              label="categories"
+            />
+          }
+        />
       </div>
 
-      {/* Add Modal (Supports 1 or Multi-category Addition) */}
+      {showEmptyNotification && (
+        <div className="fixed bottom-4 right-4 z-40 animate-in fade-in slide-in-from-right-4 duration-300">
+          <div className="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 rounded-lg shadow-lg p-3 max-w-sm flex items-start gap-2 overflow-hidden">
+            <div className="absolute bottom-0 left-0 h-1 bg-blue-600 dark:bg-blue-400 transition-all" style={{ width: `${(notificationCountdown / 20) * 100}%` }}></div>
+            <AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-xs font-semibold text-blue-700 dark:text-blue-300">Hmm, the table is empty</p>
+              <p className="text-[9px] text-blue-600 dark:text-blue-400 mt-0.5">Input some data to get started</p>
+            </div>
+            <button
+              onClick={() => { setShowEmptyNotification(false); setShowTutorial(true); }}
+              className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white text-[9px] font-semibold rounded transition-all shrink-0"
+            >
+              Quick Guide
+            </button>
+          </div>
+        </div>
+      )}
+
       {isAddOpen && (
-        <Modal title="Add New Category" onClose={() => setIsAddOpen(false)}>
-          <form onSubmit={handleAdd} className="space-y-4">
-            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
+        <Modal title="Add New Category" onClose={() => setIsAddOpen(false)} maxWidth="lg" contentClassName="p-4">
+          <form onSubmit={handleAdd} className="space-y-3">
+            <div className="space-y-2.5 max-h-[60vh] overflow-y-auto pr-1">
               {names.map((rowName, idx) => {
                 const trimmed = rowName.trim();
                 const isDupExisting = trimmed && existingNamesLower.has(trimmed.toLowerCase());
@@ -655,13 +594,13 @@ export function ManageCategories() {
                 const isOthersSelected = selectedTypes[idx] === 'Others';
 
                 return (
-                  <FormField key={idx} label={`Category ${names.length > 1 ? `#${idx + 1}` : 'Name'}`}>
-                    <div className="space-y-2">
+                  <FormField key={idx} label={`Category ${names.length > 1 ? `#${idx + 1}` : 'Name'}`} labelClassName="text-sm font-bold">
+                    <div className="space-y-1.5">
                       <div className="flex items-center gap-2">
                         <select
                           value={selectedTypes[idx] ?? ''}
                           onChange={e => handleDropdownChange(idx, e.target.value)}
-                          className={`${inputCls} flex-1`}
+                          className={`${inputCls} flex-1 h-8`}
                         >
                           <option value="">-- Select Category Type --</option>
                           {PRESET_CATEGORIES.map(cat => (
@@ -674,10 +613,10 @@ export function ManageCategories() {
                         <button
                           type="button"
                           onClick={() => setTilePickerRowIndex(idx)}
-                          className="px-2.5 py-2 rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-800 hover:border-[#006a61] text-xs font-semibold text-[#006a61] dark:text-[#7ef0cf] flex items-center gap-1.5 transition-all cursor-pointer shrink-0 shadow-xs"
+                          className="h-8 px-3 rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-800 hover:border-[#006a61] text-xs font-semibold text-[#006a61] dark:text-[#7ef0cf] flex items-center gap-1.5 transition-all cursor-pointer shrink-0 shadow-xs"
                           title="Open Visual Category Tiles Grid"
                         >
-                          <Grid className="h-4 w-4" />
+                          <Grid className="h-3.5 w-3.5" />
                           <span className="hidden sm:inline">Tiles</span>
                         </button>
 
@@ -685,15 +624,14 @@ export function ManageCategories() {
                           <button
                             type="button"
                             onClick={() => handleRemoveRow(idx)}
-                            className="p-2 text-slate-400 hover:text-red-500 transition-colors"
+                            className="p-1.5 text-slate-400 hover:text-red-500 transition-colors"
                             title="Remove category row"
                           >
-                            <Archive className="h-4 w-4" />
+                            <Archive className="h-3.5 w-3.5" />
                           </button>
                         )}
                       </div>
 
-                      {/* Custom Input when "Others" is selected */}
                       {isOthersSelected && (
                         <div className="relative flex items-center">
                           <input
@@ -702,14 +640,14 @@ export function ManageCategories() {
                             placeholder="Type custom category name..."
                             value={rowName}
                             onChange={e => handleCustomNameChange(idx, e.target.value)}
-                            className={`${inputCls} pr-10`}
+                            className={`${inputCls} pr-10 h-8`}
                           />
                           {trimmed && (() => {
                             const { icon: CatIcon, color: catColor } = getCategoryIcon(rowName);
                             return (
-                              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                              <div className="absolute right-2.5 top-1/2 -translate-y-1/2">
                                 <span className={`inline-flex items-center p-1 rounded-full border ${catColor}`} title="Auto-assigned Icon">
-                                  <CatIcon className="h-4 w-4" />
+                                  <CatIcon className="h-3.5 w-3.5" />
                                 </span>
                               </div>
                             );
@@ -717,34 +655,33 @@ export function ManageCategories() {
                         </div>
                       )}
 
-                      {/* Icon preview for preset category */}
                       {!isOthersSelected && trimmed && (() => {
                         const { icon: CatIcon, color: catColor } = getCategoryIcon(rowName);
                         return (
                           <div className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400">
-                            <span className="text-[11px] text-slate-400">Auto Icon:</span>
-                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold border ${catColor}`}>
-                              <CatIcon className="h-3.5 w-3.5" />
+                            <span className="text-[9px] text-slate-400">Auto Icon:</span>
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold border ${catColor}`}>
+                              <CatIcon className="h-3 w-3" />
                               <span>{rowName}</span>
                             </span>
                           </div>
                         );
                       })()}
                     </div>
-                    {isDupExisting && <p className="text-red-500 text-[11px] mt-1">Category name already exists.</p>}
-                    {isDupInternal && <p className="text-amber-600 text-[11px] mt-1">Duplicate entry in form.</p>}
+                    {isDupExisting && <p className="text-red-500 text-[9px] mt-0.5">Category name already exists.</p>}
+                    {isDupInternal && <p className="text-amber-600 text-[9px] mt-0.5">Duplicate entry in form.</p>}
                   </FormField>
                 );
               })}
             </div>
 
-            <div className="pt-1">
+            <div className="pt-0.5">
               <button
                 type="button"
                 onClick={handleAddRow}
-                className="w-full border border-dashed border-[#006a61] text-[#006a61] dark:text-[#7ef0cf] hover:bg-[#006a61]/5 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all"
+                className="w-full border border-dashed border-[#006a61] text-[#006a61] dark:text-[#7ef0cf] hover:bg-[#006a61]/5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all"
               >
-                <Plus className="h-3.5 w-3.5" /> Add Another Category
+                <Plus className="h-3 w-3" /> Add Another Category
               </button>
             </div>
 
@@ -753,40 +690,39 @@ export function ManageCategories() {
             <button
               type="submit"
               disabled={submitting || hasEmptyAddNames || duplicateExistingAdd || hasInternalDuplicates}
-              className="w-full bg-[#006a61] hover:bg-[#00574f] text-white py-2.5 rounded-lg text-sm font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full h-8 bg-[#006a61] hover:bg-[#00574f] text-white rounded-lg text-xs font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {submitting ? <><Loader2 className="h-4 w-4 animate-spin" />Creating...</> : (names.length > 1 ? `Add ${names.filter(n=>n.trim()).length || ''} Categories` : 'Add Category')}
+              {submitting ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Creating...</> : (names.length > 1 ? `Add ${names.filter(n=>n.trim()).length || ''} Categories` : 'Add Category')}
             </button>
           </form>
         </Modal>
       )}
 
-      {/* Edit Modal */}
       {isEditOpen && editingCategory && (
-        <Modal title="Edit Category" onClose={() => setIsEditOpen(false)}>
-          <form onSubmit={handleEdit} className="space-y-4">
-            <FormField label="Category Name">
+        <Modal title="Edit Category" onClose={() => setIsEditOpen(false)} maxWidth="lg" contentClassName="p-4">
+          <form onSubmit={handleEdit} className="space-y-3">
+            <FormField label="Category Name" labelClassName="text-sm font-bold">
               <div className="relative flex items-center">
                 <input
                   type="text" required placeholder="e.g. Beverages" value={editName} onChange={e => setEditName(e.target.value)}
-                  className={`${inputCls} pr-10`}
+                  className={`${inputCls} pr-10 h-8`}
                 />
                 {editName.trim() && (() => {
                   const { icon: CatIcon, color: catColor } = getCategoryIcon(editName);
                   return (
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <div className="absolute right-2.5 top-1/2 -translate-y-1/2">
                       <span className={`inline-flex items-center p-1 rounded-full border ${catColor}`} title="Auto-assigned Icon">
-                        <CatIcon className="h-4 w-4" />
+                        <CatIcon className="h-3.5 w-3.5" />
                       </span>
                     </div>
                   );
                 })()}
               </div>
-              {isDuplicateEditName && <p className="text-red-500 text-[11px] mt-1">Category name already exists.</p>}
+              {isDuplicateEditName && <p className="text-red-500 text-[9px] mt-0.5">Category name already exists.</p>}
             </FormField>
             {formError && <p className="text-red-600 text-xs">{formError}</p>}
-            <button type="submit" disabled={submitting || isDuplicateEditName} className="w-full bg-[#006a61] hover:bg-[#00574f] text-white py-2.5 rounded-lg text-sm font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-2">
-              {submitting ? <><Loader2 className="h-4 w-4 animate-spin" />Saving...</> : 'Save Changes'}
+            <button type="submit" disabled={submitting || isDuplicateEditName} className="w-full h-8 bg-[#006a61] hover:bg-[#00574f] text-white rounded-lg text-xs font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+              {submitting ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Saving...</> : 'Save Changes'}
             </button>
           </form>
         </Modal>
@@ -812,7 +748,6 @@ export function ManageCategories() {
         />
       )}
 
-      {/* ── Visual Category Tile Picker Modal ── */}
       {tilePickerRowIndex !== null && (
         <Modal
           title="Select Category Type"
@@ -820,26 +755,28 @@ export function ManageCategories() {
             setTilePickerRowIndex(null);
             setTileSearch('');
           }}
+          maxWidth="lg"
+          contentClassName="p-4"
         >
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div className="flex items-center gap-2">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                 <input
                   type="text"
                   placeholder="Search category tiles..."
                   value={tileSearch}
                   onChange={e => setTileSearch(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 pl-9 pr-3 py-2 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100"
+                  className="w-full h-8 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 pl-8 pr-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100"
                 />
               </div>
             </div>
 
-            <p className="text-xs text-slate-500">
+            <p className="text-[9px] text-slate-500">
               Click any category tile below to select its auto-icon and pre-set category name:
             </p>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-[50vh] overflow-y-auto pr-1">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[50vh] overflow-y-auto pr-1">
               {PRESET_CATEGORIES.filter(cat => cat.toLowerCase().includes(tileSearch.toLowerCase())).map(catName => {
                 const { icon: CatIcon, color: catColor } = getCategoryIcon(catName);
                 const isSelected = selectedTypes[tilePickerRowIndex] === catName;
@@ -850,28 +787,28 @@ export function ManageCategories() {
                     key={catName}
                     type="button"
                     onClick={() => handleSelectTile(tilePickerRowIndex, catName)}
-                    className={`p-3 rounded-xl border text-left flex flex-col justify-between gap-2 transition-all cursor-pointer ${
+                    className={`p-2.5 rounded-xl border text-left flex flex-col justify-between gap-1.5 transition-all cursor-pointer ${
                       isSelected
                         ? 'border-[#006a61] bg-[#006a61]/10 dark:bg-[#006a61]/20 shadow-md ring-2 ring-[#006a61]/30'
                         : 'border-slate-200 dark:border-white/10 bg-slate-50/60 dark:bg-slate-800/60 hover:border-[#006a61] hover:bg-slate-100 dark:hover:bg-slate-800 hover:scale-[1.02]'
                     }`}
                   >
                     <div className="flex items-center justify-between w-full">
-                      <span className={`inline-flex items-center p-2 rounded-lg border ${catColor}`}>
-                        <CatIcon className="h-4 w-4" />
+                      <span className={`inline-flex items-center p-1.5 rounded-lg border ${catColor}`}>
+                        <CatIcon className="h-3.5 w-3.5" />
                       </span>
                       {isSelected && (
                         <div className="p-0.5 rounded-full bg-[#006a61] text-white">
-                          <Check className="h-3 w-3" />
+                          <Check className="h-2.5 w-2.5" />
                         </div>
                       )}
                     </div>
                     <div>
                       <div className="font-bold text-xs text-slate-900 dark:text-slate-100 flex items-center justify-between">
                         <span>{isOthers ? 'Others' : catName}</span>
-                        {isOthers && <Sparkles className="h-3 w-3 text-amber-500" />}
+                        {isOthers && <Sparkles className="h-2.5 w-2.5 text-amber-500" />}
                       </div>
-                      <p className="text-[10px] text-slate-400 mt-0.5">
+                      <p className="text-[9px] text-slate-400 mt-0.5">
                         {isOthers ? 'Type custom name' : 'Preset icon'}
                       </p>
                     </div>
@@ -883,12 +820,9 @@ export function ManageCategories() {
         </Modal>
       )}
 
-      {/* Tutorial Component */}
       <Tutorial steps={tutorialSteps} isOpen={showTutorial} onClose={() => setShowTutorial(false)} />
 
       <Toast toasts={toasts} onDismiss={dismiss} />
     </div>
   );
 }
-
-

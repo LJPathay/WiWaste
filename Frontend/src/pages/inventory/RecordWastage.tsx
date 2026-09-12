@@ -4,6 +4,7 @@ import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../comp
 import { Toast, useToast, ConfirmDialog } from '../../components/ui/Toast';
 import { useApi } from '../../hooks/useApi';
 import { products as productsApi, wastage as wastageApi, type ApiWastage } from '../../services/api';
+import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
 
 const currencyFormatter = new Intl.NumberFormat('en-PH', {
   style: 'currency',
@@ -147,8 +148,58 @@ export function RecordWastage() {
 
   const totalCost = filteredRecords.reduce((sum, r) => sum + r.cost, 0);
 
+  const columns: DataTableColumn[] = [
+    {
+      key: 'name',
+      header: 'Item',
+      pinned: true,
+      truncate: true,
+      minWidth: '180px',
+      render: (row) => (
+        <div>
+          <div className="font-semibold text-[#0F172A] dark:text-slate-100">{String(row.name)}</div>
+          <div className="font-mono text-[10px] text-slate-400">{String(row.sku)}</div>
+        </div>
+      ),
+    },
+    {
+      key: 'qty',
+      header: 'Qty',
+      numeric: true,
+      minWidth: '80px',
+      render: (row) => (
+        <span className="font-semibold text-[#DC2626]">-{String(row.qty)} units</span>
+      ),
+    },
+    {
+      key: 'cost',
+      header: 'Loss Cost',
+      numeric: true,
+      minWidth: '100px',
+      render: (row) => (
+        <span className="font-bold text-[#DC2626]">{currencyFormatter.format(Number(row.cost))}</span>
+      ),
+    },
+    {
+      key: 'reason',
+      header: 'Reason',
+      truncate: true,
+      minWidth: '120px',
+      render: (row) => (
+        <span className={`inline-flex rounded-md px-2 py-0.5 text-[10px] font-semibold ${getReasonBadge(String(row.reason))}`}>
+          {String(row.reason)}
+        </span>
+      ),
+    },
+    {
+      key: 'recordedAt',
+      header: 'Recorded At',
+      minWidth: '120px',
+    },
+  ];
+
   return (
-    <div className="space-y-6 w-full bg-[#F8FAFC] dark:bg-slate-950 min-h-full font-sans">
+    <div className="space-y-3 w-full bg-[#F8FAFC] dark:bg-slate-950 min-h-full font-sans">
       <Toast toasts={toasts} onDismiss={dismiss} />
 
       {confirmData && (
@@ -160,10 +211,9 @@ export function RecordWastage() {
         />
       )}
 
-      {/* Page Header */}
       <div className="flex flex-col gap-1">
         <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-bold text-[#0F172A] dark:text-slate-100">Record Wastage</h1>
+          <h1 className="text-xl font-bold text-[#0F172A] dark:text-slate-100">Record Wastage</h1>
           <UITooltip>
             <TooltipTrigger asChild>
               <Info className="h-4 w-4 text-slate-400 hover:text-slate-600 cursor-help" />
@@ -173,62 +223,57 @@ export function RecordWastage() {
             </TooltipContent>
           </UITooltip>
         </div>
-        <p className="text-sm text-[#64748B] dark:text-slate-400">
+        <p className="text-xs text-[#64748B] dark:text-slate-400">
           Log inventory losses for audit, analytics, and cost recovery tracking
         </p>
       </div>
 
-      {/* Loss Summary Strip */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="rounded-xl border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-950/20 p-4 flex items-center gap-4 shadow-sm">
-          <div className="rounded-lg p-2.5 bg-red-100 dark:bg-red-900/30 flex-shrink-0">
-            <TrendingDown className="h-5 w-5 text-red-600 dark:text-red-400" />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="rounded-xl border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-950/20 p-3 flex items-center gap-3 shadow-sm">
+          <div className="rounded-lg h-7 w-7 bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0">
+            <TrendingDown className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-red-500 dark:text-red-400 uppercase tracking-wider">Today's Loss</p>
-            <p className="text-xl font-black text-red-700 dark:text-red-300 mt-0.5">{currencyFormatter.format(todayLoss)}</p>
+            <p className="text-[9px] font-semibold text-red-500 dark:text-red-400 uppercase tracking-wider">Today's Loss</p>
+            <p className="text-sm font-black text-red-700 dark:text-red-300 mt-0.5">{currencyFormatter.format(todayLoss)}</p>
           </div>
         </div>
-        <div className="rounded-xl border border-orange-100 dark:border-orange-900/30 bg-orange-50 dark:bg-orange-950/20 p-4 flex items-center gap-4 shadow-sm">
-          <div className="rounded-lg p-2.5 bg-orange-100 dark:bg-orange-900/30 flex-shrink-0">
-            <BarChart2 className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+        <div className="rounded-xl border border-orange-100 dark:border-orange-900/30 bg-orange-50 dark:bg-orange-950/20 p-3 flex items-center gap-3 shadow-sm">
+          <div className="rounded-lg h-7 w-7 bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center flex-shrink-0">
+            <BarChart2 className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-orange-500 dark:text-orange-400 uppercase tracking-wider">Weekly Loss</p>
-            <p className="text-xl font-black text-orange-700 dark:text-orange-300 mt-0.5">{currencyFormatter.format(weeklyLoss)}</p>
+            <p className="text-[9px] font-semibold text-orange-500 dark:text-orange-400 uppercase tracking-wider">Weekly Loss</p>
+            <p className="text-sm font-black text-orange-700 dark:text-orange-300 mt-0.5">{currencyFormatter.format(weeklyLoss)}</p>
           </div>
         </div>
-        <div className="rounded-xl border border-amber-100 dark:border-amber-900/30 bg-amber-50 dark:bg-amber-950/20 p-4 flex items-center gap-4 shadow-sm">
-          <div className="rounded-lg p-2.5 bg-amber-100 dark:bg-amber-900/30 flex-shrink-0">
-            <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+        <div className="rounded-xl border border-amber-100 dark:border-amber-900/30 bg-amber-50 dark:bg-amber-950/20 p-3 flex items-center gap-3 shadow-sm">
+          <div className="rounded-lg h-7 w-7 bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0">
+            <AlertTriangle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider">Monthly Loss</p>
-            <p className="text-xl font-black text-amber-700 dark:text-amber-300 mt-0.5">{currencyFormatter.format(monthlyLoss)}</p>
+            <p className="text-[9px] font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider">Monthly Loss</p>
+            <p className="text-sm font-black text-amber-700 dark:text-amber-300 mt-0.5">{currencyFormatter.format(monthlyLoss)}</p>
           </div>
         </div>
       </div>
 
-      {/* Two-Column Layout */}
-      <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-[400px_1fr] gap-6 items-start">
-
-        {/* LEFT: Form Card with Live Search Autocomplete */}
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-[#E5E7EB] dark:border-white/10 shadow-sm p-6 h-fit">
-          <div className="flex items-center gap-2 mb-5">
-            <div className="rounded-lg p-1.5 bg-red-50">
-              <Trash2 className="h-4 w-4 text-red-600" />
+      <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-[400px_1fr] gap-4 items-start">
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-[#E5E7EB] dark:border-white/10 shadow-sm p-3.5 h-fit">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="rounded-lg h-7 w-7 bg-red-50 flex items-center justify-center">
+              <Trash2 className="h-3.5 w-3.5 text-red-600" />
             </div>
             <h2 className="text-sm font-bold text-[#0F172A] dark:text-slate-100">Log Wastage Record</h2>
           </div>
 
-          <form onSubmit={handleRecord} className="space-y-4">
-            {/* Interactive Product Search Dropdown */}
+          <form onSubmit={handleRecord} className="space-y-3">
             <div className="relative" ref={dropdownRef}>
               <label className="block text-xs font-semibold text-[#374151] dark:text-slate-300 mb-1.5">
                 Search Registered Product Catalog
               </label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
                 <input
                   type="text"
                   placeholder="Type product name or SKU (e.g. Biogesic)..."
@@ -239,13 +284,12 @@ export function RecordWastage() {
                     setSelectedProductId(null);
                     setShowDropdown(true);
                   }}
-                  className="w-full pl-9 pr-8 py-2.5 rounded-lg border border-[#E5E7EB] dark:border-white/10 text-sm text-[#0F172A] dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all"
+                  className="w-full pl-9 pr-8 h-8 rounded-lg border border-[#E5E7EB] dark:border-white/10 text-xs text-[#0F172A] dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all"
                   required
                 />
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
               </div>
 
-              {/* Autocomplete Search Dropdown Menu */}
               {showDropdown && (
                 <div className="absolute z-30 top-full left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl shadow-xl divide-y divide-slate-100 dark:divide-white/5">
                   {matchingProducts.length === 0 ? (
@@ -258,7 +302,7 @@ export function RecordWastage() {
                         key={p.id}
                         type="button"
                         onClick={() => handleSelectProduct(p)}
-                        className="w-full text-left p-3 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-between transition-colors text-xs"
+                        className="w-full text-left p-2 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-between transition-colors text-xs"
                       >
                         <div>
                           <p className="font-semibold text-slate-900 dark:text-slate-100">{p.name}</p>
@@ -274,37 +318,37 @@ export function RecordWastage() {
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-[#374151] dark:text-slate-300 mb-1.5">Quantity</label>
+                <label className="block text-xs font-semibold text-[#374151] dark:text-slate-300 mb-1">Quantity</label>
                 <input
                   type="number"
                   min="1"
                   placeholder="e.g. 5"
                   value={qty}
                   onChange={(e) => setQty(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-lg border border-[#E5E7EB] dark:border-white/10 text-sm text-[#0F172A] dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all"
+                  className="w-full px-3 h-8 rounded-lg border border-[#E5E7EB] dark:border-white/10 text-xs text-[#0F172A] dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all"
                   required
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[#374151] dark:text-slate-300 mb-1.5">Unit Cost (&#8369;)</label>
+                <label className="block text-xs font-semibold text-[#374151] dark:text-slate-300 mb-1">Unit Cost (&#8369;)</label>
                 <input
                   type="number"
                   placeholder="Auto-filled"
                   value={unitCost || ''}
                   onChange={(e) => setUnitCost(Number(e.target.value))}
-                  className="w-full px-3 py-2.5 rounded-lg border border-[#E5E7EB] dark:border-white/10 text-sm text-[#0F172A] dark:text-slate-100 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all"
+                  className="w-full px-3 h-8 rounded-lg border border-[#E5E7EB] dark:border-white/10 text-xs text-[#0F172A] dark:text-slate-100 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[#374151] dark:text-slate-300 mb-1.5">Wastage Reason</label>
+              <label className="block text-xs font-semibold text-[#374151] dark:text-slate-300 mb-1">Wastage Reason</label>
               <select
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-lg border border-[#E5E7EB] dark:border-white/10 text-sm text-[#0F172A] dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all"
+                className="w-full px-3 h-8 rounded-lg border border-[#E5E7EB] dark:border-white/10 text-xs text-[#0F172A] dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all"
               >
                 <option value="Expired on Shelf">Expired on Shelf</option>
                 <option value="Damaged / Broken">Damaged / Broken</option>
@@ -337,7 +381,6 @@ export function RecordWastage() {
           </form>
         </div>
 
-        {/* RIGHT: Wastage Logs */}
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-[#E5E7EB] dark:border-white/10 shadow-sm overflow-hidden flex flex-col">
           <div className="px-5 py-4 border-b border-[#E5E7EB] dark:border-white/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
@@ -358,53 +401,7 @@ export function RecordWastage() {
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left">
-              <thead className="bg-[#F8FAFC] dark:bg-slate-800 border-b border-[#E5E7EB] dark:border-white/10">
-                <tr>
-                  <th className="px-5 py-3 font-semibold text-[10px] uppercase tracking-wider text-[#64748B]">Item</th>
-                  <th className="px-5 py-3 font-semibold text-[10px] uppercase tracking-wider text-[#64748B]">Qty</th>
-                  <th className="px-5 py-3 font-semibold text-[10px] uppercase tracking-wider text-[#64748B]">Loss Cost</th>
-                  <th className="px-5 py-3 font-semibold text-[10px] uppercase tracking-wider text-[#64748B]">Reason</th>
-                  <th className="px-5 py-3 font-semibold text-[10px] uppercase tracking-wider text-[#64748B]">Recorded At</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#F1F5F9] dark:divide-white/5">
-                {filteredRecords.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="text-center py-16">
-                      <div className="flex flex-col items-center gap-3">
-                        <div className="rounded-full bg-slate-100 p-4">
-                          <PackageX className="h-8 w-8 text-slate-400" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold text-[#64748B]">No wastage records found</p>
-                          <p className="text-xs mt-1 text-slate-400">Try adjusting your search or log a new record</p>
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                ) : (
-                  filteredRecords.map((r) => (
-                    <tr key={r.id} className="hover:bg-[#F8FAFC] dark:hover:bg-slate-800/50 transition-colors">
-                      <td className="px-5 py-4 font-semibold text-[#0F172A] dark:text-slate-100">{r.name}</td>
-                      <td className="px-5 py-4">
-                        <span className="font-semibold text-[#DC2626]">-{r.qty}</span>
-                        <span className="ml-1 text-[#64748B]">units</span>
-                      </td>
-                      <td className="px-5 py-4 font-bold text-[#DC2626]">{currencyFormatter.format(r.cost)}</td>
-                      <td className="px-5 py-4">
-                        <span className={`inline-flex rounded-md px-2 py-0.5 text-[10px] font-semibold ${getReasonBadge(r.reason)}`}>
-                          {r.reason}
-                        </span>
-                      </td>
-                      <td className="px-5 py-4 text-[#64748B] dark:text-slate-400">{r.recordedAt}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+          <DataTable columns={columns} data={filteredRecords} rowKey={(row) => row.id} emptyMessage="No wastage records found" />
 
           {filteredRecords.length > 0 && (
             <div className="px-5 py-3 border-t border-[#E5E7EB] dark:border-white/10 bg-slate-50 dark:bg-slate-800 flex items-center justify-between">

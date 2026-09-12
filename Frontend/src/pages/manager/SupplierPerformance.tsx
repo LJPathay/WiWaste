@@ -3,6 +3,7 @@ import { Info } from 'lucide-react';
 import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, LineChart, Line, LabelList } from 'recharts';
 import { Toast, useToast, ConfirmDialog } from '../../components/ui/Toast';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
+import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
 
 interface PerformanceMock {
   id: string;
@@ -40,6 +41,14 @@ const TREND_DATA = [
 
 const currencyFormatter = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 });
 
+const supplierColumns: DataTableColumn<PerformanceMock>[] = [
+  { key: 'name', header: 'Supplier', pinned: true, truncate: true, minWidth: '150px' },
+  { key: 'delivery', header: 'Delivery Rate', numeric: true, minWidth: '100px', render: (row) => `${row.delivery}%` },
+  { key: 'returns', header: 'Return Rate', numeric: true, minWidth: '100px', render: (row) => `${row.returns}%` },
+  { key: 'leadTime', header: 'Avg Lead Time', numeric: true, minWidth: '100px', render: (row) => `${row.leadTime} days` },
+  { key: 'credits', header: 'Pending Credits', minWidth: '120px', render: (row) => row.credits > 0 ? currencyFormatter.format(row.credits) : '—' },
+];
+
 export function SupplierPerformance() {
   const { toasts, dismiss, success } = useToast();
   const [suppliers, setSuppliers] = useState<PerformanceMock[]>(SUPPLIERS);
@@ -59,14 +68,14 @@ export function SupplierPerformance() {
   };
 
   return (
-    <div className="space-y-6 w-full">
+    <div className="space-y-4 w-full">
       <div className="flex items-center gap-2">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Supplier Performance Audit</h1>
+        <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Supplier Performance Audit</h1>
         <UITooltip>
           <TooltipTrigger asChild>
-            <Info className="h-5 w-5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
+            <Info className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
           </TooltipTrigger>
-          <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
+          <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs text-xs">
             Delivery fulfillment rates, return statistics, and pending credits by distributor to evaluate supplier reliability.
           </TooltipContent>
         </UITooltip>
@@ -82,26 +91,26 @@ export function SupplierPerformance() {
       )}
 
       {/* KPI row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
           { label: 'Avg On-Time Delivery', value: `${Math.round(suppliers.reduce((s, x) => s + x.delivery, 0) / suppliers.length)}%` },
           { label: 'Total Recoverable Credits', value: currencyFormatter.format(suppliers.reduce((s, x) => s + x.credits, 0)) },
           { label: 'Avg Lead Time', value: `${(suppliers.reduce((s, x) => s + x.leadTime, 0) / suppliers.length).toFixed(1)} days` },
           { label: 'Active Suppliers', value: `${suppliers.length}` },
         ].map(card => (
-          <div key={card.label} className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 p-5 shadow-sm">
-            <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{card.label}</div>
-            <div className="mt-2 text-2xl font-black text-slate-900 dark:text-slate-100">{card.value}</div>
+          <div key={card.label} className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 p-3 shadow-sm">
+            <div className="text-[9px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{card.label}</div>
+            <div className="mt-1 text-sm font-black text-slate-900 dark:text-slate-100">{card.value}</div>
           </div>
         ))}
       </div>
 
       {/* Charts row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Bar chart */}
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 p-6 shadow-sm">
-          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-5">Delivery Rate vs Return Exposure</h3>
-          <div className="h-64 w-full">
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 p-3.5 shadow-sm">
+          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-3">Delivery Rate vs Return Exposure</h3>
+          <div className="h-56 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} layout="vertical" margin={{ left: 16, right: 40, top: 8, bottom: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e8edf5" />
@@ -121,9 +130,9 @@ export function SupplierPerformance() {
         </div>
 
         {/* Line trend */}
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 p-6 shadow-sm">
-          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-5">Top 3 Supplier Delivery Trend (Full Year)</h3>
-          <div className="h-64 w-full">
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 p-3.5 shadow-sm">
+          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-3">Top 3 Supplier Delivery Trend (Full Year)</h3>
+          <div className="h-56 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={TREND_DATA}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e8edf5" />
@@ -141,51 +150,33 @@ export function SupplierPerformance() {
       </div>
 
       {/* Supplier table */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-200 dark:border-white/10">
-          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">Supplier Details</h3>
-        </div>
-        <table className="w-full text-xs text-left">
-          <thead className="bg-slate-50 dark:bg-slate-950 text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-white/10">
-            <tr>
-              <th className="px-6 py-3 font-semibold">Supplier</th>
-              <th className="px-6 py-3 font-semibold">On-Time %</th>
-              <th className="px-6 py-3 font-semibold">Return Rate</th>
-              <th className="px-6 py-3 font-semibold">Lead Time</th>
-              <th className="px-6 py-3 font-semibold">Pending Credits</th>
-              <th className="px-6 py-3 font-semibold text-right">Action</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-            {suppliers.map((s) => (
-              <tr key={s.id} className="hover:bg-slate-50/50 dark:hover:bg-white/5">
-                <td className="px-6 py-4 font-semibold text-slate-800 dark:text-slate-100">{s.name}</td>
-                <td className="px-6 py-4 text-slate-700 dark:text-slate-300">{s.delivery}%</td>
-                <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{s.returns}%</td>
-                <td className="px-6 py-4 text-slate-500 dark:text-slate-400">{s.leadTime} days</td>
-                <td className="px-6 py-4 font-semibold text-slate-800 dark:text-slate-200">{s.credits > 0 ? currencyFormatter.format(s.credits) : '—'}</td>
-                <td className="px-6 py-4 text-right">
-                  {s.credits > 0 ? (
-                    <button
-                      onClick={() => !s.creditPending && setConfirm({ open: true, supplierId: s.id, name: s.name })}
-                      disabled={s.creditPending}
-                      className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
-                        s.creditPending
-                          ? 'bg-slate-100 dark:bg-slate-800 text-slate-400'
-                          : 'bg-[#006a61] hover:bg-[#00574f] text-white'
-                      }`}
-                    >
-                      {s.creditPending ? 'Requested' : 'Request Credits'}
-                    </button>
-                  ) : (
-                    <span className="text-slate-300 dark:text-slate-600 text-xs">No credits</span>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        columns={supplierColumns}
+        data={suppliers}
+        rowKey={(row) => row.id}
+        actions={(row) => (
+          <>
+            {row.credits > 0 ? (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!row.creditPending) setConfirm({ open: true, supplierId: row.id, name: row.name });
+                }}
+                disabled={row.creditPending}
+                className={`h-8 text-xs font-semibold px-3 rounded-lg transition-colors ${
+                  row.creditPending
+                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-400'
+                    : 'bg-[#006a61] hover:bg-[#00574f] text-white'
+                }`}
+              >
+                {row.creditPending ? 'Requested' : 'Request Credits'}
+              </button>
+            ) : (
+              <span className="text-slate-300 dark:text-slate-600 text-xs">No credits</span>
+            )}
+          </>
+        )}
+      />
 
       <Toast toasts={toasts} onDismiss={dismiss} />
     </div>

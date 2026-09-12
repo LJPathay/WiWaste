@@ -5,20 +5,14 @@ import {
   initializeDashboard,
   getPredictiveAnalytics,
 } from '../utils/mockAuthAndFeatures';
-import { dashboard as dashboardApi } from '../services/api';
+import { ownerDashboard } from '../services/api';
+import type { ApiDashboard, ApiOwnerAnalytics } from '../services/api';
 import type { DashboardData } from '../utils/mockAuthAndFeatures';
-
-export interface DashboardOverview {
-  active_skus: number;
-  total_users: number;
-  active_suppliers: number;
-  today_sales: number;
-  recent_wastage: number;
-}
 
 export function useDashboardData() {
   const [data, setData] = useState<DashboardData | null>(null);
-  const [overview, setOverview] = useState<DashboardOverview | null>(null);
+  const [overview, setOverview] = useState<ApiDashboard | null>(null);
+  const [ownerAnalytics, setOwnerAnalytics] = useState<ApiOwnerAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -26,21 +20,23 @@ export function useDashboardData() {
 
     async function load() {
       try {
-        const [d, ov] = await Promise.all([
+        const [d, ov, analytics] = await Promise.all([
           (async () => {
             const session = getStoredSession();
             const email = session?.email ?? 'user@example.com';
             const role = session?.role ?? inferRoleFromEmail(email);
             return initializeDashboard(email, 'password', role);
           })(),
-          dashboardApi.overview().catch(() => null),
+          ownerDashboard.overview().catch(() => null),
+          ownerDashboard.analytics({ period: '30' }).catch(() => null),
         ]);
         if (mounted) {
           setData(d);
           setOverview(ov);
+          setOwnerAnalytics(analytics);
         }
       } catch {
-        const analytics = getPredictiveAnalytics();
+        const analyticsData = getPredictiveAnalytics();
         if (mounted) {
           setData({
             user: {
@@ -51,7 +47,7 @@ export function useDashboardData() {
               role: 'inventory',
               loginTime: new Date(),
             },
-            predictiveAnalytics: analytics,
+            predictiveAnalytics: analyticsData,
             prescriptiveDecisions: [],
             profitLeakage: [],
             batchFEFO: [],
@@ -59,6 +55,7 @@ export function useDashboardData() {
             behavioralInsights: [],
           });
           setOverview(null);
+          setOwnerAnalytics(null);
         }
       } finally {
         if (mounted) setLoading(false);
@@ -71,5 +68,5 @@ export function useDashboardData() {
     };
   }, []);
 
-  return { data, overview, loading };
+  return { data, overview, ownerAnalytics, loading };
 }

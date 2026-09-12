@@ -3,6 +3,8 @@ import { RotateCcw, Search } from 'lucide-react';
 import { FormField, inputCls, Toast, useToast } from '../../components/ui/Toast';
 import { formatCurrency } from '../../utils/cashierData';
 import { returns as returnsApi, sales as salesApi, type ApiReturn, type ApiSalesTransaction } from '../../services/api';
+import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
+import { ActionButton } from '../../components/shared/DataTableActions';
 
 interface ReturnableItem {
   sale_item_id: number;
@@ -12,11 +14,57 @@ interface ReturnableItem {
   unit_price: number;
 }
 
+interface ReturnableRow extends Record<string, unknown> {
+  sale_item_id: number;
+  transaction_id: number;
+  product_name: string;
+  quantity: number;
+  unit_price: number;
+}
+
+interface ReturnHistoryRow extends Record<string, unknown> {
+  id: number;
+  product_name: string;
+  quantity_returned: number;
+  refund_amount: number;
+  reason: string;
+  returned_by: string;
+  return_date: string;
+}
+
 function formatDate(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' });
 }
+
+const returnableColumns: DataTableColumn<ReturnableRow>[] = [
+  { key: 'transaction_id', header: 'Transaction', pinned: true, truncate: true, minWidth: '120px' },
+  { key: 'product_name', header: 'Item', truncate: true, minWidth: '150px' },
+  { key: 'quantity', header: 'Sold Qty', numeric: true, minWidth: '80px' },
+  {
+    key: 'unit_price',
+    header: 'Unit Price',
+    numeric: true,
+    minWidth: '100px',
+    render: (_row, value) => formatCurrency(Number(value)),
+  },
+];
+
+const returnHistoryColumns: DataTableColumn<ReturnHistoryRow>[] = [
+  { key: 'product_name', header: 'Product', pinned: true, truncate: true, minWidth: '150px' },
+  { key: 'quantity_returned', header: 'Qty', numeric: true, minWidth: '80px' },
+  {
+    key: 'refund_amount',
+    header: 'Refund',
+    numeric: true,
+    minWidth: '100px',
+    render: (_row, value) => formatCurrency(Number(value)),
+  },
+  { key: 'reason', header: 'Reason', truncate: true, minWidth: '120px' },
+  { key: 'returned_by', header: 'Returned By', truncate: true, minWidth: '100px' },
+  { key: 'return_date', header: 'Date', minWidth: '100px', render: (_row, value) => formatDate(String(value)) },
+];
 
 export function ReturnsRefunds() {
   const { toasts, dismiss, success, error } = useToast();
@@ -97,6 +145,26 @@ export function ReturnsRefunds() {
     }
   };
 
+  const returnableRows: ReturnableRow[] = salesData.flatMap(transaction =>
+    transaction.items.map(item => ({
+      sale_item_id: item.id,
+      transaction_id: transaction.id,
+      product_name: item.product_name,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+    }))
+  );
+
+  const returnHistoryRows: ReturnHistoryRow[] = returnsHistory.map(r => ({
+    id: r.id,
+    product_name: r.product_name,
+    quantity_returned: r.quantity_returned,
+    refund_amount: r.refund_amount,
+    reason: r.reason,
+    returned_by: r.returned_by,
+    return_date: r.return_date,
+  }));
+
   return (
     <div className="space-y-6 w-full font-sans">
       <Toast toasts={toasts} onDismiss={dismiss} />
@@ -118,65 +186,30 @@ export function ReturnsRefunds() {
               />
             </div>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left">
-              <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400">
-                <tr>
-                  <th className="px-5 py-3 font-semibold">Transaction</th>
-                  <th className="px-5 py-3 font-semibold">Item</th>
-                  <th className="px-5 py-3 font-semibold text-right">Sold Qty</th>
-                  <th className="px-5 py-3 font-semibold text-right">Unit Price</th>
-                  <th className="px-5 py-3 font-semibold text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-                {loading && (
-                  <tr>
-                    <td colSpan={5} className="px-5 py-6 text-center text-slate-400">Loading sales...</td>
-                  </tr>
-                )}
-                {!loading && salesError && (
-                  <tr>
-                    <td colSpan={5} className="px-5 py-6 text-center text-red-500">{salesError}</td>
-                  </tr>
-                )}
-                {!loading && !salesError && salesData.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="px-5 py-6 text-center text-slate-400">No matching transactions found.</td>
-                  </tr>
-                )}
-                {!loading && !salesError && salesData.flatMap(transaction =>
-                  transaction.items.map(item => (
-                    <tr key={`${transaction.id}-${item.id}`}>
-                      <td className="px-5 py-4 font-mono text-slate-600 dark:text-slate-300">{transaction.id}</td>
-                      <td className="px-5 py-4 font-semibold text-slate-800 dark:text-slate-100">{item.product_name}</td>
-                      <td className="px-5 py-4 text-right text-slate-600 dark:text-slate-300">{item.quantity}</td>
-                      <td className="px-5 py-4 text-right text-slate-600 dark:text-slate-300">{formatCurrency(item.unit_price)}</td>
-                      <td className="px-5 py-4 text-right">
-                        <button
-                          onClick={() => {
-                            setSelectedItem({
-                              sale_item_id: item.id,
-                              transaction_id: transaction.id,
-                              product_name: item.product_name,
-                              quantity: item.quantity,
-                              unit_price: item.unit_price,
-                            });
-                            setQuantity('1');
-                            setOverrideAmount(String(item.unit_price));
-                          }}
-                          className="inline-flex items-center gap-1.5 rounded-lg bg-[#006a61] hover:bg-[#00574f] text-white px-3 py-1.5 text-xs font-semibold transition-colors"
-                        >
-                          <RotateCcw className="h-3.5 w-3.5" />
-                          Select
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            columns={returnableColumns}
+            data={returnableRows}
+            rowKey={row => `${row.transaction_id}-${row.sale_item_id}`}
+            loading={loading}
+            emptyMessage={salesError || 'No matching transactions found.'}
+            actions={(row) => (
+              <ActionButton
+                icon={<RotateCcw className="h-3.5 w-3.5" />}
+                label="Return"
+                onClick={() => {
+                  setSelectedItem({
+                    sale_item_id: row.sale_item_id,
+                    transaction_id: row.transaction_id,
+                    product_name: row.product_name,
+                    quantity: row.quantity,
+                    unit_price: row.unit_price,
+                  });
+                  setQuantity('1');
+                  setOverrideAmount(String(row.unit_price));
+                }}
+              />
+            )}
+          />
         </div>
 
         <div className="bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm p-5">
@@ -247,42 +280,12 @@ export function ReturnsRefunds() {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-slate-200 dark:border-white/10">
-          <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">Recent Returns</h2>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs text-left">
-            <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400">
-              <tr>
-                <th className="px-5 py-3 font-semibold">Product</th>
-                <th className="px-5 py-3 font-semibold text-right">Qty</th>
-                <th className="px-5 py-3 font-semibold text-right">Refund</th>
-                <th className="px-5 py-3 font-semibold">Reason</th>
-                <th className="px-5 py-3 font-semibold">Returned By</th>
-                <th className="px-5 py-3 font-semibold">Date</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-              {returnsHistory.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="px-5 py-6 text-center text-slate-400">No returns recorded yet.</td>
-                </tr>
-              )}
-              {returnsHistory.map(r => (
-                <tr key={r.id}>
-                  <td className="px-5 py-4 font-semibold text-slate-800 dark:text-slate-100">{r.product_name}</td>
-                  <td className="px-5 py-4 text-right text-slate-600 dark:text-slate-300">{r.quantity_returned}</td>
-                  <td className="px-5 py-4 text-right text-slate-600 dark:text-slate-300">{formatCurrency(r.refund_amount)}</td>
-                  <td className="px-5 py-4 text-slate-500 dark:text-slate-400">{r.reason}</td>
-                  <td className="px-5 py-4 text-slate-600 dark:text-slate-300">{r.returned_by}</td>
-                  <td className="px-5 py-4 text-slate-600 dark:text-slate-300">{formatDate(r.return_date)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <DataTable
+        columns={returnHistoryColumns}
+        data={returnHistoryRows}
+        rowKey={row => row.id}
+        emptyMessage="No returns recorded yet."
+      />
     </div>
   );
 }

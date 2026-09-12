@@ -54,55 +54,55 @@ export function FefoTrackingPage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center gap-2">
         <Link to="/dashboard?highlightKpi=3" className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-slate-200 dark:border-white/10 text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-white/10 dark:hover:text-slate-200 transition-colors" aria-label="Back to Dashboard"><ArrowLeft className="h-4 w-4" /></Link>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">FEFO Batch Tracking</h1>
+        <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">FEFO Batch Tracking</h1>
         <UITooltip>
           <TooltipTrigger asChild>
-            <Info className="h-5 w-5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
+            <Info className="h-4 w-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
           </TooltipTrigger>
-          <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
+          <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs text-xs">
             Monitor batches by expiration date. Trigger rotation or promotional pricing before stock becomes unsellable.
           </TooltipContent>
         </UITooltip>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {statCards.map((card) => {
           const Icon = card.icon;
           return (
-            <div key={card.label} className={`rounded-3xl border ${card.border} ${card.bg} p-5`}>
+            <div key={card.label} className={`rounded-xl border ${card.border} ${card.bg} p-3`}>
               <div className="flex items-center justify-between">
-                <div className={`text-xs font-semibold uppercase tracking-widest ${card.color} opacity-70`}>{card.label}</div>
-                <Icon className={`h-4 w-4 ${card.color} opacity-60`} />
+                <div className={`text-[9px] font-semibold uppercase tracking-widest ${card.color} opacity-70`}>{card.label}</div>
+                <Icon className={`h-3.5 w-3.5 ${card.color} opacity-60`} />
               </div>
-              <div className={`mt-2 text-3xl font-bold ${card.color}`}>{card.value}</div>
+              <div className={`mt-1 text-sm font-bold ${card.color}`}>{card.value}</div>
             </div>
           );
         })}
       </div>
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-slate-900">
-        <div className="flex items-center justify-between gap-4 flex-wrap mb-5">
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-slate-900">
+        <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
           <div className="flex items-center gap-2">
-            <h2 className="text-lg font-bold text-[#0b1c30] dark:text-slate-100">Days to Expiry by Batch</h2>
+            <h2 className="text-sm font-bold text-[#0b1c30] dark:text-slate-100">Days to Expiry by Batch</h2>
             <UITooltip>
               <TooltipTrigger asChild>
-                <Info className="h-4 w-4 text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 cursor-help" />
+                <Info className="h-3.5 w-3.5 text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 cursor-help" />
               </TooltipTrigger>
-              <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
+              <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs text-xs">
                 Color-coded risk with recommended price drop %
               </TooltipContent>
             </UITooltip>
           </div>
-          <div className="flex gap-3 text-xs font-medium">
-            <span className="flex items-center gap-1.5 text-rose-600"><span className="inline-block h-3 w-3 rounded-sm bg-rose-500" /> Critical</span>
-            <span className="flex items-center gap-1.5 text-amber-600"><span className="inline-block h-3 w-3 rounded-sm bg-amber-500" /> High</span>
-            <span className="flex items-center gap-1.5 text-teal-600"><span className="inline-block h-3 w-3 rounded-sm bg-teal-500" /> Stable</span>
+          <div className="flex gap-2 text-xs font-medium">
+            <span className="flex items-center gap-1 text-rose-600"><span className="inline-block h-2.5 w-2.5 rounded-sm bg-rose-500" /> Critical</span>
+            <span className="flex items-center gap-1 text-amber-600"><span className="inline-block h-2.5 w-2.5 rounded-sm bg-amber-500" /> High</span>
+            <span className="flex items-center gap-1 text-teal-600"><span className="inline-block h-2.5 w-2.5 rounded-sm bg-teal-500" /> Stable</span>
           </div>
         </div>
-        <div className="h-80 w-full">
+        <div className="h-72 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={fefoChart}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e8edf5" />
@@ -122,17 +122,17 @@ export function FefoTrackingPage() {
         </div>
       </section>
 
-      <section className="rounded-3xl border border-amber-200 bg-amber-50 p-5 dark:border-amber-500/20 dark:bg-amber-500/5">
-        <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-amber-100 dark:bg-amber-500/20">
-            <PackageSearch className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+      <section className="rounded-xl border border-amber-200 bg-amber-50 p-3.5 dark:border-amber-500/20 dark:bg-amber-500/5">
+        <div className="flex items-start gap-2">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-amber-100 dark:bg-amber-500/20">
+            <PackageSearch className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="font-bold text-amber-900 dark:text-amber-200">Nearest Expiry: {nearestBatch.batchId}</h3>
-              <span className="rounded-full bg-amber-200 px-2 py-0.5 text-xs font-bold text-amber-800 dark:bg-amber-500/30 dark:text-amber-200">{nearestBatch.daysToExpiry} DAYS LEFT</span>
+              <h3 className="text-sm font-bold text-amber-900 dark:text-amber-200">Nearest Expiry: {nearestBatch.batchId}</h3>
+              <span className="rounded-full bg-amber-200 px-2 py-0.5 text-[9px] font-bold text-amber-800 dark:bg-amber-500/30 dark:text-amber-200">{nearestBatch.daysToExpiry} DAYS LEFT</span>
             </div>
-            <p className="mt-1 text-sm leading-6 text-amber-800/80 dark:text-amber-200/70">
+            <p className="mt-1 text-xs leading-5 text-amber-800/80 dark:text-amber-200/70">
               Move it to front shelves and apply the recommended price of{' '}
               <strong>{currencyFormatter.format(nearestBatch.recommendedPrice)}</strong>{' '}
               (currently priced at {currencyFormatter.format(nearestBatch.currentPrice)}).
@@ -141,21 +141,21 @@ export function FefoTrackingPage() {
         </div>
       </section>
 
-      <section className="rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-slate-900 overflow-hidden">
-        <div className="p-5 border-b border-slate-200 dark:border-white/10">
-          <h3 className="text-lg font-bold text-[#0b1c30] dark:text-slate-100">Batch Vulnerability Table</h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Full batch list with risk, pricing, and recommended action.</p>
+      <section className="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-slate-900 overflow-hidden">
+        <div className="p-4 border-b border-slate-200 dark:border-white/10">
+          <h3 className="text-sm font-bold text-[#0b1c30] dark:text-slate-100">Batch Vulnerability Table</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Full batch list with risk, pricing, and recommended action.</p>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[800px] text-sm">
+          <table className="w-full min-w-[800px] text-xs">
             <thead className="bg-slate-50 dark:bg-slate-800/50">
               <tr>
-                <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Batch ID</th>
-                <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Risk</th>
-                <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Days Left</th>
-                <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Current Price</th>
-                <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Recommended</th>
-                <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Action</th>
+                <th className="px-3 py-2 text-left text-[9px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Batch ID</th>
+                <th className="px-3 py-2 text-left text-[9px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Risk</th>
+                <th className="px-3 py-2 text-left text-[9px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Days Left</th>
+                <th className="px-3 py-2 text-left text-[9px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Current Price</th>
+                <th className="px-3 py-2 text-left text-[9px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Recommended</th>
+                <th className="px-3 py-2 text-left text-[9px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -169,21 +169,21 @@ export function FefoTrackingPage() {
                 const ActionIcon = action.icon;
                 return (
                   <tr key={batch.batchId} className="border-t border-slate-100 dark:border-white/5 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                    <td className="px-5 py-4 font-bold text-[#0b1c30] dark:text-slate-100">{batch.batchId}</td>
-                    <td className="px-5 py-4">
-                      <span className={`rounded-full px-3 py-0.5 text-xs font-bold ${risk.tone}`}>{risk.label}</span>
+                    <td className="px-3 py-2 font-bold text-[#0b1c30] dark:text-slate-100">{batch.batchId}</td>
+                    <td className="px-3 py-2">
+                      <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${risk.tone}`}>{risk.label}</span>
                     </td>
-                    <td className="px-5 py-4">
+                    <td className="px-3 py-2">
                       <span className={`font-bold ${
                         batch.daysToExpiry <= 3 ? 'text-rose-600 dark:text-rose-400' :
                         batch.daysToExpiry <= 7 ? 'text-amber-600 dark:text-amber-400' :
                         'text-teal-600 dark:text-teal-400'
                       }`}>{batch.daysToExpiry}d</span>
                     </td>
-                    <td className="px-5 py-4 text-slate-600 dark:text-slate-400 line-through">{currencyFormatter.format(batch.currentPrice)}</td>
-                    <td className="px-5 py-4 font-semibold text-emerald-700 dark:text-emerald-400">{currencyFormatter.format(batch.recommendedPrice)}</td>
-                    <td className="px-5 py-4">
-                      <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-0.5 text-xs font-bold ${action.color}`}>
+                    <td className="px-3 py-2 text-slate-600 dark:text-slate-400 line-through">{currencyFormatter.format(batch.currentPrice)}</td>
+                    <td className="px-3 py-2 font-semibold text-emerald-700 dark:text-emerald-400">{currencyFormatter.format(batch.recommendedPrice)}</td>
+                    <td className="px-3 py-2">
+                      <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[9px] font-bold ${action.color}`}>
                         <ActionIcon className="h-3 w-3" />
                         {action.label}
                       </span>

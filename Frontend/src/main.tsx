@@ -9,10 +9,3 @@ root.render(
     <App />
   </StrictMode>,
 );
-
-// Remove splash once React has painted
-requestAnimationFrame(() => {
-  requestAnimationFrame(() => {
-    (window as Window & { __hideSplash?: () => void }).__hideSplash?.();
-  });
-});

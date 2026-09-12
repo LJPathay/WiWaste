@@ -159,4 +159,48 @@ class InventoryController extends Controller
             'movements'     => $movements,
         ]);
     }
+
+    public function allMovements(Request $request)
+    {
+        $query = StockMovement::with(['product.category', 'user']);
+
+        if ($search = $request->input('search')) {
+            $query->whereHas('product', function ($q) use ($search) {
+                $q->where('product_name', 'like', "%{$search}%")
+                  ->orWhere('barcode', 'like', "%{$search}%");
+            });
+        }
+
+        if ($type = $request->input('movement_type')) {
+            $query->where('movement_type', $type);
+        }
+
+        if ($from = $request->input('from_date')) {
+            $query->whereDate('movement_date', '>=', $from);
+        }
+
+        if ($to = $request->input('to_date')) {
+            $query->whereDate('movement_date', '<=', $to);
+        }
+
+        if ($productId = $request->input('product_id')) {
+            $query->where('product_id', $productId);
+        }
+
+        $perPage = min((int) $request->input('per_page', 20), 100);
+        return response()->json(
+            $query->orderByDesc('movement_date')->paginate($perPage)->through(fn ($m) => [
+                'movement_id'    => $m->movement_id,
+                'product_id'     => $m->product_id,
+                'product_name'   => $m->product?->product_name,
+                'sku'            => $m->product?->barcode,
+                'category'       => $m->product?->category?->Category_name ?? '',
+                'movement_type'  => $m->movement_type,
+                'quantity'       => $m->quantity,
+                'remarks'        => $m->remarks,
+                'recorded_by'    => $m->user?->Full_name ?? 'System',
+                'movement_date'  => $m->movement_date,
+            ])
+        );
+    }
 }

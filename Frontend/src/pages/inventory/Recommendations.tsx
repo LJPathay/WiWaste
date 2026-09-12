@@ -1,7 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import { Info, Search, CheckCircle, TrendingDown, Clock, ChevronRight, X } from 'lucide-react';
+import { Info, Search, CheckCircle, TrendingDown, Clock, ChevronRight, X, Check } from 'lucide-react';
 import { Toast, useToast, ConfirmDialog, Modal } from '../../components/ui/Toast';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
+import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
+import { ActionButton } from '../../components/shared/DataTableActions';
+import { Pagination } from '../../components/ui/pagination';
+
 type MockRecommendation = {
   recommendation_id: number;
   product_name: string;
@@ -47,6 +51,78 @@ const WORKFLOW_STEPS = [
   { label: 'Promo Activated', active: false },
 ];
 
+const PAGE_SIZE = 5;
+
+const columns: DataTableColumn<MockRecommendation>[] = [
+  {
+    key: 'product_name',
+    header: 'Product',
+    pinned: true,
+    truncate: true,
+    minWidth: '180px',
+    render: (row) => (
+      <div>
+        <div className="font-semibold text-[#0F172A] dark:text-slate-100">{row.product_name}</div>
+        <div className="text-[10px] font-mono text-[#64748B] dark:text-slate-400">{row.sku}</div>
+      </div>
+    ),
+  },
+  {
+    key: 'recommendation_type',
+    header: 'Type',
+    align: 'center',
+    minWidth: '100px',
+    render: (row) => {
+      const { label, cls } = getTypeLabel(row.recommendation_type);
+      return (
+        <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${cls}`}>
+          {label}
+        </span>
+      );
+    },
+  },
+  {
+    key: 'current_stock',
+    header: 'Cur. Stock',
+    numeric: true,
+    minWidth: '100px',
+  },
+  {
+    key: 'recommended_stock',
+    header: 'Rec. Stock',
+    numeric: true,
+    minWidth: '120px',
+    render: (row) => (
+      <span className="font-semibold text-[#0F766E]">{row.recommended_stock}</span>
+    ),
+  },
+  {
+    key: 'confidence_score',
+    header: 'Confidence',
+    numeric: true,
+    minWidth: '80px',
+    render: (row) => (
+      <span className="font-mono text-xs font-bold text-[#0F172A] dark:text-slate-100">
+        {Math.round(row.confidence_score * 100)}%
+      </span>
+    ),
+  },
+  {
+    key: 'status',
+    header: 'Status',
+    align: 'center',
+    minWidth: '100px',
+    render: (row) => {
+      const { label, cls } = getStatusBadge(row.status);
+      return (
+        <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${cls}`}>
+          {label}
+        </span>
+      );
+    },
+  },
+];
+
 export function Recommendations() {
   const { toasts, dismiss, success } = useToast();
 
@@ -58,6 +134,7 @@ export function Recommendations() {
   const [rejectReason, setRejectReason] = useState('');
   const [confirmApprove, setConfirmApprove] = useState<number | null>(null);
   const [processing, setProcessing] = useState(false);
+  const [page, setPage] = useState(1);
 
   const filtered = useMemo(() => {
     let list = mockRecs;
@@ -73,6 +150,9 @@ export function Recommendations() {
     }
     return list;
   }, [mockRecs, search, statusFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const pendingCount = mockRecs.filter(r => r.status === 'pending').length;
   const approvedCount = mockRecs.filter(r => r.status === 'approved').length;
@@ -110,7 +190,7 @@ export function Recommendations() {
   };
 
   return (
-    <div className="space-y-6 w-full bg-[#F8FAFC] dark:bg-slate-950 min-h-full">
+    <div className="space-y-3 w-full min-h-full">
       <Toast toasts={toasts} onDismiss={dismiss} />
 
       {confirmApprove !== null && (
@@ -165,7 +245,7 @@ export function Recommendations() {
 
       <div className="flex flex-col gap-1">
         <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-bold text-[#0F172A] dark:text-slate-100">System Recommendations</h1>
+          <h1 className="text-xl font-bold text-[#0F172A] dark:text-slate-100">System Recommendations</h1>
           <UITooltip>
             <TooltipTrigger asChild>
               <Info className="h-4 w-4 text-slate-400 dark:text-slate-500 hover:text-slate-600 cursor-help" />
@@ -175,12 +255,12 @@ export function Recommendations() {
             </TooltipContent>
           </UITooltip>
         </div>
-        <p className="text-sm text-[#64748B] dark:text-slate-400 dark:text-slate-500">
+        <p className="text-xs text-[#64748B] dark:text-slate-400 dark:text-slate-500">
           Review and act on system-generated stock actions to optimise inventory levels and reduce waste
         </p>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-xl border border-[#E5E7EB] dark:border-white/10 shadow-sm px-5 py-4">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-[#E5E7EB] dark:border-white/10 shadow-sm px-4 py-3">
         <p className="text-[10px] font-semibold text-[#64748B] dark:text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3">Approval Workflow</p>
         <div className="flex items-center flex-wrap gap-1">
           {WORKFLOW_STEPS.map((step, idx) => (
@@ -199,51 +279,51 @@ export function Recommendations() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="rounded-xl border border-orange-100 dark:border-orange-900/30 bg-orange-50 dark:bg-orange-950/20 p-4 flex items-center gap-4 shadow-sm">
-          <div className="rounded-lg p-2.5 bg-orange-100 dark:bg-orange-900/40 flex-shrink-0">
-            <Clock className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="rounded-xl border border-orange-100 dark:border-orange-900/30 bg-orange-50 dark:bg-orange-950/20 p-3 flex items-center gap-3 shadow-sm">
+          <div className="h-7 w-7 rounded-lg bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center flex-shrink-0">
+            <Clock className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-orange-500 dark:text-orange-400 uppercase tracking-wider">Pending Review</p>
-            <p className="text-2xl font-black text-orange-700 dark:text-orange-300 mt-0.5">{pendingCount}</p>
+            <p className="text-[9px] font-semibold text-orange-500 dark:text-orange-400 uppercase tracking-wider">Pending Review</p>
+            <p className="text-sm font-black text-orange-700 dark:text-orange-300 mt-0.5">{pendingCount}</p>
           </div>
         </div>
-        <div className="rounded-xl border border-emerald-100 dark:border-emerald-900/30 bg-emerald-50 dark:bg-emerald-950/20 p-4 flex items-center gap-4 shadow-sm">
-          <div className="rounded-lg p-2.5 bg-emerald-100 dark:bg-emerald-900/40 flex-shrink-0">
-            <CheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+        <div className="rounded-xl border border-emerald-100 dark:border-emerald-900/30 bg-emerald-50 dark:bg-emerald-950/20 p-3 flex items-center gap-3 shadow-sm">
+          <div className="h-7 w-7 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center flex-shrink-0">
+            <CheckCircle className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Approved</p>
-            <p className="text-2xl font-black text-emerald-700 dark:text-emerald-300 mt-0.5">{approvedCount}</p>
+            <p className="text-[9px] font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Approved</p>
+            <p className="text-sm font-black text-emerald-700 dark:text-emerald-300 mt-0.5">{approvedCount}</p>
           </div>
         </div>
-        <div className="rounded-xl border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-950/20 p-4 flex items-center gap-4 shadow-sm">
-          <div className="rounded-lg p-2.5 bg-red-100 dark:bg-red-900/40 flex-shrink-0">
-            <TrendingDown className="h-5 w-5 text-red-600 dark:text-red-400" />
+        <div className="rounded-xl border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-950/20 p-3 flex items-center gap-3 shadow-sm">
+          <div className="h-7 w-7 rounded-lg bg-red-100 dark:bg-red-900/40 flex items-center justify-center flex-shrink-0">
+            <TrendingDown className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-red-500 dark:text-red-400 uppercase tracking-wider">Rejected</p>
-            <p className="text-2xl font-black text-red-700 dark:text-red-300 mt-0.5">{rejectedCount}</p>
+            <p className="text-[9px] font-semibold text-red-500 dark:text-red-400 uppercase tracking-wider">Rejected</p>
+            <p className="text-sm font-black text-red-700 dark:text-red-300 mt-0.5">{rejectedCount}</p>
           </div>
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex flex-col sm:flex-row gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 dark:text-slate-500 pointer-events-none" />
           <input
             type="text"
             placeholder="Search product or SKU..."
             value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-2.5 text-sm rounded-lg border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 text-[#374151] dark:text-slate-300 dark:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all shadow-sm"
+            onChange={e => { setSearch(e.target.value); setPage(1); }}
+            className="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 text-[#374151] dark:text-slate-300 dark:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all shadow-sm"
           />
         </div>
         <select
           value={statusFilter}
-          onChange={e => setStatusFilter(e.target.value)}
-          className="px-3 py-2.5 text-sm rounded-lg border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 text-[#374151] dark:text-slate-300 dark:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30"
+          onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
+          className="px-3 py-2 text-xs rounded-lg border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 text-[#374151] dark:text-slate-300 dark:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30"
         >
           <option value="">All Status</option>
           <option value="pending">Pending</option>
@@ -253,92 +333,56 @@ export function Recommendations() {
       </div>
 
       {filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-4 bg-white dark:bg-slate-900 rounded-xl border border-[#E5E7EB] dark:border-white/10 shadow-sm">
-          <div className="rounded-full bg-emerald-50 dark:bg-emerald-950/30 p-5">
-            <CheckCircle className="h-10 w-10 text-[#0F766E]" />
+        <div className="flex flex-col items-center justify-center py-12 gap-3 bg-white dark:bg-slate-900 rounded-xl border border-[#E5E7EB] dark:border-white/10 shadow-sm">
+          <div className="rounded-full bg-emerald-50 dark:bg-emerald-950/30 p-3">
+            <CheckCircle className="h-6 w-6 text-[#0F766E]" />
           </div>
           <div className="text-center">
-            <p className="text-base font-bold text-[#0F172A] dark:text-slate-100">No recommendations found</p>
-            <p className="text-sm text-[#64748B] dark:text-slate-400 mt-1">Try adjusting your search or filters.</p>
+            <p className="text-sm font-bold text-[#0F172A] dark:text-slate-100">No recommendations found</p>
+            <p className="text-xs text-[#64748B] dark:text-slate-400 mt-1">Try adjusting your search or filters.</p>
           </div>
         </div>
       ) : (
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-[#E5E7EB] dark:border-white/10 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="bg-slate-50 dark:bg-slate-800 text-xs font-semibold text-[#64748B] dark:text-slate-400 border-b border-[#E5E7EB] dark:border-white/10 uppercase tracking-wider">
-                <tr>
-                  <th className="px-5 py-3">Product</th>
-                  <th className="px-5 py-3">Type</th>
-                  <th className="px-5 py-3">Cur. Stock</th>
-                  <th className="px-5 py-3">Rec. Stock</th>
-                  <th className="px-5 py-3">Confidence</th>
-                  <th className="px-5 py-3">Status</th>
-                  <th className="px-5 py-3 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#F1F5F9] dark:divide-white/5">
-                {filtered.map(r => {
-                  const { label: typeLabel, cls: typeCls } = getTypeLabel(r.recommendation_type);
-                  const { label: statusLabel, cls: statusCls } = getStatusBadge(r.status);
-
-                  return (
-                    <tr
-                      key={r.recommendation_id}
-                      className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
-                      onClick={() => setSelectedRec(r)}
-                    >
-                      <td className="px-5 py-3.5">
-                        <div className="font-semibold text-[#0F172A] dark:text-slate-100">{r.product_name}</div>
-                        <div className="text-[10px] font-mono text-[#64748B] dark:text-slate-400">{r.sku}</div>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${typeCls}`}>
-                          {typeLabel}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5 font-semibold text-[#0F172A] dark:text-slate-100">{r.current_stock}</td>
-                      <td className="px-5 py-3.5 font-semibold text-[#0F766E]">{r.recommended_stock}</td>
-                      <td className="px-5 py-3.5">
-                        <span className="font-mono text-xs font-bold text-[#0F172A] dark:text-slate-100">
-                          {Math.round(r.confidence_score * 100)}%
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${statusCls}`}>
-                          {statusLabel}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5 text-right">
-                        {r.status === 'pending' ? (
-                          <span className="inline-flex gap-2">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setConfirmApprove(r.recommendation_id); }}
-                              className="text-xs font-semibold text-white bg-[#0F766E] hover:bg-[#0b5c56] rounded-lg px-3 py-1.5 transition-all"
-                            >
-                              Approve
-                            </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setRejectingId(r.recommendation_id); }}
-                              className="text-xs font-semibold text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg px-3 py-1.5 transition-all"
-                            >
-                              Reject
-                            </button>
-                          </span>
-                        ) : (
-                          <span className="text-xs text-[#64748B] dark:text-slate-400">
-                            {r.status === 'approved' ? 'Approved' : 'Rejected'}
-                            {r.reviewed_by ? ` by ${r.reviewed_by}` : ''}
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <DataTable
+          columns={columns}
+          data={paginated}
+          rowKey={(row) => row.recommendation_id}
+          onRowClick={(row) => setSelectedRec(row)}
+          hoverActions
+          emptyMessage="No recommendations found."
+          actions={(row) =>
+            row.status === 'pending' ? (
+              <>
+                <ActionButton
+                  icon={<Check className="h-3.5 w-3.5" />}
+                  label="Approve"
+                  onClick={() => setConfirmApprove(row.recommendation_id)}
+                />
+                <ActionButton
+                  icon={<X className="h-3.5 w-3.5" />}
+                  label="Reject"
+                  variant="danger"
+                  onClick={() => setRejectingId(row.recommendation_id)}
+                />
+              </>
+            ) : (
+              <span className="text-xs text-[#64748B] dark:text-slate-400 pr-1 whitespace-nowrap">
+                {row.status === 'approved' ? 'Approved' : 'Rejected'}
+                {row.reviewed_by ? ` by ${row.reviewed_by}` : ''}
+              </span>
+            )
+          }
+          pagination={
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              totalItems={filtered.length}
+              perPage={PAGE_SIZE}
+              label="recommendations"
+            />
+          }
+        />
       )}
 
       {selectedRec && (
@@ -347,16 +391,16 @@ export function Recommendations() {
           onClose={() => setSelectedRec(null)}
           title={`Recommendation: ${selectedRec.product_name}`}
         >
-          <div className="space-y-6">
-            <div className="flex items-center justify-between border-b border-[#F1F5F9] dark:border-white/10 pb-4">
-              <p className="text-sm font-semibold text-[#0F172A] dark:text-slate-100">Recommendation Details</p>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between border-b border-[#F1F5F9] dark:border-white/10 pb-3">
+              <p className="text-sm font-bold text-[#0F172A] dark:text-slate-100">Recommendation Details</p>
               <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${getTypeLabel(selectedRec.recommendation_type).cls}`}>
                 {getTypeLabel(selectedRec.recommendation_type).label}
               </span>
             </div>
 
-            <div className="grid grid-cols-2 gap-6">
-              <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-3">
                 <div>
                   <p className="text-xs text-[#64748B] dark:text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider">SKU</p>
                   <p className="text-sm font-mono font-semibold text-[#0F172A] dark:text-slate-100 mt-0.5">{selectedRec.sku}</p>
@@ -370,8 +414,8 @@ export function Recommendations() {
                   <p className="text-lg font-bold text-[#0F172A] dark:text-slate-100 mt-0.5">{selectedRec.current_stock}</p>
                 </div>
                 {selectedRec.rejection_reason && (
-                  <div className="rounded-xl bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 p-4">
-                    <p className="text-[11px] font-bold text-red-700 dark:text-red-300 mb-1">Rejection Reason</p>
+                  <div className="rounded-xl bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 p-3">
+                    <p className="text-[9px] font-bold text-red-700 dark:text-red-300 mb-1">Rejection Reason</p>
                     <p className="text-xs text-red-800 dark:text-red-200">{selectedRec.rejection_reason}</p>
                   </div>
                 )}

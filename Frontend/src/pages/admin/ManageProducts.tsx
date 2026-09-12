@@ -1,5 +1,5 @@
-import React, { useState, useEffect, memo } from 'react';
-import { Search, Plus, Info, Loader2, ChevronLeft, ChevronRight, Package, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, Plus, Info, Loader2, Package, AlertCircle } from 'lucide-react';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { Tutorial } from '../../components/ui/Tutorial';
 import { Modal, FormField, inputCls, useToast, Toast, ConfirmDialog } from '../../components/ui/Toast';
@@ -11,6 +11,9 @@ import {
   type ApiProduct,
   type CreateProductPayload,
 } from '../../services/api';
+import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
+import { ActionButton } from '../../components/shared/DataTableActions';
+import { Pagination } from '../../components/ui/pagination';
 
 const currencyFormatter = new Intl.NumberFormat('en-PH', {
   style: 'currency',
@@ -19,71 +22,6 @@ const currencyFormatter = new Intl.NumberFormat('en-PH', {
 });
 
 const ITEMS_PER_PAGE = 5;
-
-const ProductRow = memo(function ProductRow({
-  p, isSelected, onToggleSelect, onEdit, onArchive
-}: {
-  p: ApiProduct;
-  isSelected: boolean;
-  onToggleSelect: (id: number) => void;
-  onEdit: (p: ApiProduct) => void;
-  onArchive: (p: ApiProduct) => void;
-}) {
-  return (
-    <tr className={`hover:bg-slate-50/20 dark:hover:bg-white/5 transition-colors ${isSelected ? 'bg-teal-50/30 dark:bg-teal-900/10' : ''} ${p.status === 'Discontinued' ? 'opacity-60 bg-slate-50/40 dark:bg-slate-900/30' : ''}`}>
-      <td className="w-10 px-4 py-4 text-center">
-        <input
-          type="checkbox"
-          checked={isSelected}
-          onChange={() => onToggleSelect(p.id)}
-          className="rounded border-slate-300 dark:border-slate-700 text-[#006a61] focus:ring-[#006a61] cursor-pointer"
-        />
-      </td>
-      <td className="px-6 py-4 font-medium text-slate-900 dark:text-slate-100">{p.name}</td>
-      <td className="px-6 py-4 font-mono text-slate-600 dark:text-slate-400">{p.sku ?? '—'}</td>
-      <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{p.category}</td>
-      <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{p.supplier ?? '—'}</td>
-      <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{currencyFormatter.format(p.cost_price)}</td>
-      <td className="px-6 py-4 font-semibold text-emerald-700 dark:text-emerald-400">{currencyFormatter.format(p.selling_price)}</td>
-      <td className="px-6 py-4">
-        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-          p.stock <= 0
-            ? 'bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-400'
-            : p.stock <= p.reorder_level
-            ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400'
-            : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400'
-        }`}>
-          {p.stock} units ({p.stock_status})
-        </span>
-      </td>
-      <td className="px-6 py-4">
-        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-          p.status === 'Discontinued'
-            ? 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-400'
-            : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400'
-        }`}>
-          {p.status ?? 'Active'}
-        </span>
-      </td>
-      <td className="px-6 py-4 text-right flex items-center justify-end gap-3">
-        <button
-          onClick={() => onEdit(p)}
-          className="text-xs font-bold text-[#006a61] dark:text-[#7ef0cf] hover:underline"
-        >
-          Edit
-        </button>
-        <button
-          onClick={() => onArchive(p)}
-          className={`text-xs font-bold hover:underline ${
-            p.status === 'Discontinued' ? 'text-emerald-600' : 'text-slate-500 hover:text-slate-700'
-          }`}
-        >
-          {p.status === 'Discontinued' ? 'Re-activate' : 'Archive'}
-        </button>
-      </td>
-    </tr>
-  );
-});
 
 export function ManageProducts() {
   const { toasts, dismiss, success, error: toastError } = useToast();
@@ -186,7 +124,6 @@ export function ManageProducts() {
   const categories = categoryList ?? [];
   const suppliers = supplierList ?? [];
 
-  // Show empty notification when table is empty and no filters applied
   useEffect(() => {
     const isFiltered = statusFilter !== 'all' || categoryFilter !== 'All' || search !== '';
     if (products.length === 0 && !isFiltered && !pLoading && !pError) {
@@ -197,7 +134,6 @@ export function ManageProducts() {
     }
   }, [products.length, statusFilter, categoryFilter, search, pLoading, pError]);
 
-  // Countdown timer for notification
   useEffect(() => {
     if (!showEmptyNotification) return;
     const interval = setInterval(() => {
@@ -206,7 +142,6 @@ export function ManageProducts() {
     return () => clearInterval(interval);
   }, [showEmptyNotification]);
 
-  // Reset pagination on filter or search changes
   useEffect(() => {
     setCurrentPage(1);
   }, [search, statusFilter, categoryFilter]);
@@ -246,44 +181,13 @@ export function ManageProducts() {
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
-  // Pagination calculations
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / ITEMS_PER_PAGE));
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, filteredProducts.length);
   const paginatedProducts = filteredProducts.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
-  // Checkbox Selection Logic
-  const isAllSelected = paginatedProducts.length > 0 && paginatedProducts.every(p => selectedIds.includes(p.id));
-
-  const toggleSelectAll = () => {
-    if (isAllSelected) {
-      const pageIds = new Set(paginatedProducts.map(p => p.id));
-      setSelectedIds(prev => prev.filter(id => !pageIds.has(id)));
-    } else {
-      const pageIds = paginatedProducts.map(p => p.id);
-      setSelectedIds(prev => Array.from(new Set([...prev, ...pageIds])));
-    }
-  };
-
-  const toggleSelectRow = (id: number) => {
-    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
-  };
-
-  const handleBulkArchive = async () => {
-    if (selectedIds.length === 0) return;
-    setIsBulkArchiving(true);
-    try {
-      await Promise.all(selectedIds.map(id => productsApi.delete(id)));
-      selectedIds.forEach(id => removeItem(id));
-      success(`Successfully archived ${selectedIds.length} products.`);
-      setSelectedIds([]);
-      setShowBulkArchiveConfirm(false);
-      refetchProducts();
-    } catch (err) {
-      toastError(err instanceof Error ? err.message : 'Failed to archive selected products.');
-    } finally {
-      setIsBulkArchiving(false);
-    }
+  const toggleSelectAll = (keys: Set<string | number>) => {
+    setSelectedIds(Array.from(keys) as number[]);
   };
 
   const activeCount = products.filter(p => p.status !== 'Discontinued').length;
@@ -411,18 +315,121 @@ export function ManageProducts() {
     setArchiving(null);
   };
 
+  const handleBulkArchive = async () => {
+    if (selectedIds.length === 0) return;
+    setIsBulkArchiving(true);
+    try {
+      await Promise.all(selectedIds.map(id => productsApi.delete(id)));
+      selectedIds.forEach(id => removeItem(id));
+      success(`Successfully archived ${selectedIds.length} products.`);
+      setSelectedIds([]);
+      setShowBulkArchiveConfirm(false);
+      refetchProducts();
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : 'Failed to archive selected products.');
+    } finally {
+      setIsBulkArchiving(false);
+    }
+  };
+
+  const columns: DataTableColumn<ApiProduct>[] = [
+    {
+      key: 'name',
+      header: 'Product Name',
+      pinned: true,
+      truncate: true,
+      minWidth: '180px',
+    },
+    {
+      key: 'sku',
+      header: 'SKU / Barcode',
+      truncate: true,
+      minWidth: '120px',
+    },
+    {
+      key: 'category',
+      header: 'Category',
+      truncate: true,
+      minWidth: '100px',
+    },
+    {
+      key: 'supplier',
+      header: 'Supplier',
+      truncate: true,
+      minWidth: '120px',
+    },
+    {
+      key: 'cost_price',
+      header: 'Cost Price',
+      numeric: true,
+      minWidth: '90px',
+      render: (row) => currencyFormatter.format(row.cost_price as number),
+    },
+    {
+      key: 'selling_price',
+      header: 'Selling Price',
+      numeric: true,
+      minWidth: '100px',
+      render: (row) => (
+        <span className="font-semibold text-emerald-700 dark:text-emerald-400">
+          {currencyFormatter.format(row.selling_price as number)}
+        </span>
+      ),
+    },
+{
+          key: 'stock',
+          header: 'Stock Level',
+          numeric: true,
+          minWidth: '100px',
+          render: (row) => {
+            const p = row as ApiProduct;
+            return (
+              <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                p.stock <= 0
+                  ? 'bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-400'
+                  : p.stock <= p.reorder_level
+                  ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400'
+                  : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400'
+              }`}>
+                {p.stock} units ({p.stock_status})
+              </span>
+            );
+          },
+        },
+        {
+          key: 'status',
+          header: 'Status',
+          align: 'center',
+          minWidth: '80px',
+          render: (row) => {
+            const p = row as ApiProduct;
+            return (
+              <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                p.status === 'Discontinued'
+                  ? 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-400'
+                  : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400'
+              }`}>
+                {p.status ?? 'Active'}
+              </span>
+            );
+          },
+        },
+  ];
+
+  const selectedKeys = new Set(selectedIds);
+
   if (pLoading) return (
-    <div className="flex flex-col items-center justify-center h-64 gap-4">
-      <div className="relative w-16 h-16">
-        <div className="absolute inset-0 rounded-full border-4 border-slate-200 dark:border-slate-800"></div>
-        <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-[#006a61] border-r-[#006a61] animate-spin"></div>
-        <div className="absolute inset-2 flex items-center justify-center">
-          <Package className="h-8 w-8 text-[#006a61] dark:text-[#7ef0cf] animate-pulse" />
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <div className="relative w-12 h-12">
+        <div className="absolute inset-0 rounded-full border-3 border-slate-200 dark:border-slate-800"></div>
+        <div className="absolute inset-0 rounded-full border-3 border-transparent border-t-[#006a61] border-r-[#006a61] animate-spin"></div>
+        <div className="absolute inset-1.5 flex items-center justify-center">
+          <Package className="h-6 w-6 text-[#006a61] dark:text-[#7ef0cf] animate-pulse" />
         </div>
       </div>
       <div className="text-center">
-        <p className="text-slate-600 dark:text-slate-400 font-semibold">Loading products...</p>
-        <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Fetching product catalogue</p>
+        <p className="text-slate-600 dark:text-slate-400 font-semibold text-sm">Loading products...</p>
+        <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Fetching product catalogue</p>
       </div>
     </div>
   );
@@ -432,17 +439,17 @@ export function ManageProducts() {
     const errorCode = pError.match(/\((\d+)\)/)?.[1] || 'Unknown';
     const errorMessage = errorCode === '2002' ? "There's no connection (2002)" : `Connection error (${errorCode})`;
     return (
-      <div className="p-6 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800/40 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Package className="h-6 w-6 text-red-600 dark:text-red-400 shrink-0" />
+      <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800/40 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Package className="h-5 w-5 text-red-600 dark:text-red-400 shrink-0" />
           <div>
-            <p className="font-semibold text-red-700 dark:text-red-300">Failed to load products</p>
-            <p className="text-sm text-red-600 dark:text-red-400">{errorMessage}</p>
+            <p className="font-semibold text-red-700 dark:text-red-300 text-sm">Failed to load products</p>
+            <p className="text-xs text-red-600 dark:text-red-400">{errorMessage}</p>
           </div>
         </div>
         <button
           onClick={() => refetchProducts()}
-          className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg transition-all shrink-0"
+          className="h-8 px-3 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg transition-all shrink-0"
         >
           Try Again
         </button>
@@ -451,16 +458,16 @@ export function ManageProducts() {
   }
 
   return (
-    <div className="space-y-6 w-full font-sans">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-4 w-full font-sans">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Manage Products</h1>
+            <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Manage Products</h1>
             <UITooltip>
               <TooltipTrigger asChild>
-                <Info className="h-5 w-5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
+                <Info className="h-4 w-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
               </TooltipTrigger>
-              <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
+              <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs text-xs">
                 Maintain product specifications, cost structures, and SKUs.
               </TooltipContent>
             </UITooltip>
@@ -468,21 +475,18 @@ export function ManageProducts() {
         </div>
         <button
           onClick={() => { setAddError(''); setShowAddModal(true); }}
-          className="inline-flex items-center gap-2 rounded-lg bg-[#006a61] text-white px-4 py-2 text-sm font-semibold hover:bg-[#00574f] transition-all"
+          className="h-8 inline-flex items-center gap-2 rounded-lg bg-[#006a61] text-white px-3 text-xs font-semibold hover:bg-[#00574f] transition-all"
         >
-          <Plus className="h-4 w-4" />
+          <Plus className="h-3.5 w-3.5" />
           Add Product
         </button>
       </div>
 
-      {/* Main Table Container */}
-      <div className="bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden">
-        {/* Filter and Search Bar */}
-        <div className="p-4 border-b border-slate-200 dark:border-white/10 space-y-3">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            {/* Status Tabs */}
-            <div className="flex flex-wrap items-center gap-1.5 bg-slate-100 dark:bg-slate-900 p-1 rounded-lg">
-              <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 px-2 uppercase tracking-wider">Status:</span>
+      <div className="space-y-2">
+        <div className="bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm p-3.5 space-y-3">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-lg">
+              <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 px-2 uppercase tracking-wider">Status:</span>
               {[
                 { id: 'all', label: 'All Products', count: allCount },
                 { id: 'Active', label: 'Active', count: activeCount },
@@ -493,7 +497,7 @@ export function ManageProducts() {
                   <button
                     key={tab.id}
                     onClick={() => setStatusFilter(tab.id as 'all' | 'Active' | 'Discontinued')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                    className={`flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold rounded transition-all ${
                       isSelected
                         ? 'bg-white dark:bg-slate-950 text-[#006a61] dark:text-[#7ef0cf] shadow-sm'
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
@@ -501,7 +505,7 @@ export function ManageProducts() {
                   >
                     <span>{tab.label}</span>
                     {tab.count > 0 && (
-                      <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                      <span className="px-1.5 py-0.2 rounded-full text-[9px] bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                         {tab.count}
                       </span>
                     )}
@@ -510,14 +514,13 @@ export function ManageProducts() {
               })}
             </div>
 
-            {/* Category Dropdown & Search & Reset */}
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-1.5">
-                <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Category:</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-1">
+                <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Category:</span>
                 <select
                   value={categoryFilter}
                   onChange={e => setCategoryFilter(e.target.value)}
-                  className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-xs font-medium rounded-lg px-3 py-2 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#006a61]"
+                  className="h-8 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-xs font-medium rounded-lg px-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#006a61]"
                 >
                   <option value="All">All Categories</option>
                   {categories.map(c => (
@@ -527,20 +530,20 @@ export function ManageProducts() {
               </div>
 
               <div className="relative max-w-xs w-full sm:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                 <input
                   type="text"
                   placeholder="Search product name or SKU..."
                   value={search}
                   onChange={e => setSearch(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-white/10 pl-9 pr-3 py-2 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-700 dark:text-slate-200"
+                  className="h-8 w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-white/10 pl-8 pr-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-700 dark:text-slate-200"
                 />
               </div>
 
               {(statusFilter !== 'all' || categoryFilter !== 'All' || search !== '') && (
                 <button
                   onClick={() => { setStatusFilter('all'); setCategoryFilter('All'); setSearch(''); }}
-                  className="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 underline font-medium"
+                  className="text-[10px] text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 underline font-medium"
                 >
                   Reset Filters
                 </button>
@@ -549,27 +552,26 @@ export function ManageProducts() {
           </div>
         </div>
 
-        {/* Bulk Action Bar */}
         {selectedIds.length > 0 && (
-          <div className="bg-[#006a61]/10 border-b border-[#006a61]/20 px-6 py-2.5 flex items-center justify-between text-xs animate-fadeIn">
-            <div className="flex items-center gap-2 text-[#006a61] dark:text-[#7ef0cf] font-semibold">
-              <span className="px-2 py-0.5 rounded-full bg-[#006a61] text-white font-bold text-[11px]">
+          <div className="bg-[#006a61]/10 border-x border-slate-200 dark:border-white/10 px-4 py-2 flex items-center justify-between text-[10px] animate-fadeIn">
+            <div className="flex items-center gap-1.5 text-[#006a61] dark:text-[#7ef0cf] font-semibold">
+              <span className="px-1.5 py-0.5 rounded-full bg-[#006a61] text-white font-bold text-[9px]">
                 {selectedIds.length}
               </span>
               <span>{selectedIds.length === 1 ? '1 product selected' : `${selectedIds.length} products selected`}</span>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setSelectedIds([])}
-                className="px-2.5 py-1 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium hover:underline"
+                className="px-2 py-1 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium hover:underline"
               >
                 Deselect All
               </button>
               <button
                 type="button"
                 onClick={() => setShowBulkArchiveConfirm(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-600 text-white font-semibold hover:bg-amber-700 transition-all shadow-sm"
+                className="h-8 inline-flex items-center gap-1.5 px-3 rounded-lg bg-amber-600 text-white font-semibold hover:bg-amber-700 transition-all shadow-sm text-xs"
               >
                 Archive Selected ({selectedIds.length})
               </button>
@@ -577,132 +579,86 @@ export function ManageProducts() {
           </div>
         )}
 
-        <table className="w-full text-xs text-left">
-          <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-450 border-b border-slate-200 dark:border-white/10 font-bold">
-            <tr>
-              <th className="w-10 px-4 py-3 text-center">
-                <input
-                  type="checkbox"
-                  checked={isAllSelected}
-                  onChange={toggleSelectAll}
-                  className="rounded border-slate-300 dark:border-slate-700 text-[#006a61] focus:ring-[#006a61] cursor-pointer"
-                  title="Select / Deselect all on current page"
+        <DataTable
+          columns={columns}
+          data={paginatedProducts as Record<string, unknown>[]}
+          rowKey={(row) => row.id as number}
+          selectable
+          selectedKeys={selectedKeys}
+          onSelectionChange={toggleSelectAll}
+          emptyMessage="No products found."
+          rowClassName={(row) => {
+            const p = row as unknown as ApiProduct;
+            return [
+              p.status === 'Discontinued' ? 'opacity-60 bg-slate-50/40 dark:bg-slate-900/30' : '',
+            ].filter(Boolean).join(' ');
+          }}
+          actions={(row) => {
+            const p = row as unknown as ApiProduct;
+            return (
+              <>
+                <ActionButton
+                  icon={<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>}
+                  label="Edit"
+                  onClick={() => openEdit(p)}
                 />
-              </th>
-              <th className="px-6 py-3">Product Name</th>
-              <th className="px-6 py-3">SKU / Barcode</th>
-              <th className="px-6 py-3">Category</th>
-              <th className="px-6 py-3">Supplier</th>
-              <th className="px-6 py-3">Cost Price</th>
-              <th className="px-6 py-3">Selling Price</th>
-              <th className="px-6 py-3">Stock Level</th>
-              <th className="px-6 py-3">Status</th>
-              <th className="px-6 py-3 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-200 dark:divide-white/5">
-            {paginatedProducts.length === 0 ? (
-              <tr>
-                <td colSpan={10} className="px-6 py-10 text-center text-slate-400">No products found.</td>
-              </tr>
-            ) : (
-              paginatedProducts.map(p => (
-                <ProductRow
-                  key={p.id}
-                  p={p}
-                  isSelected={selectedIds.includes(p.id)}
-                  onToggleSelect={toggleSelectRow}
-                  onEdit={openEdit}
-                  onArchive={(product) => setArchiving({ id: product.id, name: product.name, status: product.status })}
+                <ActionButton
+                  icon={<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>}
+                  label={p.status === 'Discontinued' ? 'Re-activate' : 'Archive'}
+                  variant={p.status === 'Discontinued' ? 'default' : 'danger'}
+                  onClick={() => setArchiving({ id: p.id, name: p.name, status: p.status })}
                 />
-              ))
-            )}
-          </tbody>
-        </table>
+              </>
+            );
+          }}
+          pagination={
+            <Pagination
+              page={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              totalItems={filteredProducts.length}
+              perPage={ITEMS_PER_PAGE}
+              label="products"
+            />
+          }
+        />
 
-        {/* Empty State Notification */}
         {showEmptyNotification && (
-          <div className="fixed bottom-6 right-6 z-40 animate-in fade-in slide-in-from-right-4 duration-300">
-            <div className="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 rounded-lg shadow-lg p-4 max-w-sm flex items-start gap-3 overflow-hidden">
+          <div className="fixed bottom-4 right-4 z-40 animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 rounded-lg shadow-lg p-3 max-w-sm flex items-start gap-2 overflow-hidden">
               <div className="absolute bottom-0 left-0 h-1 bg-blue-600 dark:bg-blue-400 transition-all" style={{ width: `${(notificationCountdown / 20) * 100}%` }}></div>
-              <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+              <AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
               <div className="flex-1">
-                <p className="text-sm font-semibold text-blue-700 dark:text-blue-300">Hmm, the table is empty</p>
-                <p className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">Input some data to get started</p>
+                <p className="text-xs font-semibold text-blue-700 dark:text-blue-300">Hmm, the table is empty</p>
+                <p className="text-[10px] text-blue-600 dark:text-blue-400 mt-0.5">Input some data to get started</p>
               </div>
               <button
                 onClick={() => { setShowEmptyNotification(false); setShowTutorial(true); }}
-                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded transition-all shrink-0"
+                className="h-8 px-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded transition-all shrink-0"
               >
                 Quick Guide
               </button>
             </div>
           </div>
         )}
-
-        {/* Table Footer Showing Entry Count & Pagination Controls */}
-        <div className="px-6 py-3 bg-slate-50/50 dark:bg-slate-900/50 border-t border-slate-200 dark:border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
-          <span>
-            {filteredProducts.length === 0 ? (
-              <>Showing <strong className="font-semibold text-slate-800 dark:text-slate-200">0</strong> of <strong className="font-semibold text-slate-800 dark:text-slate-200">0</strong> Products</>
-            ) : totalPages === 1 ? (
-              <>Showing <strong className="font-semibold text-slate-800 dark:text-slate-200">{filteredProducts.length}</strong> of <strong className="font-semibold text-slate-800 dark:text-slate-200">{filteredProducts.length}</strong> Products</>
-            ) : (
-              <>
-                Showing <strong className="font-semibold text-slate-800 dark:text-slate-200">{startIndex + 1}</strong> to{' '}
-                <strong className="font-semibold text-slate-800 dark:text-slate-200">{endIndex}</strong> of{' '}
-                <strong className="font-semibold text-slate-800 dark:text-slate-200">{filteredProducts.length}</strong> Products
-              </>
-            )}
-          </span>
-
-          {totalPages > 1 && (
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="p-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 disabled:opacity-40 disabled:hover:bg-transparent transition-all"
-                title="Previous Page"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-
-              <span className="px-2 font-medium text-slate-700 dark:text-slate-300">
-                Page {currentPage} of {totalPages}
-              </span>
-
-              <button
-                type="button"
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="p-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 disabled:opacity-40 disabled:hover:bg-transparent transition-all"
-                title="Next Page"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
-          )}
-        </div>
       </div>
 
-      {/* Add Product Modal */}
       {showAddModal && (
-        <Modal title="Add New Product" onClose={() => setShowAddModal(false)}>
-          <form onSubmit={handleAddProduct} className="space-y-4">
+        <Modal title="Add New Product" onClose={() => setShowAddModal(false)} className="max-w-lg" contentClassName="p-4" titleClassName="text-base">
+          <form onSubmit={handleAddProduct} className="space-y-3">
             <FormField label="Product Name">
               <input type="text" required placeholder="e.g. Biogesic Paracetamol 500mg" value={addForm.product_name}
-                onChange={e => setAddForm(f => ({ ...f, product_name: e.target.value }))} className={inputCls} />
-              {isDuplicateAddName && <p className="text-red-500 text-[11px] mt-1">Product name already exists.</p>}
+                onChange={e => setAddForm(f => ({ ...f, product_name: e.target.value }))} className="h-8 text-xs" />
+              {isDuplicateAddName && <p className="text-red-500 text-[10px] mt-1">Product name already exists.</p>}
             </FormField>
             <FormField label="SKU / Barcode (Leave blank for automatic SKU generation)">
               <input type="text" placeholder="Auto-generated if empty" value={addForm.barcode}
-                onChange={e => setAddForm(f => ({ ...f, barcode: e.target.value }))} className={inputCls} />
-              {isDuplicateAddBarcode && <p className="text-red-500 text-[11px] mt-1">SKU / Barcode already exists.</p>}
+                onChange={e => setAddForm(f => ({ ...f, barcode: e.target.value }))} className="h-8 text-xs" />
+              {isDuplicateAddBarcode && <p className="text-red-500 text-[10px] mt-1">SKU / Barcode already exists.</p>}
             </FormField>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2">
               <FormField label="Category">
-                <select required value={addForm.category_id} onChange={e => setAddForm(f => ({ ...f, category_id: e.target.value }))} className={inputCls}>
+                <select required value={addForm.category_id} onChange={e => setAddForm(f => ({ ...f, category_id: e.target.value }))} className="h-8 text-xs">
                   <option value="">Select Category</option>
                   {categories.map(c => (
                     <option key={c.id} value={c.id}>{c.name}</option>
@@ -710,7 +666,7 @@ export function ManageProducts() {
                 </select>
               </FormField>
               <FormField label="Supplier">
-                <select required value={addForm.supplier_id} onChange={e => setAddForm(f => ({ ...f, supplier_id: e.target.value }))} className={inputCls}>
+                <select required value={addForm.supplier_id} onChange={e => setAddForm(f => ({ ...f, supplier_id: e.target.value }))} className="h-8 text-xs">
                   <option value="">Select Supplier</option>
                   {suppliers.map(s => (
                     <option key={s.id} value={s.id}>{s.name}</option>
@@ -718,56 +674,55 @@ export function ManageProducts() {
                 </select>
               </FormField>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2">
               <FormField label="Cost Price (₱)">
                 <input type="number" step="0.01" required min="0" placeholder="0.00" value={addForm.cost_price}
-                  onChange={e => setAddForm(f => ({ ...f, cost_price: e.target.value }))} className={inputCls} />
+                  onChange={e => setAddForm(f => ({ ...f, cost_price: e.target.value }))} className="h-8 text-xs" />
               </FormField>
               <FormField label="Selling Price (₱)">
                 <input type="number" step="0.01" required min="0" placeholder="0.00" value={addForm.selling_price}
-                  onChange={e => setAddForm(f => ({ ...f, selling_price: e.target.value }))} className={inputCls} />
+                  onChange={e => setAddForm(f => ({ ...f, selling_price: e.target.value }))} className="h-8 text-xs" />
               </FormField>
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-2">
               <FormField label="Reorder Level">
                 <input type="number" required min="0" value={addForm.reorder_level}
-                  onChange={e => setAddForm(f => ({ ...f, reorder_level: e.target.value }))} className={inputCls} />
+                  onChange={e => setAddForm(f => ({ ...f, reorder_level: e.target.value }))} className="h-8 text-xs" />
               </FormField>
               <FormField label="Initial Stock">
                 <input type="number" min="0" value={addForm.initial_stock}
-                  onChange={e => setAddForm(f => ({ ...f, initial_stock: e.target.value }))} className={inputCls} />
+                  onChange={e => setAddForm(f => ({ ...f, initial_stock: e.target.value }))} className="h-8 text-xs" />
               </FormField>
               <FormField label="Expiration Date">
                 <input type="date" value={addForm.expiration_date}
-                  onChange={e => setAddForm(f => ({ ...f, expiration_date: e.target.value }))} className={inputCls} />
+                  onChange={e => setAddForm(f => ({ ...f, expiration_date: e.target.value }))} className="h-8 text-xs" />
               </FormField>
             </div>
             {addError && <p className="text-red-600 text-xs">{addError}</p>}
             <button type="submit" disabled={processing}
-              className="w-full bg-[#006a61] hover:bg-[#00574f] text-white py-2.5 rounded-lg text-sm font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-2">
-              {processing ? <><Loader2 className="h-4 w-4 animate-spin" />Creating Product…</> : 'Create Product'}
+              className="w-full h-8 bg-[#006a61] hover:bg-[#00574f] text-white rounded-lg text-xs font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+              {processing ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Creating Product…</> : 'Create Product'}
             </button>
           </form>
         </Modal>
       )}
 
-      {/* Edit Product Modal */}
       {showEditModal && selectedProduct && (
-        <Modal title="Edit Product" onClose={() => setShowEditModal(false)}>
-          <form onSubmit={handleEditProduct} className="space-y-4">
+        <Modal title="Edit Product" onClose={() => setShowEditModal(false)} className="max-w-lg" contentClassName="p-4" titleClassName="text-base">
+          <form onSubmit={handleEditProduct} className="space-y-3">
             <FormField label="Product Name">
               <input type="text" required placeholder="Product Name" value={editForm.product_name}
-                onChange={e => setEditForm(f => ({ ...f, product_name: e.target.value }))} className={inputCls} />
-              {isDuplicateEditName && <p className="text-red-500 text-[11px] mt-1">Product name already exists.</p>}
+                onChange={e => setEditForm(f => ({ ...f, product_name: e.target.value }))} className="h-8 text-xs" />
+              {isDuplicateEditName && <p className="text-red-500 text-[10px] mt-1">Product name already exists.</p>}
             </FormField>
             <FormField label="SKU / Barcode">
               <input type="text" placeholder="Barcode" value={editForm.barcode}
-                onChange={e => setEditForm(f => ({ ...f, barcode: e.target.value }))} className={inputCls} />
-              {isDuplicateEditBarcode && <p className="text-red-500 text-[11px] mt-1">SKU / Barcode already exists.</p>}
+                onChange={e => setEditForm(f => ({ ...f, barcode: e.target.value }))} className="h-8 text-xs" />
+              {isDuplicateEditBarcode && <p className="text-red-500 text-[10px] mt-1">SKU / Barcode already exists.</p>}
             </FormField>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2">
               <FormField label="Category">
-                <select required value={editForm.category_id} onChange={e => setEditForm(f => ({ ...f, category_id: e.target.value }))} className={inputCls}>
+                <select required value={editForm.category_id} onChange={e => setEditForm(f => ({ ...f, category_id: e.target.value }))} className="h-8 text-xs">
                   <option value="">Select Category</option>
                   {categories.map(c => (
                     <option key={c.id} value={c.id}>{c.name}</option>
@@ -775,7 +730,7 @@ export function ManageProducts() {
                 </select>
               </FormField>
               <FormField label="Supplier">
-                <select required value={editForm.supplier_id} onChange={e => setEditForm(f => ({ ...f, supplier_id: e.target.value }))} className={inputCls}>
+                <select required value={editForm.supplier_id} onChange={e => setEditForm(f => ({ ...f, supplier_id: e.target.value }))} className="h-8 text-xs">
                   <option value="">Select Supplier</option>
                   {suppliers.map(s => (
                     <option key={s.id} value={s.id}>{s.name}</option>
@@ -783,30 +738,30 @@ export function ManageProducts() {
                 </select>
               </FormField>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2">
               <FormField label="Cost Price (₱)">
                 <input type="number" step="0.01" required min="0" value={editForm.cost_price}
-                  onChange={e => setEditForm(f => ({ ...f, cost_price: e.target.value }))} className={inputCls} />
+                  onChange={e => setEditForm(f => ({ ...f, cost_price: e.target.value }))} className="h-8 text-xs" />
               </FormField>
               <FormField label="Selling Price (₱)">
                 <input type="number" step="0.01" required min="0" value={editForm.selling_price}
-                  onChange={e => setEditForm(f => ({ ...f, selling_price: e.target.value }))} className={inputCls} />
+                  onChange={e => setEditForm(f => ({ ...f, selling_price: e.target.value }))} className="h-8 text-xs" />
               </FormField>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2">
               <FormField label="Reorder Level">
                 <input type="number" required min="0" value={editForm.reorder_level}
-                  onChange={e => setEditForm(f => ({ ...f, reorder_level: e.target.value }))} className={inputCls} />
+                  onChange={e => setEditForm(f => ({ ...f, reorder_level: e.target.value }))} className="h-8 text-xs" />
               </FormField>
               <FormField label="Expiration Date">
                 <input type="date" value={editForm.expiration_date}
-                  onChange={e => setEditForm(f => ({ ...f, expiration_date: e.target.value }))} className={inputCls} />
+                  onChange={e => setEditForm(f => ({ ...f, expiration_date: e.target.value }))} className="h-8 text-xs" />
               </FormField>
             </div>
             {editError && <p className="text-red-600 text-xs">{editError}</p>}
             <button type="submit" disabled={processing}
-              className="w-full bg-[#006a61] hover:bg-[#00574f] text-white py-2.5 rounded-lg text-sm font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-2">
-              {processing ? <><Loader2 className="h-4 w-4 animate-spin" />Saving Changes…</> : 'Save Changes'}
+              className="w-full h-8 bg-[#006a61] hover:bg-[#00574f] text-white rounded-lg text-xs font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+              {processing ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Saving Changes…</> : 'Save Changes'}
             </button>
           </form>
         </Modal>
@@ -831,7 +786,6 @@ export function ManageProducts() {
         />
       )}
 
-      {/* Tutorial Component */}
       <Tutorial steps={tutorialSteps} isOpen={showTutorial} onClose={() => setShowTutorial(false)} />
 
       <Toast toasts={toasts} onDismiss={dismiss} />

@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Supplier;
+use App\Models\Inventory;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class SupplierController extends Controller
 {
@@ -44,13 +46,30 @@ class SupplierController extends Controller
     public function show($id)
     {
         $s = Supplier::withCount('products')->findOrFail($id);
+
+        $lowStockCount = DB::table('Inventory as i')
+            ->join('Product as p', 'i.product_id', '=', 'p.product_id')
+            ->where('p.supplier_id', $id)
+            ->where('i.stock_status', 'Low Stock')
+            ->count();
+
+        $totalProducts = $s->products_count;
+
+        $recentProducts = $s->products()
+            ->join('Inventory as i', 'Product.product_id', '=', 'i.product_id')
+            ->select('Product.product_id', 'Product.product_name', 'i.current_stock', 'i.stock_status')
+            ->limit(5)
+            ->get();
+
         return response()->json([
             'id'             => $s->supplier_id,
             'name'           => $s->supplier_name,
             'contact_person' => $s->contact_person,
             'contact_number' => $s->contact_number,
             'address'        => $s->address,
-            'product_count'  => $s->products_count,
+            'product_count'  => $totalProducts,
+            'low_stock_count' => $lowStockCount,
+            'recent_products' => $recentProducts,
         ]);
     }
 

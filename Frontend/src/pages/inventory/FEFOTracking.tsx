@@ -1,7 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import { Info, Search, TrendingDown, DollarSign, ShieldCheck, PackageX } from 'lucide-react';
+import { Info, Search, TrendingDown, DollarSign, ShieldCheck, PackageX, Flag, Bell, Trash2, Eye } from 'lucide-react';
 import { Toast, useToast, ConfirmDialog } from '../../components/ui/Toast';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
+import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
+import { ActionButton } from '../../components/shared/DataTableActions';
+import { Pagination } from '../../components/ui/pagination';
+
 type MockBatch = {
   batch_id: number;
   product_name: string;
@@ -54,7 +58,7 @@ export function FEFOTracking() {
   const { toasts, dismiss, success } = useToast();
 
   const [search, setSearch] = useState('');
-  const [page] = useState(1);
+  const [page, setPage] = useState(1);
   const pageSize = 10;
   const [mockBatches, setMockBatches] = useState<MockBatch[]>(MOCK_BATCHES);
   const [confirmBatch, setConfirmBatch] = useState<{ batchId: number; action: string } | null>(null);
@@ -78,10 +82,92 @@ export function FEFOTracking() {
   };
 
   const criticalCount = filteredAll.filter(b => b.days_left >= 0 && b.days_left <= 5).length;
+  const totalPages = Math.ceil(filteredAll.length / pageSize);
   const filtered = filteredAll.slice((page - 1) * pageSize, page * pageSize);
 
+  const columns: DataTableColumn<MockBatch>[] = [
+    {
+      key: 'product',
+      header: 'Product',
+      pinned: true,
+      truncate: true,
+      minWidth: '180px',
+      render: (row) => (
+        <div>
+          <div className="font-semibold text-[#0F172A] dark:text-slate-100">{row.product_name}</div>
+          <div className="text-[10px] font-mono text-[#64748B] dark:text-slate-400">{row.sku}</div>
+        </div>
+      ),
+    },
+    {
+      key: 'batch_number',
+      header: 'Batch #',
+      truncate: true,
+      minWidth: '100px',
+      render: (row) => (
+        <span className="font-mono text-[#64748B] dark:text-slate-400">
+          {row.batch_number ?? `BATCH-${row.batch_id}`}
+        </span>
+      ),
+    },
+    {
+      key: 'expiry_date',
+      header: 'Expiry Date',
+      minWidth: '100px',
+      render: (row) => (
+        <span className="text-[#64748B] dark:text-slate-400 whitespace-nowrap">
+          {new Date(row.expiry_date).toLocaleDateString('en-PH', {
+            year: 'numeric', month: 'short', day: 'numeric',
+          })}
+        </span>
+      ),
+    },
+    {
+      key: 'days_left',
+      header: 'Days Left',
+      numeric: true,
+      align: 'center',
+      minWidth: '80px',
+      render: (row) => {
+        const daysLeft = row.days_left;
+        return (
+          <span className={`inline-block rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
+            daysLeft <= 5 ? 'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300' :
+            daysLeft <= 14 ? 'bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300' :
+            'bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300'
+          }`}>
+            {daysLeft < 0 ? 'Expired' : `${daysLeft}d`}
+          </span>
+        );
+      },
+    },
+    {
+      key: 'quantity',
+      header: 'Qty',
+      numeric: true,
+      minWidth: '80px',
+      render: (row) => (
+        <span className="text-[#0F172A] dark:text-slate-100">{row.quantity}</span>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      align: 'center',
+      minWidth: '100px',
+      render: (row) => {
+        const { label, cls } = getStatusLabel(row.days_left);
+        return (
+          <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[9px] font-semibold ${cls}`}>
+            {label}
+          </span>
+        );
+      },
+    },
+  ];
+
   return (
-    <div className="space-y-6 w-full min-h-screen bg-[#F8FAFC] dark:bg-slate-950 p-4 sm:p-6">
+    <div className="space-y-3 w-full min-h-screen bg-[#F8FAFC] dark:bg-slate-950">
       <Toast toasts={toasts} onDismiss={dismiss} />
 
       {confirmBatch && (
@@ -93,13 +179,13 @@ export function FEFOTracking() {
         />
       )}
 
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="flex items-start gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex items-start gap-2">
           <div>
-            <h1 className="text-2xl font-bold text-[#0F172A] dark:text-slate-100 tracking-tight">
+            <h1 className="text-xl font-bold text-[#0F172A] dark:text-slate-100 tracking-tight">
               FEFO Batch Tracking
             </h1>
-            <p className="mt-0.5 text-sm text-[#64748B] dark:text-slate-400">
+            <p className="mt-0.5 text-xs text-[#64748B] dark:text-slate-400">
               First-Expired-First-Out monitoring &mdash; prioritise near-expiry stock to minimise write-offs
             </p>
           </div>
@@ -114,144 +200,113 @@ export function FEFOTracking() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="flex items-center gap-4 rounded-2xl border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 px-5 py-4 shadow-sm">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-50 dark:bg-red-950/30">
-            <TrendingDown className="h-5 w-5 text-red-600 dark:text-red-400" />
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="flex items-center gap-3 rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 px-4 py-3 shadow-sm">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-red-50 dark:bg-red-950/30">
+            <TrendingDown className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
           </div>
           <div>
-            <p className="text-2xl font-bold text-[#0F172A] dark:text-slate-100">{criticalCount}</p>
-            <p className="text-xs font-semibold text-[#64748B] dark:text-slate-400">Critical Batches</p>
-            <p className="text-[10px] text-red-600 dark:text-red-400">Expire in &le;5 days</p>
+            <p className="text-sm font-bold text-[#0F172A] dark:text-slate-100">{criticalCount}</p>
+            <p className="text-[9px] font-semibold text-[#64748B] dark:text-slate-400">Critical Batches</p>
+            <p className="text-[9px] text-red-600 dark:text-red-400">Expire in &le;5 days</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-4 rounded-2xl border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 px-5 py-4 shadow-sm">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-green-50 dark:bg-green-950/30">
-            <DollarSign className="h-5 w-5 text-green-700 dark:text-green-400" />
+        <div className="flex items-center gap-3 rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 px-4 py-3 shadow-sm">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-green-50 dark:bg-green-950/30">
+            <DollarSign className="h-3.5 w-3.5 text-green-700 dark:text-green-400" />
           </div>
           <div>
-            <p className="text-2xl font-bold text-[#0F172A] dark:text-slate-100">{mockBatches.length}</p>
-            <p className="text-xs font-semibold text-[#64748B] dark:text-slate-400">Total Batches</p>
-            <p className="text-[10px] text-green-700 dark:text-green-400">Across all products</p>
+            <p className="text-sm font-bold text-[#0F172A] dark:text-slate-100">{mockBatches.length}</p>
+            <p className="text-[9px] font-semibold text-[#64748B] dark:text-slate-400">Total Batches</p>
+            <p className="text-[9px] text-green-700 dark:text-green-400">Across all products</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-4 rounded-2xl border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 px-5 py-4 shadow-sm">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-950/30">
-            <ShieldCheck className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+        <div className="flex items-center gap-3 rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 px-4 py-3 shadow-sm">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950/30">
+            <ShieldCheck className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
           </div>
           <div>
-            <p className="text-2xl font-bold text-[#0F172A] dark:text-slate-100">{mockBatches.filter(b => b.days_left >= 0 && b.days_left <= 7).length}</p>
-            <p className="text-xs font-semibold text-[#64748B] dark:text-slate-400">Expiring in 7 Days</p>
-            <p className="text-[10px] text-blue-600 dark:text-blue-400">Requires immediate action</p>
+            <p className="text-sm font-bold text-[#0F172A] dark:text-slate-100">{mockBatches.filter(b => b.days_left >= 0 && b.days_left <= 7).length}</p>
+            <p className="text-[9px] font-semibold text-[#64748B] dark:text-slate-400">Expiring in 7 Days</p>
+            <p className="text-[9px] text-blue-600 dark:text-blue-400">Requires immediate action</p>
           </div>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-[#E5E7EB] dark:border-white/10 shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-[#F1F5F9] dark:border-white/10 flex items-center justify-between gap-4">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-[#E5E7EB] dark:border-white/10 shadow-sm overflow-hidden">
+        <div className="px-4 py-3 border-b border-[#F1F5F9] dark:border-white/10 flex items-center justify-between gap-3">
           <span className="text-sm font-bold text-[#0F172A] dark:text-slate-100">
             Batch Register
-            <span className="ml-2 text-xs font-normal text-[#64748B] dark:text-slate-400">({filteredAll.length} batches)</span>
+            <span className="ml-2 text-[9px] font-normal text-[#64748B] dark:text-slate-400">({filteredAll.length} batches)</span>
           </span>
-          <div className="relative w-60">
+          <div className="relative w-52">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#64748B] pointer-events-none" />
             <input
               type="text"
               placeholder="Search product, SKU, or batch..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-[#E5E7EB] dark:border-white/10 bg-[#F8FAFC] dark:bg-slate-800 text-[#0F172A] dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-[#0F766E] transition-all"
+              className="w-full h-8 pl-8 pr-3 text-xs rounded-lg border border-[#E5E7EB] dark:border-white/10 bg-[#F8FAFC] dark:bg-slate-800 text-[#0F172A] dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-[#0F766E] transition-all"
             />
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="bg-[#F8FAFC] dark:bg-slate-800 text-[#64748B] dark:text-slate-400 border-b border-[#E5E7EB] dark:border-white/10">
-                  <th className="px-4 py-3 text-left font-semibold whitespace-nowrap">Product</th>
-                  <th className="px-4 py-3 text-left font-semibold whitespace-nowrap">Batch #</th>
-                  <th className="px-4 py-3 text-left font-semibold whitespace-nowrap">Expiry Date</th>
-                  <th className="px-4 py-3 text-left font-semibold whitespace-nowrap">Days Left</th>
-                  <th className="px-4 py-3 text-left font-semibold whitespace-nowrap">Qty</th>
-                  <th className="px-4 py-3 text-left font-semibold whitespace-nowrap">Status</th>
-                  <th className="px-4 py-3 text-left font-semibold whitespace-nowrap">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#F1F5F9] dark:divide-white/5">
-                {filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="text-center py-12">
-                      <div className="flex flex-col items-center gap-2">
-                        <PackageX className="h-8 w-8 text-[#64748B] dark:text-slate-500" />
-                        <span className="text-sm font-medium text-[#64748B] dark:text-slate-400">No batches found</span>
-                        <span className="text-xs text-[#94A3B8] dark:text-slate-500">Try adjusting your search</span>
-                      </div>
-                    </td>
-                  </tr>
+        <DataTable
+          columns={columns}
+          data={filtered as unknown as Record<string, unknown>[]}
+          rowKey={(row) => row.batch_id as number}
+          emptyMessage="No batches found"
+          emptyState={
+            <div className="flex flex-col items-center gap-2">
+              <PackageX className="h-8 w-8 text-[#64748B] dark:text-slate-500" />
+              <span className="text-sm font-medium text-[#64748B] dark:text-slate-400">No batches found</span>
+              <span className="text-[9px] text-[#94A3B8] dark:text-slate-500">Try adjusting your search</span>
+            </div>
+          }
+          actions={(row) => {
+            const daysLeft = row.days_left as number;
+            return (
+              <div className="inline-flex items-center gap-0.5">
+                {daysLeft < 0 ? (
+                  <span className="text-[9px] text-[#64748B] dark:text-slate-400 italic">Expired</span>
+                ) : daysLeft <= 5 ? (
+                  <ActionButton
+                    icon={<Flag className="h-3.5 w-3.5" />}
+                    label="Flag for Clearance"
+                    onClick={() => setConfirmBatch({ batchId: row.batch_id as number, action: 'flag' })}
+                  />
+                ) : daysLeft <= 14 ? (
+                  <ActionButton
+                    icon={<Bell className="h-3.5 w-3.5" />}
+                    label="Notify Cashier"
+                    onClick={() => setConfirmBatch({ batchId: row.batch_id as number, action: 'notify' })}
+                  />
                 ) : (
-                  filtered.map((b) => {
-                    const { label, cls } = getStatusLabel(b.days_left);
-                    const daysLeft = b.days_left;
-
-                    return (
-                      <tr key={b.batch_id} className="hover:bg-[#F8FAFC] dark:hover:bg-slate-800/50 transition-colors cursor-pointer">
-                        <td className="px-4 py-3.5">
-                          <div className="font-semibold text-[#0F172A] dark:text-slate-100">{b.product_name}</div>
-                          <div className="text-[10px] font-mono text-[#64748B] dark:text-slate-400">{b.sku}</div>
-                        </td>
-                        <td className="px-4 py-3.5 font-mono text-[#64748B] dark:text-slate-400">
-                          {b.batch_number ?? `BATCH-${b.batch_id}`}
-                        </td>
-                        <td className="px-4 py-3.5 text-[#64748B] dark:text-slate-400 whitespace-nowrap">
-                          {new Date(b.expiry_date).toLocaleDateString('en-PH', {
-                            year: 'numeric', month: 'short', day: 'numeric',
-                          })}
-                        </td>
-                        <td className="px-4 py-3.5 font-semibold text-[#0F172A] whitespace-nowrap">
-                          <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-bold ${
-                            daysLeft <= 5 ? 'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300' :
-                            daysLeft <= 14 ? 'bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300' :
-                            'bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300'
-                          }`}>
-                            {daysLeft < 0 ? 'Expired' : `${daysLeft}d`}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3.5 text-[#0F172A] dark:text-slate-100">{b.quantity}</td>
-                        <td className="px-4 py-3.5 whitespace-nowrap">
-                          <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold ${cls}`}>
-                            {label}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3.5 whitespace-nowrap">
-                          <div className="relative inline-flex items-center gap-0.5">
-                            {b.days_left < 0 ? (
-                              <span className="text-xs text-[#64748B] dark:text-slate-400 italic">Expired</span>
-                            ) : (
-                                <button
-                                  onClick={() => {
-                                    const action = daysLeft <= 5 ? 'flag' : 'notify';
-                                    setConfirmBatch({ batchId: b.batch_id, action });
-                                  }}
-                                  className="inline-flex items-center gap-1 rounded-lg bg-[#0F766E] hover:bg-[#0d6660] text-white px-3 py-1.5 text-xs font-semibold transition-colors"
-                                >
-                                  {getActionLabel(daysLeft)}
-                                </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
+                  <ActionButton
+                    icon={<Eye className="h-3.5 w-3.5" />}
+                    label="Monitor"
+                    onClick={() => {}}
+                  />
                 )}
-              </tbody>
-            </table>
-          </div>
+              </div>
+            );
+          }}
+          pagination={
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              totalItems={filteredAll.length}
+              perPage={pageSize}
+              label="batches"
+            />
+          }
+        />
       </div>
 
-      <div className="flex flex-wrap items-center gap-4 rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 px-5 py-3 shadow-sm text-xs text-[#64748B] dark:text-slate-400">
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 px-4 py-2 shadow-sm text-[9px] text-[#64748B] dark:text-slate-400">
         <span className="font-semibold text-[#0F172A] dark:text-slate-100">Status Legend:</span>
         <span className="inline-flex items-center gap-1.5">
           <span className="inline-block h-2 w-2 rounded-full bg-red-500" />

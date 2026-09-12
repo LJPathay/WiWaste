@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Link } from 'react-router';
+import { Link } from 'react-router-dom';
 import { AlertCircle, AlertTriangle, ArrowRight, CheckCircle2, Cpu, Info, Loader2, RefreshCw, Search, ShoppingCart, Target, Wallet } from 'lucide-react';
 import { Toast, useToast } from '../../components/ui/Toast';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';

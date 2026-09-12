@@ -6,6 +6,9 @@ import { AuthLayout } from "./components/layout/AuthLayout";
 import { DashboardLayout } from "./components/layout/DashboardLayout";
 import { CashierLayout } from "./components/layout/CashierLayout";
 import { PageLoader } from "./components/ui/PageLoader";
+import PrivacyBanner from "./components/ui/PrivacyBanner";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
 
 function lazyPage(imp: () => Promise<Record<string, unknown>>, name: string) {
   const Comp = lazy(() => imp().then(m => ({ default: m[name] as ComponentType<unknown> })));
@@ -54,69 +57,76 @@ const SupplierPerformance = lazyPage(() => import("./pages/manager/SupplierPerfo
 const ExecutiveReports = lazyPage(() => import("./pages/manager/ExecutiveReports"), "ExecutiveReports");
 
 export const router = createBrowserRouter([
-    // ── Public marketing site ──
-    {
-        path: "/",
-        Component: MainLayout,
-        children: [
-            { index: true, Component: Home },
-            { path: "pricing", Component: Pricing },
-            { path: "solutions", Component: Solutions },
-        ],
-    },
+     // ── Public marketing site ──
+     {
+         path: "/",
+         element: (
+           <>
+             <PrivacyBanner />
+             <MainLayout />
+           </>
+         ),
+         children: [
+             { index: true, Component: Home },
+             { path: "pricing", Component: Pricing },
+             { path: "solutions", Component: Solutions },
+             { path: "privacy", Component: PrivacyPolicy },
+             { path: "terms", Component: TermsOfService },
+         ],
+     },
 
-    // ── Auth pages (login / register) ──
-    {
-        Component: AuthLayout,
-        children: [
-            { path: "login", Component: Login },
-        ],
-    },
+     // ── Auth pages (login / register) ──
+     {
+         Component: AuthLayout,
+         children: [
+             { path: "login", Component: Login },
+         ],
+     },
 
-    // ── Authenticated dashboard (always shows sidebar) ──
-    {
-        Component: DashboardLayout,
-        children: [
-            // Dashboard overview & sub-pages
-            { path: "dashboard", Component: Dashboard },
-            { path: "dashboard/inventory", Component: InventoryDashboard },
-            { path: "dashboard/predictive", Component: PredictiveAnalyticsPage },
-            { path: "dashboard/leakage", Component: LeakageDetectionPage },
-            { path: "dashboard/fefo", Component: FefoTrackingPage },
-            { path: "dashboard/vendors", Component: VendorCreditsPage },
-            // Owner/Administrator routes
-            { path: "owner/users", Component: ManageUsers },
-            { path: "owner/products", Component: ManageProducts },
-            { path: "owner/categories", Component: ManageCategories },
-            { path: "owner/suppliers", Component: ManageSuppliers },
-            { path: "owner/settings", Component: SystemSettings },
-            { path: "owner/reports", Component: GenerateReports },
-            { path: "owner/audit-logs", Component: AuditLogs },
-            { path: "owner/purchase-orders", Component: PurchaseOrders },
-            { path: "owner/performance", Component: InventoryPerformance },
-            { path: "owner/overstock", Component: OverstockRisks },
-            { path: "owner/replenishment", Component: Replenishment },
-            { path: "owner/supplier-performance", Component: SupplierPerformance },
-            { path: "owner/executive-reports", Component: ExecutiveReports },
-            // Inventory routes
-            { path: "inventory/wastage", Component: RecordWastage },
-            { path: "inventory/manage", Component: ManageInventory },
-            { path: "inventory/fefo", Component: FEFOTracking },
-            { path: "inventory/recommendations", Component: Recommendations },
-            { path: "inventory/stock-receiving", Component: StockReceiving },
-            { path: "inventory/movements", Component: StockMovements },
-            { path: "inventory/suppliers", Component: InventorySuppliers },
-            { path: "inventory/reports", Component: InventoryReports },
-        ],
-    },
+     // ── Authenticated dashboard (always shows sidebar) ──
+     {
+         Component: DashboardLayout,
+         children: [
+             // Dashboard overview & sub-pages
+             { path: "dashboard", Component: Dashboard },
+             { path: "dashboard/inventory", Component: InventoryDashboard },
+             { path: "dashboard/predictive", Component: PredictiveAnalyticsPage },
+             { path: "dashboard/leakage", Component: LeakageDetectionPage },
+             { path: "dashboard/fefo", Component: FefoTrackingPage },
+             { path: "dashboard/vendors", Component: VendorCreditsPage },
+             // Owner/Administrator routes
+             { path: "owner/users", Component: ManageUsers },
+             { path: "owner/products", Component: ManageProducts },
+             { path: "owner/categories", Component: ManageCategories },
+             { path: "owner/suppliers", Component: ManageSuppliers },
+             { path: "owner/settings", Component: SystemSettings },
+             { path: "owner/reports", Component: GenerateReports },
+             { path: "owner/audit-logs", Component: AuditLogs },
+             { path: "owner/purchase-orders", Component: PurchaseOrders },
+             { path: "owner/performance", Component: InventoryPerformance },
+             { path: "owner/overstock", Component: OverstockRisks },
+             { path: "owner/replenishment", Component: Replenishment },
+             { path: "owner/supplier-performance", Component: SupplierPerformance },
+             { path: "owner/executive-reports", Component: ExecutiveReports },
+             // Inventory routes
+             { path: "inventory/wastage", Component: RecordWastage },
+             { path: "inventory/manage", Component: ManageInventory },
+             { path: "inventory/fefo", Component: FEFOTracking },
+             { path: "inventory/recommendations", Component: Recommendations },
+             { path: "inventory/stock-receiving", Component: StockReceiving },
+             { path: "inventory/movements", Component: StockMovements },
+             { path: "inventory/suppliers", Component: InventorySuppliers },
+             { path: "inventory/reports", Component: InventoryReports },
+         ],
+     },
 
-    // ── Cashier terminal: no manager sidebar, kiosk-style interface ──
-    {
-        Component: CashierLayout,
-        children: [
-            { path: "cashier/pos", Component: POSTerminal },
-            { path: "cashier/returns", Component: ReturnsRefunds },
-            { path: "cashier/history", Component: CashierHistory },
-        ],
-    },
-]);
+     // ── Cashier terminal: no manager sidebar, kiosk-style interface ──
+     {
+         Component: CashierLayout,
+         children: [
+             { path: "cashier/pos", Component: POSTerminal },
+             { path: "cashier/returns", Component: ReturnsRefunds },
+             { path: "cashier/history", Component: CashierHistory },
+         ],
+     },
+ ]);

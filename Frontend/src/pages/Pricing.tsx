@@ -1,6 +1,6 @@
 import { motion } from "motion/react";
 import { Check } from "lucide-react";
-import { Link } from 'react-router';
+import { Link } from 'react-router-dom';
 
 export function Pricing() {
     return (

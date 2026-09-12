@@ -1,6 +1,6 @@
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis, LabelList } from 'recharts';
 import { AlertTriangle, ArrowLeft, PhilippinePeso, FileCheck, Info, TimerReset, XCircle } from 'lucide-react';
-import { Link } from 'react-router';
+import { Link } from 'react-router-dom';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
 

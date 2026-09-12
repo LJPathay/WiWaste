@@ -15,7 +15,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../../components/ui/dropdown-menu';
-import { useNavigate } from 'react-router';
+import { useNavigate } from 'react-router-dom';
 import {
   cashierProducts,
   createTransactionId,

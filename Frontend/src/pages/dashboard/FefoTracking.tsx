@@ -12,7 +12,7 @@ import {
 } from 'recharts';
 import { useState } from 'react';
 import { AlertTriangle, ArrowLeft, Clock3, Info, Package, PackageSearch, RotateCcw, Tag } from 'lucide-react';
-import { Link } from 'react-router';
+import { Link } from 'react-router-dom';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 
 const currencyFormatter = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 });

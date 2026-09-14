@@ -7,6 +7,7 @@ use App\Models\Supplier;
 use App\Models\Inventory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class SupplierController extends Controller
 {
@@ -157,5 +158,79 @@ class SupplierController extends Controller
         $query->findOrFail($id)->delete();
 
         return response()->json(['message' => 'Supplier deleted.']);
+    }
+
+    public function compliance(Request $request)
+    {
+        $query = Supplier::query();
+        $query = $this->scopeForBusiness($query, $request);
+
+        $suppliers = $query->get()->map(fn ($s) => [
+            'id'             => $s->supplier_id,
+            'name'           => $s->supplier_name,
+            'fda_lto_number' => $s->fda_lto_number,
+            'fda_lto_expiry' => $s->fda_lto_expiry,
+            'fda_cpr_number' => $s->fda_cpr_number,
+            'fda_cpr_expiry' => $s->fda_cpr_expiry,
+            'lto_status'     => $this->getLicenseStatus($s->fda_lto_expiry),
+            'cpr_status'     => $this->getLicenseStatus($s->fda_cpr_expiry),
+            'days_until_lto_expiry' => $s->fda_lto_expiry ? Carbon::parse($s->fda_lto_expiry)->diffInDays(now(), false) : null,
+            'days_until_cpr_expiry' => $s->fda_cpr_expiry ? Carbon::parse($s->fda_cpr_expiry)->diffInDays(now(), false) : null,
+        ]);
+
+        return response()->json([
+            'suppliers' => $suppliers,
+            'summary' => [
+                'total' => $suppliers->count(),
+                'lto_expiring_30' => $suppliers->filter(fn ($s) => $s['days_until_lto_expiry'] !== null && $s['days_until_lto_expiry'] <= 30 && $s['days_until_lto_expiry'] >= 0)->count(),
+                'lto_expiring_14' => $suppliers->filter(fn ($s) => $s['days_until_lto_expiry'] !== null && $s['days_until_lto_expiry'] <= 14 && $s['days_until_lto_expiry'] >= 0)->count(),
+                'lto_expiring_7'  => $suppliers->filter(fn ($s) => $s['days_until_lto_expiry'] !== null && $s['days_until_lto_expiry'] <= 7 && $s['days_until_lto_expiry'] >= 0)->count(),
+                'lto_expired'     => $suppliers->filter(fn ($s) => $s['days_until_lto_expiry'] !== null && $s['days_until_lto_expiry'] < 0)->count(),
+                'cpr_expiring_30' => $suppliers->filter(fn ($s) => $s['days_until_cpr_expiry'] !== null && $s['days_until_cpr_expiry'] <= 30 && $s['days_until_cpr_expiry'] >= 0)->count(),
+                'cpr_expiring_14' => $suppliers->filter(fn ($s) => $s['days_until_cpr_expiry'] !== null && $s['days_until_cpr_expiry'] <= 14 && $s['days_until_cpr_expiry'] >= 0)->count(),
+                'cpr_expiring_7'  => $suppliers->filter(fn ($s) => $s['days_until_cpr_expiry'] !== null && $s['days_until_cpr_expiry'] <= 7 && $s['days_until_cpr_expiry'] >= 0)->count(),
+                'cpr_expired'     => $suppliers->filter(fn ($s) => $s['days_until_cpr_expiry'] !== null && $s['days_until_cpr_expiry'] < 0)->count(),
+            ],
+        ]);
+    }
+
+    public function alerts(Request $request)
+    {
+        $days = (int) $request->input('days', 30);
+
+        $query = Supplier::query();
+        $query = $this->scopeForBusiness($query, $request);
+
+        $expiring = $query->where(function ($q) use ($days) {
+            $q->where('fda_lto_expiry', '<=', now()->addDays($days))
+              ->where('fda_lto_expiry', '>=', now())
+              ->orWhere('fda_cpr_expiry', '<=', now()->addDays($days))
+              ->where('fda_cpr_expiry', '>=', now());
+        })->get()->map(fn ($s) => [
+            'id' => $s->supplier_id,
+            'name' => $s->supplier_name,
+            'fda_lto_number' => $s->fda_lto_number,
+            'fda_lto_expiry' => $s->fda_lto_expiry,
+            'fda_cpr_number' => $s->fda_cpr_number,
+            'fda_cpr_expiry' => $s->fda_cpr_expiry,
+            'lto_days_remaining' => $s->fda_lto_expiry ? Carbon::parse($s->fda_lto_expiry)->diffInDays(now(), false) : null,
+            'cpr_days_remaining' => $s->fda_cpr_expiry ? Carbon::parse($s->fda_cpr_expiry)->diffInDays(now(), false) : null,
+        ]);
+
+        return response()->json([
+            'alerts' => $expiring,
+            'count' => $expiring->count(),
+        ]);
+    }
+
+    private function getLicenseStatus(?string $expiryDate): string
+    {
+        if (!$expiryDate) return 'not_provided';
+        $days = Carbon::parse($expiryDate)->diffInDays(now(), false);
+        if ($days < 0) return 'expired';
+        if ($days <= 7) return 'critical';
+        if ($days <= 14) return 'expiring_soon';
+        if ($days <= 30) return 'expiring';
+        return 'valid';
     }
 }

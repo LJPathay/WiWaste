@@ -27,6 +27,8 @@ use App\Http\Controllers\Api\VendorReturnController;
 use App\Http\Controllers\Api\ShiftController;
 use App\Http\Controllers\Api\AlertController;
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\SanitationController;
+use App\Http\Controllers\Api\RecallController;
 use App\Http\Controllers\Api\ForecastAccuracyController;
 use App\Http\Controllers\Api\StockReceivingController;
 
@@ -50,6 +52,8 @@ Route::post('/users/{id}/reactivate',  [UserController::class, 'reactivate']);
 // Lookup tables
 Route::apiResource('/categories', CategoryController::class);
 Route::apiResource('/suppliers',  SupplierController::class);
+Route::get('/suppliers/compliance', [SupplierController::class, 'compliance']);
+Route::get('/suppliers/alerts', [SupplierController::class, 'alerts']);
 
 // Products
 Route::apiResource('/products', ProductController::class);
@@ -129,6 +133,7 @@ Route::get('/analytics/dashboard-summary',[InventoryAnalyticsController::class, 
 Route::get('/fefo/batches',       [FEFOController::class, 'batches']);
 Route::get('/fefo/batches/{id}',  [FEFOController::class, 'show']);
 Route::post('/fefo/apply',        [FEFOController::class, 'apply']);
+Route::get('/fefo/batches/{id}/trace', [FEFOController::class, 'trace']);
 
 // Recommendations
 Route::get('/recommendations',                [RecommendationController::class, 'index']);
@@ -173,6 +178,26 @@ Route::post('/shifts/close', [ShiftController::class, 'close']);
 
 // Alerts
 Route::get('/alerts/expiring', [AlertController::class, 'expiring']);
+Route::get('/alerts/summary', [AlertController::class, 'summary']);
+
+// Sanitation Checklist
+Route::get('/sanitation', [SanitationController::class, 'index']);
+Route::post('/sanitation', [SanitationController::class, 'store']);
+Route::get('/sanitation/{id}', [SanitationController::class, 'show']);
+Route::put('/sanitation/{id}', [SanitationController::class, 'update']);
+Route::post('/sanitation/{id}/verify', [SanitationController::class, 'verify']);
+Route::get('/sanitation/summary', [SanitationController::class, 'summary']);
+
+// Recall Management
+Route::get('/recalls', [RecallController::class, 'index']);
+Route::post('/recalls', [RecallController::class, 'store']);
+Route::get('/recalls/{id}', [RecallController::class, 'show']);
+Route::put('/recalls/{id}', [RecallController::class, 'update']);
+Route::post('/recalls/{id}/activate', [RecallController::class, 'activate']);
+Route::post('/recalls/{id}/quarantine', [RecallController::class, 'quarantine']);
+Route::post('/recalls/{id}/notify', [RecallController::class, 'notify']);
+Route::post('/recalls/{id}/resolve', [RecallController::class, 'resolve']);
+Route::get('/recalls/summary', [RecallController::class, 'summary']);
 
 // Returns approval
 Route::post('/returns/{id}/approve', [ReturnTransactionController::class, 'approve']);

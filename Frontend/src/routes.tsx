@@ -47,6 +47,8 @@ const StockReceiving = lazyPage(() => import("./pages/inventory/StockReceiving")
 const StockMovements = lazyPage(() => import("./pages/inventory/StockMovements"), "StockMovements");
 const InventorySuppliers = lazyPage(() => import("./pages/inventory/Suppliers"), "Suppliers");
 const InventoryReports = lazyPage(() => import("./pages/inventory/Reports"), "Reports");
+const RecallManagement = lazyPage(() => import("./pages/inventory/RecallManagement"), "RecallManagement");
+const SanitationChecklist = lazyPage(() => import("./pages/inventory/SanitationChecklist"), "SanitationChecklist");
 const POSTerminal = lazyPage(() => import("./pages/cashier/POSTerminal"), "POSTerminal");
 const ReturnsRefunds = lazyPage(() => import("./pages/cashier/ReturnsRefunds"), "ReturnsRefunds");
 const CashierHistory = lazyPage(() => import("./pages/cashier/CashierHistory"), "CashierHistory");
@@ -108,15 +110,17 @@ export const router = createBrowserRouter([
              { path: "owner/replenishment", Component: Replenishment },
              { path: "owner/supplier-performance", Component: SupplierPerformance },
              { path: "owner/executive-reports", Component: ExecutiveReports },
-             // Inventory routes
-             { path: "inventory/wastage", Component: RecordWastage },
-             { path: "inventory/manage", Component: ManageInventory },
-             { path: "inventory/fefo", Component: FEFOTracking },
-             { path: "inventory/recommendations", Component: Recommendations },
-             { path: "inventory/stock-receiving", Component: StockReceiving },
-             { path: "inventory/movements", Component: StockMovements },
-             { path: "inventory/suppliers", Component: InventorySuppliers },
-             { path: "inventory/reports", Component: InventoryReports },
+// Inventory routes
+            { path: "inventory/wastage", Component: RecordWastage },
+            { path: "inventory/manage", Component: ManageInventory },
+            { path: "inventory/fefo", Component: FEFOTracking },
+            { path: "inventory/recommendations", Component: Recommendations },
+            { path: "inventory/stock-receiving", Component: StockReceiving },
+            { path: "inventory/movements", Component: StockMovements },
+            { path: "inventory/suppliers", Component: InventorySuppliers },
+            { path: "inventory/reports", Component: InventoryReports },
+            { path: "inventory/recalls", Component: RecallManagement },
+            { path: "inventory/sanitation", Component: SanitationChecklist },
          ],
      },
 

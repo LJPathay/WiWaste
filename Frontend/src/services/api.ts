@@ -78,6 +78,8 @@ export const suppliers = {
   update: (id: number, data: Partial<CreateSupplierPayload>) =>
     request(`/suppliers/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: number) => request(`/suppliers/${id}`, { method: 'DELETE' }),
+  compliance: () => request<ApiSupplierComplianceResponse>('/suppliers/compliance'),
+  alerts: (days = 30) => request<ApiSupplierAlertResponse>(`/suppliers/alerts?days=${days}`),
 };
 
 // ─── Products ───────────────────────────────────────────
@@ -316,6 +318,10 @@ export interface ApiSupplier {
   fda_lto_expiry?: string | null;
   fda_cpr_number?: string | null;
   fda_cpr_expiry?: string | null;
+  lto_status?: 'valid' | 'expiring' | 'expiring_soon' | 'critical' | 'expired' | 'not_provided';
+  cpr_status?: 'valid' | 'expiring' | 'expiring_soon' | 'critical' | 'expired' | 'not_provided';
+  days_until_lto_expiry?: number | null;
+  days_until_cpr_expiry?: number | null;
 }
 
 export interface ApiSupplierDetail extends ApiSupplier {
@@ -326,6 +332,34 @@ export interface ApiSupplierDetail extends ApiSupplier {
     current_stock: number;
     stock_status: string;
   }>;
+}
+
+export interface ApiSupplierComplianceResponse {
+  suppliers: Array<ApiSupplier & {
+    lto_status: string;
+    cpr_status: string;
+    days_until_lto_expiry: number | null;
+    days_until_cpr_expiry: number | null;
+  }>;
+  summary: {
+    total: number;
+    lto_expiring_30: number;
+    lto_expiring_14: number;
+    lto_expiring_7: number;
+    lto_expired: number;
+    cpr_expiring_30: number;
+    cpr_expiring_14: number;
+    cpr_expiring_7: number;
+    cpr_expired: number;
+  };
+}
+
+export interface ApiSupplierAlertResponse {
+  alerts: Array<ApiSupplier & {
+    lto_days_remaining: number | null;
+    cpr_days_remaining: number | null;
+  }>;
+  count: number;
 }
 
 export type ProductClassification = 'food' | 'drug' | 'cosmetic' | 'device' | 'general';
@@ -603,6 +637,19 @@ export interface ApiFefoBatchDetail extends ApiFefoBatch {
   created_by: string;
   created_at: string;
   movements: ApiFefoMovement[];
+}
+
+export interface ApiTraceStep {
+  level: string;
+  entity_type: string;
+  entity_id: number;
+  [key: string]: unknown;
+}
+
+export interface ApiTraceResponse {
+  batch: ApiFefoBatch;
+  upstream: ApiTraceStep[];
+  downstream: ApiTraceStep[];
 }
 
 export interface ApiRecommendation {
@@ -961,12 +1008,68 @@ export const lossRisk = {
   summary: () => request<ApiLossRiskSummaryResponse>('/loss-risk/summary'),
 };
 
+// ─── Alerts ────────────────────────────────────────────────
+export interface ApiAlertBatch {
+  type: 'batch_expiry';
+  id: number;
+  product_id: number;
+  product_name: string;
+  sku: string;
+  batch_number: string | null;
+  quantity: number;
+  expiry_date: string;
+  days_left: number;
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  business_id?: number;
+  branch_id?: number;
+}
+
+export interface ApiAlertSupplier {
+  type: 'supplier_license';
+  id: number;
+  name: string;
+  fda_lto_number?: string | null;
+  fda_lto_expiry?: string | null;
+  fda_cpr_number?: string | null;
+  fda_cpr_expiry?: string | null;
+  lto_days_remaining?: number | null;
+  cpr_days_remaining?: number | null;
+  severity: 'critical' | 'high' | 'medium' | 'low';
+}
+
+export interface ApiExpiringResponse {
+  fefo_batches?: ApiAlertBatch[];
+  fefo_count?: number;
+  supplier_licenses?: ApiAlertSupplier[];
+  supplier_count?: number;
+}
+
+export interface ApiAlertSummary {
+  fefo_batches: Record<number, number>;
+  supplier_licenses: Record<number, number>;
+  total_critical: number;
+  total_expiring_14: number;
+  total_expiring_30: number;
+}
+
+export const alerts = {
+  expiring: (params?: { days?: number; type?: 'fefo' | 'supplier' | 'all' }) => {
+    const qs = new URLSearchParams();
+    if (params?.days) qs.set('days', String(params.days));
+    if (params?.type) qs.set('type', params.type);
+    const q = qs.toString();
+    return request<ApiExpiringResponse>(`/alerts/expiring${q ? '?' + q : ''}`);
+  },
+  summary: () => request<ApiAlertSummary>('/alerts/summary'),
+};
+
 // ─── FEFO Tracking ────────────────────────────────────────
 export const fefo = {
   batches: (page = 1) => request<ApiFefoList>(`/fefo/batches?page=${page}`),
   show: (id: number) => request<ApiFefoBatchDetail>(`/fefo/batches/${id}`),
   apply: (data: { batch_id: number; action: 'flag' | 'clear' | 'notify'; directive_notes?: string }) =>
     request('/fefo/apply', { method: 'POST', body: JSON.stringify(data) }),
+  trace: (id: number) => request<ApiTraceResponse>(`/fefo/batches/${id}/trace`),
 };
 
 // ─── Recommendations ─────────────────────────────────────
@@ -1020,4 +1123,116 @@ export const optimization = {
       method: 'POST',
       body: JSON.stringify(params),
     }),
+};
+
+// ─── Recall Management ─────────────────────────────────────
+export interface ApiRecall {
+  recall_id: number;
+  recall_number: string;
+  product_id: number;
+  product_name?: string;
+  batch_id?: number;
+  batch_number?: string;
+  supplier_id?: number;
+  reason: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  status: 'draft' | 'active' | 'quarantined' | 'notified' | 'resolved' | 'closed';
+  affected_batches: Array<{ batch_id: number; quantity: number }>;
+  total_quantity_affected: number;
+  initiated_date: string;
+  target_resolution_date?: string;
+  actual_resolution_date?: string;
+  initiated_by: number;
+  approved_by?: number;
+  approved_at?: string;
+  resolution_notes?: string;
+}
+
+export interface ApiRecallSummary {
+  total: number;
+  by_status: Record<string, number>;
+  by_severity: Record<string, number>;
+  total_quantity_affected: number;
+}
+
+export const recall = {
+  list: (params?: { status?: string; severity?: string; page?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.status) qs.set('status', params.status);
+    if (params?.severity) qs.set('severity', params.severity);
+    if (params?.page) qs.set('page', String(params.page));
+    const q = qs.toString();
+    return request<ApiRecall[]>(`/recalls${q ? '?' + q : ''}`);
+  },
+  show: (id: number) => request<ApiRecall>(`/recalls/${id}`),
+  create: (data: { product_id: number; batch_id?: number; supplier_id?: number; reason: string; severity: string; affected_batches: Array<{ batch_id: number; quantity: number }>; target_resolution_date?: string }) =>
+    request('/recalls', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: number, data: Partial<{ reason: string; severity: string; target_resolution_date: string; affected_batches: Array<{ batch_id: number; quantity: number }> }>) =>
+    request(`/recalls/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  activate: (id: number) => request(`/recalls/${id}/activate`, { method: 'POST' }),
+  quarantine: (id: number) => request(`/recalls/${id}/quarantine`, { method: 'POST' }),
+  notify: (id: number) => request(`/recalls/${id}/notify`, { method: 'POST' }),
+  resolve: (id: number, data: { resolution_notes: string; release_quarantine?: boolean }) =>
+    request(`/recalls/${id}/resolve`, { method: 'POST', body: JSON.stringify(data) }),
+  summary: () => request<ApiRecallSummary>('/recalls/summary'),
+};
+
+// ─── Sanitation Checklist ──────────────────────────────────
+export interface ApiSanitationChecklist {
+  checklist_id: number;
+  checklist_date: string;
+  frequency: 'daily' | 'weekly' | 'monthly';
+  area: 'receiving' | 'storage' | 'preparation' | 'dispensing' | 'waste' | 'general';
+  overall_status: 'pass' | 'fail' | 'pending';
+  verified_by: string | null;
+  verified_at: string | null;
+  created_by: string;
+  created_at: string;
+  checks: Array<{
+    item: string;
+    passed: boolean;
+    notes?: string;
+    photo_url?: string;
+  }>;
+  notes?: string;
+}
+
+export interface ApiSanitationSummary {
+  total: number;
+  passed: number;
+  failed: number;
+  verified: number;
+  pending: number;
+  by_frequency: Record<string, number>;
+  by_area: Record<string, number>;
+  failed_checks: Array<{
+    checklist_id: number;
+    item: string;
+    notes?: string;
+  }>;
+}
+
+export const sanitation = {
+  list: (params?: { frequency?: string; area?: string; status?: string; date?: string; page?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.frequency) qs.set('frequency', params.frequency);
+    if (params?.area) qs.set('area', params.area);
+    if (params?.status) qs.set('status', params.status);
+    if (params?.date) qs.set('date', params.date);
+    if (params?.page) qs.set('page', String(params.page));
+    const q = qs.toString();
+    return request<ApiSanitationChecklist[]>(`/sanitation${q ? '?' + q : ''}`);
+  },
+  show: (id: number) => request<ApiSanitationChecklist>(`/sanitation/${id}`),
+  create: (data: { checklist_date: string; frequency: string; area: string; checks: Array<{ item: string; passed: boolean; notes?: string; photo_url?: string }>; notes?: string }) =>
+    request('/sanitation', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: number, data: Partial<{ checklist_date: string; frequency: string; area: string; checks: Array<{ item: string; passed: boolean; notes?: string; photo_url?: string }>; notes: string }>) =>
+    request(`/sanitation/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  verify: (id: number) => request(`/sanitation/${id}/verify`, { method: 'POST' }),
+  summary: (params?: { date?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.date) qs.set('date', params.date);
+    const q = qs.toString();
+    return request<ApiSanitationSummary>(`/sanitation/summary${q ? '?' + q : ''}`);
+  },
 };

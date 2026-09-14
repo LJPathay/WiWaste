@@ -168,6 +168,29 @@ class StockReceivingController extends Controller
         $data['verified_at'] = now();
         $data['status'] = 'verified';
 
+        // Temperature monitoring: check against product requirements
+        $temperatureWarnings = [];
+        if (isset($data['temperature_at_receipt']) && $data['temperature_at_receipt'] !== null) {
+            $products = \App\Models\Product::whereIn('product_id', function ($q) use ($receiving) {
+                $q->select('product_id')
+                  ->from('Purchase_Order_Item')
+                  ->where('purchase_order_id', $receiving->supplier_id);
+            })->get();
+
+            foreach ($products as $product) {
+                if ($product->required_temp_min !== null && $data['temperature_at_receipt'] < $product->required_temp_min) {
+                    $temperatureWarnings[] = "Temperature {$data['temperature_at_receipt']}°C is below required minimum {$product->required_temp_min}°C for {$product->product_name}";
+                }
+                if ($product->required_temp_max !== null && $data['temperature_at_receipt'] > $product->required_temp_max) {
+                    $temperatureWarnings[] = "Temperature {$data['temperature_at_receipt']}°C exceeds required maximum {$product->required_temp_max}°C for {$product->product_name}";
+                }
+            }
+        }
+
+        if (!empty($temperatureWarnings)) {
+            $data['notes'] = ($data['notes'] ?? '') . "\n\nTEMPERATURE WARNINGS:\n" . implode("\n", $temperatureWarnings);
+        }
+
         $receiving->update($data);
 
         AuditLog::create([
@@ -187,6 +210,7 @@ class StockReceivingController extends Controller
         return response()->json([
             'message' => 'Stock receiving record verified.',
             'receiving' => $receiving,
+            'temperature_warnings' => $temperatureWarnings ?? [],
         ]);
     }
 

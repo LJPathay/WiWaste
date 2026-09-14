@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\FEFOBatch;
 use App\Models\StockMovement;
+use App\Models\StockReceiving;
 use App\Models\AuditLog;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
@@ -165,5 +166,30 @@ class FEFOController extends Controller
             'batch_id' => $batch->batch_id,
             'status'   => $batch->status,
         ]]);
+    }
+
+    public function trace($id)
+    {
+        $query = FEFOBatch::with(['product.supplier', 'product.category']);
+        $query = $this->scopeForBusinessAndBranch($query, request());
+        $batch = $query->findOrFail($id);
+
+        return response()->json([
+            'batch' => [
+                'batch_id' => $batch->batch_id,
+                'product_id' => $batch->product_id,
+                'product_name' => $batch->product?->product_name,
+                'sku' => $batch->product?->barcode,
+                'batch_number' => $batch->batch_number,
+                'supplier_batch_number' => $batch->supplier_batch_number,
+                'quantity' => $batch->quantity,
+                'expiry_date' => $batch->expiry_date,
+                'status' => $batch->status,
+                'received_date' => $batch->received_date,
+                'received_temperature' => $batch->received_temperature,
+            ],
+            'upstream' => $batch->getUpstreamTrace(),
+            'downstream' => $batch->getDownstreamTrace(),
+        ]);
     }
 }

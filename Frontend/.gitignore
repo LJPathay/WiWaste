@@ -24,3 +24,8 @@ ngrok.exe
 *.njsproj
 *.sln
 *.sw?
+
+# Backup/debug files
+*.backup
+*.debug
+*.bak

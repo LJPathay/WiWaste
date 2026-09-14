@@ -11,11 +11,11 @@ class SettingsPolicy
 
     public function view(User $user): bool
     {
-        return $user->role === 'Admin';
+        return $user->role === 'Owner';
     }
 
     public function update(User $user): bool
     {
-        return $user->role === 'Admin';
+        return $user->role === 'Owner';
     }
 }

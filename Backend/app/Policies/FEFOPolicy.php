@@ -11,26 +11,26 @@ class FEFOPolicy
 
     public function viewAny(User $user): bool
     {
-        return in_array($user->role, ['Admin', 'Inventory']);
+        return in_array($user->role, ['Owner', 'Inventory']);
     }
 
     public function view(User $user, $batch): bool
     {
-        return in_array($user->role, ['Admin', 'Inventory']);
+        return in_array($user->role, ['Owner', 'Inventory']);
     }
 
     public function flag(User $user, $batch): bool
     {
-        return in_array($user->role, ['Admin', 'Inventory']);
+        return in_array($user->role, ['Owner', 'Inventory']);
     }
 
     public function clear(User $user, $batch): bool
     {
-        return in_array($user->role, ['Admin', 'Inventory']);
+        return in_array($user->role, ['Owner', 'Inventory']);
     }
 
     public function notify(User $user): bool
     {
-        return $user->role === 'Admin';
+        return $user->role === 'Owner';
     }
 }

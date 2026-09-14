@@ -11,9 +11,22 @@ use Illuminate\Http\Request;
 
 class PurchaseOrderController extends Controller
 {
+    protected function scopeForBusinessAndBranch($query, Request $request)
+    {
+        $user = $request->user();
+        if ($user && $user->business_id) {
+            $query->where('business_id', $user->business_id);
+        }
+        if ($user && $user->branch_id) {
+            $query->where('branch_id', $user->branch_id);
+        }
+        return $query;
+    }
+
     public function index(Request $request)
     {
         $query = PurchaseOrder::with('supplier', 'user', 'items.product');
+        $query = $this->scopeForBusinessAndBranch($query, $request);
 
         if ($status = $request->input('status')) {
             $query->where('status', $status);
@@ -38,6 +51,8 @@ class PurchaseOrderController extends Controller
             'status' => $po->status,
             'total_amount' => (float) $po->total_amount,
             'notes' => $po->notes,
+            'business_id' => $po->business_id,
+            'branch_id' => $po->branch_id,
             'items' => $po->items->map(fn ($i) => [
                 'id' => $i->po_item_id,
                 'product_id' => $i->product_id,
@@ -54,7 +69,11 @@ class PurchaseOrderController extends Controller
 
     public function store(Request $request)
     {
+        $user = $request->user();
+
         $data = $request->validate([
+            'business_id' => 'sometimes|integer|exists:businesses,id',
+            'branch_id'   => 'sometimes|integer|exists:branches,id',
             'supplier_id' => 'required|integer|exists:Supplier,supplier_id',
             'notes' => 'nullable|string|max:1000',
             'items' => 'required|array|min:1',
@@ -62,6 +81,14 @@ class PurchaseOrderController extends Controller
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.unit_price' => 'required|numeric|min:0',
         ]);
+
+        // Auto-assign business_id and branch_id from user if not provided
+        if (!isset($data['business_id']) && $user && $user->business_id) {
+            $data['business_id'] = $user->business_id;
+        }
+        if (!isset($data['branch_id']) && $user && $user->branch_id) {
+            $data['branch_id'] = $user->branch_id;
+        }
 
         $poNumber = 'PO-' . now()->format('Ymd') . '-' . strtoupper(substr(uniqid(), -6));
         $totalAmount = 0;
@@ -79,16 +106,24 @@ class PurchaseOrderController extends Controller
             ]);
         }
 
-        $po = PurchaseOrder::create([
+        $poData = [
             'supplier_id' => $data['supplier_id'],
-            'user_id' => $request->user()?->User_id ?? 1,
+            'user_id' => $user?->User_id ?? 1,
             'po_number' => $poNumber,
             'status' => 'Draft',
             'total_amount' => $totalAmount,
             'notes' => $data['notes'] ?? null,
             'created_at' => now(),
-        ]);
+        ];
 
+        if ($user && $user->business_id) {
+            $poData['business_id'] = $user->business_id;
+        }
+        if ($user && $user->branch_id) {
+            $poData['branch_id'] = $user->branch_id;
+        }
+
+        $po = PurchaseOrder::create($poData);
         $po->items()->saveMany($poItems);
 
         return response()->json([
@@ -100,7 +135,9 @@ class PurchaseOrderController extends Controller
 
     public function update(Request $request, $id)
     {
-        $po = PurchaseOrder::findOrFail($id);
+        $query = PurchaseOrder::with('supplier', 'user', 'items.product');
+        $query = $this->scopeForBusinessAndBranch($query, $request);
+        $po = $query->findOrFail($id);
 
         $data = $request->validate([
             'status' => 'sometimes|in:Draft,Ordered,Partially Received,Received,Cancelled',
@@ -128,7 +165,9 @@ class PurchaseOrderController extends Controller
 
     public function receive(Request $request, $id)
     {
-        $po = PurchaseOrder::with('items')->findOrFail($id);
+        $query = PurchaseOrder::with('items');
+        $query = $this->scopeForBusinessAndBranch($query, $request);
+        $po = $query->findOrFail($id);
 
         if (!in_array($po->status, ['Ordered', 'Partially Received'])) {
             return response()->json(['message' => 'Only Ordered or Partially Received orders can receive stock.'], 422);
@@ -155,7 +194,9 @@ class PurchaseOrderController extends Controller
                 $poItem->update(['received_qty' => $newReceived]);
                 $anyReceived = true;
 
-                $inventory = Inventory::firstOrCreate(
+                $query = Inventory::where('product_id', $poItem->product_id);
+                $query = $this->scopeForBusinessAndBranch($query, $request);
+                $inventory = $query->firstOrCreate(
                     ['product_id' => $poItem->product_id],
                     ['current_stock' => 0, 'stock_status' => 'Normal', 'last_updated' => now()]
                 );
@@ -166,12 +207,15 @@ class PurchaseOrderController extends Controller
                 $inventory->last_updated = now();
                 $inventory->save();
 
+                $user = $request->user();
                 StockMovement::create([
-                    'product_id' => $poItem->product_id,
-                    'user_id' => $request->user()?->User_id ?? 1,
+                    'business_id'   => $user?->business_id,
+                    'branch_id'     => $user?->branch_id,
+                    'product_id'    => $poItem->product_id,
+                    'user_id'       => $user?->User_id ?? 1,
                     'movement_type' => 'Stock In',
-                    'quantity' => $additionalQty,
-                    'remarks' => "PO receive: {$po->po_number}",
+                    'quantity'      => $additionalQty,
+                    'remarks'       => "PO receive: {$po->po_number}",
                     'movement_date' => now(),
                 ]);
             }
@@ -192,7 +236,10 @@ class PurchaseOrderController extends Controller
 
     public function show($id)
     {
-        $po = PurchaseOrder::with('supplier', 'user', 'items.product')->findOrFail($id);
+        $query = PurchaseOrder::with('supplier', 'user', 'items.product');
+        $query = $this->scopeForBusinessAndBranch($query, request());
+        $po = $query->findOrFail($id);
+
         return response()->json([
             'id' => $po->po_id,
             'po_number' => $po->po_number,
@@ -202,6 +249,8 @@ class PurchaseOrderController extends Controller
             'status' => $po->status,
             'total_amount' => (float) $po->total_amount,
             'notes' => $po->notes,
+            'business_id' => $po->business_id,
+            'branch_id' => $po->branch_id,
             'items' => $po->items->map(fn ($i) => [
                 'id' => $i->po_item_id,
                 'product_id' => $i->product_id,

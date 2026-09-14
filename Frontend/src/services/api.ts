@@ -257,15 +257,45 @@ export const ownerDashboard = {
   },
 };
 
+// ─── Business & Branch Types ──────────────────────────────
+export interface ApiBusiness {
+  id: number;
+  name: string;
+  business_type: 'food_retail' | 'minimart' | 'restaurant' | 'pharmacy' | 'hybrid';
+  capabilities: {
+    food_safety: boolean;
+    pharmacy_rx: boolean;
+    controlled_substances: boolean;
+    prescription_handling: boolean;
+  };
+  dpo_name: string | null;
+  dpo_email: string | null;
+  dpo_phone: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ApiBranch {
+  id: number;
+  business_id: number;
+  name: string;
+  address: string;
+  status: 'active' | 'inactive';
+  created_at: string;
+  updated_at: string;
+}
+
 // ─── Types ──────────────────────────────────────────────
 export interface ApiUser {
   id: number;
   name: string;
   username: string;
   email: string;
-  role: 'Admin' | 'Inventory' | 'Business Owner';
+  role: 'Admin' | 'Inventory' | 'Business Owner' | 'Owner' | 'Cashier' | 'Pharmacist';
   status: 'Active' | 'Inactive' | 'Quarantined';
   created_at?: string;
+  business_id?: number;
+  branch_id?: number;
 }
 
 export interface ApiCategory {
@@ -281,6 +311,11 @@ export interface ApiSupplier {
   contact_number: string;
   address: string | null;
   product_count: number;
+  business_id?: number;
+  fda_lto_number?: string | null;
+  fda_lto_expiry?: string | null;
+  fda_cpr_number?: string | null;
+  fda_cpr_expiry?: string | null;
 }
 
 export interface ApiSupplierDetail extends ApiSupplier {
@@ -292,6 +327,9 @@ export interface ApiSupplierDetail extends ApiSupplier {
     stock_status: string;
   }>;
 }
+
+export type ProductClassification = 'food' | 'drug' | 'cosmetic' | 'device' | 'general';
+export type StorageRequirement = 'refrigerated' | 'frozen' | 'controlled_room' | 'ambient' | 'custom';
 
 export interface ApiProduct {
   id: number;
@@ -309,6 +347,13 @@ export interface ApiProduct {
   status: 'Active' | 'Discontinued';
   stock: number;
   stock_status: 'Normal' | 'Low Stock' | 'Overstock';
+  business_id?: number;
+  product_classification?: ProductClassification;
+  required_temp_min?: number | null;
+  required_temp_max?: number | null;
+  storage_requirement?: StorageRequirement;
+  is_rx_only?: boolean;
+  ddb_schedule?: string | null;
 }
 
 export interface ApiInventory {
@@ -327,6 +372,8 @@ export interface ApiInventory {
   reorder_level: number;
   expiration_date: string | null;
   last_updated: string;
+  business_id?: number;
+  branch_id?: number;
 }
 
 export interface ApiWastage {
@@ -339,6 +386,9 @@ export interface ApiWastage {
   quantity: number;
   estimated_loss: number;
   date_recorded: string;
+  business_id?: number;
+  branch_id?: number;
+  batch_id?: number | null;
 }
 
 export interface ApiSalesTransaction {
@@ -353,6 +403,13 @@ export interface ApiSalesTransaction {
   change_due: number | null;
   status: string;
   items: ApiSalesItem[];
+  business_id?: number;
+  branch_id?: number;
+  customer_name?: string | null;
+  customer_phone?: string | null;
+  customer_email?: string | null;
+  senior_pwd_id?: string | null;
+  senior_pwd_type?: 'senior' | 'pwd' | 'none';
 }
 
 export interface ApiSalesItem {
@@ -379,8 +436,10 @@ export interface CreateUserPayload {
   username: string;
   password: string;
   email?: string;
-  role: 'Admin' | 'Inventory' | 'Business Owner';
+  role: 'Admin' | 'Inventory' | 'Business Owner' | 'Owner' | 'Cashier' | 'Pharmacist';
   status: 'Active' | 'Inactive' | 'Quarantined';
+  business_id?: number;
+  branch_id?: number;
 }
 
 export interface CreateSupplierPayload {
@@ -388,9 +447,15 @@ export interface CreateSupplierPayload {
   contact_person?: string;
   contact_number: string;
   address?: string;
+  business_id?: number;
+  fda_lto_number?: string;
+  fda_lto_expiry?: string;
+  fda_cpr_number?: string;
+  fda_cpr_expiry?: string;
 }
 
 export interface CreateProductPayload {
+  business_id?: number;
   category_id: number;
   supplier_id: number;
   barcode?: string;
@@ -400,10 +465,19 @@ export interface CreateProductPayload {
   reorder_level: number;
   expiration_date?: string;
   initial_stock?: number;
+  product_classification?: ProductClassification;
+  required_temp_min?: number;
+  required_temp_max?: number;
+  storage_requirement?: StorageRequirement;
+  is_rx_only?: boolean;
+  ddb_schedule?: string;
 }
 
 export interface CreateWastagePayload {
+  business_id?: number;
+  branch_id?: number;
   product_id: number;
+  batch_id?: number;
   wastage_type: 'Expired' | 'Damaged' | 'Spoiled' | 'Lost';
   quantity: number;
   estimated_loss: number;
@@ -411,6 +485,8 @@ export interface CreateWastagePayload {
 }
 
 export interface CreateSalePayload {
+  business_id?: number;
+  branch_id?: number;
   payment_method: 'Cash' | 'E-wallet' | 'Credit Card' | 'Debit Card';
   payment_reference?: string;
   customer_name?: string | null;
@@ -421,6 +497,7 @@ export interface CreateSalePayload {
   change_due?: number;
   senior_pwd_name?: string | null;
   senior_pwd_id?: string | null;
+  senior_pwd_type?: 'senior' | 'pwd' | 'none';
   items: Array<{
     product_id: number;
     quantity: number;
@@ -499,6 +576,11 @@ export interface ApiFefoBatch {
   days_left: number;
   status: string;
   directive_notes: string | null;
+  business_id?: number;
+  branch_id?: number;
+  received_date?: string | null;
+  received_temperature?: number | null;
+  supplier_batch_number?: string | null;
 }
 
 export interface ApiFefoList {
@@ -570,21 +652,39 @@ export interface ApiStockMovement {
   remarks: string | null;
   recorded_by: string;
   movement_date: string;
+  business_id?: number;
+  branch_id?: number;
+  batch_id?: number | null;
 }
 
 // ─── Stock Receiving ──────────────────────────────────────
 export interface ApiStockReceiving {
   id: number;
-  po_number: string;
+  business_id: number;
+  branch_id: number;
   supplier_id: number;
   supplier_name: string;
-  expected_date: string;
-  status: string;
-  total_amount: number;
+  received_by: number;
+  verified_by: number | null;
+  received_at: string;
+  verified_at: string | null;
+  temperature_at_receipt: number | null;
+  condition_check_passed: boolean;
+  sanitation_check_passed: boolean;
+  notes: string | null;
+  status: 'pending' | 'received' | 'verified' | 'rejected' | 'partial';
+  created_at: string;
+  updated_at: string;
+  supplier?: ApiSupplier;
+  receiver?: ApiUser;
+  verifier?: ApiUser;
 }
 
 export interface CreateStockReceivingPayload {
+  business_id: number;
+  branch_id: number;
   supplier_id: number;
+  received_by: number;
   expected_date: string;
   items: Array<{
     product_id: number;
@@ -618,9 +718,13 @@ export interface ApiPurchaseOrder {
   items: ApiPurchaseOrderItem[];
   created_at: string;
   updated_at: string;
+  business_id?: number;
+  branch_id?: number;
 }
 
 export interface CreatePurchaseOrderPayload {
+  business_id?: number;
+  branch_id?: number;
   supplier_id: number;
   notes?: string;
   items: Array<{
@@ -659,6 +763,8 @@ export interface ApiAuditLog {
   old_values: string | null;
   new_values: string | null;
   timestamp: string;
+  business_id?: number;
+  branch_id?: number;
 }
 
 export const auditLogs = {

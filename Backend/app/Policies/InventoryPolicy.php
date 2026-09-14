@@ -11,31 +11,31 @@ class InventoryPolicy
 
     public function viewAny(User $user): bool
     {
-        return in_array($user->role, ['Admin', 'Inventory', 'Business Owner']);
+        return in_array($user->role, ['Owner', 'Inventory']);
     }
 
     public function view(User $user, $inventory): bool
     {
-        return in_array($user->role, ['Admin', 'Inventory', 'Business Owner']);
+        return in_array($user->role, ['Owner', 'Inventory']);
     }
 
     public function stockIn(User $user): bool
     {
-        return in_array($user->role, ['Admin', 'Inventory']);
+        return in_array($user->role, ['Owner', 'Inventory']);
     }
 
     public function stockOut(User $user): bool
     {
-        return in_array($user->role, ['Admin', 'Inventory']);
+        return in_array($user->role, ['Owner', 'Inventory']);
     }
 
     public function adjust(User $user): bool
     {
-        return in_array($user->role, ['Admin', 'Inventory']);
+        return in_array($user->role, ['Owner', 'Inventory']);
     }
 
     public function export(User $user): bool
     {
-        return in_array($user->role, ['Admin', 'Inventory', 'Business Owner']);
+        return in_array($user->role, ['Owner', 'Inventory']);
     }
 }

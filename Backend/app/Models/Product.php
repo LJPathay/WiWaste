@@ -12,8 +12,30 @@ class Product extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'category_id', 'supplier_id', 'barcode', 'product_name', 
-        'cost_price', 'selling_price', 'reorder_level', 'expiration_date', 'status'
+        'business_id',
+        'category_id',
+        'supplier_id',
+        'barcode',
+        'product_name',
+        'cost_price',
+        'selling_price',
+        'reorder_level',
+        'expiration_date',
+        'status',
+        'product_classification',
+        'required_temp_min',
+        'required_temp_max',
+        'storage_requirement',
+        'is_rx_only',
+        'ddb_schedule',
+    ];
+
+    protected $casts = [
+        'cost_price' => 'decimal:2',
+        'selling_price' => 'decimal:2',
+        'required_temp_min' => 'decimal:2',
+        'required_temp_max' => 'decimal:2',
+        'is_rx_only' => 'boolean',
     ];
 
     /**
@@ -46,6 +68,10 @@ class Product extends Model
         return $sku;
     }
 
+    public function business()
+    {
+        return $this->belongsTo(Business::class, 'business_id', 'id');
+    }
 
     public function category()
     {
@@ -90,5 +116,38 @@ class Product extends Model
     public function inventoryRecommendations()
     {
         return $this->hasMany(InventoryRecommendation::class, 'product_id', 'product_id');
+    }
+
+    public function fefoBatches()
+    {
+        return $this->hasMany(FEFOBatch::class, 'product_id', 'product_id');
+    }
+
+    // Scopes
+    public function scopeFood($query)
+    {
+        return $query->where('product_classification', 'food');
+    }
+
+    public function scopeDrug($query)
+    {
+        return $query->where('product_classification', 'drug');
+    }
+
+    public function scopeRxOnly($query)
+    {
+        return $query->where('is_rx_only', true);
+    }
+
+    public function scopeForBusiness($query, $businessId)
+    {
+        return $query->where('business_id', $businessId);
+    }
+
+    public function scopeForBranch($query, $branchId)
+    {
+        return $query->whereHas('inventory', function ($q) use ($branchId) {
+            $q->where('branch_id', $branchId);
+        });
     }
 }

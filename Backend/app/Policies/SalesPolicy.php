@@ -11,26 +11,26 @@ class SalesPolicy
 
     public function viewAny(User $user): bool
     {
-        return in_array($user->role, ['Admin', 'Business Owner']);
+        return in_array($user->role, ['Owner']);
     }
 
     public function view(User $user, $sale): bool
     {
-        return in_array($user->role, ['Admin', 'Business Owner']);
+        return in_array($user->role, ['Owner']);
     }
 
     public function create(User $user): bool
     {
-        return in_array($user->role, ['Admin', 'Business Owner']);
+        return in_array($user->role, ['Owner']);
     }
 
     public function refund(User $user, $sale): bool
     {
-        return $user->role === 'Admin';
+        return $user->role === 'Owner';
     }
 
     public function void(User $user, $sale): bool
     {
-        return $user->role === 'Admin';
+        return $user->role === 'Owner';
     }
 }

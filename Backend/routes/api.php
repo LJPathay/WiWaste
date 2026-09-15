@@ -31,6 +31,8 @@ use App\Http\Controllers\Api\SanitationController;
 use App\Http\Controllers\Api\RecallController;
 use App\Http\Controllers\Api\ForecastAccuracyController;
 use App\Http\Controllers\Api\StockReceivingController;
+use App\Http\Controllers\Api\ReorderController;
+use App\Http\Controllers\Api\VendorReturnController;
 
 /*
 |--------------------------------------------------------------------------
@@ -121,6 +123,11 @@ Route::get('/purchase-orders/{id}',        [PurchaseOrderController::class, 'sho
 Route::put('/purchase-orders/{id}',        [PurchaseOrderController::class, 'update']);
 Route::post('/purchase-orders/{id}/receive',[PurchaseOrderController::class, 'receive']);
 
+// Reorder Suggestions
+Route::get('/reorder/suggestions', [ReorderController::class, 'index']);
+Route::post('/reorder/approve', [ReorderController::class, 'approve']);
+Route::post('/reorder/auto-approve', [ReorderController::class, 'autoApprove']);
+
 // Audit Logs
 Route::get('/audit-logs', [AuditLogController::class, 'index']);
 
@@ -177,8 +184,13 @@ Route::prefix('/optimization')->group(function () {
 Route::post('/inventory/cycle-count', [CycleCountController::class, 'store']);
 
 // Vendor Returns
+Route::apiResource('/vendor-returns', VendorReturnController::class);
+Route::post('/vendor-returns/{id}/approve', [VendorReturnController::class, 'approve']);
+Route::post('/vendor-returns/{id}/reject', [VendorReturnController::class, 'reject']);
+Route::post('/vendor-returns/{id}/ship', [VendorReturnController::class, 'ship']);
 Route::post('/vendor-returns/{id}/receive', [VendorReturnController::class, 'receive']);
-Route::post('/vendor-returns/{id}/credit',  [VendorReturnController::class, 'credit']);
+Route::post('/vendor-returns/{id}/credit', [VendorReturnController::class, 'credit']);
+Route::get('/vendor-returns/summary', [VendorReturnController::class, 'summary']);
 
 // Shifts
 Route::post('/shifts/open',  [ShiftController::class, 'open']);

@@ -8,13 +8,16 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('Stock_Receiving', function (Blueprint $table) {
+        Schema::create('stock_receiving', function (Blueprint $table) {
             $table->id('receiving_id');
             $table->foreignId('business_id')->constrained('businesses')->onDelete('cascade');
             $table->foreignId('branch_id')->constrained('branches')->onDelete('cascade');
-            $table->foreignId('supplier_id')->constrained('Supplier', 'supplier_id')->onDelete('cascade');
-            $table->foreignId('received_by')->constrained('users', 'User_id')->onDelete('cascade');
-            $table->foreignId('verified_by')->nullable()->constrained('users', 'User_id')->onDelete('set null');
+            $table->integer('supplier_id');
+            $table->foreign('supplier_id')->references('supplier_id')->on('supplier')->onDelete('cascade');
+            $table->integer('received_by');
+            $table->foreign('received_by')->references('User_id')->on('user')->onDelete('cascade');
+            $table->integer('verified_by')->nullable();
+            $table->foreign('verified_by')->references('User_id')->on('user')->onDelete('set null');
             $table->timestamp('received_at')->useCurrent();
             $table->timestamp('verified_at')->nullable();
             $table->decimal('temperature_at_receipt', 5, 2)->nullable();
@@ -28,6 +31,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('Stock_Receiving');
+        Schema::dropIfExists('stock_receiving');
     }
 };

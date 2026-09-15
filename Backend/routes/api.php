@@ -32,7 +32,6 @@ use App\Http\Controllers\Api\RecallController;
 use App\Http\Controllers\Api\ForecastAccuracyController;
 use App\Http\Controllers\Api\StockReceivingController;
 use App\Http\Controllers\Api\ReorderController;
-use App\Http\Controllers\Api\VendorReturnController;
 
 /*
 |--------------------------------------------------------------------------

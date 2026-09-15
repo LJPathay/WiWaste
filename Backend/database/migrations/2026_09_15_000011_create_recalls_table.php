@@ -8,14 +8,17 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('Recalls', function (Blueprint $table) {
+        Schema::create('recalls', function (Blueprint $table) {
             $table->id('recall_id');
             $table->foreignId('business_id')->constrained('businesses')->onDelete('cascade');
             $table->foreignId('branch_id')->nullable()->constrained('branches')->onDelete('cascade');
             $table->string('recall_number', 50)->unique();
-            $table->foreignId('product_id')->constrained('Product', 'product_id')->onDelete('cascade');
-            $table->foreignId('batch_id')->nullable()->constrained('FEFO_Batch', 'batch_id')->onDelete('set null');
-            $table->foreignId('supplier_id')->nullable()->constrained('Supplier', 'supplier_id')->onDelete('set null');
+            $table->integer('product_id');
+            $table->foreign('product_id')->references('product_id')->on('product')->onDelete('cascade');
+            $table->integer('batch_id')->nullable();
+            $table->foreign('batch_id')->references('batch_id')->on('fefo_batch')->onDelete('set null');
+            $table->integer('supplier_id')->nullable();
+            $table->foreign('supplier_id')->references('supplier_id')->on('supplier')->onDelete('set null');
             $table->text('reason');
             $table->enum('severity', ['low', 'medium', 'high', 'critical'])->default('medium');
             $table->enum('status', ['draft', 'active', 'quarantined', 'notified', 'resolved', 'closed'])->default('draft');
@@ -24,8 +27,10 @@ return new class extends Migration
             $table->date('initiated_date')->nullable();
             $table->date('target_resolution_date')->nullable();
             $table->date('actual_resolution_date')->nullable();
-            $table->foreignId('initiated_by')->constrained('User', 'User_id')->onDelete('cascade');
-            $table->foreignId('approved_by')->nullable()->constrained('User', 'User_id')->onDelete('set null');
+            $table->integer('initiated_by');
+            $table->foreign('initiated_by')->references('User_id')->on('user')->onDelete('cascade');
+            $table->integer('approved_by')->nullable();
+            $table->foreign('approved_by')->references('User_id')->on('user')->onDelete('set null');
             $table->timestamp('approved_at')->nullable();
             $table->text('resolution_notes')->nullable();
             $table->timestamps();
@@ -34,6 +39,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('Recalls');
+        Schema::dropIfExists('recalls');
     }
 };

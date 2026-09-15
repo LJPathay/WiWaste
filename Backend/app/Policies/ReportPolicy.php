@@ -11,16 +11,16 @@ class ReportPolicy
 
     public function viewAny(User $user): bool
     {
-        return in_array($user->role, ['Admin', 'Inventory', 'Business Owner']);
+        return in_array($user->role, ['Owner', 'Inventory']);
     }
 
     public function generate(User $user): bool
     {
-        return in_array($user->role, ['Admin', 'Inventory']);
+        return in_array($user->role, ['Owner', 'Inventory']);
     }
 
     public function export(User $user): bool
     {
-        return in_array($user->role, ['Admin', 'Inventory']);
+        return in_array($user->role, ['Owner', 'Inventory']);
     }
 }

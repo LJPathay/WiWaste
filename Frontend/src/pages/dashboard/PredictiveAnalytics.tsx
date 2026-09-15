@@ -12,7 +12,7 @@ import {
   ComposedChart,
 } from 'recharts';
 import { AlertTriangle, ArrowLeft, Brain, Info, RefreshCw, Zap, TrendingUp } from 'lucide-react';
-import { Link } from 'react-router';
+import { Link } from 'react-router-dom';
 import { useDashboardData } from '../../hooks/useDashboardData';
 import { forecast as forecastApi, type ApiForecastOverview } from '../../services/api';
 import { retailExamples } from '../../utils/mockAuthAndFeatures';

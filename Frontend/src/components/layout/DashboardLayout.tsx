@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo, memo } from 'react';
 import { HeaderLabelProvider } from './HeaderLabelProvider';
-import { Navigate, Outlet, Link, useLocation, useNavigate } from 'react-router';
+import { Navigate, Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LogOut,
   LayoutDashboard,

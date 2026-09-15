@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Inventory;
 use App\Models\StockMovement;
+use App\Models\StockReceiving;
 use App\Models\AuditLog;
 use App\Jobs\WarmAnalyticsCache;
 use Illuminate\Http\Request;
@@ -12,171 +13,233 @@ use Illuminate\Support\Facades\DB;
 
 class StockReceivingController extends Controller
 {
+    protected function scopeForBusinessAndBranch($query, Request $request)
+    {
+        $user = $request->user();
+        if ($user && $user->business_id) {
+            $query->where('business_id', $user->business_id);
+        }
+        if ($user && $user->branch_id) {
+            $query->where('branch_id', $user->branch_id);
+        }
+        return $query;
+    }
+
     public function index(Request $request)
     {
-        $query = DB::table('Purchase_Order as po')
-            ->join('Supplier as s', 'po.supplier_id', '=', 's.supplier_id')
-            ->select(
-                'po.purchase_order_id as id',
-                'po.po_number',
-                'po.supplier_id',
-                's.supplier_name',
-                'po.expected_date',
-                'po.status',
-                'po.total_amount'
-            )
-            ->orderByDesc('po.expected_date');
+        $query = StockReceiving::with(['supplier', 'receiver', 'verifier']);
+        $query = $this->scopeForBusinessAndBranch($query, $request);
 
         if ($status = $request->input('status')) {
-            $query->where('po.status', $status);
+            $query->where('status', $status);
         }
 
         $perPage = min((int) $request->input('per_page', 20), 100);
-        return response()->json($query->paginate($perPage));
+        return response()->json(
+            $query->orderByDesc('received_at')->paginate($perPage)
+        );
     }
 
     public function store(Request $request)
     {
+        $user = $request->user();
+
         $data = $request->validate([
-            'supplier_id'   => 'required|integer|exists:Supplier,supplier_id',
-            'expected_date' => 'required|date',
-            'items'         => 'required|array|min:1',
-            'items.*.product_id' => 'required|integer|exists:Product,product_id',
-            'items.*.quantity'   => 'required|integer|min:1',
-            'items.*.unit_cost'  => 'required|numeric|min:0',
+            'business_id'       => 'sometimes|integer|exists:businesses,id',
+            'branch_id'         => 'sometimes|integer|exists:branches,id',
+            'supplier_id'       => 'required|integer|exists:Supplier,supplier_id',
+            'received_by'       => 'sometimes|integer|exists:User,User_id',
+            'received_at'       => 'nullable|date',
+            'temperature_at_receipt' => 'nullable|numeric',
+            'condition_check_passed' => 'nullable|boolean',
+            'sanitation_check_passed' => 'nullable|boolean',
+            'notes'             => 'nullable|string|max:500',
+            'status'            => 'nullable|in:pending,received,verified,rejected,partial',
         ]);
 
-        $total = collect($data['items'])->sum(fn ($i) => $i['quantity'] * $i['unit_cost']);
-        $poNumber = 'PO-' . strtoupper(uniqid());
-
-        $po = DB::table('Purchase_Order')->insertGetId([
-            'po_number'     => $poNumber,
-            'supplier_id'   => $data['supplier_id'],
-            'expected_date' => $data['expected_date'],
-            'total_amount'  => $total,
-            'status'        => 'pending',
-            'created_at'    => now(),
-            'updated_at'    => now(),
-        ]);
-
-        foreach ($data['items'] as $item) {
-            DB::table('Purchase_Order_Item')->insert([
-                'purchase_order_id' => $po,
-                'product_id'        => $item['product_id'],
-                'quantity_ordered'  => $item['quantity'],
-                'unit_cost'         => $item['unit_cost'],
-                'quantity_received' => 0,
-            ]);
+        // Auto-assign business_id and branch_id from user if not provided
+        if (!isset($data['business_id']) && $user && $user->business_id) {
+            $data['business_id'] = $user->business_id;
+        }
+        if (!isset($data['branch_id']) && $user && $user->branch_id) {
+            $data['branch_id'] = $user->branch_id;
+        }
+        if (!isset($data['received_by']) && $user && $user->User_id) {
+            $data['received_by'] = $user->User_id;
+        }
+        if (!isset($data['received_at'])) {
+            $data['received_at'] = now();
+        }
+        if (!isset($data['status'])) {
+            $data['status'] = 'received';
         }
 
+        $receiving = StockReceiving::create($data);
+
+        AuditLog::create([
+            'user_id'       => $user?->User_id ?? 1,
+            'action'        => "Created stock receiving record for supplier #{$receiving->supplier_id}",
+            'entity_type'   => 'Stock_Receiving',
+            'entity_id'     => $receiving->receiving_id,
+            'old_values'    => null,
+            'new_values'    => json_encode($data),
+            'created_at'    => now(),
+            'business_id'   => $user?->business_id,
+            'branch_id'     => $user?->branch_id,
+        ]);
+
+        $receiving->load(['supplier', 'receiver', 'verifier']);
+
         return response()->json([
-            'message'       => 'Purchase order created.',
-            'purchase_order_id' => $po,
-            'po_number'     => $poNumber,
+            'message' => 'Stock receiving record created.',
+            'receiving' => $receiving,
         ], 201);
     }
 
-    public function receive(Request $request, $id)
+    public function show($id)
     {
+        $query = StockReceiving::with(['supplier', 'receiver', 'verifier']);
+        $query = $this->scopeForBusinessAndBranch($query, request());
+        $receiving = $query->findOrFail($id);
+
+        return response()->json($receiving);
+    }
+
+    public function update(Request $request, $id)
+    {
+        $query = StockReceiving::with(['supplier', 'receiver', 'verifier']);
+        $query = $this->scopeForBusinessAndBranch($query, $request);
+        $receiving = $query->findOrFail($id);
+
         $data = $request->validate([
-            'items'         => 'required|array|min:1',
-            'items.*.product_id'      => 'required|integer|exists:Product,product_id',
-            'items.*.quantity'        => 'required|integer|min:1',
-            'items.*.unit_cost'       => 'required|numeric|min:0',
-            'items.*.batch_number'    => 'nullable|string|max:100',
-            'items.*.expiration_date' => 'nullable|date',
+            'supplier_id'       => 'sometimes|integer|exists:Supplier,supplier_id',
+            'received_by'       => 'sometimes|integer|exists:User,User_id',
+            'verified_by'       => 'nullable|integer|exists:User,User_id',
+            'received_at'       => 'sometimes|date',
+            'verified_at'       => 'nullable|date',
+            'temperature_at_receipt' => 'nullable|numeric',
+            'condition_check_passed' => 'nullable|boolean',
+            'sanitation_check_passed' => 'nullable|boolean',
+            'notes'             => 'nullable|string|max:500',
+            'status'            => 'sometimes|in:pending,received,verified,rejected,partial',
         ]);
 
-        $po = DB::table('Purchase_Order')->where('purchase_order_id', $id)->first();
-        if (!$po) {
-            return response()->json(['message' => 'Purchase order not found.'], 404);
+        $receiving->update($data);
+
+        AuditLog::create([
+            'user_id'       => $request->user()?->User_id ?? 1,
+            'action'        => "Updated stock receiving record #{$receiving->receiving_id}",
+            'entity_type'   => 'Stock_Receiving',
+            'entity_id'     => $receiving->receiving_id,
+            'old_values'    => json_encode($receiving->getOriginal()),
+            'new_values'    => json_encode($data),
+            'created_at'    => now(),
+            'business_id'   => $request->user()?->business_id,
+            'branch_id'     => $request->user()?->branch_id,
+        ]);
+
+        $receiving->load(['supplier', 'receiver', 'verifier']);
+
+        return response()->json([
+            'message' => 'Stock receiving record updated.',
+            'receiving' => $receiving,
+        ]);
+    }
+
+    public function verify(Request $request, $id)
+    {
+        $user = $request->user();
+
+        $query = StockReceiving::with(['supplier', 'receiver', 'verifier']);
+        $query = $this->scopeForBusinessAndBranch($query, $request);
+        $receiving = $query->findOrFail($id);
+
+        $data = $request->validate([
+            'verified_by' => 'sometimes|integer|exists:User,User_id',
+            'temperature_at_receipt' => 'nullable|numeric',
+            'condition_check_passed' => 'nullable|boolean',
+            'sanitation_check_passed' => 'nullable|boolean',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        if (!isset($data['verified_by']) && $user && $user->User_id) {
+            $data['verified_by'] = $user->User_id;
         }
-        if ($po->status === 'received' || $po->status === 'cancelled') {
-            return response()->json(['message' => 'Cannot receive items for this order.'], 422);
-        }
+        $data['verified_at'] = now();
+        $data['status'] = 'verified';
 
-        $userId = $request->user()?->User_id ?? 1;
+        // Temperature monitoring: check against product requirements
+        $temperatureWarnings = [];
+        if (isset($data['temperature_at_receipt']) && $data['temperature_at_receipt'] !== null) {
+            $products = \App\Models\Product::whereIn('product_id', function ($q) use ($receiving) {
+                $q->select('product_id')
+                  ->from('Purchase_Order_Item')
+                  ->where('purchase_order_id', $receiving->supplier_id);
+            })->get();
 
-        return DB::transaction(function () use ($data, $id, $userId) {
-            foreach ($data['items'] as $item) {
-                $inventory = Inventory::where('product_id', $item['product_id'])->first();
-
-                if ($inventory) {
-                    $inventory->current_stock += $item['quantity'];
-                    $inventory->stock_status  = Inventory::calcStatus(
-                        $inventory->current_stock,
-                        $inventory->product?->reorder_level ?? 10
-                    );
-                    $inventory->last_updated  = now();
-                    $inventory->save();
-                } else {
-                    $inventory = Inventory::create([
-                        'product_id'    => $item['product_id'],
-                        'current_stock' => $item['quantity'],
-                        'stock_status'  => 'Normal',
-                        'last_updated'  => now(),
-                    ]);
+            foreach ($products as $product) {
+                if ($product->required_temp_min !== null && $data['temperature_at_receipt'] < $product->required_temp_min) {
+                    $temperatureWarnings[] = "Temperature {$data['temperature_at_receipt']}°C is below required minimum {$product->required_temp_min}°C for {$product->product_name}";
                 }
-
-                StockMovement::create([
-                    'product_id'    => $item['product_id'],
-                    'user_id'       => $userId,
-                    'movement_type' => 'Stock In',
-                    'quantity'      => $item['quantity'],
-                    'remarks'       => "Received via PO #{$id}",
-                    'movement_date' => now(),
-                ]);
-
-                AuditLog::create([
-                    'user_id'     => $userId,
-                    'action'      => "Received {$item['quantity']} units of product #{$item['product_id']} via PO #{$id}",
-                    'entity_type' => 'Inventory',
-                    'entity_id'   => $inventory->inventory_id,
-                    'new_values'  => json_encode($item),
-                    'created_at'  => now(),
-                ]);
-
-                DB::table('Purchase_Order_Item')
-                    ->where('purchase_order_id', $id)
-                    ->where('product_id', $item['product_id'])
-                    ->update([
-                        'quantity_received' => DB::raw("quantity_received + {$item['quantity']}"),
-                        'unit_cost'         => $item['unit_cost'],
-                    ]);
+                if ($product->required_temp_max !== null && $data['temperature_at_receipt'] > $product->required_temp_max) {
+                    $temperatureWarnings[] = "Temperature {$data['temperature_at_receipt']}°C exceeds required maximum {$product->required_temp_max}°C for {$product->product_name}";
+                }
             }
+        }
 
-            DB::table('Purchase_Order')
-                ->where('purchase_order_id', $id)
-                ->update(['status' => 'received', 'updated_at' => now()]);
+        if (!empty($temperatureWarnings)) {
+            $data['notes'] = ($data['notes'] ?? '') . "\n\nTEMPERATURE WARNINGS:\n" . implode("\n", $temperatureWarnings);
+        }
 
-            WarmAnalyticsCache::dispatch();
+        $receiving->update($data);
 
-            return response()->json(['message' => 'Stock received successfully.']);
-        });
+        AuditLog::create([
+            'user_id'       => $user?->User_id ?? 1,
+            'action'        => "Verified stock receiving record #{$receiving->receiving_id}",
+            'entity_type'   => 'Stock_Receiving',
+            'entity_id'     => $receiving->receiving_id,
+            'old_values'    => json_encode($receiving->getOriginal()),
+            'new_values'    => json_encode($data),
+            'created_at'    => now(),
+            'business_id'   => $user?->business_id,
+            'branch_id'     => $user?->branch_id,
+        ]);
+
+        $receiving->load(['supplier', 'receiver', 'verifier']);
+
+        return response()->json([
+            'message' => 'Stock receiving record verified.',
+            'receiving' => $receiving,
+            'temperature_warnings' => $temperatureWarnings ?? [],
+        ]);
     }
 
     public function reject(Request $request, $id)
     {
+        $user = $request->user();
+
+        $query = StockReceiving::with(['supplier', 'receiver', 'verifier']);
+        $query = $this->scopeForBusinessAndBranch($query, $request);
+        $receiving = $query->findOrFail($id);
+
         $data = $request->validate([
             'reason' => 'required|string|max:255',
         ]);
 
-        $po = DB::table('Purchase_Order')->where('purchase_order_id', $id)->first();
-        if (!$po) {
-            return response()->json(['message' => 'Purchase order not found.'], 404);
-        }
-
-        DB::table('Purchase_Order')
-            ->where('purchase_order_id', $id)
-            ->update(['status' => 'cancelled', 'updated_at' => now()]);
+        $receiving->update([
+            'status' => 'rejected',
+            'notes' => ($receiving->notes ? $receiving->notes . "\n" : '') . "Rejected: {$data['reason']}",
+        ]);
 
         AuditLog::create([
-            'user_id'     => $request->user()?->User_id ?? 1,
-            'action'      => "Rejected PO #{$id}: {$data['reason']}",
-            'entity_type' => 'PurchaseOrder',
-            'entity_id'   => $id,
-            'new_values'  => json_encode($data),
-            'created_at'  => now(),
+            'user_id'       => $user?->User_id ?? 1,
+            'action'        => "Rejected stock receiving record #{$receiving->receiving_id}: {$data['reason']}",
+            'entity_type'   => 'Stock_Receiving',
+            'entity_id'     => $receiving->receiving_id,
+            'new_values'    => json_encode($data),
+            'created_at'    => now(),
+            'business_id'   => $user?->business_id,
+            'branch_id'     => $user?->branch_id,
         ]);
 
         return response()->json(['message' => 'Order rejected.']);
@@ -184,26 +247,30 @@ class StockReceivingController extends Controller
 
     public function discard(Request $request, $id)
     {
+        $user = $request->user();
+
+        $query = StockReceiving::with(['supplier', 'receiver', 'verifier']);
+        $query = $this->scopeForBusinessAndBranch($query, $request);
+        $receiving = $query->findOrFail($id);
+
         $data = $request->validate([
             'reason' => 'required|string|max:255',
         ]);
 
-        $po = DB::table('Purchase_Order')->where('purchase_order_id', $id)->first();
-        if (!$po) {
-            return response()->json(['message' => 'Purchase order not found.'], 404);
-        }
-
-        DB::table('Purchase_Order')
-            ->where('purchase_order_id', $id)
-            ->update(['status' => 'cancelled', 'updated_at' => now()]);
+        $receiving->update([
+            'status' => 'rejected',
+            'notes' => ($receiving->notes ? $receiving->notes . "\n" : '') . "Discarded: {$data['reason']}",
+        ]);
 
         AuditLog::create([
-            'user_id'     => $request->user()?->User_id ?? 1,
-            'action'      => "Discarded PO #{$id}: {$data['reason']}",
-            'entity_type' => 'PurchaseOrder',
-            'entity_id'   => $id,
-            'new_values'  => json_encode($data),
-            'created_at'  => now(),
+            'user_id'       => $user?->User_id ?? 1,
+            'action'        => "Discarded stock receiving record #{$receiving->receiving_id}: {$data['reason']}",
+            'entity_type'   => 'Stock_Receiving',
+            'entity_id'     => $receiving->receiving_id,
+            'new_values'    => json_encode($data),
+            'created_at'    => now(),
+            'business_id'   => $user?->business_id,
+            'branch_id'     => $user?->branch_id,
         ]);
 
         return response()->json(['message' => 'Order discarded.']);

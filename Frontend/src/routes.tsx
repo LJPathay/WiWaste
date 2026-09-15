@@ -6,6 +6,9 @@ import { AuthLayout } from "./components/layout/AuthLayout";
 import { DashboardLayout } from "./components/layout/DashboardLayout";
 import { CashierLayout } from "./components/layout/CashierLayout";
 import { PageLoader } from "./components/ui/PageLoader";
+import PrivacyBanner from "./components/ui/PrivacyBanner";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
 
 function lazyPage(imp: () => Promise<Record<string, unknown>>, name: string) {
   const Comp = lazy(() => imp().then(m => ({ default: m[name] as ComponentType<unknown> })));
@@ -44,6 +47,8 @@ const StockReceiving = lazyPage(() => import("./pages/inventory/StockReceiving")
 const StockMovements = lazyPage(() => import("./pages/inventory/StockMovements"), "StockMovements");
 const InventorySuppliers = lazyPage(() => import("./pages/inventory/Suppliers"), "Suppliers");
 const InventoryReports = lazyPage(() => import("./pages/inventory/Reports"), "Reports");
+const RecallManagement = lazyPage(() => import("./pages/inventory/RecallManagement"), "RecallManagement");
+const SanitationChecklist = lazyPage(() => import("./pages/inventory/SanitationChecklist"), "SanitationChecklist");
 const POSTerminal = lazyPage(() => import("./pages/cashier/POSTerminal"), "POSTerminal");
 const ReturnsRefunds = lazyPage(() => import("./pages/cashier/ReturnsRefunds"), "ReturnsRefunds");
 const CashierHistory = lazyPage(() => import("./pages/cashier/CashierHistory"), "CashierHistory");
@@ -52,39 +57,51 @@ const OverstockRisks = lazyPage(() => import("./pages/manager/OverstockRisks"), 
 const Replenishment = lazyPage(() => import("./pages/manager/Replenishment"), "Replenishment");
 const SupplierPerformance = lazyPage(() => import("./pages/manager/SupplierPerformance"), "SupplierPerformance");
 const ExecutiveReports = lazyPage(() => import("./pages/manager/ExecutiveReports"), "ExecutiveReports");
+const SalesReports = lazyPage(() => import("./pages/reports/SalesReports"), "SalesReports");
+const PrivacyRequests = lazyPage(() => import("./pages/admin/PrivacyRequests"), "PrivacyRequests");
+const BreachIncidents = lazyPage(() => import("./pages/admin/BreachIncidents"), "BreachIncidents");
+const DataRetentionConfig = lazyPage(() => import("./pages/admin/DataRetentionConfig"), "DataRetentionConfig");
+const ReorderDashboard = lazyPage(() => import("./pages/reorder/ReorderDashboard"), "ReorderDashboard");
 
 export const router = createBrowserRouter([
-    // ── Public marketing site ──
-    {
-        path: "/",
-        Component: MainLayout,
-        children: [
-            { index: true, Component: Home },
-            { path: "pricing", Component: Pricing },
-            { path: "solutions", Component: Solutions },
-        ],
-    },
+     // ── Public marketing site ──
+     {
+         path: "/",
+         element: (
+           <>
+             <PrivacyBanner />
+             <MainLayout />
+           </>
+         ),
+         children: [
+             { index: true, Component: Home },
+             { path: "pricing", Component: Pricing },
+             { path: "solutions", Component: Solutions },
+             { path: "privacy", Component: PrivacyPolicy },
+             { path: "terms", Component: TermsOfService },
+         ],
+     },
 
-    // ── Auth pages (login / register) ──
-    {
-        Component: AuthLayout,
-        children: [
-            { path: "login", Component: Login },
-        ],
-    },
+     // ── Auth pages (login / register) ──
+     {
+         Component: AuthLayout,
+         children: [
+             { path: "login", Component: Login },
+         ],
+     },
 
-    // ── Authenticated dashboard (always shows sidebar) ──
-    {
-        Component: DashboardLayout,
-        children: [
-            // Dashboard overview & sub-pages
-            { path: "dashboard", Component: Dashboard },
-            { path: "dashboard/inventory", Component: InventoryDashboard },
-            { path: "dashboard/predictive", Component: PredictiveAnalyticsPage },
-            { path: "dashboard/leakage", Component: LeakageDetectionPage },
-            { path: "dashboard/fefo", Component: FefoTrackingPage },
-            { path: "dashboard/vendors", Component: VendorCreditsPage },
-            // Owner/Administrator routes
+     // ── Authenticated dashboard (always shows sidebar) ──
+     {
+         Component: DashboardLayout,
+         children: [
+             // Dashboard overview & sub-pages
+             { path: "dashboard", Component: Dashboard },
+             { path: "dashboard/inventory", Component: InventoryDashboard },
+             { path: "dashboard/predictive", Component: PredictiveAnalyticsPage },
+             { path: "dashboard/leakage", Component: LeakageDetectionPage },
+             { path: "dashboard/fefo", Component: FefoTrackingPage },
+             { path: "dashboard/vendors", Component: VendorCreditsPage },
+// Owner/Administrator routes
             { path: "owner/users", Component: ManageUsers },
             { path: "owner/products", Component: ManageProducts },
             { path: "owner/categories", Component: ManageCategories },
@@ -98,7 +115,12 @@ export const router = createBrowserRouter([
             { path: "owner/replenishment", Component: Replenishment },
             { path: "owner/supplier-performance", Component: SupplierPerformance },
             { path: "owner/executive-reports", Component: ExecutiveReports },
-            // Inventory routes
+            // Sprint 5: Admin privacy & compliance
+            { path: "admin/privacy-requests", Component: PrivacyRequests },
+            { path: "admin/breach-incidents", Component: BreachIncidents },
+            { path: "admin/data-retention", Component: DataRetentionConfig },
+            { path: "reorder/dashboard", Component: ReorderDashboard },
+// Inventory routes
             { path: "inventory/wastage", Component: RecordWastage },
             { path: "inventory/manage", Component: ManageInventory },
             { path: "inventory/fefo", Component: FEFOTracking },
@@ -107,16 +129,20 @@ export const router = createBrowserRouter([
             { path: "inventory/movements", Component: StockMovements },
             { path: "inventory/suppliers", Component: InventorySuppliers },
             { path: "inventory/reports", Component: InventoryReports },
-        ],
-    },
+            { path: "inventory/recalls", Component: RecallManagement },
+            { path: "inventory/sanitation", Component: SanitationChecklist },
+            // Reports routes
+            { path: "reports/sales", Component: SalesReports },
+         ],
+     },
 
-    // ── Cashier terminal: no manager sidebar, kiosk-style interface ──
-    {
-        Component: CashierLayout,
-        children: [
-            { path: "cashier/pos", Component: POSTerminal },
-            { path: "cashier/returns", Component: ReturnsRefunds },
-            { path: "cashier/history", Component: CashierHistory },
-        ],
-    },
-]);
+     // ── Cashier terminal: no manager sidebar, kiosk-style interface ──
+     {
+         Component: CashierLayout,
+         children: [
+             { path: "cashier/pos", Component: POSTerminal },
+             { path: "cashier/returns", Component: ReturnsRefunds },
+             { path: "cashier/history", Component: CashierHistory },
+         ],
+     },
+ ]);

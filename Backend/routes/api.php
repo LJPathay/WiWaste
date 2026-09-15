@@ -27,8 +27,11 @@ use App\Http\Controllers\Api\VendorReturnController;
 use App\Http\Controllers\Api\ShiftController;
 use App\Http\Controllers\Api\AlertController;
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\SanitationController;
+use App\Http\Controllers\Api\RecallController;
 use App\Http\Controllers\Api\ForecastAccuracyController;
 use App\Http\Controllers\Api\StockReceivingController;
+use App\Http\Controllers\Api\ReorderController;
 
 /*
 |--------------------------------------------------------------------------
@@ -50,6 +53,8 @@ Route::post('/users/{id}/reactivate',  [UserController::class, 'reactivate']);
 // Lookup tables
 Route::apiResource('/categories', CategoryController::class);
 Route::apiResource('/suppliers',  SupplierController::class);
+Route::get('/suppliers/compliance', [SupplierController::class, 'compliance']);
+Route::get('/suppliers/alerts', [SupplierController::class, 'alerts']);
 
 // Products
 Route::apiResource('/products', ProductController::class);
@@ -79,10 +84,14 @@ Route::get('/health', fn () => response()->json(['status' => 'ok', 'service' => 
 Route::get('/sales',  [SalesTransactionController::class, 'index']);
 Route::get('/sales/{id}', [SalesTransactionController::class, 'show']);
 Route::post('/sales', [SalesTransactionController::class, 'store']);
+Route::get('/sales/{id}/receipt', [SalesTransactionController::class, 'receipt']);
 
 // Returns & Refunds
 Route::get('/returns',  [ReturnTransactionController::class, 'index']);
 Route::post('/returns', [ReturnTransactionController::class, 'store']);
+Route::post('/returns/{id}/approve', [ReturnTransactionController::class, 'approve']);
+Route::post('/returns/{id}/reject', [ReturnTransactionController::class, 'reject']);
+Route::get('/returns/{id}', [ReturnTransactionController::class, 'show']);
 
 // Reports
 Route::prefix('/reports')->group(function () {
@@ -92,6 +101,10 @@ Route::prefix('/reports')->group(function () {
     Route::get('/expiry-analysis',     [ReportController::class, 'expiryAnalysis']);
     Route::get('/category-analysis',   [ReportController::class, 'categoryAnalysis']);
     Route::get('/cost-impact',         [ReportController::class, 'costImpact']);
+    // Sprint 4: Sales Reports
+    Route::get('/sales-vat-summary',   [ReportController::class, 'salesVatSummary']);
+    Route::get('/discount-summary',    [ReportController::class, 'discountSummary']);
+    Route::get('/senior-pwd-log',      [ReportController::class, 'seniorPwdTransactionLog']);
 });
 
 // Settings
@@ -108,6 +121,11 @@ Route::post('/purchase-orders',            [PurchaseOrderController::class, 'sto
 Route::get('/purchase-orders/{id}',        [PurchaseOrderController::class, 'show']);
 Route::put('/purchase-orders/{id}',        [PurchaseOrderController::class, 'update']);
 Route::post('/purchase-orders/{id}/receive',[PurchaseOrderController::class, 'receive']);
+
+// Reorder Suggestions
+Route::get('/reorder/suggestions', [ReorderController::class, 'index']);
+Route::post('/reorder/approve', [ReorderController::class, 'approve']);
+Route::post('/reorder/auto-approve', [ReorderController::class, 'autoApprove']);
 
 // Audit Logs
 Route::get('/audit-logs', [AuditLogController::class, 'index']);
@@ -129,6 +147,7 @@ Route::get('/analytics/dashboard-summary',[InventoryAnalyticsController::class, 
 Route::get('/fefo/batches',       [FEFOController::class, 'batches']);
 Route::get('/fefo/batches/{id}',  [FEFOController::class, 'show']);
 Route::post('/fefo/apply',        [FEFOController::class, 'apply']);
+Route::get('/fefo/batches/{id}/trace', [FEFOController::class, 'trace']);
 
 // Recommendations
 Route::get('/recommendations',                [RecommendationController::class, 'index']);
@@ -164,8 +183,13 @@ Route::prefix('/optimization')->group(function () {
 Route::post('/inventory/cycle-count', [CycleCountController::class, 'store']);
 
 // Vendor Returns
+Route::apiResource('/vendor-returns', VendorReturnController::class);
+Route::post('/vendor-returns/{id}/approve', [VendorReturnController::class, 'approve']);
+Route::post('/vendor-returns/{id}/reject', [VendorReturnController::class, 'reject']);
+Route::post('/vendor-returns/{id}/ship', [VendorReturnController::class, 'ship']);
 Route::post('/vendor-returns/{id}/receive', [VendorReturnController::class, 'receive']);
-Route::post('/vendor-returns/{id}/credit',  [VendorReturnController::class, 'credit']);
+Route::post('/vendor-returns/{id}/credit', [VendorReturnController::class, 'credit']);
+Route::get('/vendor-returns/summary', [VendorReturnController::class, 'summary']);
 
 // Shifts
 Route::post('/shifts/open',  [ShiftController::class, 'open']);
@@ -173,6 +197,26 @@ Route::post('/shifts/close', [ShiftController::class, 'close']);
 
 // Alerts
 Route::get('/alerts/expiring', [AlertController::class, 'expiring']);
+Route::get('/alerts/summary', [AlertController::class, 'summary']);
+
+// Sanitation Checklist
+Route::get('/sanitation', [SanitationController::class, 'index']);
+Route::post('/sanitation', [SanitationController::class, 'store']);
+Route::get('/sanitation/{id}', [SanitationController::class, 'show']);
+Route::put('/sanitation/{id}', [SanitationController::class, 'update']);
+Route::post('/sanitation/{id}/verify', [SanitationController::class, 'verify']);
+Route::get('/sanitation/summary', [SanitationController::class, 'summary']);
+
+// Recall Management
+Route::get('/recalls', [RecallController::class, 'index']);
+Route::post('/recalls', [RecallController::class, 'store']);
+Route::get('/recalls/{id}', [RecallController::class, 'show']);
+Route::put('/recalls/{id}', [RecallController::class, 'update']);
+Route::post('/recalls/{id}/activate', [RecallController::class, 'activate']);
+Route::post('/recalls/{id}/quarantine', [RecallController::class, 'quarantine']);
+Route::post('/recalls/{id}/notify', [RecallController::class, 'notify']);
+Route::post('/recalls/{id}/resolve', [RecallController::class, 'resolve']);
+Route::get('/recalls/summary', [RecallController::class, 'summary']);
 
 // Returns approval
 Route::post('/returns/{id}/approve', [ReturnTransactionController::class, 'approve']);

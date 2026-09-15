@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { FileText, Download, Loader2, CheckCircle2, Cpu, Target, Wallet, AlertTriangle, ArrowRight } from 'lucide-react';
-import { Link } from 'react-router';
+import { Link } from 'react-router-dom';
 import { Toast, useToast } from '../../components/ui/Toast';
 import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
 import { formatCurrency, paymentMethods, type PaymentMethod } from '../../utils/cashierData';

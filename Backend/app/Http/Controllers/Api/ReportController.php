@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\WastageRecord;
 use App\Models\StockMovement;
 use App\Models\SalesTransaction;
+use App\Models\SalesItem;
 use App\Models\ReturnTransaction;
 use App\Models\Product;
 use App\Models\Inventory;
@@ -176,5 +177,118 @@ class ReportController extends Controller
                 'waste_to_sales_ratio' => $totalSales > 0 ? round($totalWasteLoss / $totalSales * 100, 2) : 0,
             ];
         }));
+    }
+
+    public function salesVatSummary(Request $request)
+    {
+        $from = $request->input('from', '');
+        $to   = $request->input('to', '');
+
+        $query = SalesTransaction::where('status', 'Completed');
+        if ($from) $query->whereDate('transaction_date', '>=', $from);
+        if ($to)   $query->whereDate('transaction_date', '<=', $to);
+
+        $totals = $query->selectRaw('
+            SUM(total_amount) as total_sales,
+            SUM(vat_amount) as total_vat,
+            SUM(vatable_amount) as total_vatable,
+            SUM(non_vatable_amount) as total_non_vatable,
+            SUM(senior_pwd_discount_amount) as total_senior_pwd_discount,
+            SUM(senior_pwd_vat_exempt_amount) as total_senior_pwd_vat_exempt,
+            SUM(discount_amount) as total_discount
+        ')->first();
+
+        $dailyBreakdown = SalesTransaction::where('status', 'Completed')
+            ->when($from, fn ($q) => $q->whereDate('transaction_date', '>=', $from))
+            ->when($to, fn ($q) => $q->whereDate('transaction_date', '<=', $to))
+            ->selectRaw('
+                DATE(transaction_date) as date,
+                COUNT(*) as transaction_count,
+                SUM(total_amount) as daily_sales,
+                SUM(vat_amount) as daily_vat,
+                SUM(vatable_amount) as daily_vatable,
+                SUM(non_vatable_amount) as daily_non_vatable,
+                SUM(senior_pwd_discount_amount) as daily_senior_pwd_discount,
+                SUM(discount_amount) as daily_discount
+            ')
+            ->groupBy('date')
+            ->orderBy('date')
+            ->get();
+
+        return response()->json([
+            'summary' => $totals,
+            'daily_breakdown' => $dailyBreakdown,
+        ]);
+    }
+
+    public function discountSummary(Request $request)
+    {
+        $from = $request->input('from', '');
+        $to   = $request->input('to', '');
+
+        $query = SalesTransaction::where('status', 'Completed');
+        if ($from) $query->whereDate('transaction_date', '>=', $from);
+        if ($to)   $query->whereDate('transaction_date', '<=', $to);
+
+        $totals = $query->selectRaw('
+            SUM(discount_amount) as total_discount,
+            SUM(senior_pwd_discount_amount) as total_senior_pwd_discount,
+            SUM(senior_pwd_vat_exempt_amount) as total_senior_pwd_vat_exempt
+        ')->first();
+
+        // Item-level discounts
+        $itemDiscounts = DB::table('Sales_Item')
+            ->join('Sales_Transaction', 'Sales_Item.transaction_id', '=', 'Sales_Transaction.transaction_id')
+            ->where('Sales_Transaction.status', 'Completed')
+            ->when($from, fn ($q) => $q->whereDate('Sales_Transaction.transaction_date', '>=', $from))
+            ->when($to, fn ($q) => $q->whereDate('Sales_Transaction.transaction_date', '<=', $to))
+            ->selectRaw('
+                SUM(discount_amount) as total_item_discount,
+                SUM(CASE WHEN is_senior_pwd_exempt = 1 THEN discount_amount ELSE 0 END) as senior_pwd_item_discount,
+                COUNT(*) as discounted_items_count
+            ')
+            ->first();
+
+        return response()->json([
+            'transaction_level' => $totals,
+            'item_level' => $itemDiscounts,
+            'combined' => [
+                'total_discount' => ($totals->total_discount ?? 0) + ($itemDiscounts->total_item_discount ?? 0),
+                'total_senior_pwd_discount' => ($totals->total_senior_pwd_discount ?? 0) + ($itemDiscounts->senior_pwd_item_discount ?? 0),
+            ],
+        ]);
+    }
+
+    public function seniorPwdTransactionLog(Request $request)
+    {
+        $from = $request->input('from', '');
+        $to   = $request->input('to', '');
+
+        $transactions = SalesTransaction::where('status', 'Completed')
+            ->where('senior_pwd_type', '!=', 'none')
+            ->when($from, fn ($q) => $q->whereDate('transaction_date', '>=', $from))
+            ->when($to, fn ($q) => $q->whereDate('transaction_date', '<=', $to))
+            ->with(['user', 'salesItems.product'])
+            ->orderByDesc('transaction_date')
+            ->get()
+            ->map(fn ($t) => [
+                'transaction_id' => $t->transaction_id,
+                'date' => $t->transaction_date,
+                'cashier' => $t->user?->Full_name,
+                'senior_pwd_type' => $t->senior_pwd_type,
+                'senior_pwd_id' => $t->senior_pwd_id,
+                'senior_pwd_name' => $t->senior_pwd_name,
+                'senior_pwd_discount' => $t->senior_pwd_discount_amount,
+                'senior_pwd_vat_exempt' => $t->senior_pwd_vat_exempt_amount,
+                'total_amount' => $t->total_amount,
+                'items' => $t->salesItems->map(fn ($item) => [
+                    'product_name' => $item->product?->product_name,
+                    'quantity' => $item->quantity,
+                    'is_exempt' => $item->is_senior_pwd_exempt,
+                    'discount' => $item->discount_amount,
+                ]),
+            ]);
+
+        return response()->json($transactions);
     }
 }

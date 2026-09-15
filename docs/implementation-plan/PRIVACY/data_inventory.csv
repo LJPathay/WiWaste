@@ -1,0 +1,12 @@
+data_element,description,data_category,purpose,legal_basis,retention_period,recipients,safeguards
+email_address,Customer email for order confirmation,Customer PII,Order fulfillment,Contract,7_years,"['payment_gateway','delivery_service']","encryption_at_rest,access_control"
+phone_number,Customer phone for delivery updates,Customer PII,Order fulfillment,Contract,7_years,"['payment_gateway','delivery_service']","encryption_at_rest,access_control"
+name,Customer name for shipping,Customer PII,Order fulfillment,Contract,7_years,"['payment_gateway','delivery_service']","encryption_at_rest,access_control"
+business_name,Business name for invoicing,Business Data,Order fulfillment,Contract,7_years,"['accounting_system']","encryption_at_rest,access_control"
+tax_id,Tax ID for official receipts,Business Data,Legal compliance,Legal obligation,10_years,"['bir','accounting_system']","encryption_at_rest,access_control"
+employee_name,Employee name for payroll,Employee Data,Payroll processing,Contract,7_years_after_termination,"['payroll_provider','sss','philhealth','pagibig']","encryption_at_rest,access_control"
+employee_email,Employee email for internal communication,Employee Data,HR administration,Legitimate interest,7_years_after_termination,"['email_provider']","encryption_at_rest,access_control"
+supplier_name,Supplier name for procurement,Supplier Data,Supplier management,Contract,7_years_after_termination,"['accounting_system']","encryption_at_rest,access_control"
+supplier_contact,Supplier contact person,Supplier Data,Supplier management,Contract,7_years_after_termination,"['accounting_system']","encryption_at_rest,access_control"
+fda_lto_number,Supplier FDA License to Operate,Supplier Data,Regulatory compliance,Legal obligation,5_years,"[None]","encryption_at_rest,access_control"
+fda_cpr_number,Supplier FDA Certificate of Product Registration,Supplier Data,Regulatory compliance,Legal obligation,5_years,"[None]","encryption_at_rest,access_control"

@@ -78,6 +78,8 @@ export const suppliers = {
   update: (id: number, data: Partial<CreateSupplierPayload>) =>
     request(`/suppliers/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: number) => request(`/suppliers/${id}`, { method: 'DELETE' }),
+  compliance: () => request<ApiSupplierComplianceResponse>('/suppliers/compliance'),
+  alerts: (days = 30) => request<ApiSupplierAlertResponse>(`/suppliers/alerts?days=${days}`),
 };
 
 // ─── Products ───────────────────────────────────────────
@@ -176,13 +178,27 @@ export const sales = {
   show: (id: number) => request<ApiSalesTransaction>(`/sales/${id}`),
   create: (data: CreateSalePayload) =>
     request('/sales', { method: 'POST', body: JSON.stringify(data) }),
+  receipt: (id: number) => request<ApiReceiptResponse>(`/sales/${id}/receipt`),
 };
 
 // ─── Returns ────────────────────────────────────────────
 export const returns = {
-  list: (page = 1) => request<PaginatedResponse<ApiReturn>>(`/returns?page=${page}`),
+  list: (params?: { page?: number; approval_status?: string; return_reason_code?: string; from_date?: string; to_date?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.page) qs.set('page', String(params.page));
+    if (params?.approval_status) qs.set('approval_status', params.approval_status);
+    if (params?.return_reason_code) qs.set('return_reason_code', params.return_reason_code);
+    if (params?.from_date) qs.set('from_date', params.from_date);
+    if (params?.to_date) qs.set('to_date', params.to_date);
+    const q = qs.toString();
+    return request<PaginatedResponse<ApiReturn>>(`/returns${q ? '?' + q : ''}`);
+  },
   create: (data: CreateReturnPayload) =>
     request('/returns', { method: 'POST', body: JSON.stringify(data) }),
+  approve: (id: number) => request(`/returns/${id}/approve`, { method: 'POST' }),
+  reject: (id: number, rejection_reason: string) =>
+    request(`/returns/${id}/reject`, { method: 'POST', body: JSON.stringify({ rejection_reason }) }),
+  show: (id: number) => request<ApiReturn>(`/returns/${id}`),
 };
 
 // ─── Reports ────────────────────────────────────────────
@@ -205,6 +221,27 @@ export const reports = {
   expiryAnalysis: (days?: number) => request<ApiReport[]>(`/reports/expiry-analysis${days ? '?days=' + days : ''}`),
   categoryAnalysis: () => request<ApiReport[]>('/reports/category-analysis'),
   costImpact: () => request<ApiReport[]>('/reports/cost-impact'),
+  salesVatSummary: (params?: { from?: string; to?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.from) qs.set('from', params.from);
+    if (params?.to) qs.set('to', params.to);
+    const q = qs.toString();
+    return request<ApiSalesVatSummary>(`/reports/sales-vat-summary${q ? '?' + q : ''}`);
+  },
+  discountSummary: (params?: { from?: string; to?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.from) qs.set('from', params.from);
+    if (params?.to) qs.set('to', params.to);
+    const q = qs.toString();
+    return request<ApiDiscountSummary>(`/reports/discount-summary${q ? '?' + q : ''}`);
+  },
+  seniorPwdTransactionLog: (params?: { from?: string; to?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.from) qs.set('from', params.from);
+    if (params?.to) qs.set('to', params.to);
+    const q = qs.toString();
+    return request<ApiSeniorPwdTransaction[]>(`/reports/senior-pwd-log${q ? '?' + q : ''}`);
+  },
 };
 
 // ─── Settings ───────────────────────────────────────────
@@ -257,15 +294,45 @@ export const ownerDashboard = {
   },
 };
 
+// ─── Business & Branch Types ──────────────────────────────
+export interface ApiBusiness {
+  id: number;
+  name: string;
+  business_type: 'food_retail' | 'minimart' | 'restaurant' | 'pharmacy' | 'hybrid';
+  capabilities: {
+    food_safety: boolean;
+    pharmacy_rx: boolean;
+    controlled_substances: boolean;
+    prescription_handling: boolean;
+  };
+  dpo_name: string | null;
+  dpo_email: string | null;
+  dpo_phone: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ApiBranch {
+  id: number;
+  business_id: number;
+  name: string;
+  address: string;
+  status: 'active' | 'inactive';
+  created_at: string;
+  updated_at: string;
+}
+
 // ─── Types ──────────────────────────────────────────────
 export interface ApiUser {
   id: number;
   name: string;
   username: string;
   email: string;
-  role: 'Admin' | 'Inventory' | 'Business Owner';
+  role: 'Admin' | 'Inventory' | 'Business Owner' | 'Owner' | 'Cashier' | 'Pharmacist';
   status: 'Active' | 'Inactive' | 'Quarantined';
   created_at?: string;
+  business_id?: number;
+  branch_id?: number;
 }
 
 export interface ApiCategory {
@@ -281,6 +348,15 @@ export interface ApiSupplier {
   contact_number: string;
   address: string | null;
   product_count: number;
+  business_id?: number;
+  fda_lto_number?: string | null;
+  fda_lto_expiry?: string | null;
+  fda_cpr_number?: string | null;
+  fda_cpr_expiry?: string | null;
+  lto_status?: 'valid' | 'expiring' | 'expiring_soon' | 'critical' | 'expired' | 'not_provided';
+  cpr_status?: 'valid' | 'expiring' | 'expiring_soon' | 'critical' | 'expired' | 'not_provided';
+  days_until_lto_expiry?: number | null;
+  days_until_cpr_expiry?: number | null;
 }
 
 export interface ApiSupplierDetail extends ApiSupplier {
@@ -292,6 +368,37 @@ export interface ApiSupplierDetail extends ApiSupplier {
     stock_status: string;
   }>;
 }
+
+export interface ApiSupplierComplianceResponse {
+  suppliers: Array<ApiSupplier & {
+    lto_status: string;
+    cpr_status: string;
+    days_until_lto_expiry: number | null;
+    days_until_cpr_expiry: number | null;
+  }>;
+  summary: {
+    total: number;
+    lto_expiring_30: number;
+    lto_expiring_14: number;
+    lto_expiring_7: number;
+    lto_expired: number;
+    cpr_expiring_30: number;
+    cpr_expiring_14: number;
+    cpr_expiring_7: number;
+    cpr_expired: number;
+  };
+}
+
+export interface ApiSupplierAlertResponse {
+  alerts: Array<ApiSupplier & {
+    lto_days_remaining: number | null;
+    cpr_days_remaining: number | null;
+  }>;
+  count: number;
+}
+
+export type ProductClassification = 'food' | 'drug' | 'cosmetic' | 'device' | 'general';
+export type StorageRequirement = 'refrigerated' | 'frozen' | 'controlled_room' | 'ambient' | 'custom';
 
 export interface ApiProduct {
   id: number;
@@ -309,6 +416,13 @@ export interface ApiProduct {
   status: 'Active' | 'Discontinued';
   stock: number;
   stock_status: 'Normal' | 'Low Stock' | 'Overstock';
+  business_id?: number;
+  product_classification?: ProductClassification;
+  required_temp_min?: number | null;
+  required_temp_max?: number | null;
+  storage_requirement?: StorageRequirement;
+  is_rx_only?: boolean;
+  ddb_schedule?: string | null;
 }
 
 export interface ApiInventory {
@@ -327,6 +441,8 @@ export interface ApiInventory {
   reorder_level: number;
   expiration_date: string | null;
   last_updated: string;
+  business_id?: number;
+  branch_id?: number;
 }
 
 export interface ApiWastage {
@@ -339,12 +455,28 @@ export interface ApiWastage {
   quantity: number;
   estimated_loss: number;
   date_recorded: string;
+  business_id?: number;
+  branch_id?: number;
+  batch_id?: number | null;
 }
 
 export interface ApiSalesTransaction {
   id: number;
   cashier: string;
   total_amount: number;
+  vat_amount?: number;
+  vatable_amount?: number;
+  non_vatable_amount?: number;
+  senior_pwd_discount_amount?: number;
+  senior_pwd_vat_exempt_amount?: number;
+  discount_amount?: number;
+  discount_breakdown?: Array<{
+    type: string;
+    product_id?: number;
+    amount: number;
+    rate?: number;
+    pct?: number;
+  }>;
   transaction_date: string;
   payment_method: string;
   payment_reference?: string | null;
@@ -353,6 +485,13 @@ export interface ApiSalesTransaction {
   change_due: number | null;
   status: string;
   items: ApiSalesItem[];
+  business_id?: number;
+  branch_id?: number;
+  customer_name?: string | null;
+  customer_phone?: string | null;
+  customer_email?: string | null;
+  senior_pwd_id?: string | null;
+  senior_pwd_type?: 'senior' | 'pwd' | 'none';
 }
 
 export interface ApiSalesItem {
@@ -362,6 +501,11 @@ export interface ApiSalesItem {
   quantity: number;
   unit_price: number;
   subtotal: number;
+  vat_amount?: number;
+  vatable_amount?: number;
+  discount_amount?: number;
+  discount_pct?: number;
+  is_senior_pwd_exempt?: boolean;
 }
 
 export interface ApiReturn {
@@ -379,8 +523,10 @@ export interface CreateUserPayload {
   username: string;
   password: string;
   email?: string;
-  role: 'Admin' | 'Inventory' | 'Business Owner';
+  role: 'Admin' | 'Inventory' | 'Business Owner' | 'Owner' | 'Cashier' | 'Pharmacist';
   status: 'Active' | 'Inactive' | 'Quarantined';
+  business_id?: number;
+  branch_id?: number;
 }
 
 export interface CreateSupplierPayload {
@@ -388,9 +534,15 @@ export interface CreateSupplierPayload {
   contact_person?: string;
   contact_number: string;
   address?: string;
+  business_id?: number;
+  fda_lto_number?: string;
+  fda_lto_expiry?: string;
+  fda_cpr_number?: string;
+  fda_cpr_expiry?: string;
 }
 
 export interface CreateProductPayload {
+  business_id?: number;
   category_id: number;
   supplier_id: number;
   barcode?: string;
@@ -400,10 +552,19 @@ export interface CreateProductPayload {
   reorder_level: number;
   expiration_date?: string;
   initial_stock?: number;
+  product_classification?: ProductClassification;
+  required_temp_min?: number;
+  required_temp_max?: number;
+  storage_requirement?: StorageRequirement;
+  is_rx_only?: boolean;
+  ddb_schedule?: string;
 }
 
 export interface CreateWastagePayload {
+  business_id?: number;
+  branch_id?: number;
   product_id: number;
+  batch_id?: number;
   wastage_type: 'Expired' | 'Damaged' | 'Spoiled' | 'Lost';
   quantity: number;
   estimated_loss: number;
@@ -411,6 +572,8 @@ export interface CreateWastagePayload {
 }
 
 export interface CreateSalePayload {
+  business_id?: number;
+  branch_id?: number;
   payment_method: 'Cash' | 'E-wallet' | 'Credit Card' | 'Debit Card';
   payment_reference?: string;
   customer_name?: string | null;
@@ -421,6 +584,7 @@ export interface CreateSalePayload {
   change_due?: number;
   senior_pwd_name?: string | null;
   senior_pwd_id?: string | null;
+  senior_pwd_type?: 'senior' | 'pwd' | 'none';
   items: Array<{
     product_id: number;
     quantity: number;
@@ -434,12 +598,117 @@ export interface CreateReturnPayload {
   sale_item_id: number;
   quantity_returned: number;
   reason?: string;
+  return_reason_code: 'defective' | 'wrong_item' | 'change_mind' | 'damaged' | 'expired' | 'missing_parts' | 'not_as_described' | 'other';
+  evidence_notes?: string;
+  evidence_photos?: string[];
   refund_amount: number;
   return_date: string;
 }
 
 export interface ApiReport {
   [key: string]: unknown;
+}
+
+export interface ApiSalesVatSummary {
+  summary: {
+    total_sales: number;
+    total_vat: number;
+    total_vatable: number;
+    total_non_vatable: number;
+    total_senior_pwd_discount: number;
+    total_senior_pwd_vat_exempt: number;
+    total_discount: number;
+  };
+  daily_breakdown: Array<{
+    date: string;
+    transaction_count: number;
+    daily_sales: number;
+    daily_vat: number;
+    daily_vatable: number;
+    daily_non_vatable: number;
+    daily_senior_pwd_discount: number;
+    daily_discount: number;
+  }>;
+}
+
+export interface ApiDiscountSummary {
+  transaction_level: {
+    total_discount: number;
+    total_senior_pwd_discount: number;
+    total_senior_pwd_vat_exempt: number;
+  };
+  item_level: {
+    total_item_discount: number;
+    senior_pwd_item_discount: number;
+    discounted_items_count: number;
+  };
+  combined: {
+    total_discount: number;
+    total_senior_pwd_discount: number;
+  };
+}
+
+export interface ApiSeniorPwdTransaction {
+  transaction_id: number;
+  date: string;
+  cashier: string;
+  senior_pwd_type: 'senior' | 'pwd' | 'none';
+  senior_pwd_id: string | null;
+  senior_pwd_name: string | null;
+  senior_pwd_discount: number;
+  senior_pwd_vat_exempt: number;
+  total_amount: number;
+  items: Array<{
+    product_name: string;
+    quantity: number;
+    is_exempt: boolean;
+    discount: number;
+  }>;
+}
+
+export interface ApiReceiptResponse {
+  receipt: {
+    transaction_id: number;
+    transaction_date: string;
+    business_name: string;
+    business_address: string;
+    business_tin: string;
+    cashier: string;
+    payment_method: string;
+    payment_reference?: string | null;
+    senior_pwd: {
+      type: 'senior' | 'pwd';
+      id: string;
+      name: string;
+      discount: number;
+    } | null;
+    items: Array<{
+      product_name: string;
+      quantity: number;
+      unit_price: number;
+      vat_amount: number;
+      vatable_amount: number;
+      discount_amount: number;
+      subtotal: number;
+      is_senior_pwd_exempt: boolean;
+    }>;
+    totals: {
+      subtotal: number;
+      discount: number;
+      senior_pwd_discount: number;
+      senior_pwd_vat_exempt: number;
+      vatable_sales: number;
+      non_vatable_sales: number;
+      vat_amount: number;
+      total: number;
+    };
+    payment: {
+      method: string;
+      reference?: string | null;
+      amount_tendered: number | null;
+      change_due: number | null;
+    };
+  };
 }
 
 export interface ApiDashboard {
@@ -499,6 +768,11 @@ export interface ApiFefoBatch {
   days_left: number;
   status: string;
   directive_notes: string | null;
+  business_id?: number;
+  branch_id?: number;
+  received_date?: string | null;
+  received_temperature?: number | null;
+  supplier_batch_number?: string | null;
 }
 
 export interface ApiFefoList {
@@ -521,6 +795,19 @@ export interface ApiFefoBatchDetail extends ApiFefoBatch {
   created_by: string;
   created_at: string;
   movements: ApiFefoMovement[];
+}
+
+export interface ApiTraceStep {
+  level: string;
+  entity_type: string;
+  entity_id: number;
+  [key: string]: unknown;
+}
+
+export interface ApiTraceResponse {
+  batch: ApiFefoBatch;
+  upstream: ApiTraceStep[];
+  downstream: ApiTraceStep[];
 }
 
 export interface ApiRecommendation {
@@ -570,21 +857,39 @@ export interface ApiStockMovement {
   remarks: string | null;
   recorded_by: string;
   movement_date: string;
+  business_id?: number;
+  branch_id?: number;
+  batch_id?: number | null;
 }
 
 // ─── Stock Receiving ──────────────────────────────────────
 export interface ApiStockReceiving {
   id: number;
-  po_number: string;
+  business_id: number;
+  branch_id: number;
   supplier_id: number;
   supplier_name: string;
-  expected_date: string;
-  status: string;
-  total_amount: number;
+  received_by: number;
+  verified_by: number | null;
+  received_at: string;
+  verified_at: string | null;
+  temperature_at_receipt: number | null;
+  condition_check_passed: boolean;
+  sanitation_check_passed: boolean;
+  notes: string | null;
+  status: 'pending' | 'received' | 'verified' | 'rejected' | 'partial';
+  created_at: string;
+  updated_at: string;
+  supplier?: ApiSupplier;
+  receiver?: ApiUser;
+  verifier?: ApiUser;
 }
 
 export interface CreateStockReceivingPayload {
+  business_id: number;
+  branch_id: number;
   supplier_id: number;
+  received_by: number;
   expected_date: string;
   items: Array<{
     product_id: number;
@@ -618,9 +923,13 @@ export interface ApiPurchaseOrder {
   items: ApiPurchaseOrderItem[];
   created_at: string;
   updated_at: string;
+  business_id?: number;
+  branch_id?: number;
 }
 
 export interface CreatePurchaseOrderPayload {
+  business_id?: number;
+  branch_id?: number;
   supplier_id: number;
   notes?: string;
   items: Array<{
@@ -659,6 +968,8 @@ export interface ApiAuditLog {
   old_values: string | null;
   new_values: string | null;
   timestamp: string;
+  business_id?: number;
+  branch_id?: number;
 }
 
 export const auditLogs = {
@@ -855,12 +1166,68 @@ export const lossRisk = {
   summary: () => request<ApiLossRiskSummaryResponse>('/loss-risk/summary'),
 };
 
+// ─── Alerts ────────────────────────────────────────────────
+export interface ApiAlertBatch {
+  type: 'batch_expiry';
+  id: number;
+  product_id: number;
+  product_name: string;
+  sku: string;
+  batch_number: string | null;
+  quantity: number;
+  expiry_date: string;
+  days_left: number;
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  business_id?: number;
+  branch_id?: number;
+}
+
+export interface ApiAlertSupplier {
+  type: 'supplier_license';
+  id: number;
+  name: string;
+  fda_lto_number?: string | null;
+  fda_lto_expiry?: string | null;
+  fda_cpr_number?: string | null;
+  fda_cpr_expiry?: string | null;
+  lto_days_remaining?: number | null;
+  cpr_days_remaining?: number | null;
+  severity: 'critical' | 'high' | 'medium' | 'low';
+}
+
+export interface ApiExpiringResponse {
+  fefo_batches?: ApiAlertBatch[];
+  fefo_count?: number;
+  supplier_licenses?: ApiAlertSupplier[];
+  supplier_count?: number;
+}
+
+export interface ApiAlertSummary {
+  fefo_batches: Record<number, number>;
+  supplier_licenses: Record<number, number>;
+  total_critical: number;
+  total_expiring_14: number;
+  total_expiring_30: number;
+}
+
+export const alerts = {
+  expiring: (params?: { days?: number; type?: 'fefo' | 'supplier' | 'all' }) => {
+    const qs = new URLSearchParams();
+    if (params?.days) qs.set('days', String(params.days));
+    if (params?.type) qs.set('type', params.type);
+    const q = qs.toString();
+    return request<ApiExpiringResponse>(`/alerts/expiring${q ? '?' + q : ''}`);
+  },
+  summary: () => request<ApiAlertSummary>('/alerts/summary'),
+};
+
 // ─── FEFO Tracking ────────────────────────────────────────
 export const fefo = {
   batches: (page = 1) => request<ApiFefoList>(`/fefo/batches?page=${page}`),
   show: (id: number) => request<ApiFefoBatchDetail>(`/fefo/batches/${id}`),
   apply: (data: { batch_id: number; action: 'flag' | 'clear' | 'notify'; directive_notes?: string }) =>
     request('/fefo/apply', { method: 'POST', body: JSON.stringify(data) }),
+  trace: (id: number) => request<ApiTraceResponse>(`/fefo/batches/${id}/trace`),
 };
 
 // ─── Recommendations ─────────────────────────────────────
@@ -914,4 +1281,288 @@ export const optimization = {
       method: 'POST',
       body: JSON.stringify(params),
     }),
+};
+
+// ─── Recall Management ─────────────────────────────────────
+export interface ApiRecall {
+  recall_id: number;
+  recall_number: string;
+  product_id: number;
+  product_name?: string;
+  batch_id?: number;
+  batch_number?: string;
+  supplier_id?: number;
+  reason: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  status: 'draft' | 'active' | 'quarantined' | 'notified' | 'resolved' | 'closed';
+  affected_batches: Array<{ batch_id: number; quantity: number }>;
+  total_quantity_affected: number;
+  initiated_date: string;
+  target_resolution_date?: string;
+  actual_resolution_date?: string;
+  initiated_by: number;
+  approved_by?: number;
+  approved_at?: string;
+  resolution_notes?: string;
+}
+
+export interface ApiRecallSummary {
+  total: number;
+  by_status: Record<string, number>;
+  by_severity: Record<string, number>;
+  total_quantity_affected: number;
+}
+
+export const recall = {
+  list: (params?: { status?: string; severity?: string; page?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.status) qs.set('status', params.status);
+    if (params?.severity) qs.set('severity', params.severity);
+    if (params?.page) qs.set('page', String(params.page));
+    const q = qs.toString();
+    return request<ApiRecall[]>(`/recalls${q ? '?' + q : ''}`);
+  },
+  show: (id: number) => request<ApiRecall>(`/recalls/${id}`),
+  create: (data: { product_id: number; batch_id?: number; supplier_id?: number; reason: string; severity: string; affected_batches: Array<{ batch_id: number; quantity: number }>; target_resolution_date?: string }) =>
+    request('/recalls', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: number, data: Partial<{ reason: string; severity: string; target_resolution_date: string; affected_batches: Array<{ batch_id: number; quantity: number }> }>) =>
+    request(`/recalls/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  activate: (id: number) => request(`/recalls/${id}/activate`, { method: 'POST' }),
+  quarantine: (id: number) => request(`/recalls/${id}/quarantine`, { method: 'POST' }),
+  notify: (id: number) => request(`/recalls/${id}/notify`, { method: 'POST' }),
+  resolve: (id: number, data: { resolution_notes: string; release_quarantine?: boolean }) =>
+    request(`/recalls/${id}/resolve`, { method: 'POST', body: JSON.stringify(data) }),
+  summary: () => request<ApiRecallSummary>('/recalls/summary'),
+};
+
+// ─── Sanitation Checklist ──────────────────────────────────
+export interface ApiSanitationChecklist {
+  checklist_id: number;
+  checklist_date: string;
+  frequency: 'daily' | 'weekly' | 'monthly';
+  area: 'receiving' | 'storage' | 'preparation' | 'dispensing' | 'waste' | 'general';
+  overall_status: 'pass' | 'fail' | 'pending';
+  verified_by: string | null;
+  verified_at: string | null;
+  created_by: string;
+  created_at: string;
+  checks: Array<{
+    item: string;
+    passed: boolean;
+    notes?: string;
+    photo_url?: string;
+  }>;
+  notes?: string;
+}
+
+export interface ApiSanitationSummary {
+  total: number;
+  passed: number;
+  failed: number;
+  verified: number;
+  pending: number;
+  by_frequency: Record<string, number>;
+  by_area: Record<string, number>;
+  failed_checks: Array<{
+    checklist_id: number;
+    item: string;
+    notes?: string;
+  }>;
+}
+
+export const sanitation = {
+  list: (params?: { frequency?: string; area?: string; status?: string; date?: string; page?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.frequency) qs.set('frequency', params.frequency);
+    if (params?.area) qs.set('area', params.area);
+    if (params?.status) qs.set('status', params.status);
+    if (params?.date) qs.set('date', params.date);
+    if (params?.page) qs.set('page', String(params.page));
+    const q = qs.toString();
+    return request<ApiSanitationChecklist[]>(`/sanitation${q ? '?' + q : ''}`);
+  },
+  show: (id: number) => request<ApiSanitationChecklist>(`/sanitation/${id}`),
+  create: (data: { checklist_date: string; frequency: string; area: string; checks: Array<{ item: string; passed: boolean; notes?: string; photo_url?: string }>; notes?: string }) =>
+    request('/sanitation', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: number, data: Partial<{ checklist_date: string; frequency: string; area: string; checks: Array<{ item: string; passed: boolean; notes?: string; photo_url?: string }>; notes: string }>) =>
+    request(`/sanitation/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  verify: (id: number) => request(`/sanitation/${id}/verify`, { method: 'POST' }),
+  summary: (params?: { date?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.date) qs.set('date', params.date);
+    const q = qs.toString();
+    return request<ApiSanitationSummary>(`/sanitation/summary${q ? '?' + q : ''}`);
+  },
+};
+
+// ─── Reorder ───────────────────────────────────────────────
+export interface ApiReorderSuggestionItem {
+  product_id: number;
+  product_name: string;
+  sku: string;
+  supplier_id: number;
+  supplier_name: string;
+  current_stock: number;
+  reorder_level: number;
+  target_stock: number;
+  quantity_needed: number;
+  adjusted_quantity: number;
+  unit_cost: number;
+  estimated_cost: number;
+  lead_time_days: number;
+  expiry_adjustment?: number;
+  branch_id?: number;
+  business_id?: number;
+  status: string;
+}
+
+export interface ApiReorderSuggestion {
+  supplier_id: number;
+  supplier_name: string;
+  items: ApiReorderSuggestionItem[];
+  total_items: number;
+  estimated_total_cost: number;
+  lead_time_days: number;
+  branch_id?: number;
+  business_id?: number;
+}
+
+export interface ApiReorderSummary {
+  total_products_analyzed: number;
+  products_needing_reorder: number;
+  suppliers_involved: number;
+  estimated_total_cost: number;
+}
+
+export const reorder = {
+  index: (params?: { safety_stock_multiplier?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.safety_stock_multiplier) qs.set('safety_stock_multiplier', String(params.safety_stock_multiplier));
+    const q = qs.toString();
+    return request<ApiReorderSuggestion[]>(`/reorder/suggestions${q ? '?' + q : ''}`);
+  },
+  approve: (data: { suggestions: ApiReorderSuggestion[] }) =>
+    request('/reorder/approve', { method: 'POST', body: JSON.stringify(data) }),
+  autoApprove: (data: { criteria?: { max_cost_per_po?: number; min_items_per_po?: number } }) =>
+    request('/reorder/auto-approve', { method: 'POST', body: JSON.stringify(data) }),
+};
+
+// ─── Privacy ────────────────────────────────────────────────
+export interface ApiDataSubjectRequest {
+  id: number;
+  business_id: number;
+  request_type: 'access' | 'rectification' | 'erasure' | 'portability' | 'restriction' | 'objection';
+  subject_identifier: string;
+  status: 'pending' | 'in_progress' | 'completed' | 'rejected';
+  requested_at: string;
+  completed_at: string | null;
+  notes: string | null;
+}
+
+export interface ApiDataBreachIncident {
+  id: number;
+  description: string;
+  personal_data_affected: string;
+  risk_assessment: 'low' | 'medium' | 'high' | 'critical';
+  status: 'open' | 'investigating' | 'contained' | 'notified' | 'resolved' | 'closed';
+  detected_at: string;
+  npc_notified_at: string | null;
+  subjects_notified_at: string | null;
+  resolved_at: string | null;
+  business_id: number;
+}
+
+export interface ApiBreachStatistics {
+  total: number;
+  by_status: Record<string, number>;
+  by_risk: Record<string, number>;
+  npc_notified: number;
+  subjects_notified: number;
+  avg_resolution_days: number;
+}
+
+export interface ApiPrivacyComplianceReport {
+  period: { from: string; to: string };
+  processing_records: {
+    total: number;
+    by_category: Record<string, number>;
+    by_legal_basis: Record<string, number>;
+  };
+  subject_requests: {
+    total: number;
+    by_type: Record<string, number>;
+    by_status: Record<string, number>;
+    avg_resolution_days: number;
+  };
+  breaches: {
+    total: number;
+    by_risk: Record<string, number>;
+    npc_notified: number;
+    subjects_notified: number;
+  };
+}
+
+export interface ApiRetentionPolicy {
+  entity_type: string;
+  retention_days: number;
+  description: string;
+  enabled: boolean;
+  last_purged: string | null;
+  records_purged: number;
+}
+
+export interface ApiRetentionSummary {
+  total_policies: number;
+  active_policies: number;
+  total_records_purged: number;
+  next_scheduled_purge: string | null;
+}
+
+export const privacy = {
+  requests: (params?: { type?: string; status?: string; page?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.type) qs.set('type', params.type);
+    if (params?.status) qs.set('status', params.status);
+    if (params?.page) qs.set('page', String(params.page));
+    const q = qs.toString();
+    return request<ApiDataSubjectRequest[]>(`/privacy/requests${q ? '?' + q : ''}`);
+  },
+  createRequest: (data: { request_type: string; subject_identifier: string; notes?: string }) =>
+    request('/privacy/requests', { method: 'POST', body: JSON.stringify(data) }),
+  approveRequest: (id: number) => request(`/privacy/requests/${id}/approve`, { method: 'POST' }),
+  rejectRequest: (id: number, data: { rejection_reason: string }) =>
+    request(`/privacy/requests/${id}/reject`, { method: 'POST', body: JSON.stringify(data) }),
+  deleteRequest: (id: number) => request(`/privacy/requests/${id}`, { method: 'DELETE' }),
+  complianceReport: (params?: { from?: string; to?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.from) qs.set('from', params.from);
+    if (params?.to) qs.set('to', params.to);
+    const q = qs.toString();
+    return request<ApiPrivacyComplianceReport>(`/privacy/compliance-report${q ? '?' + q : ''}`);
+  },
+  breaches: (params?: { status?: string; risk?: string; page?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.status) qs.set('status', params.status);
+    if (params?.risk) qs.set('risk', params.risk);
+    if (params?.page) qs.set('page', String(params.page));
+    const q = qs.toString();
+    return request<ApiDataBreachIncident[]>(`/privacy/breaches${q ? '?' + q : ''}`);
+  },
+  breachStatistics: () => request<ApiBreachStatistics>('/privacy/breaches/statistics'),
+  escalateBreach: (id: number) => request(`/privacy/breaches/${id}/escalate`, { method: 'POST' }),
+  notifyNPC: (id: number) => request(`/privacy/breaches/${id}/notify-npc`, { method: 'POST' }),
+  notifySubjects: (id: number) => request(`/privacy/breaches/${id}/notify-subjects`, { method: 'POST' }),
+containBreach: (id: number, data: { actions: string[] }) =>
+    request(`/privacy/breaches/${id}/contain`, { method: 'POST', body: JSON.stringify(data) }),
+  resolveBreach: (id: number, data: { resolution_notes: string }) =>
+    request(`/privacy/breaches/${id}/resolve`, { method: 'POST', body: JSON.stringify(data) }),
+  breachStatistics: () => request<ApiBreachStatistics>('/privacy/breaches/statistics'),
+  retentionPolicies: () => request<ApiRetentionPolicy[]>(`/privacy/retention-policies`),
+  createRetentionPolicy: (data: { entity_type: string; retention_days: number; description?: string; enabled?: boolean }) =>
+    request('/privacy/retention-policies', { method: 'POST', body: JSON.stringify(data) }),
+  updateRetentionPolicy: (entityType: string, data: Partial<{ retention_days: number; description: string; enabled: boolean }>) =>
+    request(`/privacy/retention-policies/${entityType}`, { method: 'PUT', body: JSON.stringify(data) }),
+  purgeNow: (entityType: string) => request(`/privacy/retention-policies/${entityType}/purge`, { method: 'POST' }),
+  testPurge: (entityType: string) => request(`/privacy/retention-policies/${entityType}/test-purge`, { method: 'POST' }),
+  retentionSummary: () => request<ApiRetentionSummary>('/privacy/retention-policies/summary'),
 };

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router';
+import { useSearchParams } from 'react-router-dom';
 
 /**
  * Reads `?highlightKpi=<index>` from the URL and returns the highlighted card index.

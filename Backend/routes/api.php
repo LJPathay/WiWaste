@@ -32,6 +32,7 @@ use App\Http\Controllers\Api\StockReceivingController;
 use App\Http\Controllers\Api\ReorderController;
 use App\Http\Controllers\Api\SanitationController;
 use App\Http\Controllers\Api\RecallController;
+use App\Http\Controllers\Api\WebhookController;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\ForceHttps;
 use App\Http\Middleware\RateLimitMiddleware;
@@ -236,5 +237,8 @@ Route::post('/notifications/read-all',    [NotificationController::class, 'markA
 Route::post('/ml/accuracy',               [ForecastAccuracyController::class, 'store']);
 Route::get('/ml/accuracy/alerts',         [ForecastAccuracyController::class, 'alerts']);
 Route::get('/ml/accuracy/{product_id}',   [ForecastAccuracyController::class, 'show']);
+
+// Webhook Framework
+Route::post('/webhooks/{provider}', [WebhookController::class, 'handle']);
 
 });

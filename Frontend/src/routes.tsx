@@ -58,6 +58,10 @@ const Replenishment = lazyPage(() => import("./pages/manager/Replenishment"), "R
 const SupplierPerformance = lazyPage(() => import("./pages/manager/SupplierPerformance"), "SupplierPerformance");
 const ExecutiveReports = lazyPage(() => import("./pages/manager/ExecutiveReports"), "ExecutiveReports");
 const SalesReports = lazyPage(() => import("./pages/reports/SalesReports"), "SalesReports");
+const PrivacyRequests = lazyPage(() => import("./pages/admin/PrivacyRequests"), "PrivacyRequests");
+const BreachIncidents = lazyPage(() => import("./pages/admin/BreachIncidents"), "BreachIncidents");
+const DataRetentionConfig = lazyPage(() => import("./pages/admin/DataRetentionConfig"), "DataRetentionConfig");
+const ReorderDashboard = lazyPage(() => import("./pages/reorder/ReorderDashboard"), "ReorderDashboard");
 
 export const router = createBrowserRouter([
      // ── Public marketing site ──
@@ -97,20 +101,25 @@ export const router = createBrowserRouter([
              { path: "dashboard/leakage", Component: LeakageDetectionPage },
              { path: "dashboard/fefo", Component: FefoTrackingPage },
              { path: "dashboard/vendors", Component: VendorCreditsPage },
-             // Owner/Administrator routes
-             { path: "owner/users", Component: ManageUsers },
-             { path: "owner/products", Component: ManageProducts },
-             { path: "owner/categories", Component: ManageCategories },
-             { path: "owner/suppliers", Component: ManageSuppliers },
-             { path: "owner/settings", Component: SystemSettings },
-             { path: "owner/reports", Component: GenerateReports },
-             { path: "owner/audit-logs", Component: AuditLogs },
-             { path: "owner/purchase-orders", Component: PurchaseOrders },
-             { path: "owner/performance", Component: InventoryPerformance },
-             { path: "owner/overstock", Component: OverstockRisks },
-             { path: "owner/replenishment", Component: Replenishment },
-             { path: "owner/supplier-performance", Component: SupplierPerformance },
-             { path: "owner/executive-reports", Component: ExecutiveReports },
+// Owner/Administrator routes
+            { path: "owner/users", Component: ManageUsers },
+            { path: "owner/products", Component: ManageProducts },
+            { path: "owner/categories", Component: ManageCategories },
+            { path: "owner/suppliers", Component: ManageSuppliers },
+            { path: "owner/settings", Component: SystemSettings },
+            { path: "owner/reports", Component: GenerateReports },
+            { path: "owner/audit-logs", Component: AuditLogs },
+            { path: "owner/purchase-orders", Component: PurchaseOrders },
+            { path: "owner/performance", Component: InventoryPerformance },
+            { path: "owner/overstock", Component: OverstockRisks },
+            { path: "owner/replenishment", Component: Replenishment },
+            { path: "owner/supplier-performance", Component: SupplierPerformance },
+            { path: "owner/executive-reports", Component: ExecutiveReports },
+            // Sprint 5: Admin privacy & compliance
+            { path: "admin/privacy-requests", Component: PrivacyRequests },
+            { path: "admin/breach-incidents", Component: BreachIncidents },
+            { path: "admin/data-retention", Component: DataRetentionConfig },
+            { path: "reorder/dashboard", Component: ReorderDashboard },
 // Inventory routes
             { path: "inventory/wastage", Component: RecordWastage },
             { path: "inventory/manage", Component: ManageInventory },

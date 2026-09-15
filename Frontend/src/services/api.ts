@@ -1394,3 +1394,175 @@ export const sanitation = {
     return request<ApiSanitationSummary>(`/sanitation/summary${q ? '?' + q : ''}`);
   },
 };
+
+// ─── Reorder ───────────────────────────────────────────────
+export interface ApiReorderSuggestionItem {
+  product_id: number;
+  product_name: string;
+  sku: string;
+  supplier_id: number;
+  supplier_name: string;
+  current_stock: number;
+  reorder_level: number;
+  target_stock: number;
+  quantity_needed: number;
+  adjusted_quantity: number;
+  unit_cost: number;
+  estimated_cost: number;
+  lead_time_days: number;
+  expiry_adjustment?: number;
+  branch_id?: number;
+  business_id?: number;
+  status: string;
+}
+
+export interface ApiReorderSuggestion {
+  supplier_id: number;
+  supplier_name: string;
+  items: ApiReorderSuggestionItem[];
+  total_items: number;
+  estimated_total_cost: number;
+  lead_time_days: number;
+  branch_id?: number;
+  business_id?: number;
+}
+
+export interface ApiReorderSummary {
+  total_products_analyzed: number;
+  products_needing_reorder: number;
+  suppliers_involved: number;
+  estimated_total_cost: number;
+}
+
+export const reorder = {
+  index: (params?: { safety_stock_multiplier?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.safety_stock_multiplier) qs.set('safety_stock_multiplier', String(params.safety_stock_multiplier));
+    const q = qs.toString();
+    return request<ApiReorderSuggestion[]>(`/reorder/suggestions${q ? '?' + q : ''}`);
+  },
+  approve: (data: { suggestions: ApiReorderSuggestion[] }) =>
+    request('/reorder/approve', { method: 'POST', body: JSON.stringify(data) }),
+  autoApprove: (data: { criteria?: { max_cost_per_po?: number; min_items_per_po?: number } }) =>
+    request('/reorder/auto-approve', { method: 'POST', body: JSON.stringify(data) }),
+};
+
+// ─── Privacy ────────────────────────────────────────────────
+export interface ApiDataSubjectRequest {
+  id: number;
+  business_id: number;
+  request_type: 'access' | 'rectification' | 'erasure' | 'portability' | 'restriction' | 'objection';
+  subject_identifier: string;
+  status: 'pending' | 'in_progress' | 'completed' | 'rejected';
+  requested_at: string;
+  completed_at: string | null;
+  notes: string | null;
+}
+
+export interface ApiDataBreachIncident {
+  id: number;
+  description: string;
+  personal_data_affected: string;
+  risk_assessment: 'low' | 'medium' | 'high' | 'critical';
+  status: 'open' | 'investigating' | 'contained' | 'notified' | 'resolved' | 'closed';
+  detected_at: string;
+  npc_notified_at: string | null;
+  subjects_notified_at: string | null;
+  resolved_at: string | null;
+  business_id: number;
+}
+
+export interface ApiBreachStatistics {
+  total: number;
+  by_status: Record<string, number>;
+  by_risk: Record<string, number>;
+  npc_notified: number;
+  subjects_notified: number;
+  avg_resolution_days: number;
+}
+
+export interface ApiPrivacyComplianceReport {
+  period: { from: string; to: string };
+  processing_records: {
+    total: number;
+    by_category: Record<string, number>;
+    by_legal_basis: Record<string, number>;
+  };
+  subject_requests: {
+    total: number;
+    by_type: Record<string, number>;
+    by_status: Record<string, number>;
+    avg_resolution_days: number;
+  };
+  breaches: {
+    total: number;
+    by_risk: Record<string, number>;
+    npc_notified: number;
+    subjects_notified: number;
+  };
+}
+
+export interface ApiRetentionPolicy {
+  entity_type: string;
+  retention_days: number;
+  description: string;
+  enabled: boolean;
+  last_purged: string | null;
+  records_purged: number;
+}
+
+export interface ApiRetentionSummary {
+  total_policies: number;
+  active_policies: number;
+  total_records_purged: number;
+  next_scheduled_purge: string | null;
+}
+
+export const privacy = {
+  requests: (params?: { type?: string; status?: string; page?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.type) qs.set('type', params.type);
+    if (params?.status) qs.set('status', params.status);
+    if (params?.page) qs.set('page', String(params.page));
+    const q = qs.toString();
+    return request<ApiDataSubjectRequest[]>(`/privacy/requests${q ? '?' + q : ''}`);
+  },
+  createRequest: (data: { request_type: string; subject_identifier: string; notes?: string }) =>
+    request('/privacy/requests', { method: 'POST', body: JSON.stringify(data) }),
+  approveRequest: (id: number) => request(`/privacy/requests/${id}/approve`, { method: 'POST' }),
+  rejectRequest: (id: number, data: { rejection_reason: string }) =>
+    request(`/privacy/requests/${id}/reject`, { method: 'POST', body: JSON.stringify(data) }),
+  deleteRequest: (id: number) => request(`/privacy/requests/${id}`, { method: 'DELETE' }),
+  complianceReport: (params?: { from?: string; to?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.from) qs.set('from', params.from);
+    if (params?.to) qs.set('to', params.to);
+    const q = qs.toString();
+    return request<ApiPrivacyComplianceReport>(`/privacy/compliance-report${q ? '?' + q : ''}`);
+  },
+  breaches: (params?: { status?: string; risk?: string; page?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.status) qs.set('status', params.status);
+    if (params?.risk) qs.set('risk', params.risk);
+    if (params?.page) qs.set('page', String(params.page));
+    const q = qs.toString();
+    return request<ApiDataBreachIncident[]>(`/privacy/breaches${q ? '?' + q : ''}`);
+  },
+  breachStatistics: () => request<ApiBreachStatistics>('/privacy/breaches/statistics'),
+  escalateBreach: (id: number) => request(`/privacy/breaches/${id}/escalate`, { method: 'POST' }),
+  notifyNPC: (id: number) => request(`/privacy/breaches/${id}/notify-npc`, { method: 'POST' }),
+  notifySubjects: (id: number) => request(`/privacy/breaches/${id}/notify-subjects`, { method: 'POST' }),
+containBreach: (id: number, data: { actions: string[] }) =>
+    request(`/privacy/breaches/${id}/contain`, { method: 'POST', body: JSON.stringify(data) }),
+  resolveBreach: (id: number, data: { resolution_notes: string }) =>
+    request(`/privacy/breaches/${id}/resolve`, { method: 'POST', body: JSON.stringify(data) }),
+  breachStatistics: () => request<ApiBreachStatistics>('/privacy/breaches/statistics'),
+  retentionPolicies: () => request<ApiRetentionPolicy[]>(`/privacy/retention-policies`),
+  createRetentionPolicy: (data: { entity_type: string; retention_days: number; description?: string; enabled?: boolean }) =>
+    request('/privacy/retention-policies', { method: 'POST', body: JSON.stringify(data) }),
+  updateRetentionPolicy: (entityType: string, data: Partial<{ retention_days: number; description: string; enabled: boolean }>) =>
+    request(`/privacy/retention-policies/${entityType}`, { method: 'PUT', body: JSON.stringify(data) }),
+  purgeNow: (entityType: string) => request(`/privacy/retention-policies/${entityType}/purge`, { method: 'POST' }),
+  testPurge: (entityType: string) => request(`/privacy/retention-policies/${entityType}/test-purge`, { method: 'POST' }),
+  retentionSummary: () => request<ApiRetentionSummary>('/privacy/retention-policies/summary'),
+};

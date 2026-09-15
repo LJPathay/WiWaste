@@ -83,10 +83,14 @@ Route::get('/health', fn () => response()->json(['status' => 'ok', 'service' => 
 Route::get('/sales',  [SalesTransactionController::class, 'index']);
 Route::get('/sales/{id}', [SalesTransactionController::class, 'show']);
 Route::post('/sales', [SalesTransactionController::class, 'store']);
+Route::get('/sales/{id}/receipt', [SalesTransactionController::class, 'receipt']);
 
 // Returns & Refunds
 Route::get('/returns',  [ReturnTransactionController::class, 'index']);
 Route::post('/returns', [ReturnTransactionController::class, 'store']);
+Route::post('/returns/{id}/approve', [ReturnTransactionController::class, 'approve']);
+Route::post('/returns/{id}/reject', [ReturnTransactionController::class, 'reject']);
+Route::get('/returns/{id}', [ReturnTransactionController::class, 'show']);
 
 // Reports
 Route::prefix('/reports')->group(function () {
@@ -96,6 +100,10 @@ Route::prefix('/reports')->group(function () {
     Route::get('/expiry-analysis',     [ReportController::class, 'expiryAnalysis']);
     Route::get('/category-analysis',   [ReportController::class, 'categoryAnalysis']);
     Route::get('/cost-impact',         [ReportController::class, 'costImpact']);
+    // Sprint 4: Sales Reports
+    Route::get('/sales-vat-summary',   [ReportController::class, 'salesVatSummary']);
+    Route::get('/discount-summary',    [ReportController::class, 'discountSummary']);
+    Route::get('/senior-pwd-log',      [ReportController::class, 'seniorPwdTransactionLog']);
 });
 
 // Settings

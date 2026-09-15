@@ -12,7 +12,18 @@ class SalesItem extends Model
 
     protected $fillable = [
         'transaction_id', 'product_id', 'quantity', 'unit_price', 'subtotal',
-        'original_price', 'override_reason'
+        'original_price', 'override_reason',
+        'vat_amount', 'vatable_amount', 'discount_amount', 'discount_pct', 'is_senior_pwd_exempt',
+    ];
+
+    protected $casts = [
+        'unit_price' => 'decimal:2',
+        'subtotal' => 'decimal:2',
+        'vat_amount' => 'decimal:2',
+        'vatable_amount' => 'decimal:2',
+        'discount_amount' => 'decimal:2',
+        'discount_pct' => 'decimal:2',
+        'is_senior_pwd_exempt' => 'boolean',
     ];
 
     public function transaction()

@@ -15,6 +15,13 @@ class SalesTransaction extends Model
         'branch_id',
         'user_id',
         'total_amount',
+        'vat_amount',
+        'vatable_amount',
+        'non_vatable_amount',
+        'senior_pwd_discount_amount',
+        'senior_pwd_vat_exempt_amount',
+        'discount_amount',
+        'discount_breakdown',
         'transaction_date',
         'payment_method',
         'payment_reference',
@@ -33,10 +40,17 @@ class SalesTransaction extends Model
 
     protected $casts = [
         'total_amount' => 'decimal:2',
+        'vat_amount' => 'decimal:2',
+        'vatable_amount' => 'decimal:2',
+        'non_vatable_amount' => 'decimal:2',
+        'senior_pwd_discount_amount' => 'decimal:2',
+        'senior_pwd_vat_exempt_amount' => 'decimal:2',
+        'discount_amount' => 'decimal:2',
         'amount_tendered' => 'decimal:2',
         'change_due' => 'decimal:2',
         'global_discount_pct' => 'decimal:2',
         'transaction_date' => 'datetime',
+        'discount_breakdown' => 'json',
     ];
 
     public function business()

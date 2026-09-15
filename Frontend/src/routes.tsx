@@ -57,6 +57,7 @@ const OverstockRisks = lazyPage(() => import("./pages/manager/OverstockRisks"), 
 const Replenishment = lazyPage(() => import("./pages/manager/Replenishment"), "Replenishment");
 const SupplierPerformance = lazyPage(() => import("./pages/manager/SupplierPerformance"), "SupplierPerformance");
 const ExecutiveReports = lazyPage(() => import("./pages/manager/ExecutiveReports"), "ExecutiveReports");
+const SalesReports = lazyPage(() => import("./pages/reports/SalesReports"), "SalesReports");
 
 export const router = createBrowserRouter([
      // ── Public marketing site ──
@@ -121,6 +122,8 @@ export const router = createBrowserRouter([
             { path: "inventory/reports", Component: InventoryReports },
             { path: "inventory/recalls", Component: RecallManagement },
             { path: "inventory/sanitation", Component: SanitationChecklist },
+            // Reports routes
+            { path: "reports/sales", Component: SalesReports },
          ],
      },
 

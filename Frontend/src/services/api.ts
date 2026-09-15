@@ -178,13 +178,27 @@ export const sales = {
   show: (id: number) => request<ApiSalesTransaction>(`/sales/${id}`),
   create: (data: CreateSalePayload) =>
     request('/sales', { method: 'POST', body: JSON.stringify(data) }),
+  receipt: (id: number) => request<ApiReceiptResponse>(`/sales/${id}/receipt`),
 };
 
 // ─── Returns ────────────────────────────────────────────
 export const returns = {
-  list: (page = 1) => request<PaginatedResponse<ApiReturn>>(`/returns?page=${page}`),
+  list: (params?: { page?: number; approval_status?: string; return_reason_code?: string; from_date?: string; to_date?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.page) qs.set('page', String(params.page));
+    if (params?.approval_status) qs.set('approval_status', params.approval_status);
+    if (params?.return_reason_code) qs.set('return_reason_code', params.return_reason_code);
+    if (params?.from_date) qs.set('from_date', params.from_date);
+    if (params?.to_date) qs.set('to_date', params.to_date);
+    const q = qs.toString();
+    return request<PaginatedResponse<ApiReturn>>(`/returns${q ? '?' + q : ''}`);
+  },
   create: (data: CreateReturnPayload) =>
     request('/returns', { method: 'POST', body: JSON.stringify(data) }),
+  approve: (id: number) => request(`/returns/${id}/approve`, { method: 'POST' }),
+  reject: (id: number, rejection_reason: string) =>
+    request(`/returns/${id}/reject`, { method: 'POST', body: JSON.stringify({ rejection_reason }) }),
+  show: (id: number) => request<ApiReturn>(`/returns/${id}`),
 };
 
 // ─── Reports ────────────────────────────────────────────
@@ -207,6 +221,27 @@ export const reports = {
   expiryAnalysis: (days?: number) => request<ApiReport[]>(`/reports/expiry-analysis${days ? '?days=' + days : ''}`),
   categoryAnalysis: () => request<ApiReport[]>('/reports/category-analysis'),
   costImpact: () => request<ApiReport[]>('/reports/cost-impact'),
+  salesVatSummary: (params?: { from?: string; to?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.from) qs.set('from', params.from);
+    if (params?.to) qs.set('to', params.to);
+    const q = qs.toString();
+    return request<ApiSalesVatSummary>(`/reports/sales-vat-summary${q ? '?' + q : ''}`);
+  },
+  discountSummary: (params?: { from?: string; to?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.from) qs.set('from', params.from);
+    if (params?.to) qs.set('to', params.to);
+    const q = qs.toString();
+    return request<ApiDiscountSummary>(`/reports/discount-summary${q ? '?' + q : ''}`);
+  },
+  seniorPwdTransactionLog: (params?: { from?: string; to?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.from) qs.set('from', params.from);
+    if (params?.to) qs.set('to', params.to);
+    const q = qs.toString();
+    return request<ApiSeniorPwdTransaction[]>(`/reports/senior-pwd-log${q ? '?' + q : ''}`);
+  },
 };
 
 // ─── Settings ───────────────────────────────────────────
@@ -429,6 +464,19 @@ export interface ApiSalesTransaction {
   id: number;
   cashier: string;
   total_amount: number;
+  vat_amount?: number;
+  vatable_amount?: number;
+  non_vatable_amount?: number;
+  senior_pwd_discount_amount?: number;
+  senior_pwd_vat_exempt_amount?: number;
+  discount_amount?: number;
+  discount_breakdown?: Array<{
+    type: string;
+    product_id?: number;
+    amount: number;
+    rate?: number;
+    pct?: number;
+  }>;
   transaction_date: string;
   payment_method: string;
   payment_reference?: string | null;
@@ -453,6 +501,11 @@ export interface ApiSalesItem {
   quantity: number;
   unit_price: number;
   subtotal: number;
+  vat_amount?: number;
+  vatable_amount?: number;
+  discount_amount?: number;
+  discount_pct?: number;
+  is_senior_pwd_exempt?: boolean;
 }
 
 export interface ApiReturn {
@@ -545,12 +598,117 @@ export interface CreateReturnPayload {
   sale_item_id: number;
   quantity_returned: number;
   reason?: string;
+  return_reason_code: 'defective' | 'wrong_item' | 'change_mind' | 'damaged' | 'expired' | 'missing_parts' | 'not_as_described' | 'other';
+  evidence_notes?: string;
+  evidence_photos?: string[];
   refund_amount: number;
   return_date: string;
 }
 
 export interface ApiReport {
   [key: string]: unknown;
+}
+
+export interface ApiSalesVatSummary {
+  summary: {
+    total_sales: number;
+    total_vat: number;
+    total_vatable: number;
+    total_non_vatable: number;
+    total_senior_pwd_discount: number;
+    total_senior_pwd_vat_exempt: number;
+    total_discount: number;
+  };
+  daily_breakdown: Array<{
+    date: string;
+    transaction_count: number;
+    daily_sales: number;
+    daily_vat: number;
+    daily_vatable: number;
+    daily_non_vatable: number;
+    daily_senior_pwd_discount: number;
+    daily_discount: number;
+  }>;
+}
+
+export interface ApiDiscountSummary {
+  transaction_level: {
+    total_discount: number;
+    total_senior_pwd_discount: number;
+    total_senior_pwd_vat_exempt: number;
+  };
+  item_level: {
+    total_item_discount: number;
+    senior_pwd_item_discount: number;
+    discounted_items_count: number;
+  };
+  combined: {
+    total_discount: number;
+    total_senior_pwd_discount: number;
+  };
+}
+
+export interface ApiSeniorPwdTransaction {
+  transaction_id: number;
+  date: string;
+  cashier: string;
+  senior_pwd_type: 'senior' | 'pwd' | 'none';
+  senior_pwd_id: string | null;
+  senior_pwd_name: string | null;
+  senior_pwd_discount: number;
+  senior_pwd_vat_exempt: number;
+  total_amount: number;
+  items: Array<{
+    product_name: string;
+    quantity: number;
+    is_exempt: boolean;
+    discount: number;
+  }>;
+}
+
+export interface ApiReceiptResponse {
+  receipt: {
+    transaction_id: number;
+    transaction_date: string;
+    business_name: string;
+    business_address: string;
+    business_tin: string;
+    cashier: string;
+    payment_method: string;
+    payment_reference?: string | null;
+    senior_pwd: {
+      type: 'senior' | 'pwd';
+      id: string;
+      name: string;
+      discount: number;
+    } | null;
+    items: Array<{
+      product_name: string;
+      quantity: number;
+      unit_price: number;
+      vat_amount: number;
+      vatable_amount: number;
+      discount_amount: number;
+      subtotal: number;
+      is_senior_pwd_exempt: boolean;
+    }>;
+    totals: {
+      subtotal: number;
+      discount: number;
+      senior_pwd_discount: number;
+      senior_pwd_vat_exempt: number;
+      vatable_sales: number;
+      non_vatable_sales: number;
+      vat_amount: number;
+      total: number;
+    };
+    payment: {
+      method: string;
+      reference?: string | null;
+      amount_tendered: number | null;
+      change_due: number | null;
+    };
+  };
 }
 
 export interface ApiDashboard {

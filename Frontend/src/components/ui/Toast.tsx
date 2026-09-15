@@ -102,6 +102,7 @@ interface ModalProps {
 
 export function Modal({ title, onClose, children, size = 'md' }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
+  const previousActiveElement = useRef<HTMLElement | null>(null);
   useFocusTrap(modalRef, true);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -109,6 +110,14 @@ export function Modal({ title, onClose, children, size = 'md' }: ModalProps) {
   }, [onClose]);
 
   const sizeClasses = { sm: 'max-w-md', md: 'max-w-lg', lg: 'max-w-2xl', xl: 'max-w-4xl' };
+
+  useEffect(() => {
+    previousActiveElement.current = document.activeElement as HTMLElement;
+    modalRef.current?.focus();
+    return () => {
+      previousActiveElement.current?.focus();
+    };
+  }, []);
 
   return (
     <div
@@ -121,12 +130,13 @@ export function Modal({ title, onClose, children, size = 'md' }: ModalProps) {
     >
       <div
         ref={modalRef}
-        className={`bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 w-full ${sizeClasses[size]} shadow-xl relative`}
+        tabIndex={-1}
+        className={`bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 w-full ${sizeClasses[size]} shadow-xl relative focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2`}
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-white/10">
           <h2 id="modal-title" className="text-sm font-bold text-slate-900 dark:text-slate-100">{title}</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" aria-label="Close">
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2" aria-label="Close">
             <X className="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
@@ -146,11 +156,20 @@ interface ConfirmProps {
 
 export function ConfirmDialog({ message, onConfirm, onCancel, confirmLabel = 'Confirm', danger = false }: ConfirmProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
+  const previousActiveElement = useRef<HTMLElement | null>(null);
   useFocusTrap(dialogRef, true);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Escape') onCancel();
   }, [onCancel]);
+
+  useEffect(() => {
+    previousActiveElement.current = document.activeElement as HTMLElement;
+    dialogRef.current?.focus();
+    return () => {
+      previousActiveElement.current?.focus();
+    };
+  }, []);
 
   return (
     <div
@@ -163,21 +182,22 @@ export function ConfirmDialog({ message, onConfirm, onCancel, confirmLabel = 'Co
     >
       <div
         ref={dialogRef}
-        className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-sm shadow-xl p-6"
+        tabIndex={-1}
+        className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-sm shadow-xl p-6 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
         onClick={e => e.stopPropagation()}
       >
         <p id="confirm-message" className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">{message}</p>
         <div className="mt-5 flex gap-3 justify-end">
           <button
             onClick={onCancel}
-            className="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+            className="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
           >
             Cancel
           </button>
           <button
             onClick={onConfirm}
             autoFocus
-            className={`px-4 py-2 text-xs font-semibold rounded-lg text-white transition-colors ${
+            className={`px-4 py-2 text-xs font-semibold rounded-lg text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 ${
               danger ? 'bg-rose-600 hover:bg-rose-700' : 'bg-[#006a61] hover:bg-[#00574f]'
             }`}
           >
@@ -189,13 +209,36 @@ export function ConfirmDialog({ message, onConfirm, onCancel, confirmLabel = 'Co
   );
 }
 
-interface FieldProps { label: string; children: React.ReactNode; }
+interface FieldProps {
+  label: string;
+  children: React.ReactNode;
+  error?: string;
+  hint?: string;
+  htmlFor?: string;
+}
 
-export function FormField({ label, children }: FieldProps) {
+export function FormField({ label, children, error, hint, htmlFor }: FieldProps) {
+  const errorId = error ? `${htmlFor}-error` : undefined;
+  const hintId = hint ? `${htmlFor}-hint` : undefined;
+  const describedBy = [errorId, hintId].filter(Boolean).join(' ') || undefined;
+
   return (
     <div>
-      <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">{label}</label>
-      {children}
+      <label htmlFor={htmlFor} className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">{label}</label>
+      {React.isValidElement(children) ? React.cloneElement(children as React.ReactElement, {
+        'aria-describedby': describedBy,
+        'aria-invalid': error ? 'true' : 'false',
+      }) : children}
+      {error && (
+        <p id={errorId} className="mt-1.5 text-xs text-red-600 dark:text-red-400" role="alert" aria-live="polite">
+          {error}
+        </p>
+      )}
+      {hint && !error && (
+        <p id={hintId} className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+          {hint}
+        </p>
+      )}
     </div>
   );
 }

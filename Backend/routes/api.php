@@ -27,11 +27,15 @@ use App\Http\Controllers\Api\VendorReturnController;
 use App\Http\Controllers\Api\ShiftController;
 use App\Http\Controllers\Api\AlertController;
 use App\Http\Controllers\Api\NotificationController;
-use App\Http\Controllers\Api\SanitationController;
-use App\Http\Controllers\Api\RecallController;
 use App\Http\Controllers\Api\ForecastAccuracyController;
 use App\Http\Controllers\Api\StockReceivingController;
 use App\Http\Controllers\Api\ReorderController;
+use App\Http\Controllers\Api\SanitationController;
+use App\Http\Controllers\Api\RecallController;
+use App\Http\Middleware\SecurityHeaders;
+use App\Http\Middleware\ForceHttps;
+use App\Http\Middleware\RateLimitMiddleware;
+use App\Http\Middleware\ValidateApiInput;
 
 /*
 |--------------------------------------------------------------------------
@@ -40,55 +44,57 @@ use App\Http\Controllers\Api\ReorderController;
 | Open access for development/prototyping across all roles & transactions.
 */
 
-// Auth
-Route::post('/login',  [AuthController::class, 'login']);
-Route::post('/logout', [AuthController::class, 'logout']);
-Route::get('/me',      [AuthController::class, 'me']);
+// Global middleware
+Route::middleware([SecurityHeaders::class, ForceHttps::class, RateLimitMiddleware::class])->group(function () {
+    // Auth
+    Route::post('/login',  [AuthController::class, 'login']);
+    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::get('/me',      [AuthController::class, 'me']);
 
-// User management
-Route::apiResource('/users', UserController::class);
-Route::post('/users/{id}/quarantine',  [UserController::class, 'quarantine']);
-Route::post('/users/{id}/reactivate',  [UserController::class, 'reactivate']);
+    // User management
+    Route::apiResource('/users', UserController::class);
+    Route::post('/users/{id}/quarantine',  [UserController::class, 'quarantine']);
+    Route::post('/users/{id}/reactivate',  [UserController::class, 'reactivate']);
 
-// Lookup tables
-Route::apiResource('/categories', CategoryController::class);
-Route::apiResource('/suppliers',  SupplierController::class);
-Route::get('/suppliers/compliance', [SupplierController::class, 'compliance']);
-Route::get('/suppliers/alerts', [SupplierController::class, 'alerts']);
+    // Lookup tables
+    Route::apiResource('/categories', CategoryController::class);
+    Route::apiResource('/suppliers',  SupplierController::class);
+    Route::get('/suppliers/compliance', [SupplierController::class, 'compliance']);
+    Route::get('/suppliers/alerts', [SupplierController::class, 'alerts']);
 
-// Products
-Route::apiResource('/products', ProductController::class);
-Route::get('/products/lookup/{code}', [ProductController::class, 'lookup']);
+    // Products
+    Route::apiResource('/products', ProductController::class);
+    Route::get('/products/lookup/{code}', [ProductController::class, 'lookup']);
 
-// Inventory
-Route::get('/inventory',             [InventoryController::class, 'index']);
-Route::post('/inventory/stock-in',   [InventoryController::class, 'stockIn']);
-Route::post('/inventory/stock-out',  [InventoryController::class, 'stockOut']);
-Route::get('/inventory/movements',   [InventoryController::class, 'allMovements']);
+    // Inventory
+    Route::get('/inventory',             [InventoryController::class, 'index']);
+    Route::post('/inventory/stock-in',   [InventoryController::class, 'stockIn']);
+    Route::post('/inventory/stock-out',  [InventoryController::class, 'stockOut']);
+    Route::get('/inventory/movements',   [InventoryController::class, 'allMovements']);
 
-// Stock Receiving (PO-based receiving)
-Route::get('/stock-receiving',                       [StockReceivingController::class, 'index']);
-Route::post('/stock-receiving',                      [StockReceivingController::class, 'store']);
-Route::post('/stock-receiving/{id}/receive',         [StockReceivingController::class, 'receive']);
-Route::post('/stock-receiving/{id}/reject',          [StockReceivingController::class, 'reject']);
-Route::post('/stock-receiving/{id}/discard',         [StockReceivingController::class, 'discard']);
+    // Stock Receiving (PO-based receiving)
+    Route::get('/stock-receiving',                       [StockReceivingController::class, 'index']);
+    Route::post('/stock-receiving',                      [StockReceivingController::class, 'store']);
+    Route::post('/stock-receiving/{id}/receive',         [StockReceivingController::class, 'receive']);
+    Route::post('/stock-receiving/{id}/reject',          [StockReceivingController::class, 'reject']);
+    Route::post('/stock-receiving/{id}/discard',         [StockReceivingController::class, 'discard']);
 
-// Wastage
-Route::get('/wastage',  [WastageRecordController::class, 'index']);
-Route::post('/wastage', [WastageRecordController::class, 'store']);
+    // Wastage
+    Route::get('/wastage',  [WastageRecordController::class, 'index']);
+    Route::post('/wastage', [WastageRecordController::class, 'store']);
 
-// Health Check
-Route::get('/health', fn () => response()->json(['status' => 'ok', 'service' => 'laravel']));
+    // Health Check
+    Route::get('/health', fn () => response()->json(['status' => 'ok', 'service' => 'laravel']));
 
-// Sales / POS
-Route::get('/sales',  [SalesTransactionController::class, 'index']);
-Route::get('/sales/{id}', [SalesTransactionController::class, 'show']);
-Route::post('/sales', [SalesTransactionController::class, 'store']);
-Route::get('/sales/{id}/receipt', [SalesTransactionController::class, 'receipt']);
+    // Sales / POS
+    Route::get('/sales',  [SalesTransactionController::class, 'index']);
+    Route::get('/sales/{id}', [SalesTransactionController::class, 'show']);
+    Route::post('/sales', [SalesTransactionController::class, 'store']);
+    Route::get('/sales/{id}/receipt', [SalesTransactionController::class, 'receipt']);
 
-// Returns & Refunds
-Route::get('/returns',  [ReturnTransactionController::class, 'index']);
-Route::post('/returns', [ReturnTransactionController::class, 'store']);
+    // Returns & Refunds
+    Route::get('/returns',  [ReturnTransactionController::class, 'index']);
+    Route::post('/returns', [ReturnTransactionController::class, 'store']);
 Route::post('/returns/{id}/approve', [ReturnTransactionController::class, 'approve']);
 Route::post('/returns/{id}/reject', [ReturnTransactionController::class, 'reject']);
 Route::get('/returns/{id}', [ReturnTransactionController::class, 'show']);
@@ -230,3 +236,5 @@ Route::post('/notifications/read-all',    [NotificationController::class, 'markA
 Route::post('/ml/accuracy',               [ForecastAccuracyController::class, 'store']);
 Route::get('/ml/accuracy/alerts',         [ForecastAccuracyController::class, 'alerts']);
 Route::get('/ml/accuracy/{product_id}',   [ForecastAccuracyController::class, 'show']);
+
+});

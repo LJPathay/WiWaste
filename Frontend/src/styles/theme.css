@@ -399,6 +399,40 @@
     }
 }
 
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Focus visible styles for keyboard navigation */
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: more) {
+  :root {
+    --brand: #004d40;
+    --brand-foreground: #ffffff;
+  }
+  .dark {
+    --brand: #a7f3d0;
+    --brand-foreground: #000000;
+  }
+}
+
 @media print {
     html, body {
         width: 80mm !important;

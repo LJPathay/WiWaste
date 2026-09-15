@@ -1556,7 +1556,6 @@ containBreach: (id: number, data: { actions: string[] }) =>
     request(`/privacy/breaches/${id}/contain`, { method: 'POST', body: JSON.stringify(data) }),
   resolveBreach: (id: number, data: { resolution_notes: string }) =>
     request(`/privacy/breaches/${id}/resolve`, { method: 'POST', body: JSON.stringify(data) }),
-  breachStatistics: () => request<ApiBreachStatistics>('/privacy/breaches/statistics'),
   retentionPolicies: () => request<ApiRetentionPolicy[]>(`/privacy/retention-policies`),
   createRetentionPolicy: (data: { entity_type: string; retention_days: number; description?: string; enabled?: boolean }) =>
     request('/privacy/retention-policies', { method: 'POST', body: JSON.stringify(data) }),

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo, memo } from 'react';
 import { HeaderLabelProvider } from './HeaderLabelProvider';
 import { Navigate, Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import { SkipLink } from './SkipLink';
 import {
   LogOut,
   LayoutDashboard,
@@ -333,6 +334,12 @@ export function DashboardLayout() {
 
   return (
     <ErrorBoundary><div className="h-screen bg-[#f4f7fb] text-[#1b1b1d] font-['Inter',sans-serif] transition-colors duration-200 dark:bg-slate-950 dark:text-slate-100 overflow-hidden">
+      <SkipLink targets={[
+        { id: 'main-content', label: 'Main Content' },
+        { id: 'sidebar', label: 'Sidebar Navigation' },
+        { id: 'header', label: 'Header' },
+        { id: 'footer', label: 'Footer' }
+      ]} />
       <div className="flex h-screen w-full overflow-hidden">
 
         {/* ── Desktop Sidebar ── */}
@@ -469,7 +476,7 @@ export function DashboardLayout() {
                 </header>
 
                 {/* Page content */}
-                <div className="theme-content min-w-0 flex-1 relative p-6 bg-white dark:bg-slate-900 transition-colors duration-200">
+                <div className="theme-content min-w-0 flex-1 relative p-6 bg-white dark:bg-slate-900 transition-colors duration-200" id="main-content">
                   <Breadcrumb />
                   <Outlet />
                 </div>
@@ -477,6 +484,12 @@ export function DashboardLayout() {
             )}
           </HeaderLabelProvider>
         </div>
+        {/* Footer */}
+        <footer className="border-t border-gray-200 dark:border-white/10 bg-white/50 dark:bg-slate-900/50 py-4 px-6" id="footer" role="contentinfo">
+          <p className="text-xs text-center text-slate-500 dark:text-slate-400">
+            © 2026 WiWaste. All rights reserved.
+          </p>
+        </footer>
       </div>
     </div></ErrorBoundary>
   );

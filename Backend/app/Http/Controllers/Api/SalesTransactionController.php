@@ -93,9 +93,10 @@ class SalesTransactionController extends Controller
         return $deductions;
     }
 
-    protected function calculateItemVat(float $unitPrice, int $quantity, bool $isVatExempt = false): array
+    protected function calculateItemVat(float $sellingPrice, int $quantity, bool $isVatExempt = false): array
     {
-        $subtotal = $unitPrice * $quantity;
+        // sellingPrice is the actual unit price the customer pays (after all discounts)
+        $subtotal = $sellingPrice * $quantity;
         if ($isVatExempt) {
             return [
                 'vatable_amount' => 0,
@@ -369,8 +370,11 @@ class SalesTransactionController extends Controller
                     $isVatExempt = true;
                 }
 
-                // Calculate VAT for this item
-                $vatCalc = $this->calculateItemVat($unitPrice, $quantity, $isVatExempt);
+                // Actual selling price per unit (after all discounts)
+                $sellingPrice = $quantity > 0 ? round($subtotal / $quantity, 2) : $unitPrice;
+
+                // Calculate VAT for this item using the actual selling price
+                $vatCalc = $this->calculateItemVat($sellingPrice, $quantity, $isVatExempt);
 
                 $saleItem = SalesItem::create([
                     'transaction_id'      => $transaction->transaction_id,
@@ -540,43 +544,91 @@ class SalesTransactionController extends Controller
         }
 
         $business = $transaction->branch?->business ?? $transaction->business;
+        $branch = $transaction->branch;
+
+        // Generate receipt serial number (ATP + date + sequence)
+        $receiptSerial = 'ATP-' . $transaction->transaction_id . '-' . now()->format('YmdHis');
 
         return response()->json([
             'receipt' => [
+                // BIR Required Fields
+                'atp_number' => $business?->atp_number ?? 'ATP-000000000',
+                'atp_expiry' => $business?->atp_expiry ?? null,
+                'permit_number' => $business?->permit_number ?? null,
+                'receipt_serial' => $receiptSerial,
+                
+                // Business Information
+                'business_name' => $business?->name ?? 'WiWaste',
+                'business_trade_name' => $business?->trade_name ?? null,
+                'business_address' => $branch?->address ?? $business?->address ?? 'N/A',
+                'business_tin' => $business?->tin ?? 'N/A',
+                'business_vat_reg' => $business?->vat_registered ? 'VAT' : 'NON-VAT',
+                
+                // Branch Information
+                'branch_name' => $branch?->name ?? null,
+                'branch_address' => $branch?->address ?? null,
+                'branch_code' => $branch?->code ?? null,
+                
+                // Transaction Information
                 'transaction_id' => $transaction->transaction_id,
                 'transaction_date' => $transaction->transaction_date,
-                'business_name' => $business?->name ?? 'WiWaste',
-                'business_address' => $transaction->branch?->address ?? 'N/A',
-                'business_tin' => $business?->tin ?? 'N/A',
+                'transaction_time' => $transaction->transaction_date ? $transaction->transaction_date->format('H:i:s') : null,
+                
+                // Cashier
                 'cashier' => $transaction->user?->Full_name ?? 'Cashier',
+                'cashier_id' => $transaction->user_id,
+                
+                // Payment
                 'payment_method' => $transaction->payment_method,
                 'payment_reference' => $transaction->payment_reference,
+                'amount_tendered' => $transaction->amount_tendered,
+                'change_due' => $transaction->change_due,
+                
+                // Senior/PWD
                 'senior_pwd' => $transaction->senior_pwd_type !== 'none' ? [
                     'type' => $transaction->senior_pwd_type,
                     'id' => $transaction->senior_pwd_id,
                     'name' => $transaction->senior_pwd_name,
                     'discount' => $transaction->senior_pwd_discount_amount,
                 ] : null,
+                
+                // Items with VAT breakdown
                 'items' => $transaction->salesItems->map(fn ($item) => [
                     'product_name' => $item->product?->product_name,
                     'quantity' => $item->quantity,
                     'unit_price' => $item->unit_price,
+                    'discount_amount' => $item->discount_amount,
+                    'discount_pct' => $item->discount_pct,
+                    'subtotal' => $item->subtotal,
                     'vat_amount' => $item->vat_amount,
                     'vatable_amount' => $item->vatable_amount,
+                    'non_vatable_amount' => $item->non_vatable_amount,
                     'discount_amount' => $item->discount_amount,
-                    'subtotal' => $item->subtotal,
                     'is_senior_pwd_exempt' => $item->is_senior_pwd_exempt,
                 ]),
+                
+                // VAT Breakdown (BIR Compliant)
+                'vat_breakdown' => [
+                    'vatable_sales' => $transaction->vatable_amount,
+                    'vat_exempt_sales' => $transaction->non_vatable_amount + $transaction->senior_pwd_vat_exempt_amount,
+                    'zero_rated_sales' => 0,
+                    'vat_amount' => $transaction->vat_amount,
+                ],
+                
+                // Totals
                 'totals' => [
-                    'subtotal' => $transaction->total_amount + $transaction->discount_amount + $transaction->senior_pwd_discount_amount,
+                    'gross_sales' => $transaction->total_amount + $transaction->discount_amount + $transaction->senior_pwd_discount_amount,
                     'discount' => $transaction->discount_amount,
                     'senior_pwd_discount' => $transaction->senior_pwd_discount_amount,
                     'senior_pwd_vat_exempt' => $transaction->senior_pwd_vat_exempt_amount,
                     'vatable_sales' => $transaction->vatable_amount,
                     'non_vatable_sales' => $transaction->non_vatable_amount,
+                    'vat_exempt_sales' => $transaction->senior_pwd_vat_exempt_amount,
                     'vat_amount' => $transaction->vat_amount,
                     'total' => $transaction->total_amount,
                 ],
+                
+                // Payment
                 'payment' => [
                     'method' => $transaction->payment_method,
                     'reference' => $transaction->payment_reference,

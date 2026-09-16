@@ -195,8 +195,12 @@
 }
 
 @layer base {
-    * {
+    *,
+    *::before,
+    *::after {
         @apply border-border outline-ring/50;
+        border-style: solid;
+        border-width: 0;
     }
 
     body {

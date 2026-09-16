@@ -216,7 +216,7 @@ const SidebarInner = memo(function SidebarInner({
 }) {
   return (
     <div className="flex h-full flex-col bg-[#f5f5f5] dark:bg-slate-900 transition-colors duration-200">
-      <div className="border-b border-gray-200 dark:border-white/10 px-3 py-3 bg-white dark:bg-slate-950">
+      <div className="px-3 py-3 bg-white dark:bg-slate-950">
         <div className="flex items-center justify-between gap-2">
           <div className={`flex min-w-0 items-center flex-1 ${compact ? 'justify-center' : 'justify-start'}`}>
             <div className={`flex items-center justify-center ${compact ? 'h-10 w-10' : 'h-10 px-2'}`}>
@@ -251,7 +251,7 @@ const SidebarInner = memo(function SidebarInner({
       </div>
 
       {!compact && (
-        <div className="border-b border-gray-200 dark:border-white/10 px-4 py-3 bg-white dark:bg-slate-950">
+        <div className="px-4 py-3 bg-white dark:bg-slate-950">
           <p className="text-xs font-semibold text-gray-800 dark:text-slate-100 truncate">{session.name}</p>
           <p className="text-xs text-gray-500 dark:text-slate-400">{getRoleDisplayName(session.role)}</p>
         </div>
@@ -362,7 +362,7 @@ export function DashboardLayout() {
   };
 
   return (
-    <ErrorBoundary><div className="h-screen bg-[#f4f7fb] text-[#1b1b1d] font-['Inter',sans-serif] transition-colors duration-200 dark:bg-slate-950 dark:text-slate-100 overflow-hidden">
+    <ErrorBoundary><div className="h-screen bg-white text-[#1b1b1d] font-['Inter',sans-serif] transition-colors duration-200 dark:bg-slate-950 dark:text-slate-100 overflow-hidden">
       <SkipLink targets={[
         { id: 'main-content', label: 'Main Content' },
         { id: 'sidebar', label: 'Sidebar Navigation' },
@@ -373,7 +373,7 @@ export function DashboardLayout() {
 
         {/* ── Desktop Sidebar ── */}
         <aside
-          className={`hidden md:flex flex-none flex-col overflow-hidden border-r border-gray-200 dark:border-white/10 bg-[#f5f5f5] dark:bg-slate-900 text-gray-700 dark:text-slate-300 transition-all duration-300 h-screen sticky top-0 transition-colors duration-200 ${sidebarWidth}`}
+          className={`hidden md:flex flex-none flex-col overflow-hidden bg-[#f5f5f5] dark:bg-slate-900 text-gray-700 dark:text-slate-300 transition-all duration-300 h-screen sticky top-0 transition-colors duration-200 ${sidebarWidth}`}
         >
           <SidebarInner
             compact={collapsed}
@@ -408,7 +408,7 @@ export function DashboardLayout() {
         {/* ── Main Content ── */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {/* Top bar for mobile */}
-          <header className="md:hidden sticky top-0 z-30 flex h-14 items-center justify-between border-b border-gray-200/50 dark:border-white/10 bg-white/60 dark:bg-slate-950/60 backdrop-blur-md px-4 transition-colors duration-200 flex-shrink-0">
+          <header className="md:hidden sticky top-0 z-30 flex h-14 items-center justify-between bg-white/60 dark:bg-slate-950/60 backdrop-blur-md px-4 transition-colors duration-200 flex-shrink-0">
             <button
               type="button"
               onClick={() => setMobileOpen(true)}
@@ -427,7 +427,7 @@ export function DashboardLayout() {
           >
             {(state) => (
               <>
-                <header className="hidden md:flex sticky top-0 z-30 h-14 items-center justify-between border-b border-gray-200/50 dark:border-white/10 bg-white/60 dark:bg-slate-950/60 backdrop-blur-md px-6 gap-3 overflow-hidden transition-colors duration-200 flex-shrink-0">
+                <header className="hidden md:flex sticky top-0 z-30 h-14 items-center justify-between bg-white/60 dark:bg-slate-950/60 backdrop-blur-md px-6 gap-3 overflow-hidden transition-colors duration-200 flex-shrink-0">
                   {/* ── Mode 1: Quick Access Bar ── */}
                   {headerStyle === 'quick-access' && (
                     <>
@@ -510,7 +510,7 @@ export function DashboardLayout() {
                   <Outlet />
                 </div>
                 {/* Footer */}
-                <footer className="border-t border-gray-200 dark:border-white/10 bg-white/50 dark:bg-slate-900/50 py-4 px-6 flex-shrink-0" id="footer" role="contentinfo">
+                <footer className="bg-white/50 dark:bg-slate-900/50 py-4 px-6 flex-shrink-0" id="footer" role="contentinfo">
                   <p className="text-xs text-center text-slate-500 dark:text-slate-400">
                     © 2026 WiWaste. All rights reserved.
                   </p>

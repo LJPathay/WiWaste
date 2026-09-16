@@ -6,7 +6,7 @@ interface SkipLinkProps {
 
 export function SkipLink({ targets }: SkipLinkProps) {
   return (
-    <nav aria-label="Skip links" className="sr-only focus-within:not-sr-only fixed top-0 left-0 z-[100] w-full">
+    <nav aria-label="Skip links" className="sr-only focus-within:not-sr-only fixed top-4 left-4 z-[100] w-full">
       <ul className="flex flex-col gap-2 p-4" role="list">
         {targets.map((target) => (
           <li key={target.id}>

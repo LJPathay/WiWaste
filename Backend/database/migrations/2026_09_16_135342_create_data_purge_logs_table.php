@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('data_purge_logs', function (Blueprint $table) {
             $table->id('log_id');
             $table->foreignId('business_id')->constrained('businesses')->onDelete('cascade');
-            $table->foreignId('policy_id')->nullable()->constrained('data_retention_policies')->onDelete('set null');
+            $table->foreignId('policy_id')->nullable()->constrained('data_retention_policies', 'policy_id')->onDelete('set null');
             $table->string('entity_type', 100);
             $table->string('entity_table', 100);
             $table->bigInteger('records_purged')->default(0);

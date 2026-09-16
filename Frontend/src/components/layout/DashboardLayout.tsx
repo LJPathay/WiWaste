@@ -408,7 +408,7 @@ export function DashboardLayout() {
         {/* ── Main Content ── */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {/* Top bar for mobile */}
-          <header className="md:hidden sticky top-0 z-30 flex h-14 items-center justify-between bg-white/60 dark:bg-slate-950/60 backdrop-blur-md px-4 transition-colors duration-200 flex-shrink-0">
+          <header className="md:hidden sticky top-0 z-30 flex h-14 items-center justify-between bg-white dark:bg-slate-950 px-4 transition-colors duration-200 flex-shrink-0">
             <button
               type="button"
               onClick={() => setMobileOpen(true)}
@@ -427,7 +427,7 @@ export function DashboardLayout() {
           >
             {(state) => (
               <>
-                <header className="hidden md:flex sticky top-0 z-30 h-14 items-center justify-between bg-white/60 dark:bg-slate-950/60 backdrop-blur-md px-6 gap-3 overflow-hidden transition-colors duration-200 flex-shrink-0">
+                <header className="hidden md:flex sticky top-0 z-30 h-14 items-center justify-between bg-white dark:bg-slate-950 px-6 gap-3 overflow-hidden transition-colors duration-200 flex-shrink-0">
                   {/* ── Mode 1: Quick Access Bar ── */}
                   {headerStyle === 'quick-access' && (
                     <>
@@ -505,7 +505,7 @@ export function DashboardLayout() {
                 </header>
 
                 {/* Page content */}
-                <div className="theme-content min-w-0 flex-1 relative p-6 bg-white dark:bg-slate-900 transition-colors duration-200" id="main-content">
+                <div className="theme-content min-w-0 flex-1 relative p-6 bg-transparent dark:bg-transparent border-0 outline-none shadow-none transition-colors duration-200" id="main-content">
                   <Breadcrumb />
                   <Outlet />
                 </div>

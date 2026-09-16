@@ -531,3 +531,49 @@ resolved_at
 ---
 
 *This plan is a living document. Update the Compliance Matrix and sprint tasks as decisions evolve.*
+
+---
+
+## O. Missing Information (Updated with Business Input)
+
+List the exact questions we should ask the business representative next to confirm the process.
+
+### Confirmed / Clarified
+
+| # | Question | Business Answer | Impact |
+|---|----------|----------------|--------|
+| 11 | How frequently is expiry checking done? | **Quarterly** (not monthly as initially recalled) | System should support quarterly + on-demand; alerts still daily |
+| 12 | Is checking per batch or per product? | **Per batch** - "system should able to input on which batch it is as some products have different expiry dates" | Confirms batch-level tracking requirement (FEFO) |
+| 13 | Different policies per supplier/product? | **No** - "pharmacy + small market" - uniform policy | Simplifies supplier exchange workflow; no per-product config needed |
+
+### Still Unknown (Priority Questions)
+
+| # | Question | Notes |
+|---|----------|-------|
+| 1 | How are supplier exchanges actually performed? | Logistics? Who initiates? |
+| 2 | What does supplier provide? | Replacement products (same/different)? Credit note? Cash refund? Mix? |
+| 3 | Deadline for returns? | e.g., "within 30 days of expiry"? |
+| 4 | Partial acceptance? | Does supplier ever accept only some units? |
+| 5 | (Duplicate of 13) | Already answered: uniform policy |
+| 6 | How are B1T1 promotions recorded? | Manual tally? POS promotion? Not recorded? |
+| 7 | Are near-expiry products physically separated? | Dedicated shelf/section? Sticker? |
+| 8 | How are disposed products recorded? | Paper log? System? Photos? Witness? |
+| 9 | Quantity affected by promotions tracked? | |
+| 10 | Financial value of actions tracked? | Exchange credit, discount impact, disposal cost |
+| 16 | Historical data availability | Years of sales? Wastage records? Exchange records? |
+| 17 | Current POS export capability | Transaction-level data? Batch/lot tracking? |
+
+### Assumptions Log
+
+| # | Assumption | Validation Method |
+|---|------------|-------------------|
+| A1 | Quarterly check → daily system alerts still needed | Confirm with owner |
+| A2 | 7/30 day thresholds appropriate | Validate with product shelf-life data |
+| A3 | Cost price = loss valuation basis | Confirm accounting method |
+| A4 | Manager approves exchanges | Confirm approval chain |
+| A5 | Discounts ≤20% auto-approved | Validate limit |
+| A6 | FEFO deduction acceptable for POS | Test with cashier workflow |
+| A7 | Batch-level tracking feasible | Verify receiving captures batch data |
+| A8 | Uniform supplier policy simplifies workflow | Confirmed by business |
+
+Clearly label every assumption and do not present assumptions as confirmed facts.

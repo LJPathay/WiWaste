@@ -406,9 +406,9 @@ export function DashboardLayout() {
         )}
 
         {/* ── Main Content ── */}
-        <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {/* Top bar for mobile */}
-          <header className="md:hidden sticky top-0 z-30 flex h-14 items-center justify-between border-b border-gray-200/50 dark:border-white/10 bg-white/60 dark:bg-slate-950/60 backdrop-blur-md px-4 transition-colors duration-200">
+          <header className="md:hidden sticky top-0 z-30 flex h-14 items-center justify-between border-b border-gray-200/50 dark:border-white/10 bg-white/60 dark:bg-slate-950/60 backdrop-blur-md px-4 transition-colors duration-200 flex-shrink-0">
             <button
               type="button"
               onClick={() => setMobileOpen(true)}
@@ -427,7 +427,7 @@ export function DashboardLayout() {
           >
             {(state) => (
               <>
-                <header className="hidden md:flex sticky top-0 z-30 h-14 items-center justify-between border-b border-gray-200/50 dark:border-white/10 bg-white/60 dark:bg-slate-950/60 backdrop-blur-md px-6 gap-3 overflow-hidden transition-colors duration-200">
+                <header className="hidden md:flex sticky top-0 z-30 h-14 items-center justify-between border-b border-gray-200/50 dark:border-white/10 bg-white/60 dark:bg-slate-950/60 backdrop-blur-md px-6 gap-3 overflow-hidden transition-colors duration-200 flex-shrink-0">
                   {/* ── Mode 1: Quick Access Bar ── */}
                   {headerStyle === 'quick-access' && (
                     <>
@@ -509,16 +509,16 @@ export function DashboardLayout() {
                   <Breadcrumb />
                   <Outlet />
                 </div>
+                {/* Footer */}
+                <footer className="border-t border-gray-200 dark:border-white/10 bg-white/50 dark:bg-slate-900/50 py-4 px-6 flex-shrink-0" id="footer" role="contentinfo">
+                  <p className="text-xs text-center text-slate-500 dark:text-slate-400">
+                    © 2026 WiWaste. All rights reserved.
+                  </p>
+                </footer>
               </>
             )}
           </HeaderLabelProvider>
         </div>
-        {/* Footer */}
-        <footer className="border-t border-gray-200 dark:border-white/10 bg-white/50 dark:bg-slate-900/50 py-4 px-6" id="footer" role="contentinfo">
-          <p className="text-xs text-center text-slate-500 dark:text-slate-400">
-            © 2026 WiWaste. All rights reserved.
-          </p>
-        </footer>
       </div>
     </div></ErrorBoundary>
   );

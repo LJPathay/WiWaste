@@ -85,6 +85,35 @@ const sidebarGroupsByRole: Record<UserRole, SidebarGroup[]> = {
       ],
     },
   ],
+  manager: [
+    {
+      group: 'OVERVIEW',
+      items: [
+        { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      ],
+    },
+    {
+      group: 'INVENTORY MANAGEMENT',
+      items: [
+        { to: '/manager/inventory-performance', label: 'Inventory Performance', icon: TrendingUp },
+        { to: '/manager/overstock-risks', label: 'Overstock Risks', icon: AlertTriangle },
+        { to: '/manager/replenishment', label: 'Replenishment', icon: CheckCircle },
+      ],
+    },
+    {
+      group: 'SUPPLY CHAIN',
+      items: [
+        { to: '/manager/supplier-performance', label: 'Supplier Performance', icon: Users },
+        { to: '/owner/purchase-orders', label: 'Purchase Orders', icon: Package },
+      ],
+    },
+    {
+      group: 'REPORTS',
+      items: [
+        { to: '/manager/executive-reports', label: 'Executive Reports', icon: FileText },
+      ],
+    },
+  ],
   inventory: [
     {
       group: 'Overview',

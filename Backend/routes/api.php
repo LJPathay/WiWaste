@@ -239,6 +239,6 @@ Route::get('/ml/accuracy/alerts',         [ForecastAccuracyController::class, 'a
 Route::get('/ml/accuracy/{product_id}',   [ForecastAccuracyController::class, 'show']);
 
 // Webhook Framework
-Route::post('/webhooks/{provider}', [WebhookController::class, 'handle']);
+    Route::post('/webhooks/{provider}', [WebhookController::class, 'handle']);
 
 });

@@ -150,7 +150,7 @@ class SalesTransactionController extends Controller
         $user = $request->user();
         $userId = $user?->User_id ?? 1;
 
-        $result = DB::transaction(function () use ($data, $userId, $user) {
+        $result = DB::transaction(function () use ($data, $userId, $user, $request) {
             // First pass: validate stock and calculate totals
             $query = Inventory::whereIn('product_id', collect($data['items'])->pluck('product_id'));
             $query = $this->scopeForBusinessAndBranch($query, $request);

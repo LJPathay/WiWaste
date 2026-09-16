@@ -3,7 +3,7 @@
  * Demonstrates core functionality with sample data.
  */
 
-export type UserRole = 'owner' | 'inventory' | 'cashier';
+export type UserRole = 'owner' | 'inventory' | 'cashier' | 'manager';
 
 interface User {
   id: string;
@@ -28,16 +28,18 @@ const ROLE_LABELS: Record<UserRole, string> = {
   owner: 'Owner/Administrator',
   inventory: 'Inventory Staff',
   cashier: 'Cashier',
+  manager: 'Manager',
 };
 
 const ROLE_LIMITS: Record<UserRole, number> = {
   owner: 5,
   inventory: 3,
   cashier: 2,
+  manager: 4,
 };
 
 function normalizeRole(role?: string): UserRole {
-  if (role === 'owner' || role === 'inventory' || role === 'cashier') return role;
+  if (role === 'owner' || role === 'inventory' || role === 'cashier' || role === 'manager') return role;
   if (role === 'analyst') return 'inventory';
   return 'owner';
 }
@@ -47,6 +49,7 @@ export function inferRoleFromEmail(email: string): UserRole {
 
   if (normalized.includes('cashier') || normalized.includes('pos')) return 'cashier';
   if (normalized.includes('inventory') || normalized.includes('staff') || normalized.includes('stock')) return 'inventory';
+  if (normalized.includes('manager')) return 'manager';
   if (normalized.includes('owner')) return 'owner';
 
   return 'owner';
@@ -194,6 +197,10 @@ export async function mockLogin(email: string, password: string, role?: UserRole
     cashier: {
       name: 'Carlo Reyes',
       company: 'Ipharma Mart POS',
+    },
+    manager: {
+      name: 'Ramon Santos',
+      company: 'WiWaste Management',
     },
   };
 

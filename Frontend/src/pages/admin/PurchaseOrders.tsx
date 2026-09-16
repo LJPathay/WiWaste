@@ -235,7 +235,8 @@ export function PurchaseOrders() {
           <div className="relative flex-1">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
             <input type="text" placeholder="Search PO number or supplier..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
-              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 pl-8 pr-3 h-8 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-700 dark:text-slate-300" />
+              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 pl-8 pr-3 h-8 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-700 dark:text-slate-300"
+              aria-label="Search PO number or supplier" />
           </div>
           <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
             className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 h-8 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-400 focus:outline-none focus:ring-1 focus:ring-[#006a61]">
@@ -295,7 +296,7 @@ export function PurchaseOrders() {
           <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto m-4" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-white/10">
               <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">New Purchase Order</h2>
-              <button onClick={() => setShowCreate(false)} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700"><X className="h-4 w-4" /></button>
+              <button onClick={() => setShowCreate(false)} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700" aria-label="Close"><X className="h-4 w-4" /></button>
             </div>
             <div className="p-4 space-y-3">
               <div>
@@ -328,7 +329,7 @@ export function PurchaseOrders() {
                         className="w-20 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg px-2 h-8 text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61]" placeholder="Qty" />
                       <input type="number" min={0} step="0.01" value={item.unit_price} onChange={e => updateItem(idx, 'unit_price', Number(e.target.value))}
                         className="w-24 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg px-2 h-8 text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61]" placeholder="Price" />
-                      <button onClick={() => removeItem(idx)} className="p-1.5 rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-600"><X className="h-3.5 w-3.5" /></button>
+                      <button onClick={() => removeItem(idx)} className="p-1.5 rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-600" aria-label="Remove item"><X className="h-3.5 w-3.5" /></button>
                     </div>
                   ))}
                 </div>
@@ -350,7 +351,7 @@ export function PurchaseOrders() {
           <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto m-4" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-white/10">
               <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">{showDetail.order.po_number}</h2>
-              <button onClick={() => setShowDetail({ open: false, order: null })} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700"><X className="h-4 w-4" /></button>
+              <button onClick={() => setShowDetail({ open: false, order: null })} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700" aria-label="Close detail"><X className="h-4 w-4" /></button>
             </div>
             <div className="p-4 space-y-2.5 text-xs">
               <div className="grid grid-cols-2 gap-3">
@@ -385,7 +386,7 @@ export function PurchaseOrders() {
           <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-lg m-4" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-white/10">
               <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Receive Stock — {showReceive.order.po_number}</h2>
-              <button onClick={() => setShowReceive({ open: false, order: null })} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700"><X className="h-4 w-4" /></button>
+              <button onClick={() => setShowReceive({ open: false, order: null })} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700" aria-label="Close receive"><X className="h-4 w-4" /></button>
             </div>
             <div className="p-4 space-y-2.5">
               <p className="text-xs text-slate-500">Enter the quantity received for each item.</p>

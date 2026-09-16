@@ -219,7 +219,8 @@ export function OverstockRisks() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-3.5 border-b border-slate-100 dark:border-white/10">
           <h2 className="text-sm font-bold text-slate-700 dark:text-slate-200">Flagged Overstock Items</h2>
           <input type="text" placeholder="Search items…" value={search} onChange={(e) => setSearch(e.target.value)}
-            className="w-full sm:w-64 h-8 rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-700 px-3 text-xs text-slate-700 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#006a61]" />
+            className="w-full sm:w-64 h-8 rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-700 px-3 text-xs text-slate-700 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#006a61]"
+            aria-label="Search overstock items" />
         </div>
         <DataTable
           className="border-0 rounded-none shadow-none bg-transparent"

@@ -213,7 +213,7 @@ export function DataTable<T extends Record<string, unknown>>({
                         <TableCell
                           key={col.key}
                           className={cn(
-                            col.align === 'numeric' && "text-right tabular-nums",
+                            (col.align === 'numeric' || col.numeric) && "text-right tabular-nums",
                             col.align === 'center' && "text-center",
                             col.pinned && "sticky left-0 z-10 bg-white dark:bg-slate-950 group-hover:bg-slate-50/50 dark:group-hover:bg-white/5",
                             col.numeric && "tabular-nums",

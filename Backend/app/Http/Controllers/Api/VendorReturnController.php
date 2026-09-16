@@ -292,7 +292,7 @@ class VendorReturnController extends Controller
     {
         $user = $request->user();
 
-        $query = VendorReturn::with('items');
+        $query = VendorReturn::with('items.product', 'items.batch');
         $query = $this->scopeForBusinessAndBranch($query, $request);
         $vendorReturn = $query->findOrFail($id);
 
@@ -300,37 +300,75 @@ class VendorReturnController extends Controller
             return response()->json(['message' => 'Only shipped returns can be received.'], 422);
         }
 
+        $data = $request->validate([
+            'items' => 'sometimes|array',
+            'items.*.vendor_return_item_id' => 'required|integer|exists:Vendor_Return_Items,vendor_return_item_id',
+            'items.*.received_quantity' => 'required|integer|min:0',
+            'items.*.rejected_quantity' => 'nullable|integer|min:0',
+            'items.*.rejection_reason' => 'nullable|string|max:255',
+        ]);
+
         $vendorReturn->receive();
 
-        // Process each item - add credit to supplier account
-        foreach ($vendorReturn->items as $item) {
-            // In a real implementation, this would create a supplier credit note
-            // For now, we'll just log the movement
-            $inventory = Inventory::where('product_id', $item->product_id);
-            $inventory = $this->scopeForBusinessAndBranch($inventory, $request);
-            $inventory = $inventory->first();
+        $totalCredit = 0;
+        $receivedItems = [];
 
-            if ($inventory) {
-                // For returns, we typically don't add stock back
-                // But we could create a credit note
+        // Process each item - create credit note for received items
+        foreach ($vendorReturn->items as $item) {
+            $itemData = collect($data['items'] ?? [])->firstWhere('vendor_return_item_id', $item->vendor_return_item_id);
+            
+            $receivedQty = $itemData['received_quantity'] ?? $item->quantity;
+            $rejectedQty = $itemData['rejected_quantity'] ?? 0;
+            
+            // Create credit note for received items
+            if ($receivedQty > 0) {
+                $creditAmount = $receivedQty * $item->unit_cost;
+                $totalCredit += $creditAmount;
+                
+                $receivedItems[] = [
+                    'vendor_return_item_id' => $item->vendor_return_item_id,
+                    'product_id' => $item->product_id,
+                    'product_name' => $item->product?->product_name,
+                    'batch_id' => $item->batch_id,
+                    'received_quantity' => $receivedQty,
+                    'rejected_quantity' => $rejectedQty,
+                    'unit_cost' => $item->unit_cost,
+                    'credit_amount' => $creditAmount,
+                    'rejection_reason' => $itemData['rejection_reason'] ?? null,
+                ];
             }
         }
 
+        // Update vendor return with credit info
+        $vendorReturn->update([
+            'total_credit_amount' => $totalCredit,
+        ]);
+
+        // Create credit note record (in a real implementation, this would create a credit note document)
+        // For now, we log the credit in audit log
         AuditLog::create([
             'user_id'       => $request->user()?->User_id ?? 1,
-            'action'        => "Received vendor return {$vendorReturn->return_number}",
+            'action'        => "Received vendor return {$vendorReturn->return_number} with credit ₱{$totalCredit}",
             'entity_type'   => 'Vendor_Return',
             'entity_id'     => $vendorReturn->vendor_return_id,
-            'new_values'    => json_encode(['status' => 'received']),
+            'new_values'    => json_encode([
+                'status' => 'received',
+                'received_items' => $receivedItems,
+                'total_credit' => $totalCredit,
+            ]),
             'created_at'    => now(),
             'business_id'   => $user?->business_id,
             'branch_id'     => $user?->branch_id,
         ]);
 
         return response()->json([
-            'message' => 'Vendor return received.',
-            'vendor_return' => $vendorReturn->fresh(),
-        ]);
+            'message' => 'Vendor return received with credit note.',
+            'vendor_return' => $vendorReturn->fresh()->load('items.product', 'items.batch'),
+            'credit_note' => [
+                'total_credit' => $totalCredit,
+                'items' => $receivedItems,
+            ],
+        ], 200);
     }
 
     public function credit(Request $request, $id)

@@ -57,4 +57,9 @@ class StockReceiving extends Model
     {
         return $this->belongsTo(User::class, 'verified_by', 'User_id');
     }
+
+    public function items()
+    {
+        return $this->hasMany(StockReceivingItem::class, 'receiving_id', 'receiving_id');
+    }
 }

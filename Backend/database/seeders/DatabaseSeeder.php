@@ -75,7 +75,7 @@ class DatabaseSeeder extends Seeder
     private function seedUsers(): void
     {
         $users = [
-            ['username' => 'admin',     'Full_name' => 'Lia Cruz',       'password' => 'admin123',     'email' => 'admin@ipharmamart.com',     'role' => 'Admin',           'status' => 'Active'],
+            ['username' => 'admin',     'Full_name' => 'Lia Cruz',       'password' => 'admin123',     'email' => 'admin@ipharmamart.com',     'role' => 'Owner',           'status' => 'Active'],
             ['username' => 'inventory', 'Full_name' => 'Mia Stockwell',  'password' => 'inventory123', 'email' => 'inventory@ipharmamart.com', 'role' => 'Inventory',        'status' => 'Active'],
             ['username' => 'cashier',   'Full_name' => 'Carlo Reyes',    'password' => 'cashier123',   'email' => 'cashier@ipharmamart.com',   'role' => 'Business Owner',   'status' => 'Active'],
         ];

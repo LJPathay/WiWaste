@@ -87,6 +87,15 @@ class FEFOBatch extends Model
             ->where('status', '!=', 'expired');
     }
 
+    public function scopeActiveFefo($query)
+    {
+        return $query->where('status', 'active')
+            ->where('quantity', '>', 0)
+            ->where('expiry_date', '>=', now())
+            ->orderBy('expiry_date')
+            ->orderBy('created_at');
+    }
+
     // Traceability methods
     public function getUpstreamTrace(): array
     {

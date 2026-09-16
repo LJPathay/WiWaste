@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\SalesTransaction;
 use App\Models\SalesItem;
 use App\Models\Inventory;
+use App\Models\FEFOBatch;
 use App\Models\StockMovement;
 use App\Models\AuditLog;
 use App\Jobs\WarmAnalyticsCache;
@@ -30,6 +31,66 @@ class SalesTransactionController extends Controller
             $query->where('branch_id', $user->branch_id);
         }
         return $query;
+    }
+
+    /**
+     * Get FEFO batches for a product ordered by earliest expiry first
+     * Returns batches with available stock for the given business and branch
+     */
+    protected function getFEFObatchesForProduct(int $productId, Request $request): \Illuminate\Support\Collection
+    {
+        $user = $request->user();
+        
+        return FEFOBatch::where('product_id', $productId)
+            ->where('business_id', $user?->business_id)
+            ->where('branch_id', $user?->branch_id)
+            ->where('status', 'active')
+            ->where('quantity', '>', 0)
+            ->where('expiry_date', '>=', now())
+            ->orderBy('expiry_date')
+            ->orderBy('created_at')
+            ->lockForUpdate()
+            ->get();
+    }
+
+    /**
+     * Deduct stock using FEFO (First Expired, First Out) method
+     * Returns array of [batch_id => quantity_deducted] for stock movement records
+     * Falls back to legacy behavior if no FEFO batches exist
+     */
+    protected function deductStockFEFO(int $productId, int $quantity, Request $request): array
+    {
+        $batches = $this->getFEFObatchesForProduct($productId, $request);
+        
+        // If no FEFO batches exist, fall back to legacy behavior (no batch tracking)
+        if ($batches->isEmpty()) {
+            return ['legacy' => $quantity];
+        }
+        
+        $totalAvailable = $batches->sum('quantity');
+        if ($totalAvailable < $quantity) {
+            throw new \Exception("Insufficient stock across all batches for product #{$productId}. Available: {$totalAvailable}, requested: {$quantity}");
+        }
+        
+        $deductions = [];
+        $remainingQty = $quantity;
+        
+        foreach ($batches as $batch) {
+            if ($remainingQty <= 0) {
+                break;
+            }
+            
+            $deductQty = min($batch->quantity, $remainingQty);
+            $batch->quantity -= $deductQty;
+            $batch->stock_status = Inventory::calcStatus($batch->quantity, $batch->product?->reorder_level ?? 10);
+            $batch->last_updated = now();
+            $batch->save();
+            
+            $deductions[$batch->batch_id] = $deductQty;
+            $remainingQty -= $deductQty;
+        }
+        
+        return $deductions;
     }
 
     protected function calculateItemVat(float $unitPrice, int $quantity, bool $isVatExempt = false): array
@@ -177,10 +238,20 @@ class SalesTransactionController extends Controller
                         'message' => "No inventory record for product #{$item['product_id']}.",
                     ], 422);
                 }
-                if ($inventory->current_stock < $item['quantity']) {
+                
+                // Validate stock using FEFO batches (if available) or inventory aggregate
+                $batches = $this->getFEFObatchesForProduct($item['product_id'], $request);
+                $totalAvailable = $batches->sum('quantity');
+                
+                // If no FEFO batches, fall back to inventory aggregate
+                if ($batches->isEmpty()) {
+                    $totalAvailable = $inventory->current_stock;
+                }
+                
+                if ($totalAvailable < $item['quantity']) {
                     $productName = $inventory->product?->product_name ?? "Product #{$item['product_id']}";
                     return response()->json([
-                        'message' => "Insufficient stock for {$productName}. Available: {$inventory->current_stock}, requested: {$item['quantity']}.",
+                        'message' => "Insufficient stock for {$productName}. Available: {$totalAvailable}, requested: {$item['quantity']}.",
                     ], 422);
                 }
 
@@ -272,6 +343,7 @@ class SalesTransactionController extends Controller
 
             $transaction = SalesTransaction::create($transactionData);
 
+            // Deduct stock using FEFO (First Expired, First Out)
             foreach ($data['items'] as $item) {
                 $unitPrice = $item['unit_price'];
                 $quantity = $item['quantity'];
@@ -317,25 +389,61 @@ class SalesTransactionController extends Controller
                     'override_reason'     => $item['override_reason'] ?? null,
                 ]);
 
-                $inventory = $lockedInventories->get($item['product_id']);
-                if ($inventory) {
-                    $inventory->current_stock -= $quantity;
-                    $inventory->stock_status  = Inventory::calcStatus($inventory->current_stock, $inventory->product?->reorder_level ?? 10);
-                    $inventory->last_updated  = now();
-                    $inventory->save();
-                }
+                // Deduct stock using FEFO (First Expired, First Out)
+                $batchDeductions = $this->deductStockFEFO($item['product_id'], $quantity, $request);
 
-                StockMovement::create([
-                    'business_id'   => $user?->business_id,
-                    'branch_id'     => $user?->branch_id,
-                    'product_id'    => $item['product_id'],
-                    'user_id'       => $userId,
-                    'movement_type' => 'Sale',
-                    'quantity'      => $quantity,
-                    'remarks'       => 'Sale - Txn #' . $transaction->transaction_id,
-                    'movement_date' => now(),
-                    'sale_item_id'  => $saleItem->sales_item_id,
-                ]);
+                // Create stock movements for each batch deducted (FEFO)
+                foreach ($batchDeductions as $batchId => $deductQty) {
+                    // Handle legacy case (no FEFO batches)
+                    if ($batchId === 'legacy') {
+                        // Update inventory aggregate
+                        $inventory = $lockedInventories->get($item['product_id']);
+                        if ($inventory) {
+                            $inventory->current_stock -= $deductQty;
+                            $inventory->stock_status  = Inventory::calcStatus($inventory->current_stock, $inventory->product?->reorder_level ?? 10);
+                            $inventory->last_updated  = now();
+                            $inventory->save();
+                        }
+
+                        StockMovement::create([
+                            'business_id'   => $user?->business_id,
+                            'branch_id'     => $user?->branch_id,
+                            'product_id'    => $item['product_id'],
+                            'batch_id'      => null,
+                            'user_id'       => $userId,
+'movement_type' => 'Stock Out',
+                            'quantity'      => $deductQty,
+                            'remarks'       => 'Sale - Txn #' . $transaction->transaction_id,
+                            'movement_date' => now(),
+                            'sale_item_id'  => $saleItem->sales_item_id,
+                        ]);
+                        continue;
+                    }
+                    
+                    $batch = FEFOBatch::find($batchId);
+                    
+                    // Update inventory aggregate
+                    $inventory = $lockedInventories->get($item['product_id']);
+                    if ($inventory) {
+                        $inventory->current_stock -= $deductQty;
+                        $inventory->stock_status  = Inventory::calcStatus($inventory->current_stock, $inventory->product?->reorder_level ?? 10);
+                        $inventory->last_updated  = now();
+                        $inventory->save();
+                    }
+
+                    StockMovement::create([
+                        'business_id'   => $user?->business_id,
+                        'branch_id'     => $user?->branch_id,
+                        'product_id'    => $item['product_id'],
+                        'batch_id'      => $batchId,
+                        'user_id'       => $userId,
+                        'movement_type' => 'Sale',
+                        'quantity'      => $deductQty,
+                        'remarks'       => 'Sale - Txn #' . $transaction->transaction_id,
+                        'movement_date' => now(),
+                        'sale_item_id'  => $saleItem->sales_item_id,
+                    ]);
+                }
             }
 
             AuditLog::create([
@@ -408,14 +516,14 @@ class SalesTransactionController extends Controller
             'items'             => $transaction->salesItems->map(fn ($item) => [
                 'id'                 => $item->sales_item_id,
                 'product_name'       => $item->product?->product_name,
-                'sku'               => $item->product?->barcode,
-                'quantity'          => $item->quantity,
-                'unit_price'        => $item->unit_price,
-                'subtotal'          => $item->subtotal,
-                'vat_amount'        => $item->vat_amount,
-                'vatable_amount'    => $item->vatable_amount,
-                'discount_amount'   => $item->discount_amount,
-                'discount_pct'      => $item->discount_pct,
+                'sku'                => $item->product?->barcode,
+                'quantity'           => $item->quantity,
+                'unit_price'         => $item->unit_price,
+                'subtotal'           => $item->subtotal,
+                'vat_amount'         => $item->vat_amount,
+                'vatable_amount'     => $item->vatable_amount,
+                'discount_amount'    => $item->discount_amount,
+                'discount_pct'       => $item->discount_pct,
                 'is_senior_pwd_exempt' => $item->is_senior_pwd_exempt,
             ]),
         ]);

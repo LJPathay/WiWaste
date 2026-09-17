@@ -210,6 +210,7 @@
         --tw-inset-ring-shadow: 0 0 #0000;
         --tw-ring-offset-shadow: 0 0 #0000;
         box-shadow: none;
+        border-color: transparent;
     }
 
     #main-content,
@@ -217,6 +218,7 @@
         --tw-ring-offset-shadow: 0 0 #0000;
         --tw-ring-shadow: 0 0 #0000;
         --tw-inset-shadow: 0 0 #0000;
+        border-color: transparent;
     }
 
     body {

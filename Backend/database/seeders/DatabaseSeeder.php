@@ -20,7 +20,6 @@ use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
 use App\Models\AuditLog;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 
 class DatabaseSeeder extends Seeder
@@ -85,7 +84,7 @@ class DatabaseSeeder extends Seeder
                 ['username' => $u['username']],
                 [
                     'Full_name'  => $u['Full_name'],
-                    'password'   => Hash::make($u['password']),
+                    'password'   => $u['password'],
                     'email'      => $u['email'],
                     'role'       => $u['role'],
                     'status'     => $u['status'],

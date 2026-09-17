@@ -38,8 +38,8 @@ export function ReceiptPreview({ receipt, isVatRegistered }: ReceiptPreviewProps
           <span style={{ flex: 1 }}>Item</span>
           <span style={{ textAlign: 'right' }}>Total</span>
         </div>
-        {receipt.items.map((item, idx) => (
-          <div key={idx} className="flex-row-item" style={{ marginBottom: '2px' }}>
+        {receipt.items.map((item) => (
+          <div key={item.product_name} className="flex-row-item" style={{ marginBottom: '2px' }}>
             <span style={{ width: '30px' }}>{item.quantity}</span>
             <span style={{ flex: 1, paddingRight: '4px' }}>{item.product_name}</span>
             <span style={{ textAlign: 'right' }}>{formatCurrency(item.subtotal)}</span>

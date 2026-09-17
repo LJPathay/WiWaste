@@ -260,7 +260,7 @@ export interface ApiSalesTransaction {
   transaction_date: string;
   payment_method: string;
   payment_reference?: string | null;
-  payment_status?: 'pending' | 'paid' | 'failed' | string | null;
+  payment_status?: string | null;
   amount_tendered: number | null;
   change_due: number | null;
   status: string;

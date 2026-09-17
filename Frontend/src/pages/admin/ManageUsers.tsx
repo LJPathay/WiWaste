@@ -1,7 +1,7 @@
 import React, { useState, useEffect, memo } from 'react';
 import {
-  Users, Search, Plus, Edit2, X, Info, Shield, Package,
-  Briefcase, AlertTriangle, CheckCircle2, Circle, RotateCcw, Trash2,
+  Users, Search, Plus, Edit2, X, Info,
+  AlertTriangle, CheckCircle2, Circle, RotateCcw, Trash2,
   Lock, ShieldOff, ChevronDown, Check, UserX, Eye, EyeOff, AlertCircle
 } from 'lucide-react';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';

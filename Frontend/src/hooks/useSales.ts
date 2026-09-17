@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { sales, type ApiSalesTransaction, type CreateSalePayload, type ApiReceiptResponse } from '../services/api';
+import { sales, type CreateSalePayload } from '../services/api';
 
 export function useSalesList(params?: { search?: string; page?: number; per_page?: number }) {
   return useQuery({

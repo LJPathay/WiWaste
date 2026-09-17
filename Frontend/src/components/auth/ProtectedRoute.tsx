@@ -2,7 +2,7 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { getStoredSession, type UserRole } from '../../utils/mockAuthAndFeatures';
 
 interface ProtectedRouteProps {
-  allowedRoles: UserRole[];
+  readonly allowedRoles: readonly UserRole[];
 }
 
 export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {

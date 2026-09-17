@@ -33,10 +33,10 @@ class ReorderService
     public function generateSuggestions(int $businessId, ?int $branchId = null, array $options = []): array
     {
         // Generate ML forecasts first
-        $this->generateMLForecasts($businessId, $branchId);
+        $this->generateMLForecasts();
 
         // Then run optimization for optimal replenishment plan
-        $optimizationResult = $this->runOptimization($businessId, $branchId, $options);
+        $this->runOptimization($options);
 
         // Get products needing reorder (fallback to rule-based if ML unavailable)
         $products = $this->getProductsNeedingReorder($businessId, $branchId);
@@ -78,7 +78,7 @@ class ReorderService
     /**
      * Generate ML forecasts for products needing reorder
      */
-    protected function generateMLForecasts(int $businessId, ?int $branchId): void
+    protected function generateMLForecasts(): void
     {
         try {
             $this->lastForecastCount = $this->forecastService->generateForAll();
@@ -91,11 +91,10 @@ class ReorderService
     /**
      * Run GA optimization for optimal replenishment plan
      */
-    protected function runOptimization(int $businessId, ?int $branchId, array $options = []): array
+    protected function runOptimization(array $options = []): array
     {
         try {
             $budget = $options['budget'] ?? 100000; // Default budget
-            $horizonDays = $options['horizon_days'] ?? 30;
             
             $result = $this->optimizationService->optimize($budget, 30);
             

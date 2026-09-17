@@ -24,7 +24,7 @@ import {
   type SalesTransaction,
 } from '../../utils/cashierData';
 import { clearStoredSession, getStoredSession } from '../../utils/mockAuthAndFeatures';
-import { products as productsApi, sales as salesApi, type ApiProduct, type CreateSalePayload } from '../../services/api';
+import { products as productsApi, sales as salesApi, type CreateSalePayload } from '../../services/api';
 import {
   type CartLine,
   type HotkeyAction,
@@ -1197,7 +1197,7 @@ export function POSTerminal() {
               <ArrowRight className="w-5 h-5 text-[#0F766E]" /> Process Return
             </h3>
             <p className="text-sm text-slate-500 mb-4">Scan the receipt barcode or enter transaction ID to process a return.</p>
-            <input autoFocus type="text" placeholder="Transaction ID..." className="w-full px-4 py-3 bg-[#F8FAFC] border border-[#E5E7EB] rounded-lg mb-6 focus:outline-none focus:border-[#0F766E]" aria-label="Transaction ID" />
+            <input type="text" placeholder="Transaction ID..." className="w-full px-4 py-3 bg-[#F8FAFC] border border-[#E5E7EB] rounded-lg mb-6 focus:outline-none focus:border-[#0F766E]" aria-label="Transaction ID" />
             <div className="flex gap-2">
               <button onClick={() => setShowReturnModal(false)} className="flex-1 py-2 bg-slate-100 text-slate-600 font-bold rounded-lg hover:bg-slate-200">Cancel (Esc)</button>
               <button onClick={() => { success('Return processed'); setShowReturnModal(false); }} className="flex-1 py-2 bg-[#0F766E] text-white font-bold rounded-lg hover:bg-[#0d615b]">Find Receipt</button>

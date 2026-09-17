@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { dashboard, ownerDashboard, type ApiDashboard, type ApiOwnerAnalytics } from '../services/api';
+import { dashboard, ownerDashboard, type ApiOwnerAnalytics } from '../services/api';
 
 export function useDashboardOverview() {
   return useQuery({

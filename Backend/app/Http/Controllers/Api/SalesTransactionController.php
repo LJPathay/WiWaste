@@ -69,7 +69,7 @@ class SalesTransactionController extends Controller
         
         $totalAvailable = $batches->sum('quantity');
         if ($totalAvailable < $quantity) {
-            throw new \Exception("Insufficient stock across all batches for product #{$productId}. Available: {$totalAvailable}, requested: {$quantity}");
+            throw new \InvalidArgumentException("Insufficient stock across all batches for product #{$productId}. Available: {$totalAvailable}, requested: {$quantity}");
         }
         
         $deductions = [];
@@ -212,7 +212,7 @@ class SalesTransactionController extends Controller
         $user = $request->user();
         $userId = $user?->User_id ?? 1;
 
-        $result = DB::transaction(function () use ($data, $userId, $user, $request) {
+        return DB::transaction(function () use ($data, $userId, $user, $request) {
             // First pass: validate stock and calculate totals
             $query = Inventory::whereIn('product_id', collect($data['items'])->pluck('product_id'));
             $query = $this->scopeForBusinessAndBranch($query, $request);
@@ -478,8 +478,6 @@ class SalesTransactionController extends Controller
                 'senior_pwd_discount' => round($totalSeniorPWDiscount, 2),
             ], 201);
         });
-
-        return $result;
     }
 
     public function show(Request $request, int $id)

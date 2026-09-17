@@ -54,7 +54,6 @@ class DataRetentionPolicyController extends Controller
     public function store(Request $request)
     {
         $user = $request->user();
-        $userId = $user?->User_id ?? 1;
 
         $data = $request->validate([
             'entity_type' => 'required|string|max:100',
@@ -146,11 +145,8 @@ class DataRetentionPolicyController extends Controller
             return response()->json(['message' => 'Policy is not active.'], 422);
         }
 
-        $user = $request->user();
-        $userId = $request->user()?->User_id ?? 1;
 
-        return DB::transaction(function () use ($policy, $userId, $request) {
-            $cutoffDate = $policy->getCutoffDate();
+        return DB::transaction(function () use ($policy, $request) {
             $entityTable = $this->getEntityTable($policy->entity_type);
             $action = $policy->action;
 
@@ -178,7 +174,6 @@ class DataRetentionPolicyController extends Controller
                 $query->where('branch_id', $policy->branch_id);
             }
 
-            $countBefore = $query->count();
             $recordsPurged = 0;
             $recordsAnonymized = 0;
             $recordsArchived = 0;

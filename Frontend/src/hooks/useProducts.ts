@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { products, type PaginatedResponse, type ApiProduct, type CreateProductPayload } from '../services/api';
+import { products, type CreateProductPayload } from '../services/api';
 
 export function useProducts(params?: { search?: string; category_id?: number; page?: number; per_page?: number }) {
   return useQuery({

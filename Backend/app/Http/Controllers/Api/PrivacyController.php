@@ -398,10 +398,8 @@ class PrivacyController extends Controller
               });
         })->get();
 
-        foreach ($returns as $return) {
-            // Returns reference sale items which have transaction data
-            // The transaction data is already anonymized above
-        }
+        // Returns reference sale items which have transaction data
+        // The transaction data is already anonymized above
         $erasedCounts['returns'] = $returns->count();
 
         // 4. Audit logs - we keep audit logs for compliance but can mark subject as anonymized

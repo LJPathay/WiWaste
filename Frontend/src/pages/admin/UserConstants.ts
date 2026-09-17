@@ -29,10 +29,10 @@ export const ROLE_CONFIG = {
 export const maskEmail = (email: string) => {
   if (!email || !email.includes('@')) return email;
   const [name, domain] = email.split('@');
-  if (name.length <= 2) {
+  if (name?.length <= 2) {
     return `${name[0]}*@${domain}`;
   }
-  const maskedName = `${name[0]}${'*'.repeat(Math.min(name.length - 2, 5))}${name[name.length - 1]}`;
+  const maskedName = `${name[0]}${'*'.repeat(Math.min(name.length - 2, 5))}${name.at(-1)}`;
   return `${maskedName}@${domain}`;
 };
 
@@ -59,7 +59,7 @@ export function getPasswordRules(password: string) {
     { id: 'length', label: 'At least 6 characters', met: password.length >= 6 },
     { id: 'upper', label: 'One uppercase letter (A-Z)', met: /[A-Z]/.test(password) },
     { id: 'lower', label: 'One lowercase letter (a-z)', met: /[a-z]/.test(password) },
-    { id: 'number', label: 'One number (0-9)', met: /[0-9]/.test(password) },
+    { id: 'number', label: 'One number (0-9)', met: /\d/.test(password) },
     { id: 'special', label: 'One special character (!@#$%^&*)', met: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password) },
   ];
 }

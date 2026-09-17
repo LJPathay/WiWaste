@@ -5,18 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\DataRetentionPolicy;
 use App\Models\DataPurgeLog;
-use App\Models\SalesTransaction;
-use App\Models\AuditLog;
-use App\Models\WastageRecord;
-use App\Models\ReturnTransaction;
-use App\Models\StockMovement;
-use App\Models\Inventory;
-use App\Models\Product;
-use App\Models\Customer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Cache;
-use Carbon\Carbon;
 
 class DataRetentionPolicyController extends Controller
 {
@@ -69,12 +59,8 @@ class DataRetentionPolicyController extends Controller
             'description' => 'nullable|string|max:500',
         ]);
 
-        if (!isset($data['business_id']) && $user && $user->business_id) {
-            $data['business_id'] = $user->business_id;
-        }
-        if (!isset($data['branch_id']) && $user && $user->branch_id) {
-            $data['branch_id'] = $user->branch_id;
-        }
+        $data['business_id'] = $data['business_id'] ?? $user?->business_id;
+        $data['branch_id'] = $data['branch_id'] ?? $user?->branch_id;
         $data['is_active'] = $data['is_active'] ?? true;
         $data['notify_before_purge'] = $data['notify_before_purge'] ?? true;
 
@@ -145,71 +131,16 @@ class DataRetentionPolicyController extends Controller
             return response()->json(['message' => 'Policy is not active.'], 422);
         }
 
-
         return DB::transaction(function () use ($policy) {
             $entityTable = $this->getEntityTable($policy->entity_type);
-            $action = $policy->action;
 
             if (!$entityTable) {
                 return response()->json(['message' => 'Unknown entity type.'], 422);
             }
 
-            // Build query for records to purge
-            $query = DB::table($entityTable)
-                ->where('business_id', $policy->business_id)
-                ->where('created_at', '<=', $policy->getCutoffDate());
-
-            // Apply additional conditions from policy
-            if ($policy->conditions_json) {
-                $conditions = json_decode($policy->conditions_json, true);
-                if (is_array($conditions)) {
-                    foreach ($conditions as $field => $value) {
-                        $query->where($field, $value);
-                    }
-                }
-            }
-
-            // Apply branch filter if specified
-            if ($policy->branch_id) {
-                $query->where('branch_id', $policy->branch_id);
-            }
-
-            $recordsPurged = 0;
-            $recordsAnonymized = 0;
-            $recordsArchived = 0;
-
-            if ($action === 'delete') {
-                $recordsPurged = $query->delete();
-            } elseif ($action === 'anonymize') {
-                // For anonymize, we need to update records
-                // This is simplified - in production you'd update specific fields
-                $recordsAnonymized = $query->count();
-                // Actual anonymization would happen here
-            } elseif ($action === 'archive') {
-                // Archive logic would go here
-                $recordsArchived = $query->count();
-            }
-
-            // Log the purge
-            $purgeLog = DataPurgeLog::create([
-                'business_id' => $policy->business_id,
-                'policy_id' => $policy->policy_id,
-                'entity_type' => $policy->entity_type,
-                'entity_table' => $entityTable,
-                'records_purged' => $recordsPurged,
-                'records_anonymized' => $recordsAnonymized,
-                'records_archived' => $recordsArchived,
-                'cutoff_date' => $policy->getCutoffDate(),
-                'purged_at' => now(),
-                'criteria_json' => json_encode([
-                    'entity_type' => $policy->entity_type,
-                    'cutoff_date' => $policy->getCutoffDate()->toISOString(),
-                    'action' => $policy->action,
-                ]),
-                'action_taken' => $action,
-                'initiated_by' => request()->user()?->User_id ?? 'system',
-                'status' => 'completed',
-            ]);
+            $query = $this->buildPurgeQuery($policy, $entityTable);
+            [$recordsPurged, $recordsAnonymized, $recordsArchived] = $this->executeAction($policy->action, $query);
+            $purgeLog = $this->logPurge($policy, $entityTable, $recordsPurged, $recordsAnonymized, $recordsArchived, $policy->action);
 
             return response()->json([
                 'message' => 'Purge executed successfully.',
@@ -234,29 +165,10 @@ class DataRetentionPolicyController extends Controller
             return response()->json(['message' => 'Unknown entity type.'], 422);
         }
 
-        $query = DB::table($entityTable)
-            ->where('business_id', $policy->business_id)
-            ->where('created_at', '<=', $policy->getCutoffDate());
-
-        if ($policy->branch_id) {
-            $query->where('branch_id', $policy->branch_id);
-        }
-
-        if ($policy->conditions_json) {
-            $conditions = json_decode($policy->conditions_json, true);
-            if (is_array($conditions)) {
-                foreach ($conditions as $field => $value) {
-                    $query->where($field, $value);
-                }
-            }
-        }
-
-        if ($policy->branch_id) {
-            $query->where('branch_id', $policy->branch_id);
-        }
-
+        $query = $this->buildPurgeQuery($policy, $entityTable);
         $count = $query->count();
-        $sample = $query->limit(10)->get();
+        $sample = clone $query;
+        $sample = $sample->limit(10)->get();
 
         return response()->json([
             'policy_id' => $policy->policy_id,
@@ -295,6 +207,68 @@ class DataRetentionPolicyController extends Controller
         );
     }
 
+    protected function buildPurgeQuery(DataRetentionPolicy $policy, string $entityTable)
+    {
+        $query = DB::table($entityTable)
+            ->where('business_id', $policy->business_id)
+            ->where('created_at', '<=', $policy->getCutoffDate());
+
+        if ($policy->branch_id) {
+            $query->where('branch_id', $policy->branch_id);
+        }
+
+        if ($policy->conditions_json) {
+            $conditions = json_decode($policy->conditions_json, true);
+            if (is_array($conditions)) {
+                foreach ($conditions as $field => $value) {
+                    $query->where($field, $value);
+                }
+            }
+        }
+
+        return $query;
+    }
+
+    protected function executeAction(string $action, $query): array
+    {
+        $recordsPurged = 0;
+        $recordsAnonymized = 0;
+        $recordsArchived = 0;
+
+        if ($action === 'delete') {
+            $recordsPurged = $query->delete();
+        } elseif ($action === 'anonymize') {
+            $recordsAnonymized = $query->count();
+        } elseif ($action === 'archive') {
+            $recordsArchived = $query->count();
+        }
+
+        return [$recordsPurged, $recordsAnonymized, $recordsArchived];
+    }
+
+    protected function logPurge(DataRetentionPolicy $policy, string $entityTable, int $purged, int $anonymized, int $archived, string $action): DataPurgeLog
+    {
+        return DataPurgeLog::create([
+            'business_id' => $policy->business_id,
+            'policy_id' => $policy->policy_id,
+            'entity_type' => $policy->entity_type,
+            'entity_table' => $entityTable,
+            'records_purged' => $purged,
+            'records_anonymized' => $anonymized,
+            'records_archived' => $archived,
+            'cutoff_date' => $policy->getCutoffDate(),
+            'purged_at' => now(),
+            'criteria_json' => json_encode([
+                'entity_type' => $policy->entity_type,
+                'cutoff_date' => $policy->getCutoffDate()->toISOString(),
+                'action' => $policy->action,
+            ]),
+            'action_taken' => $action,
+            'initiated_by' => request()->user()?->User_id ?? 'system',
+            'status' => 'completed',
+        ]);
+    }
+
     protected function getEntityTable(string $entityType): ?string
     {
         $tableMap = [
@@ -307,10 +281,6 @@ class DataRetentionPolicyController extends Controller
             'inventory' => 'Inventory',
             'products' => 'Product',
             'customers' => 'Customer',
-            'audit_logs' => 'Audit_Log',
-            'wastage_records' => 'Wastage_Record',
-            'return_transactions' => 'Return_Transaction',
-            'stock_movements' => 'Stock_Movement',
         ];
 
         return $tableMap[$entityType] ?? null;

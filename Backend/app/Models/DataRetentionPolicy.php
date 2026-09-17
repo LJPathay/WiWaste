@@ -64,19 +64,15 @@ class DataRetentionPolicy extends Model
      */
     public function getCutoffDate(): \Carbon\Carbon
     {
-        $unit = $this->retention_unit ?? 'days';
         $days = $this->retention_days;
+        $unitMethod = match ($this->retention_unit ?? 'days') {
+            'years' => 'subYears',
+            'months' => 'subMonths',
+            'weeks' => 'subWeeks',
+            default => 'subDays',
+        };
 
-        switch ($unit) {
-            case 'years':
-                return now()->subYears($days);
-            case 'months':
-                return now()->subMonths($days);
-            case 'weeks':
-                return now()->subWeeks($days);
-            default:
-                return now()->subDays($days);
-        }
+        return now()->{$unitMethod}($days);
     }
 
     /**
@@ -103,3 +99,4 @@ class DataRetentionPolicy extends Model
         return $recordDate->lte($cutoffDate);
     }
 }
+

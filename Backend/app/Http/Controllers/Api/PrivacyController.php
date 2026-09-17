@@ -6,20 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\Business;
 use App\Models\DataSubjectRequest;
 use App\Models\SalesTransaction;
-use App\Models\SalesItem;
 use App\Models\ReturnTransaction;
-use App\Models\WastageRecord;
-use App\Models\StockMovement;
 use App\Models\AuditLog;
 use App\Models\Customer;
-use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
-use Carbon\Carbon;
-use Maatwebsite\Excel\Facades\Excel;
-use App\Exports\DataSubjectExport;
 
 class PrivacyController extends Controller
 {
@@ -38,7 +29,6 @@ class PrivacyController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        // Check if there's already a pending request for this subject and type
         $existing = DataSubjectRequest::where('business_id', $request->business_id)
             ->where('subject_identifier', $request->subject_identifier)
             ->where('request_type', $request->request_type)
@@ -70,7 +60,6 @@ class PrivacyController extends Controller
      */
     public function show(DataSubjectRequest $request)
     {
-        // Check if the authenticated user's business matches the request's business
         return response()->json($request);
     }
 
@@ -90,7 +79,6 @@ class PrivacyController extends Controller
 
         $dataSubjectRequest->update($validator->validated());
 
-        // If completed, set the completed_at timestamp
         if ($request->status === 'completed') {
             $dataSubjectRequest->update(['completed_at' => now()]);
         }
@@ -114,13 +102,9 @@ class PrivacyController extends Controller
             ], 422);
         }
 
-        $identifier = $request->subject_identifier;
-
-        // Gather data from all relevant systems
-        $exportData = $this->gatherSubjectData($business->id, $identifier);
+        $exportData = $this->gatherSubjectData($business->id, $request->subject_identifier);
 
         if ($request->request_type === 'portability') {
-            // For portability, provide structured, machine-readable format
             return $this->formatForPortability($exportData, $request);
         }
 
@@ -134,15 +118,7 @@ class PrivacyController extends Controller
     {
         $data = [];
 
-        // Customer data
-        $customer = Customer::where('business_id', $businessId)
-            ->where(function ($q) use ($identifier) {
-                $q->where('customer_name', 'like', "%{$identifier}%")
-                  ->orWhere('customer_phone', $identifier)
-                  ->orWhere('customer_email', $identifier);
-            })
-            ->first();
-
+        $customer = $this->findCustomerByIdentifier($businessId, $identifier);
         if ($customer) {
             $data['customer_pii'] = [
                 'customer_id' => $customer->customer_id,
@@ -154,8 +130,38 @@ class PrivacyController extends Controller
             ];
         }
 
-        // Sales transactions
-        $sales = SalesTransaction::where('business_id', $businessId)
+        $sales = $this->findSalesByIdentifier($businessId, $identifier);
+        if ($sales->count() > 0) {
+            $data['sales_transactions'] = $sales;
+        }
+
+        $returns = $this->findReturnsByIdentifier($businessId, $identifier);
+        if ($returns->count() > 0) {
+            $data['returns'] = $returns;
+        }
+
+        $auditLogs = $this->findAuditLogsByIdentifier($businessId, $identifier);
+        if ($auditLogs->count() > 0) {
+            $data['audit_trail'] = $auditLogs;
+        }
+
+        return $data;
+    }
+
+    protected function findCustomerByIdentifier(int $businessId, string $identifier): ?Customer
+    {
+        return Customer::where('business_id', $businessId)
+            ->where(function ($q) use ($identifier) {
+                $q->where('customer_name', 'like', "%{$identifier}%")
+                  ->orWhere('customer_phone', $identifier)
+                  ->orWhere('customer_email', $identifier);
+            })
+            ->first();
+    }
+
+    protected function findSalesByIdentifier(int $businessId, string $identifier)
+    {
+        return SalesTransaction::where('business_id', $businessId)
             ->where(function ($q) use ($identifier) {
                 $q->where('customer_name', 'like', "%{$identifier}%")
                   ->orWhere('customer_phone', $identifier)
@@ -177,37 +183,33 @@ class PrivacyController extends Controller
                     ]),
                 ];
             });
+    }
 
-        if ($sales->count() > 0) {
-            $data['sales_transactions'] = $sales;
-        }
-
-        // Returns
-        $returns = ReturnTransaction::whereHas('saleItem.transaction', function ($q) use ($businessId, $identifier) {
+    protected function findReturnsByIdentifier(int $businessId, string $identifier)
+    {
+        return ReturnTransaction::whereHas('saleItem.transaction', function ($q) use ($businessId, $identifier) {
             $q->where('business_id', $businessId)
               ->where(function ($q) use ($identifier) {
                   $q->where('customer_name', 'like', "%{$identifier}%")
                     ->orWhere('customer_phone', $identifier)
                     ->orWhere('customer_email', $identifier);
               });
-        })->with(['saleItem.product'])->get();
+        })->with(['saleItem.product'])->get()
+          ->map(fn ($r) => [
+              'return_id' => $r->return_id,
+              'date' => $r->return_date,
+              'reason' => $r->reason,
+              'refund' => $r->refund_amount,
+              'items' => $r->saleItem ? [
+                  'product' => $r->saleItem->product?->product_name,
+                  'quantity' => $r->quantity_returned,
+              ] : [],
+          ]);
+    }
 
-        if ($returns->count() > 0) {
-            $data['returns'] = $returns->map(fn ($r) => [
-                'return_id' => $r->return_id,
-                'date' => $r->return_date,
-                'reason' => $r->reason,
-                'refund' => $r->refund_amount,
-                'items' => $r->saleItem ? [
-                    'product' => $r->saleItem->product?->product_name,
-                    'quantity' => $r->quantity_returned,
-                ] : [],
-            ]);
-        }
-
-        // Loyalty/loyalty data (if applicable)
-        // Audit logs for this subject
-        $auditLogs = AuditLog::where('business_id', $businessId)
+    protected function findAuditLogsByIdentifier(int $businessId, string $identifier)
+    {
+        return AuditLog::where('business_id', $businessId)
             ->where(function ($q) use ($identifier) {
                 $q->where('action', 'like', "%{$identifier}%")
                   ->orWhere('new_values', 'like', "%{$identifier}%")
@@ -222,12 +224,6 @@ class PrivacyController extends Controller
                 'entity' => $log->entity_type,
                 'user' => $log->user?->Full_name,
             ]);
-
-        if ($auditLogs->count() > 0) {
-            $data['audit_trail'] = $auditLogs;
-        }
-
-        return $data;
     }
 
     protected function formatForAccess(array $data, DataSubjectRequest $request): \Illuminate\Http\JsonResponse
@@ -253,7 +249,6 @@ class PrivacyController extends Controller
 
     protected function formatForPortability(array $data, DataSubjectRequest $request): \Illuminate\Http\JsonResponse
     {
-        // For portability, provide structured, machine-readable format
         return response()->json([
             'request_info' => [
                 'id' => $request->id,
@@ -277,51 +272,17 @@ class PrivacyController extends Controller
             return response()->json(['message' => 'Download is only available for portability requests.'], 422);
         }
 
-        $this->gatherSubjectData($request->business_id, $request->subject_identifier);
+        $exportData = $this->gatherSubjectData($request->business_id, $request->subject_identifier);
 
-        // Create CSV export
         $filename = "portability_export_{$request->subject_identifier}_" . now()->format('Ymd_His') . ".csv";
 
-        $callback = function () use ($request) {
-            $exportData = $this->gatherSubjectData($request->business_id, $request->subject_identifier);
-            
+        $callback = function () use ($exportData) {
             $handle = fopen('php://output', 'w');
-            
-            // Customer PII
-            if (isset($exportData['customer_pii'])) {
-                fputcsv($handle, ['Category', 'Field', 'Value']);
-                foreach ($exportData['customer_pii'] as $key => $value) {
-                    fputcsv($handle, ['Customer PII', $key, $value]);
-                }
-            }
 
-            // Sales Transactions
-            if (!empty($exportData['sales_transactions'])) {
-                fputcsv($handle, ['Category', 'Transaction ID', 'Date', 'Total', 'Payment Method', 'Items']);
-                foreach ($exportData['sales_transactions'] as $txn) {
-                    foreach ($txn['items'] as $item) {
-                        fputcsv($handle, ['Sales', $txn['transaction_id'], $txn['date'], $txn['total'], $txn['payment_method'], json_encode($item)]);
-                    }
-                }
-            }
-
-            // Returns
-            if (!empty($exportData['returns'])) {
-                fputcsv($handle, ['Category', 'Return ID', 'Date', 'Reason', 'Refund', 'Items']);
-                foreach ($exportData['returns'] as $ret) {
-                    foreach ($ret['items'] as $item) {
-                        fputcsv($handle, ['Return', $ret['return_id'], $ret['date'], $ret['reason'], $ret['refund'], json_encode($item)]);
-                    }
-                }
-            }
-
-            // Audit Trail
-            if (!empty($exportData['audit_trail'])) {
-                fputcsv($handle, ['Category', 'Date', 'Action', 'Entity', 'User']);
-                foreach ($exportData['audit_trail'] as $log) {
-                    fputcsv($handle, ['Audit', $log['date'], $log['action'], $log['entity'], $log['user']]);
-                }
-            }
+            $this->writeCustomerCsv($handle, $exportData);
+            $this->writeSalesCsv($handle, $exportData);
+            $this->writeReturnsCsv($handle, $exportData);
+            $this->writeAuditCsv($handle, $exportData);
 
             fclose($handle);
         };
@@ -332,6 +293,58 @@ class PrivacyController extends Controller
         ]);
     }
 
+    protected function writeCustomerCsv($handle, array $exportData): void
+    {
+        if (!isset($exportData['customer_pii'])) {
+            return;
+        }
+
+        fputcsv($handle, ['Category', 'Field', 'Value']);
+        foreach ($exportData['customer_pii'] as $key => $value) {
+            fputcsv($handle, ['Customer PII', $key, $value]);
+        }
+    }
+
+    protected function writeSalesCsv($handle, array $exportData): void
+    {
+        if (empty($exportData['sales_transactions'])) {
+            return;
+        }
+
+        fputcsv($handle, ['Category', 'Transaction ID', 'Date', 'Total', 'Payment Method', 'Items']);
+        foreach ($exportData['sales_transactions'] as $txn) {
+            foreach ($txn['items'] as $item) {
+                fputcsv($handle, ['Sales', $txn['transaction_id'], $txn['date'], $txn['total'], $txn['payment_method'], json_encode($item)]);
+            }
+        }
+    }
+
+    protected function writeReturnsCsv($handle, array $exportData): void
+    {
+        if (empty($exportData['returns'])) {
+            return;
+        }
+
+        fputcsv($handle, ['Category', 'Return ID', 'Date', 'Reason', 'Refund', 'Items']);
+        foreach ($exportData['returns'] as $ret) {
+            foreach ($ret['items'] as $item) {
+                fputcsv($handle, ['Return', $ret['return_id'], $ret['date'], $ret['reason'], $ret['refund'], json_encode($item)]);
+            }
+        }
+    }
+
+    protected function writeAuditCsv($handle, array $exportData): void
+    {
+        if (empty($exportData['audit_trail'])) {
+            return;
+        }
+
+        fputcsv($handle, ['Category', 'Date', 'Action', 'Entity', 'User']);
+        foreach ($exportData['audit_trail'] as $log) {
+            fputcsv($handle, ['Audit', $log['date'], $log['action'], $log['entity'], $log['user']]);
+        }
+    }
+
     /**
      * Delete or anonymize data for erasure request.
      */
@@ -340,32 +353,48 @@ class PrivacyController extends Controller
         $businessId = $request->business_id;
         $identifier = $request->subject_identifier;
 
-        // Get all data to be erased
-        $this->gatherSubjectData($businessId, $request->subject_identifier);
+        $this->gatherSubjectData($businessId, $identifier);
 
         $erasedCounts = [];
+        $erasedCounts['customer_pii'] = $this->anonymizeCustomer($businessId, $identifier);
+        $erasedCounts['sales_transactions'] = $this->anonymizeSalesTransactions($businessId, $identifier);
+        $erasedCounts['returns'] = $this->anonymizeReturns($businessId, $identifier);
+        $erasedCounts['audit_logs'] = $this->anonymizeAuditLogs($businessId, $identifier);
 
-        // 1. Anonymize customer PII
-        $customer = \App\Models\Customer::where('business_id', $request->business_id)
-            ->where(function ($q) use ($identifier) {
-                $q->where('customer_name', 'like', "%{$identifier}%")
-                  ->orWhere('customer_phone', $identifier)
-                  ->orWhere('customer_email', $identifier);
-            })
-            ->first();
+        $request->update([
+            'status' => 'completed',
+            'completed_at' => now(),
+            'notes' => "Data erasure completed. Erased: " . json_encode($erasedCounts),
+        ]);
 
-        if ($customer) {
-            $customer->update([
-                'customer_name' => 'ANONYMIZED_' . $customer->customer_id,
-                'customer_phone' => 'ANONYMIZED',
-                'customer_email' => 'ANONYMIZED',
-                'customer_address' => 'ANONYMIZED',
-            ]);
-            $erasedCounts['customer_pii'] = 1;
+        return response()->json([
+            'message' => 'Data erasure completed successfully.',
+            'erased_summary' => $erasedCounts,
+            'request' => $request
+        ], 200);
+    }
+
+    protected function anonymizeCustomer(int $businessId, string $identifier): int
+    {
+        $customer = $this->findCustomerByIdentifier($businessId, $identifier);
+
+        if (!$customer) {
+            return 0;
         }
 
-        // 2. Anonymize sales transactions (keep transaction data, remove PII)
-        $transactions = SalesTransaction::where('business_id', $request->business_id)
+        $customer->update([
+            'customer_name' => 'ANONYMIZED_' . $customer->customer_id,
+            'customer_phone' => 'ANONYMIZED',
+            'customer_email' => 'ANONYMIZED',
+            'customer_address' => 'ANONYMIZED',
+        ]);
+
+        return 1;
+    }
+
+    protected function anonymizeSalesTransactions(int $businessId, string $identifier): int
+    {
+        $transactions = SalesTransaction::where('business_id', $businessId)
             ->where(function ($q) use ($identifier) {
                 $q->where('customer_name', 'like', "%{$identifier}%")
                   ->orWhere('customer_phone', $identifier)
@@ -380,9 +409,12 @@ class PrivacyController extends Controller
                 'customer_email' => 'ANONYMIZED',
             ]);
         }
-        $erasedCounts['sales_transactions'] = $transactions->count();
 
-        // 3. Anonymize returns
+        return $transactions->count();
+    }
+
+    protected function anonymizeReturns(int $businessId, string $identifier): int
+    {
         $returns = ReturnTransaction::whereHas('saleItem.transaction', function ($q) use ($businessId, $identifier) {
             $q->where('business_id', $businessId)
               ->where(function ($q) use ($identifier) {
@@ -392,12 +424,12 @@ class PrivacyController extends Controller
               });
         })->get();
 
-        // Returns reference sale items which have transaction data
-        // The transaction data is already anonymized above
-        $erasedCounts['returns'] = $returns->count();
+        return $returns->count();
+    }
 
-        // 4. Audit logs - we keep audit logs for compliance but can mark subject as anonymized
-        $auditLogs = AuditLog::where('business_id', $request->business_id)
+    protected function anonymizeAuditLogs(int $businessId, string $identifier): int
+    {
+        $auditLogs = AuditLog::where('business_id', $businessId)
             ->where(function ($q) use ($identifier) {
                 $q->where('action', 'like', "%{$identifier}%")
                   ->orWhere('new_values', 'like', "%{$identifier}%")
@@ -417,20 +449,8 @@ class PrivacyController extends Controller
                 'old_values' => $oldValues ? json_encode($oldValues) : null,
             ]);
         }
-        $erasedCounts['audit_logs'] = $auditLogs->count();
 
-        // Mark request as completed
-        $request->update([
-            'status' => 'completed',
-            'completed_at' => now(),
-            'notes' => "Data erasure completed. Erased: " . json_encode($erasedCounts),
-        ]);
-
-        return response()->json([
-            'message' => 'Data erasure completed successfully.',
-            'erased_summary' => $erasedCounts,
-            'request' => $request
-        ], 200);
+        return $auditLogs->count();
     }
 
     protected function anonymizeValues(array $data, string $identifier): array
@@ -468,21 +488,13 @@ class PrivacyController extends Controller
 
         $identifier = $dataSubjectRequest->subject_identifier;
         $businessId = $dataSubjectRequest->business_id;
-
         $updated = [];
 
         foreach ($request->corrections as $correction) {
             $field = $correction['field'];
             $newValue = $correction['new_value'];
 
-            // Update customer record
-            $customer = Customer::where('business_id', $businessId)
-                ->where(function ($q) use ($identifier) {
-                    $q->where('customer_name', 'like', "%{$identifier}%")
-                      ->orWhere('customer_phone', $identifier)
-                      ->orWhere('customer_email', $identifier);
-                })
-                ->first();
+            $customer = $this->findCustomerByIdentifier($businessId, $identifier);
 
             if ($customer && $customer->{$field} !== null) {
                 $customer->update([$field => $newValue]);
@@ -513,9 +525,6 @@ class PrivacyController extends Controller
             'notes' => 'Processing restricted per data subject request. Data marked as restricted in all systems.',
         ]);
 
-        // In a real implementation, you would flag the data as restricted
-        // and prevent further processing until restriction is lifted
-
         return response()->json([
             'message' => 'Processing restriction applied. Data marked as restricted.',
             'request' => $dataSubjectRequest,
@@ -532,8 +541,6 @@ class PrivacyController extends Controller
             'completed_at' => now(),
             'notes' => 'Objection recorded. Processing will be reviewed and halted if legitimate grounds exist.',
         ]);
-
-        // In a real implementation, you would flag the data to stop specific processing activities
 
         return response()->json([
             'message' => 'Objection recorded. Processing will be reviewed.',

@@ -14,29 +14,19 @@ return new class extends Migration
             } else {
                 $table->integer('witnessed_by')->nullable()->change();
             }
-            
+
             if (!Schema::hasColumn('Wastage_Record', 'witnessed_by')) {
                 $table->foreign('witnessed_by')->references('User_id')->on('User')->onDelete('set null');
             }
-            
-            if (!Schema::hasColumn('Wastage_Record', 'witnessed_at')) {
-                $table->timestamp('witnessed_at')->nullable();
-            }
-            if (!Schema::hasColumn('Wastage_Record', 'witness_notes')) {
-                $table->text('witness_notes')->nullable();
-            }
-            if (!Schema::hasColumn('Wastage_Record', 'disposal_method')) {
-                $table->string('disposal_method')->nullable();
-            }
-            if (!Schema::hasColumn('Wastage_Record', 'disposal_location')) {
-                $table->string('disposal_location')->nullable();
-            }
-            if (!Schema::hasColumn('Wastage_Record', 'requires_witness')) {
-                $table->boolean('requires_witness')->default(false);
-            }
-            if (!Schema::hasColumn('Wastage_Record', 'witness_verified')) {
-                $table->boolean('witness_verified')->default(false);
-            }
+
+            $this->addMissingColumns($table, [
+                'witnessed_at' => fn (Blueprint $t) => $t->timestamp('witnessed_at')->nullable(),
+                'witness_notes' => fn (Blueprint $t) => $t->text('witness_notes')->nullable(),
+                'disposal_method' => fn (Blueprint $t) => $t->string('disposal_method')->nullable(),
+                'disposal_location' => fn (Blueprint $t) => $t->string('disposal_location')->nullable(),
+                'requires_witness' => fn (Blueprint $t) => $t->boolean('requires_witness')->default(false),
+                'witness_verified' => fn (Blueprint $t) => $t->boolean('witness_verified')->default(false),
+            ]);
         });
     }
 
@@ -54,5 +44,14 @@ return new class extends Migration
                 'witness_verified',
             ]);
         });
+    }
+
+    protected function addMissingColumns(Blueprint $table, array $columns): void
+    {
+        foreach ($columns as $column => $definition) {
+            if (!Schema::hasColumn('Wastage_Record', $column)) {
+                $definition($table);
+            }
+        }
     }
 };

@@ -424,7 +424,7 @@ class SalesTransactionController extends Controller
                         continue;
                     }
                     
-                    $batch = FEFOBatch::find($batchId);
+                    FEFOBatch::find($batchId);
                     
                     // Update inventory aggregate
                     $inventory = $lockedInventories->get($item['product_id']);

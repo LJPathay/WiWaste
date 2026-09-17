@@ -243,13 +243,14 @@ Route::get('/ml/accuracy/{product_id}',   [ForecastAccuracyController::class, 's
 
     // Data Retention Policies
     $retentionPrefix = '/retention-policies';
+    $retentionId = $retentionPrefix.'/{id}';
     Route::get($retentionPrefix, [DataRetentionPolicyController::class, 'index']);
     Route::post($retentionPrefix, [DataRetentionPolicyController::class, 'store']);
-    Route::get($retentionPrefix.'/{id}', [DataRetentionPolicyController::class, 'show']);
-    Route::put($retentionPrefix.'/{id}', [DataRetentionPolicyController::class, 'update']);
-    Route::delete($retentionPrefix.'/{id}', [DataRetentionPolicyController::class, 'destroy']);
-    Route::post($retentionPrefix.'/{id}/execute', [DataRetentionPolicyController::class, 'executePurge']);
-    Route::get($retentionPrefix.'/{id}/preview', [DataRetentionPolicyController::class, 'previewPurge']);
+    Route::get($retentionId, [DataRetentionPolicyController::class, 'show']);
+    Route::put($retentionId, [DataRetentionPolicyController::class, 'update']);
+    Route::delete($retentionId, [DataRetentionPolicyController::class, 'destroy']);
+    Route::post($retentionId.'/execute', [DataRetentionPolicyController::class, 'executePurge']);
+    Route::get($retentionId.'/preview', [DataRetentionPolicyController::class, 'previewPurge']);
     Route::get($retentionPrefix.'/logs', [DataRetentionPolicyController::class, 'purgeLogs']);
 
 });

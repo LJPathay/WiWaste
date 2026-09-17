@@ -47,7 +47,7 @@ class ReorderService
             $suggestion = $this->calculateSuggestion($product, $businessId, $branchId, $options);
             if ($suggestion) {
                 // Enhance with ML data if available
-                $suggestion = $this->enhanceWithMLData($suggestion, $product);
+                $suggestion = $this->enhanceWithMLData($suggestion);
                 $suggestions[] = $suggestion;
             }
         }
@@ -116,7 +116,7 @@ class ReorderService
     /**
      * Enhance suggestion with ML data (forecast, risk, optimization)
      */
-    protected function enhanceWithMLData(array $suggestion, Product $product): array
+    protected function enhanceWithMLData(array $suggestion): array
     {
         // Add forecast demand if available
         $latestForecast = \App\Models\ForecastResult::where('product_id', $suggestion['product_id'])

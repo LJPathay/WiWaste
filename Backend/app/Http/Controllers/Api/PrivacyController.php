@@ -277,16 +277,10 @@ class PrivacyController extends Controller
             return response()->json(['message' => 'Download is only available for portability requests.'], 422);
         }
 
-        $business = Business::find($request->business_id);
-        $exportData = $this->gatherSubjectData($request->business_id, $request->subject_identifier);
+        $this->gatherSubjectData($request->business_id, $request->subject_identifier);
 
         // Create CSV export
         $filename = "portability_export_{$request->subject_identifier}_" . now()->format('Ymd_His') . ".csv";
-
-        $headers = [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
-        ];
 
         $callback = function () use ($request) {
             $exportData = $this->gatherSubjectData($request->business_id, $request->subject_identifier);
@@ -347,7 +341,7 @@ class PrivacyController extends Controller
         $identifier = $request->subject_identifier;
 
         // Get all data to be erased
-        $dataToErase = $this->gatherSubjectData($businessId, $request->subject_identifier);
+        $this->gatherSubjectData($businessId, $request->subject_identifier);
 
         $erasedCounts = [];
 
@@ -441,7 +435,9 @@ class PrivacyController extends Controller
 
     protected function anonymizeValues(array $data, string $identifier): array
     {
-        if (!$data) return $data;
+        if (!$data) {
+            return $data;
+        }
 
         foreach ($data as $key => $value) {
             if (is_string($value)) {

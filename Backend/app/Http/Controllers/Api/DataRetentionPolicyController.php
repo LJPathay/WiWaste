@@ -146,7 +146,7 @@ class DataRetentionPolicyController extends Controller
         }
 
 
-        return DB::transaction(function () use ($policy, $request) {
+        return DB::transaction(function () use ($policy) {
             $entityTable = $this->getEntityTable($policy->entity_type);
             $action = $policy->action;
 

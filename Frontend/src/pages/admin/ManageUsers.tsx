@@ -15,7 +15,6 @@ import {
   ITEMS_PER_PAGE,
   ROLE_CONFIG,
   maskEmail,
-  type UserForm,
   EMPTY_FORM,
   getPasswordRules,
   isPasswordValid,

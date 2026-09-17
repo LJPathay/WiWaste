@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { suppliers, type ApiSupplier, type CreateSupplierPayload } from '../services/api';
+import { suppliers, type CreateSupplierPayload } from '../services/api';
 
 export function useSuppliers() {
   return useQuery({

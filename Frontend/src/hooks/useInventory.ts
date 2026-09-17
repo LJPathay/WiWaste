@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { inventory, type ApiInventory, type ApiStockMovement } from '../services/api';
+import { inventory } from '../services/api';
 
 export function useInventoryList(params?: { search?: string; status?: string; page?: number }) {
   return useQuery({

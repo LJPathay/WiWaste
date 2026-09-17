@@ -1,16 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth } from '../services/api';
-import { setStoredSession, type UserRole, mockLogin } from '../utils/mockAuthAndFeatures';
+import { setStoredSession, type UserRole } from '../utils/mockAuthAndFeatures';
 
 export function Login() {
   const navigate = useNavigate();
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('admin123');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
-  const [showDemoDropdown, setShowDemoDropdown] = useState(false);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -21,62 +20,23 @@ export function Login() {
     setLoading(true);
     setError(null);
 
-    const nameMap: Record<UserRole, string> = {
-      owner: 'Lia Cruz',
-      inventory: 'Mia Stockwell',
-      cashier: 'Carlo Reyes',
-    };
-
     const companyMap: Record<UserRole, string> = {
       owner: 'WiWaste Owner Administration',
       inventory: 'WiWaste Inventory Floor',
       cashier: 'Ipharma Mart POS',
     };
 
-    const demoUsers: Record<string, { password: string; role: UserRole; email: string }> = {
-      admin: { password: 'admin123', role: 'owner', email: 'owner@ipharmamart.com' },
-      staff_inventory: { password: 'staff123', role: 'inventory', email: 'inventory@ipharmamart.com' },
-      cashier_01: { password: 'pos123', role: 'cashier', email: 'cashier@ipharmamart.com' },
-    };
-
-    const demoUser = demoUsers[username];
-
-    if (demoUser && password === demoUser.password) {
-      try {
-        const user = await mockLogin(demoUser.email, password, demoUser.role);
-        localStorage.setItem('wiwaste_token', 'demo-token');
-        localStorage.setItem('wiwaste_user', JSON.stringify(user));
-
-        setStoredSession({
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          company: user.company,
-          role: user.role,
-        });
-
-        navigate(user.role === 'cashier' ? '/cashier/pos' : '/dashboard');
-      } catch {
-        setStoredSession({
-          id: `demo-${demoUser.role}`,
-          email: demoUser.email,
-          name: nameMap[demoUser.role],
-          company: companyMap[demoUser.role],
-          role: demoUser.role,
-        });
-        navigate(demoUser.role === 'cashier' ? '/cashier/pos' : '/dashboard');
-      } finally {
-        setLoading(false);
-      }
-      return;
-    }
-
     try {
       const result = await auth.login(username, password);
       localStorage.setItem('wiwaste_token', result.token);
       localStorage.setItem('wiwaste_user', JSON.stringify(result.user));
 
-      const uiRole: UserRole = result.user.role === 'Admin' ? 'owner' : (result.user.role === 'Inventory' ? 'inventory' : 'cashier');
+      let uiRole: UserRole = 'cashier';
+      if (result.user.role === 'Admin' || result.user.role === 'Owner') {
+        uiRole = 'owner';
+      } else if (result.user.role === 'Inventory') {
+        uiRole = 'inventory';
+      }
 
       setStoredSession({
         id: String(result.user.id ?? result.user.email ?? username),
@@ -93,16 +53,6 @@ export function Login() {
       setLoading(false);
     }
   }
-
-  const fillCredentials = (user: string, pass: string) => {
-    setUsername(user);
-    setPassword(pass);
-    setShowDemoDropdown(false);
-  };
-
-  useEffect(() => {
-    document.documentElement.classList.remove('dark');
-  }, []);
 
   return (
     <div className="min-h-full flex flex-col lg:flex-row bg-slate-50 dark:bg-slate-950">
@@ -294,51 +244,6 @@ export function Login() {
                   </button>
                 </div>
               </form>
-              {/* Quick Demo Credentials Accordion / Drawer */}
-              <div className="pt-2" data-purpose="quick-demo-section">
-                <button
-                  className="w-full flex items-center justify-center space-x-1.5 py-3 px-3 bg-slate-50 hover:bg-slate-100/80 dark:bg-slate-800/40 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-300 transition"
-                  id="demo-toggle-btn"
-                  type="button"
-                  onClick={() => setShowDemoDropdown(!showDemoDropdown)}
-                >
-                  {/* Lightning Bolt */}
-                  <svg className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path d="M13 10V3L4 14h7v7l9-11h-7z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path>
-                  </svg>
-                  <span>Quick Demo Credentials</span>
-                  <svg className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${showDemoDropdown ? 'rotate-180' : ''}`} fill="none" id="demo-arrow" stroke="currentColor" viewBox="0 0 24 24">
-                    <path d="M19 9l-7 7-7-7" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path>
-                  </svg>
-                </button>
-                {/* Collapsible Demo Quick-Fill Pills */}
-                <div className={`mt-2.5 p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800/60 text-xs ${showDemoDropdown ? '' : 'hidden'}`} id="demo-content">
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-2">Click below to auto-fill mock account details:</p>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    <button
-                      className="px-2 py-1.5 text-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded hover:border-brand-500 text-slate-700 dark:text-slate-300 font-medium truncate"
-                      onClick={() => fillCredentials('admin', 'admin123')}
-                      type="button"
-                    >
-                      Admin
-                    </button>
-                    <button
-                      className="px-2 py-1.5 text-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded hover:border-blue-500 text-slate-700 dark:text-slate-300 font-medium truncate"
-                      onClick={() => fillCredentials('staff_inventory', 'staff123')}
-                      type="button"
-                    >
-                      Staff
-                    </button>
-                    <button
-                      className="px-2 py-1.5 text-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded hover:border-purple-500 text-slate-700 dark:text-slate-300 font-medium truncate"
-                      onClick={() => fillCredentials('cashier_01', 'pos123')}
-                      type="button"
-                    >
-                      Cashier
-                    </button>
-                  </div>
-                </div>
-              </div>
             </div>
             {/* Card Inner Footer Note */}
             <div className="px-8 py-4 bg-slate-50/70 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800/80 text-center">

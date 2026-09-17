@@ -32,7 +32,7 @@ use App\Http\Controllers\Api\StockReceivingController;
 use App\Http\Controllers\Api\ReorderController;
 use App\Http\Controllers\Api\SanitationController;
 use App\Http\Controllers\Api\RecallController;
-use App\Http\Controllers\Api\WebhookController;
+use App\Http\Controllers\Api\DataRetentionPolicyController;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\ForceHttps;
 use App\Http\Middleware\RateLimitMiddleware;
@@ -239,6 +239,18 @@ Route::get('/ml/accuracy/alerts',         [ForecastAccuracyController::class, 'a
 Route::get('/ml/accuracy/{product_id}',   [ForecastAccuracyController::class, 'show']);
 
 // Webhook Framework
-Route::post('/webhooks/{provider}', [WebhookController::class, 'handle']);
+    Route::post('/webhooks/{provider}', [WebhookController::class, 'handle']);
+
+    // Data Retention Policies
+    $retentionPrefix = '/retention-policies';
+    $retentionId = $retentionPrefix.'/{id}';
+    Route::get($retentionPrefix, [DataRetentionPolicyController::class, 'index']);
+    Route::post($retentionPrefix, [DataRetentionPolicyController::class, 'store']);
+    Route::get($retentionId, [DataRetentionPolicyController::class, 'show']);
+    Route::put($retentionId, [DataRetentionPolicyController::class, 'update']);
+    Route::delete($retentionId, [DataRetentionPolicyController::class, 'destroy']);
+    Route::post($retentionId.'/execute', [DataRetentionPolicyController::class, 'executePurge']);
+    Route::get($retentionId.'/preview', [DataRetentionPolicyController::class, 'previewPurge']);
+    Route::get($retentionPrefix.'/logs', [DataRetentionPolicyController::class, 'purgeLogs']);
 
 });

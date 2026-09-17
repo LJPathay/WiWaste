@@ -207,11 +207,26 @@ class PurchaseOrderController extends Controller
                 $inventory->last_updated = now();
                 $inventory->save();
 
+                // Create FEFO batch for received stock
+                $batch = \App\Models\FEFOBatch::create([
+                    'business_id' => $user?->business_id,
+                    'branch_id' => $user?->branch_id,
+                    'product_id' => $poItem->product_id,
+                    'batch_number' => 'PO-' . $po->po_number,
+                    'quantity' => $additionalQty,
+                    'expiry_date' => $poItem->product?->expiration_date ?? now()->addYear(),
+                    'status' => 'active',
+                    'received_date' => now()->toDateString(),
+                    'supplier_batch_number' => $poItem->product?->barcode,
+                    'created_by' => $user?->User_id ?? 1,
+                ]);
+
                 $user = $request->user();
                 StockMovement::create([
                     'business_id'   => $user?->business_id,
                     'branch_id'     => $user?->branch_id,
                     'product_id'    => $poItem->product_id,
+                    'batch_id'      => $batch->batch_id,
                     'user_id'       => $user?->User_id ?? 1,
                     'movement_type' => 'Stock In',
                     'quantity'      => $additionalQty,

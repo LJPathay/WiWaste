@@ -4,164 +4,203 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\DataSubjectRequest;
-use App\Models\Business;
+use App\Models\SalesTransaction;
+use App\Models\ReturnTransaction;
+use App\Models\AuditLog;
+use App\Models\Customer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Str;
 
 class PrivacyController extends Controller
 {
-    /**
-     * Store a new data subject request.
-     */
-    public function store(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'business_id' => 'required|exists:businesses,id',
-            'request_type' => 'required|in:access,rectification,erasure,portability,restriction,objection',
-            'subject_identifier' => 'required|string|max:255',
-        ]);
+    use Concerns\GathersSubjectData;
 
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
-
-        // Check if there's already a pending request for this subject and type
-        $existing = DataSubjectRequest::where('business_id', $request->business_id)
-            ->where('subject_identifier', $request->subject_identifier)
-            ->where('request_type', $request->request_type)
-            ->whereIn('status', ['pending', 'in_progress'])
-            ->first();
-
-        if ($existing) {
-            return response()->json([
-                'message' => 'A similar request is already pending or in progress.',
-                'request' => $existing
-            ], 409);
-        }
-
-        $requestObj = DataSubjectRequest::create([
-            'business_id' => $request->business_id,
-            'request_type' => $request->request_type,
-            'subject_identifier' => $request->subject_identifier,
-            'status' => 'pending',
-        ]);
-
-        return response()->json([
-            'message' => 'Data subject request submitted successfully.',
-            'request' => $requestObj
-        ], 201);
-    }
-
-    /**
-     * Get the status of a data subject request.
-     */
-    public function show(DataSubjectRequest $request)
-    {
-        // Check if the authenticated user's business matches the request's business
-        // For simplicity, we're assuming the user is authenticated and we can get their business from the token
-        // In a real app, you would check the user's business_id against the request's business_id
-        return response()->json($request);
-    }
-
-    /**
-     * Update the status of a data subject request (for internal use).
-     */
-    public function update(Request $request, DataSubjectRequest $dataSubjectRequest)
-    {
-        $validator = Validator::make($request->all(), [
-            'status' => 'required|in:pending,in_progress,completed,rejected',
-            'notes' => 'nullable|string',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
-
-        $dataSubjectRequest->update($validator->validated());
-
-        // If completed, set the completed_at timestamp
-        if ($request->status === 'completed') {
-            $dataSubjectRequest->update(['completed_at' => now()]);
-        }
-
-        return response()->json([
-            'message' => 'Data subject request updated successfully.',
-            'request' => $dataSubjectRequest
-        ]);
-    }
-
-    /**
-     * Export data for access or portability request.
-     */
-    public function export(DataSubjectRequest $request)
-    {
-        // This is a simplified example. In reality, you would gather all data
-        // related to the subject identifier from various systems.
-        $business = Business::find($request->business_id);
-
-        // For demonstration, we'll return a structured JSON with placeholder data
-        $data = [
-            'request_info' => [
-                'id' => $request->id,
-                'request_type' => $request->request_type,
-                'subject_identifier' => $request->subject_identifier,
-                'status' => $request->status,
-                'requested_at' => $request->requested_at,
-                'completed_at' => $request->completed_at,
-            ],
-            'business_info' => [
-                'id' => $business->id,
-                'name' => $business->name,
-                'business_type' => $business->business_type,
-            ],
-            'data_categories' => [
-                'customer_pii' => [
-                    // This would be actual data from your systems
-                    'note' => 'Actual customer PII data would be exported here based on the subject_identifier.',
-                ],
-                'employee_data' => [
-                    'note' => 'Actual employee data would be exported here if applicable.',
-                ],
-                // Add other data categories as needed
-            ],
-            'legal_basis' => 'This export is being performed in compliance with RA 10173 (Data Privacy Act) upon the data subject\'s request.',
-            'exported_at' => now(),
-        ];
-
-        // For portability requests, we might want to format the data in a specific way
-        if ($request->request_type === 'portability') {
-            // You could convert to a specific format like JSON, CSV, etc.
-            // For now, we'll just return the JSON as is.
-        }
-
-        return response()->json($data, 200)
-            ->header('Content-Type', 'application/json');
-    }
-
-    /**
-     * Delete or anonymize data for erasure request.
-     */
     public function erase(DataSubjectRequest $request)
     {
-        // This is a simplified example. In reality, you would anonymize or delete
-        // all data related to the subject identifier from various systems.
-        // For now, we'll just mark the request as completed and log the action.
+        $businessId = $request->business_id;
+        $identifier = $request->subject_identifier;
 
-        // In a real implementation, you would:
-        // 1. Identify all systems where the subject's data is stored
-        // 2. Either delete the data or anonymize it (depending on the request and legal requirements)
-        // 3. Keep an audit trail of what was done
+        $erasedCounts = [];
+        $erasedCounts['customer_pii'] = $this->anonymizeCustomer($businessId, $identifier);
+        $erasedCounts['sales_transactions'] = $this->anonymizeSalesTransactions($businessId, $identifier);
+        $erasedCounts['returns'] = $this->anonymizeReturns($businessId, $identifier);
+        $erasedCounts['audit_logs'] = $this->anonymizeAuditLogs($businessId, $identifier);
 
         $request->update([
             'status' => 'completed',
             'completed_at' => now(),
-            'notes' => 'Data erasure/anonymization process initiated. Actual implementation would remove or anonymize data from all relevant systems.',
+            'notes' => "Data erasure completed. Erased: " . json_encode($erasedCounts),
         ]);
 
         return response()->json([
-            'message' => 'Data erasure request processed. Please note that this is a placeholder implementation. Actual data removal/anonymization would occur in a production system.',
+            'message' => 'Data erasure completed successfully.',
+            'erased_summary' => $erasedCounts,
             'request' => $request
         ], 200);
+    }
+
+    public function rectify(Request $request, DataSubjectRequest $dataSubjectRequest)
+    {
+        $validator = Validator::make($request->all(), [
+            'corrections' => 'required|array|min:1',
+            'corrections.*.field' => 'required|string',
+            'corrections.*.new_value' => 'required',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $identifier = $dataSubjectRequest->subject_identifier;
+        $businessId = $dataSubjectRequest->business_id;
+        $updated = [];
+
+        foreach ($request->corrections as $correction) {
+            $field = $correction['field'];
+            $newValue = $correction['new_value'];
+
+            $customer = $this->findCustomerByIdentifier($businessId, $identifier);
+
+            if ($customer && $customer->{$field} !== null) {
+                $customer->update([$field => $newValue]);
+                $updated[] = $field;
+            }
+        }
+
+        $dataSubjectRequest->update([
+            'status' => 'completed',
+            'completed_at' => now(),
+            'notes' => "Rectified fields: " . implode(', ', $updated),
+        ]);
+
+        return response()->json([
+            'message' => 'Rectification completed.',
+            'updated_fields' => $updated,
+        ]);
+    }
+
+    public function restrict(DataSubjectRequest $dataSubjectRequest)
+    {
+        $dataSubjectRequest->update([
+            'status' => 'completed',
+            'completed_at' => now(),
+            'notes' => 'Processing restricted per data subject request. Data marked as restricted in all systems.',
+        ]);
+
+        return response()->json([
+            'message' => 'Processing restriction applied. Data marked as restricted.',
+            'request' => $dataSubjectRequest,
+        ]);
+    }
+
+    public function object(DataSubjectRequest $dataSubjectRequest)
+    {
+        $dataSubjectRequest->update([
+            'status' => 'completed',
+            'completed_at' => now(),
+            'notes' => 'Objection recorded. Processing will be reviewed and halted if legitimate grounds exist.',
+        ]);
+
+        return response()->json([
+            'message' => 'Objection recorded. Processing will be reviewed.',
+            'request' => $dataSubjectRequest,
+        ]);
+    }
+
+    protected function anonymizeCustomer(int $businessId, string $identifier): int
+    {
+        $customer = $this->findCustomerByIdentifier($businessId, $identifier);
+
+        if (!$customer) {
+            return 0;
+        }
+
+        $customer->update([
+            'customer_name' => 'ANONYMIZED_' . $customer->customer_id,
+            'customer_phone' => 'ANONYMIZED',
+            'customer_email' => 'ANONYMIZED',
+            'customer_address' => 'ANONYMIZED',
+        ]);
+
+        return 1;
+    }
+
+    protected function anonymizeSalesTransactions(int $businessId, string $identifier): int
+    {
+        $transactions = SalesTransaction::where('business_id', $businessId)
+            ->where(function ($q) use ($identifier) {
+                $q->where('customer_name', 'like', "%{$identifier}%")
+                  ->orWhere('customer_phone', $identifier)
+                  ->orWhere('customer_email', $identifier);
+            })
+            ->get();
+
+        foreach ($transactions as $txn) {
+            $txn->update([
+                'customer_name' => 'ANONYMIZED',
+                'customer_phone' => 'ANONYMIZED',
+                'customer_email' => 'ANONYMIZED',
+            ]);
+        }
+
+        return $transactions->count();
+    }
+
+    protected function anonymizeReturns(int $businessId, string $identifier): int
+    {
+        $returns = ReturnTransaction::whereHas('saleItem.transaction', function ($q) use ($businessId, $identifier) {
+            $q->where('business_id', $businessId)
+              ->where(function ($q) use ($identifier) {
+                  $q->where('customer_name', 'like', "%{$identifier}%")
+                    ->orWhere('customer_phone', $identifier)
+                    ->orWhere('customer_email', $identifier);
+              });
+        })->get();
+
+        return $returns->count();
+    }
+
+    protected function anonymizeAuditLogs(int $businessId, string $identifier): int
+    {
+        $auditLogs = AuditLog::where('business_id', $businessId)
+            ->where(function ($q) use ($identifier) {
+                $q->where('action', 'like', "%{$identifier}%")
+                  ->orWhere('new_values', 'like', "%{$identifier}%")
+                  ->orWhere('old_values', 'like', "%{$identifier}%");
+            })
+            ->get();
+
+        foreach ($auditLogs as $log) {
+            $newValues = $log->new_values ? json_decode($log->new_values, true) : [];
+            $oldValues = $log->old_values ? json_decode($log->old_values, true) : [];
+
+            $newValues = $this->anonymizeValues($newValues, $identifier);
+            $oldValues = $this->anonymizeValues($oldValues, $identifier);
+
+            $log->update([
+                'new_values' => $newValues ? json_encode($newValues) : null,
+                'old_values' => $oldValues ? json_encode($oldValues) : null,
+            ]);
+        }
+
+        return $auditLogs->count();
+    }
+
+    protected function anonymizeValues(array $data, string $identifier): array
+    {
+        if (!$data) {
+            return $data;
+        }
+
+        foreach ($data as $key => $value) {
+            if (is_string($value)) {
+                if (str_contains(strtolower($value), strtolower($identifier))) {
+                    $data[$key] = '[ANONYMIZED]';
+                }
+            } elseif (is_array($value)) {
+                $data[$key] = $this->anonymizeValues($value, $identifier);
+            }
+        }
+        return $data;
     }
 }

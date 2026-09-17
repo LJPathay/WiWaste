@@ -9,7 +9,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('product', function (Blueprint $table) {
-            // business_id already exists, skip
+            // Add business_id if not exists
+            if (!Schema::hasColumn('product', 'business_id')) {
+                $table->foreignId('business_id')->nullable()->constrained('businesses')->onDelete('cascade')->after('supplier_id');
+            }
             if (!Schema::hasColumn('product', 'product_classification')) {
                 $table->enum('product_classification', ['food', 'drug', 'cosmetic', 'device', 'general'])->default('general')->after('business_id');
             }

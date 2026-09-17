@@ -49,11 +49,11 @@
     --chart-5: oklch(0.769 0.188 70.08);
     --radius: 0.625rem;
     --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
+    --sidebar-foreground: oklch(0.145 0 0);
     --sidebar-primary: #030213;
-    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-primary-foreground: oklch(1 0 0);
     --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
+    --sidebar-accent-foreground: oklch(1 0 0);
     --sidebar-border: oklch(0.922 0 0);
     --sidebar-ring: oklch(0.708 0 0);
 
@@ -195,8 +195,31 @@
 }
 
 @layer base {
-    * {
-        @apply border-border outline-ring/50;
+    *,
+    *::before,
+    *::after {
+        outline-color: oklch(0.708 0 0 / 0.5);
+        border-color: var(--border);
+    }
+
+    #main-content {
+        --tw-shadow: 0 0 #0000;
+        --tw-shadow-colored: 0 0 #0000;
+        --tw-inset-shadow: 0 0 #0000;
+        --tw-ring-shadow: 0 0 #0000;
+        --tw-inset-ring-shadow: 0 0 #0000;
+        --tw-ring-offset-shadow: 0 0 #0000;
+        box-shadow: none;
+        border-color: transparent;
+    }
+
+    #main-content,
+    #main-content *,
+    #main-content *::before,
+    #main-content *::after {
+        --tw-ring-offset-shadow: 0 0 #0000;
+        --tw-ring-shadow: 0 0 #0000;
+        --tw-inset-shadow: 0 0 #0000;
     }
 
     body {
@@ -204,9 +227,9 @@
     }
 
     /**
-  * Default typography styles for HTML elements (h1-h4, p, label, button, input).
-  * These are in @layer base, so Tailwind utility classes (like text-sm, text-lg) automatically override them.
-  */
+   * Default typography styles for HTML elements (h1-h4, p, label, button, input).
+   * These are in @layer base, so Tailwind utility classes (like text-sm, text-lg) automatically override them.
+   */
 
     html {
         font-size: var(--font-size);
@@ -246,6 +269,8 @@
         font-size: var(--text-base);
         font-weight: var(--font-weight-medium);
         line-height: 1.5;
+        min-height: 44px;
+        min-width: 44px;
     }
 
     input {

@@ -8,17 +8,37 @@ use App\Models\Supplier;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
 use App\Models\FEFOBatch;
+use App\Services\Ml\ForecastService;
+use App\Services\Ml\OptimizationService;
+use App\Services\Ml\MlServiceUnavailableException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Collection;
 
 class ReorderService
 {
+    protected int $lastForecastCount = 0;
+    protected ?float $lastOptimizationFitness = null;
+    protected ?int $lastOptimizationGenerations = null;
+    protected ?float $lastOptimizationConfidence = null;
+
+    public function __construct(
+        private ForecastService $forecastService,
+        private OptimizationService $optimizationService
+    ) {}
+
     /**
      * Generate reorder suggestions for a business/branch
      * Returns a collection of suggested PO drafts grouped by supplier
      */
     public function generateSuggestions(int $businessId, ?int $branchId = null, array $options = []): array
     {
+        // Generate ML forecasts first
+        $this->generateMLForecasts();
+
+        // Then run optimization for optimal replenishment plan
+        $this->runOptimization($options);
+
+        // Get products needing reorder (fallback to rule-based if ML unavailable)
         $products = $this->getProductsNeedingReorder($businessId, $branchId);
         
         $suggestions = [];
@@ -26,6 +46,8 @@ class ReorderService
         foreach ($products as $product) {
             $suggestion = $this->calculateSuggestion($product, $businessId, $branchId, $options);
             if ($suggestion) {
+                // Enhance with ML data if available
+                $suggestion = $this->enhanceWithMLData($suggestion);
                 $suggestions[] = $suggestion;
             }
         }
@@ -44,7 +66,85 @@ class ReorderService
                 'suppliers_involved' => count($consolidated),
                 'estimated_total_cost' => array_sum(array_column($consolidated, 'estimated_total_cost')),
             ],
+            'ml_insights' => [
+                'forecast_generated' => $this->lastForecastCount,
+                'optimization_fitness' => $this->lastOptimizationFitness ?? null,
+                'optimization_generations' => $this->lastOptimizationGenerations ?? null,
+                'optimization_confidence' => $this->lastOptimizationConfidence ?? null,
+            ],
         ];
+    }
+
+    /**
+     * Generate ML forecasts for products needing reorder
+     */
+    protected function generateMLForecasts(): void
+    {
+        try {
+            $this->lastForecastCount = $this->forecastService->generateForAll();
+        } catch (MlServiceUnavailableException $e) {
+            // ML service unavailable, fall back to rule-based
+            $this->lastForecastCount = 0;
+        }
+    }
+
+    /**
+     * Run GA optimization for optimal replenishment plan
+     */
+    protected function runOptimization(array $options = []): array
+    {
+        try {
+            $budget = $options['budget'] ?? 100000; // Default budget
+            
+            $result = $this->optimizationService->optimize($budget, 30);
+            
+            $this->lastOptimizationFitness = $result['fitness'] ?? null;
+            $this->lastOptimizationGenerations = $result['generations_run'] ?? null;
+            $this->lastOptimizationConfidence = $result['confidence'] ?? null;
+            
+            return $result;
+        } catch (MlServiceUnavailableException $e) {
+            // ML service unavailable, skip optimization
+            $this->lastOptimizationFitness = null;
+            $this->lastOptimizationGenerations = null;
+            $this->lastOptimizationConfidence = null;
+            
+            return [];
+        }
+    }
+
+    /**
+     * Enhance suggestion with ML data (forecast, risk, optimization)
+     */
+    protected function enhanceWithMLData(array $suggestion): array
+    {
+        // Add forecast demand if available
+        $latestForecast = \App\Models\ForecastResult::where('product_id', $suggestion['product_id'])
+            ->latest('generated_date')
+            ->first();
+        
+        if ($latestForecast) {
+            $suggestion['ml_forecast'] = [
+                'predicted_demand_30d' => (int) $latestForecast->forecast_period_sum ?? 0,
+                'overstock_risk' => $latestForecast->overstock_risk ?? 'Low',
+                'confidence' => $latestForecast->confidence ?? null,
+            ];
+        }
+
+        // Add loss risk if available
+        $lossRisk = \App\Models\LossRisk::where('product_id', $suggestion['product_id'])
+            ->latest('generated_at')
+            ->first();
+        
+        if ($lossRisk) {
+            $suggestion['loss_risk'] = [
+                'tier' => $lossRisk->risk_tier,
+                'probability' => $lossRisk->loss_probability,
+                'expected_loss' => $lossRisk->expected_loss,
+            ];
+        }
+
+        return $suggestion;
     }
 
     /**

@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\DB;
 
 class OptimizationService
 {
+    use QueriesSalesVelocity;
+
     public function __construct(private MlServiceClient $ml)
     {
     }
@@ -31,7 +33,7 @@ class OptimizationService
             ->get();
 
         $forecastDemand = $this->forecastDemandByProduct($horizonDays);
-        $salesVelocity = $this->salesVelocity7d();
+        $salesVelocity = $this->salesByWindow(7)->keyBy('product_id');
 
         $inputs = $products->filter(function (Product $product) use ($forecastDemand, $salesVelocity) {
             $demand = $this->demandFor($product, $forecastDemand, $salesVelocity);
@@ -75,23 +77,6 @@ class OptimizationService
             ->get()
             ->groupBy('product_id')
             ->map(fn ($rows) => (float) $rows->sum('predicted_demand'));
-    }
-
-    /**
-     * Completed-sales quantity per product over the last 7 days.
-     *
-     * @return Collection<int, object>
-     */
-    private function salesVelocity7d(): Collection
-    {
-        return DB::table('Sales_Item')
-            ->join('Sales_Transaction', 'Sales_Transaction.transaction_id', '=', 'Sales_Item.transaction_id')
-            ->where('Sales_Transaction.status', 'Completed')
-            ->whereBetween('Sales_Transaction.transaction_date', [now()->subDays(7), now()])
-            ->select('Sales_Item.product_id', DB::raw('SUM(Sales_Item.quantity) AS total'))
-            ->groupBy('Sales_Item.product_id')
-            ->get()
-            ->keyBy('product_id');
     }
 
     private function demandFor(Product $product, Collection $forecastDemand, Collection $salesVelocity, int $horizonDays = 30): float

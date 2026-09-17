@@ -6,10 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Inventory;
 use App\Models\StockMovement;
 use App\Models\StockReceiving;
+use App\Models\StockReceivingItem;
+use App\Models\FEFOBatch;
 use App\Models\AuditLog;
-use App\Jobs\WarmAnalyticsCache;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class StockReceivingController extends Controller
 {
@@ -27,7 +27,7 @@ class StockReceivingController extends Controller
 
     public function index(Request $request)
     {
-        $query = StockReceiving::with(['supplier', 'receiver', 'verifier']);
+        $query = StockReceiving::with(['supplier', 'receiver', 'verifier', 'items.product', 'items.batch']);
         $query = $this->scopeForBusinessAndBranch($query, $request);
 
         if ($status = $request->input('status')) {
@@ -55,40 +55,27 @@ class StockReceivingController extends Controller
             'sanitation_check_passed' => 'nullable|boolean',
             'notes'             => 'nullable|string|max:500',
             'status'            => 'nullable|in:pending,received,verified,rejected,partial',
+            'items'             => 'sometimes|array',
+            'items.*.product_id'      => 'required|integer|exists:Product,product_id',
+            'items.*.batch_id'        => 'nullable|integer|exists:FEFO_Batch,batch_id',
+            'items.*.po_item_id'      => 'nullable|integer|exists:Purchase_Order_Item,po_item_id',
+            'items.*.expected_quantity' => 'required|integer|min:1',
+            'items.*.received_quantity' => 'nullable|integer|min:0',
+            'items.*.rejected_quantity' => 'nullable|integer|min:0',
+            'items.*.unit_cost'       => 'nullable|numeric|min:0',
+            'items.*.temperature_at_receipt' => 'nullable|numeric',
+            'items.*.condition_check_passed' => 'nullable|boolean',
+            'items.*.sanitation_check_passed' => 'nullable|boolean',
+            'items.*.status'          => 'nullable|in:pending,received,partial,rejected',
+            'items.*.notes'           => 'nullable|string|max:500',
         ]);
 
-        // Auto-assign business_id and branch_id from user if not provided
-        if (!isset($data['business_id']) && $user && $user->business_id) {
-            $data['business_id'] = $user->business_id;
-        }
-        if (!isset($data['branch_id']) && $user && $user->branch_id) {
-            $data['branch_id'] = $user->branch_id;
-        }
-        if (!isset($data['received_by']) && $user && $user->User_id) {
-            $data['received_by'] = $user->User_id;
-        }
-        if (!isset($data['received_at'])) {
-            $data['received_at'] = now();
-        }
-        if (!isset($data['status'])) {
-            $data['status'] = 'received';
-        }
-
+        $this->applyReceivingDefaults($data, $user);
         $receiving = StockReceiving::create($data);
+        $this->createReceivingItems($receiving, $data['items'] ?? []);
+        $this->logAudit($user, "Created stock receiving record for supplier #{$receiving->supplier_id}", $receiving, null, $data);
 
-        AuditLog::create([
-            'user_id'       => $user?->User_id ?? 1,
-            'action'        => "Created stock receiving record for supplier #{$receiving->supplier_id}",
-            'entity_type'   => 'Stock_Receiving',
-            'entity_id'     => $receiving->receiving_id,
-            'old_values'    => null,
-            'new_values'    => json_encode($data),
-            'created_at'    => now(),
-            'business_id'   => $user?->business_id,
-            'branch_id'     => $user?->branch_id,
-        ]);
-
-        $receiving->load(['supplier', 'receiver', 'verifier']);
+        $receiving->load(['supplier', 'receiver', 'verifier', 'items.product', 'items.batch']);
 
         return response()->json([
             'message' => 'Stock receiving record created.',
@@ -96,9 +83,57 @@ class StockReceivingController extends Controller
         ], 201);
     }
 
+    public function receive(Request $request, $id)
+    {
+        $user = $request->user();
+
+        $query = StockReceiving::with(['supplier', 'receiver', 'verifier', 'items.product', 'items.batch']);
+        $query = $this->scopeForBusinessAndBranch($query, $request);
+        $receiving = $query->findOrFail($id);
+
+        if (!in_array($receiving->status, ['pending', 'received', 'partial'])) {
+            return response()->json(['message' => 'Cannot receive in current status.'], 422);
+        }
+
+        $data = $request->validate([
+            'received_by' => 'sometimes|integer|exists:User,User_id',
+            'temperature_at_receipt' => 'nullable|numeric',
+            'condition_check_passed' => 'nullable|boolean',
+            'sanitation_check_passed' => 'nullable|boolean',
+            'notes' => 'nullable|string|max:500',
+            'items' => 'required|array|min:1',
+            'items.*.receiving_item_id' => 'required|integer|exists:stock_receiving_items,receiving_item_id',
+            'items.*.temperature_at_receipt' => 'nullable|numeric',
+            'items.*.condition_check_passed' => 'nullable|boolean',
+            'items.*.sanitation_check_passed' => 'nullable|boolean',
+            'items.*.received_quantity' => 'required|integer|min:1',
+            'items.*.rejected_quantity' => 'nullable|integer|min:0',
+            'items.*.notes' => 'nullable|string|max:500',
+        ]);
+
+        $data['received_by'] = $data['received_by'] ?? $user?->User_id;
+        $data['received_at'] = now();
+
+        $warnings = $this->processReceiveItems($receiving, $data['items'], $user);
+
+        $data['status'] = 'received';
+        $this->appendTemperatureWarnings($data, $warnings);
+        $receiving->update($data);
+
+        $this->logAudit($user, "Received stock for receiving record #{$receiving->receiving_id}", $receiving, $receiving->getOriginal(), $data);
+
+        $receiving->load(['supplier', 'receiver', 'verifier', 'items.product', 'items.batch']);
+
+        return response()->json([
+            'message' => 'Stock received successfully.',
+            'receiving' => $receiving,
+            'temperature_warnings' => $warnings,
+        ]);
+    }
+
     public function show($id)
     {
-        $query = StockReceiving::with(['supplier', 'receiver', 'verifier']);
+        $query = StockReceiving::with(['supplier', 'receiver', 'verifier', 'items.product', 'items.batch']);
         $query = $this->scopeForBusinessAndBranch($query, request());
         $receiving = $query->findOrFail($id);
 
@@ -107,7 +142,7 @@ class StockReceivingController extends Controller
 
     public function update(Request $request, $id)
     {
-        $query = StockReceiving::with(['supplier', 'receiver', 'verifier']);
+        $query = StockReceiving::with(['supplier', 'receiver', 'verifier', 'items.product', 'items.batch']);
         $query = $this->scopeForBusinessAndBranch($query, $request);
         $receiving = $query->findOrFail($id);
 
@@ -126,19 +161,9 @@ class StockReceivingController extends Controller
 
         $receiving->update($data);
 
-        AuditLog::create([
-            'user_id'       => $request->user()?->User_id ?? 1,
-            'action'        => "Updated stock receiving record #{$receiving->receiving_id}",
-            'entity_type'   => 'Stock_Receiving',
-            'entity_id'     => $receiving->receiving_id,
-            'old_values'    => json_encode($receiving->getOriginal()),
-            'new_values'    => json_encode($data),
-            'created_at'    => now(),
-            'business_id'   => $request->user()?->business_id,
-            'branch_id'     => $request->user()?->branch_id,
-        ]);
+        $this->logAudit($request->user(), "Updated stock receiving record #{$receiving->receiving_id}", $receiving, $receiving->getOriginal(), $data);
 
-        $receiving->load(['supplier', 'receiver', 'verifier']);
+        $receiving->load(['supplier', 'receiver', 'verifier', 'items.product', 'items.batch']);
 
         return response()->json([
             'message' => 'Stock receiving record updated.',
@@ -150,67 +175,40 @@ class StockReceivingController extends Controller
     {
         $user = $request->user();
 
-        $query = StockReceiving::with(['supplier', 'receiver', 'verifier']);
+        $query = StockReceiving::with(['supplier', 'receiver', 'verifier', 'items.product', 'items.batch']);
         $query = $this->scopeForBusinessAndBranch($query, $request);
         $receiving = $query->findOrFail($id);
 
         $data = $request->validate([
             'verified_by' => 'sometimes|integer|exists:User,User_id',
-            'temperature_at_receipt' => 'nullable|numeric',
-            'condition_check_passed' => 'nullable|boolean',
-            'sanitation_check_passed' => 'nullable|boolean',
             'notes' => 'nullable|string|max:500',
+            'items' => 'sometimes|array',
+            'items.*.receiving_item_id' => 'required|integer|exists:stock_receiving_items,receiving_item_id',
+            'items.*.temperature_at_receipt' => 'nullable|numeric',
+            'items.*.condition_check_passed' => 'nullable|boolean',
+            'items.*.sanitation_check_passed' => 'nullable|boolean',
+            'items.*.received_quantity' => 'nullable|integer|min:0',
+            'items.*.rejected_quantity' => 'nullable|integer|min:0',
+            'items.*.status' => 'nullable|in:pending,received,partial,rejected',
+            'items.*.notes' => 'nullable|string|max:500',
         ]);
 
-        if (!isset($data['verified_by']) && $user && $user->User_id) {
-            $data['verified_by'] = $user->User_id;
-        }
+        $data['verified_by'] = $data['verified_by'] ?? $user?->User_id;
         $data['verified_at'] = now();
         $data['status'] = 'verified';
 
-        // Temperature monitoring: check against product requirements
-        $temperatureWarnings = [];
-        if (isset($data['temperature_at_receipt']) && $data['temperature_at_receipt'] !== null) {
-            $products = \App\Models\Product::whereIn('product_id', function ($q) use ($receiving) {
-                $q->select('product_id')
-                  ->from('Purchase_Order_Item')
-                  ->where('purchase_order_id', $receiving->supplier_id);
-            })->get();
-
-            foreach ($products as $product) {
-                if ($product->required_temp_min !== null && $data['temperature_at_receipt'] < $product->required_temp_min) {
-                    $temperatureWarnings[] = "Temperature {$data['temperature_at_receipt']}°C is below required minimum {$product->required_temp_min}°C for {$product->product_name}";
-                }
-                if ($product->required_temp_max !== null && $data['temperature_at_receipt'] > $product->required_temp_max) {
-                    $temperatureWarnings[] = "Temperature {$data['temperature_at_receipt']}°C exceeds required maximum {$product->required_temp_max}°C for {$product->product_name}";
-                }
-            }
-        }
-
-        if (!empty($temperatureWarnings)) {
-            $data['notes'] = ($data['notes'] ?? '') . "\n\nTEMPERATURE WARNINGS:\n" . implode("\n", $temperatureWarnings);
-        }
-
+        $warnings = $this->processVerifyItems($receiving, $data['items'] ?? null, $user);
+        $this->appendTemperatureWarnings($data, $warnings);
         $receiving->update($data);
 
-        AuditLog::create([
-            'user_id'       => $user?->User_id ?? 1,
-            'action'        => "Verified stock receiving record #{$receiving->receiving_id}",
-            'entity_type'   => 'Stock_Receiving',
-            'entity_id'     => $receiving->receiving_id,
-            'old_values'    => json_encode($receiving->getOriginal()),
-            'new_values'    => json_encode($data),
-            'created_at'    => now(),
-            'business_id'   => $user?->business_id,
-            'branch_id'     => $user?->branch_id,
-        ]);
+        $this->logAudit($user, "Verified stock receiving record #{$receiving->receiving_id}", $receiving, $receiving->getOriginal(), $data);
 
-        $receiving->load(['supplier', 'receiver', 'verifier']);
+        $receiving->load(['supplier', 'receiver', 'verifier', 'items.product', 'items.batch']);
 
         return response()->json([
             'message' => 'Stock receiving record verified.',
             'receiving' => $receiving,
-            'temperature_warnings' => $temperatureWarnings ?? [],
+            'temperature_warnings' => $warnings,
         ]);
     }
 
@@ -231,16 +229,7 @@ class StockReceivingController extends Controller
             'notes' => ($receiving->notes ? $receiving->notes . "\n" : '') . "Rejected: {$data['reason']}",
         ]);
 
-        AuditLog::create([
-            'user_id'       => $user?->User_id ?? 1,
-            'action'        => "Rejected stock receiving record #{$receiving->receiving_id}: {$data['reason']}",
-            'entity_type'   => 'Stock_Receiving',
-            'entity_id'     => $receiving->receiving_id,
-            'new_values'    => json_encode($data),
-            'created_at'    => now(),
-            'business_id'   => $user?->business_id,
-            'branch_id'     => $user?->branch_id,
-        ]);
+        $this->logAudit($user, "Rejected stock receiving record #{$receiving->receiving_id}: {$data['reason']}", $receiving, null, $data);
 
         return response()->json(['message' => 'Order rejected.']);
     }
@@ -262,17 +251,175 @@ class StockReceivingController extends Controller
             'notes' => ($receiving->notes ? $receiving->notes . "\n" : '') . "Discarded: {$data['reason']}",
         ]);
 
-        AuditLog::create([
-            'user_id'       => $user?->User_id ?? 1,
-            'action'        => "Discarded stock receiving record #{$receiving->receiving_id}: {$data['reason']}",
-            'entity_type'   => 'Stock_Receiving',
-            'entity_id'     => $receiving->receiving_id,
-            'new_values'    => json_encode($data),
-            'created_at'    => now(),
-            'business_id'   => $user?->business_id,
-            'branch_id'     => $user?->branch_id,
-        ]);
+        $this->logAudit($user, "Discarded stock receiving record #{$receiving->receiving_id}: {$data['reason']}", $receiving, null, $data);
 
         return response()->json(['message' => 'Order discarded.']);
+    }
+
+    protected function applyReceivingDefaults(array &$data, $user): void
+    {
+        $data['business_id']  = $data['business_id']  ?? $user?->business_id;
+        $data['branch_id']    = $data['branch_id']    ?? $user?->branch_id;
+        $data['received_by']  = $data['received_by']  ?? $user?->User_id;
+        $data['received_at'] ??= now();
+        $data['status']      ??= 'received';
+    }
+
+    protected function createReceivingItems(StockReceiving $receiving, array $items): void
+    {
+        foreach ($items as $itemData) {
+            $itemData['receiving_id'] = $receiving->receiving_id;
+            $itemData += [
+                'received_quantity'       => 0,
+                'rejected_quantity'       => 0,
+                'condition_check_passed'  => true,
+                'sanitation_check_passed' => true,
+                'status'                  => 'pending',
+            ];
+            StockReceivingItem::create($itemData);
+        }
+    }
+
+    protected function validateTemperature(StockReceivingItem $item, array &$itemData): ?string
+    {
+        $product = $item->product;
+        $warning = null;
+
+        if ($product && !empty($itemData['temperature_at_receipt'])) {
+            $temp = $itemData['temperature_at_receipt'];
+
+            if ($product->required_temp_min !== null && $temp < $product->required_temp_min) {
+                $itemData['condition_check_passed'] = false;
+                $warning = "Item {$item->receiving_item_id} ({$product->product_name}): Temperature {$temp}°C is below required minimum {$product->required_temp_min}°C";
+            } elseif ($product->required_temp_max !== null && $temp > $product->required_temp_max) {
+                $itemData['condition_check_passed'] = false;
+                $warning = "Item {$item->receiving_item_id} ({$product->product_name}): Temperature {$temp}°C exceeds required maximum {$product->required_temp_max}°C";
+            }
+        }
+
+        return $warning;
+    }
+
+    protected function processReceiveItems(StockReceiving $receiving, array $items, $user): array
+    {
+        $warnings = [];
+
+        foreach ($items as $itemData) {
+            $item = $receiving->items()->find($itemData['receiving_item_id']);
+            if (!$item) {
+                continue;
+            }
+
+            $warning = $this->validateTemperature($item, $itemData);
+            if ($warning) {
+                $warnings[] = $warning;
+            }
+
+            $itemData['received_at'] = now();
+            $item->update($itemData);
+
+            if ($itemData['received_quantity'] > 0) {
+                $this->createBatchAndStockMovement($item, $itemData['received_quantity'], $user);
+            }
+        }
+
+        return $warnings;
+    }
+
+    protected function processVerifyItems(StockReceiving $receiving, ?array $items, $user): array
+    {
+        $warnings = [];
+
+        if (!$items || !is_array($items)) {
+            return $warnings;
+        }
+
+        foreach ($items as $itemData) {
+            $item = $receiving->items()->find($itemData['receiving_item_id']);
+            if (!$item) {
+                continue;
+            }
+
+            $itemData['verified_at'] = now();
+            $item->update($itemData);
+
+            $warning = $this->validateTemperature($item, $itemData);
+            if ($warning) {
+                $warnings[] = $warning;
+                $item->condition_check_passed = false;
+                $item->save();
+            }
+
+            if (isset($itemData['received_quantity']) && $itemData['received_quantity'] > 0) {
+                $this->createBatchAndStockMovement($item, $itemData['received_quantity'], $user);
+            }
+        }
+
+        return $warnings;
+    }
+
+    protected function appendTemperatureWarnings(array &$data, array $warnings): void
+    {
+        if (!empty($warnings)) {
+            $data['notes'] = ($data['notes'] ?? '') . "\n\nTEMPERATURE WARNINGS:\n" . implode("\n", $warnings);
+        }
+    }
+
+    protected function logAudit($user, string $action, $entity, ?array $oldValues, array $newValues): void
+    {
+        AuditLog::create([
+            'user_id'     => $user?->User_id ?? 1,
+            'action'      => $action,
+            'entity_type' => 'Stock_Receiving',
+            'entity_id'   => $entity->receiving_id,
+            'old_values'  => $oldValues ? json_encode($oldValues) : null,
+            'new_values'  => json_encode($newValues),
+            'created_at'  => now(),
+            'business_id' => $user?->business_id,
+            'branch_id'   => $user?->branch_id,
+        ]);
+    }
+
+    protected function createBatchAndStockMovement(StockReceivingItem $item, int $quantity, $user): void
+    {
+        $batch = FEFOBatch::create([
+            'business_id' => $item->receiving->business_id,
+            'branch_id' => $item->receiving->branch_id,
+            'product_id' => $item->product_id,
+            'batch_number' => $item->batch_id ? \App\Models\FEFOBatch::find($item->batch_id)?->batch_number : 'BATCH-' . now()->format('YmdHis'),
+            'quantity' => $quantity,
+            'expiry_date' => $item->product?->expiration_date ?? now()->addYear(),
+            'status' => 'active',
+            'received_date' => now()->toDateString(),
+            'received_temperature' => $item->temperature_at_receipt,
+            'supplier_batch_number' => $item->batch_id ? \App\Models\FEFOBatch::find($item->batch_id)?->supplier_batch_number : null,
+            'created_by' => $user?->User_id ?? 1,
+        ]);
+
+        $item->update(['batch_id' => $batch->batch_id, 'status' => 'received']);
+
+        StockMovement::create([
+            'business_id' => $item->receiving->business_id,
+            'branch_id' => $item->receiving->branch_id,
+            'product_id' => $item->product_id,
+            'batch_id' => $batch->batch_id,
+            'user_id' => $user?->User_id ?? 1,
+            'movement_type' => 'Stock In',
+            'quantity' => $quantity,
+            'remarks' => 'Stock received via receiving #' . $item->receiving->receiving_id,
+            'movement_date' => now(),
+        ]);
+
+        $inventory = Inventory::where('product_id', $item->product_id)
+            ->where('business_id', $item->receiving->business_id)
+            ->where('branch_id', $item->receiving->branch_id)
+            ->first();
+
+        if ($inventory) {
+            $inventory->current_stock += $quantity;
+            $inventory->stock_status = Inventory::calcStatus($inventory->current_stock, $item->product?->reorder_level ?? 10);
+            $inventory->last_updated = now();
+            $inventory->save();
+        }
     }
 }

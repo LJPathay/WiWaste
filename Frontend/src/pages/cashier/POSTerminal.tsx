@@ -1,5 +1,4 @@
 import { useMemo, useRef, useState, useEffect, useCallback } from 'react';
-import { createPortal } from 'react-dom';
 import { 
   Barcode, Search, Trash2, CreditCard, Wallet, Banknote, Plus, Minus, 
   User, Receipt, Clock, ArrowRight, Printer, CheckCircle2,
@@ -25,138 +24,21 @@ import {
   type SalesTransaction,
 } from '../../utils/cashierData';
 import { clearStoredSession, getStoredSession } from '../../utils/mockAuthAndFeatures';
-import { products as productsApi, sales as salesApi, type ApiProduct, type CreateSalePayload } from '../../services/api';
-
-interface CartLine {
-  product: CashierProduct;
-  quantity: number;
-  discountPct?: number;
-  discountAmount?: number;
-  originalPrice?: number;
-  overrideReason?: string;
-}
-
-const PRODUCT_SLOT_KEYS = ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'] as const;
-type ProductSlotKey = `product_${0|1|2|3|4|5|6|7|8|9}`;
-type HotkeyAction = 'focusSearch' | 'checkout' | 'discount' | 'closeModal' | 'voidItem' | 'newTransaction' | 'unqueue' | 'selectFirstQueue' | 'selectNextItem' | 'selectPrevItem' | ProductSlotKey;
-
-const DEFAULT_HOTKEYS: Record<HotkeyAction, string> = {
-  focusSearch: 'F2',
-  checkout: 'F4',
-  discount: 'F9',
-  closeModal: 'Escape',
-  voidItem: 'F8',
-  newTransaction: 'F6',
-  unqueue: 'Backspace',
-  selectFirstQueue: 'Tab',
-  selectNextItem: 'ArrowDown',
-  selectPrevItem: 'ArrowUp',
-  product_0: 'q', product_1: 'w', product_2: 'e', product_3: 'r', product_4: 't',
-  product_5: 'y', product_6: 'u', product_7: 'i', product_8: 'o', product_9: 'p',
-};
-
-const HOTKEY_LABELS: Record<HotkeyAction, string> = {
-  focusSearch: 'Focus Search / Barcode',
-  checkout: 'Proceed to Checkout',
-  discount: 'Apply Discount',
-  closeModal: 'Close Modal / Clear Search',
-  voidItem: 'Void Selected Item',
-  newTransaction: 'New Transaction',
-  unqueue: 'Remove Selected Item (Unqueue)',
-  selectFirstQueue: 'Select First Queue Item',
-  selectNextItem: 'Select Next Cart Item ↓',
-  selectPrevItem: 'Select Previous Cart Item ↑',
-  product_0: 'Product Slot 1', product_1: 'Product Slot 2', product_2: 'Product Slot 3',
-  product_3: 'Product Slot 4', product_4: 'Product Slot 5', product_5: 'Product Slot 6',
-  product_6: 'Product Slot 7', product_7: 'Product Slot 8', product_8: 'Product Slot 9',
-  product_9: 'Product Slot 10',
-};
-
-type HotkeyPreset = { label: string; description: string; keys: Record<HotkeyAction, string> };
-const HOTKEY_PRESETS: HotkeyPreset[] = [
-  {
-    label: 'Function Keys',
-    description: 'F-keys for actions, QWERTY row for slots — best for full keyboards',
-    keys: { focusSearch: 'F2', checkout: 'F4', discount: 'F9', voidItem: 'F8', newTransaction: 'F6', closeModal: 'Escape', unqueue: 'Backspace', selectFirstQueue: 'Tab', selectNextItem: 'ArrowDown', selectPrevItem: 'ArrowUp', product_0: 'q', product_1: 'w', product_2: 'e', product_3: 'r', product_4: 't', product_5: 'y', product_6: 'u', product_7: 'i', product_8: 'o', product_9: 'p' },
-  },
-  {
-    label: 'Numpad',
-    description: 'Numpad 1–0 for product slots — ideal for POS terminals with numpad',
-    keys: { focusSearch: 'F2', checkout: 'F4', discount: 'F9', voidItem: 'F8', newTransaction: 'F6', closeModal: 'Escape', unqueue: 'Delete', selectFirstQueue: 'Home', selectNextItem: 'ArrowDown', selectPrevItem: 'ArrowUp', product_0: '1', product_1: '2', product_2: '3', product_3: '4', product_4: '5', product_5: '6', product_6: '7', product_7: '8', product_8: '9', product_9: '0' },
-  },
-  {
-    label: 'Compact / Laptop',
-    description: 'Z–/ row for products, letter keys for actions — good for laptops without numpad',
-    keys: { focusSearch: 'F2', checkout: 'Enter', discount: 'd', voidItem: 'v', newTransaction: 'n', closeModal: 'Escape', unqueue: 'Backspace', selectFirstQueue: 'Tab', selectNextItem: 'ArrowDown', selectPrevItem: 'ArrowUp', product_0: 'z', product_1: 'x', product_2: 'c', product_3: 'b', product_4: 'm', product_5: ',', product_6: '.', product_7: '/', product_8: ';', product_9: "'" },
-  },
-];
-
-const CATEGORIES = [
-  { id: 'all', label: 'All Items' },
-  { id: 'CAT-GROCERY', label: 'Grocery' },
-  { id: 'CAT-BEVERAGE', label: 'Beverages' },
-  { id: 'CAT-SNACK', label: 'Snacks' },
-  { id: 'CAT-HOUSEHOLD', label: 'Household' },
-  { id: 'CAT-PHARMA', label: 'Pharmacy' },
-  { id: 'CAT-PERSONAL', label: 'Personal Care' },
-];
-
-// Backend category names → POS category filter slugs.
-const DB_CATEGORY_TO_SLUG: Record<string, string> = {
-  'Food & Beverage': 'CAT-GROCERY',
-  'Medicine & Health': 'CAT-PHARMA',
-  'Personal Care': 'CAT-PERSONAL',
-  'Household': 'CAT-HOUSEHOLD',
-  'Dairy': 'CAT-GROCERY',
-  'Frozen Goods': 'CAT-GROCERY',
-  'Beverages': 'CAT-BEVERAGE',
-  'Snacks': 'CAT-SNACK',
-};
-
-function apiProductToCashier(api: ApiProduct): CashierProduct {
-  return {
-    product_id: `P-${String(api.id).padStart(4, '0')}`,
-    db_id: api.id,
-    plu_code: String(api.id),
-    category_id: DB_CATEGORY_TO_SLUG[api.category] ?? 'CAT-GROCERY',
-    supplier_id: `SUP-${api.supplier?.toUpperCase() ?? 'GEN'}`,
-    barcode: api.sku,
-    product_name: api.name,
-    cost_price: api.cost_price,
-    selling_price: api.selling_price,
-    reorder_level: api.reorder_level,
-    expiration_date: api.expiration_date ?? '',
-    current_stock: api.stock,
-  };
-}
-
-const POS_CATALOG_CACHE_KEY = 'wiwaste_pos_catalog';
-const POS_CATALOG_CACHE_TTL_MS = 5 * 60 * 1000;
-
-function resolveCatalogSource(catalog: CashierProduct[], fallback: CashierProduct[], apiFailed: boolean): CashierProduct[] {
-  if (catalog.length > 0) return catalog;
-  return apiFailed ? fallback : [];
-}
-
-function loadCachedCatalog(): CashierProduct[] | null {
-  try {
-    const raw = localStorage.getItem(POS_CATALOG_CACHE_KEY);
-    if (!raw) return null;
-    const { savedAt, products } = JSON.parse(raw);
-    if (!Array.isArray(products) || Date.now() - Number(savedAt) > POS_CATALOG_CACHE_TTL_MS) return null;
-    return products as CashierProduct[];
-  } catch {
-    return null;
-  }
-}
-
-function saveCachedCatalog(products: CashierProduct[]): void {
-  try {
-    localStorage.setItem(POS_CATALOG_CACHE_KEY, JSON.stringify({ savedAt: Date.now(), products }));
-  } catch {
-    // storage unavailable — catalog still loads from the network
-  }
-}
+import { products as productsApi, sales as salesApi, type CreateSalePayload } from '../../services/api';
+import {
+  type CartLine,
+  type HotkeyAction,
+  type ProductSlotKey,
+  DEFAULT_HOTKEYS,
+  HOTKEY_LABELS,
+  HOTKEY_PRESETS,
+  CATEGORIES,
+  apiProductToCashier,
+  resolveCatalogSource,
+  loadCachedCatalog,
+  saveCachedCatalog,
+} from './POSConstants';
+import { ReceiptPreview } from './ReceiptPreview';
 
 export function POSTerminal() {
   const { toasts, dismiss, success, error } = useToast();
@@ -1315,7 +1197,7 @@ export function POSTerminal() {
               <ArrowRight className="w-5 h-5 text-[#0F766E]" /> Process Return
             </h3>
             <p className="text-sm text-slate-500 mb-4">Scan the receipt barcode or enter transaction ID to process a return.</p>
-            <input autoFocus type="text" placeholder="Transaction ID..." className="w-full px-4 py-3 bg-[#F8FAFC] border border-[#E5E7EB] rounded-lg mb-6 focus:outline-none focus:border-[#0F766E]" />
+            <input type="text" placeholder="Transaction ID..." className="w-full px-4 py-3 bg-[#F8FAFC] border border-[#E5E7EB] rounded-lg mb-6 focus:outline-none focus:border-[#0F766E]" aria-label="Transaction ID" />
             <div className="flex gap-2">
               <button onClick={() => setShowReturnModal(false)} className="flex-1 py-2 bg-slate-100 text-slate-600 font-bold rounded-lg hover:bg-slate-200">Cancel (Esc)</button>
               <button onClick={() => { success('Return processed'); setShowReturnModal(false); }} className="flex-1 py-2 bg-[#0F766E] text-white font-bold rounded-lg hover:bg-[#0d615b]">Find Receipt</button>
@@ -1835,98 +1717,7 @@ export function POSTerminal() {
       {/* =========================================================
           DEDICATED 80MM THERMAL RECEIPT PRINT TARGET (PORTAL DIRECTLY TO BODY)
           ========================================================= */}
-      {receipt && createPortal(
-        <div id="thermal-receipt-print-target">
-          <div style={{ textAlign: 'center', marginBottom: '8px' }}>
-            <div style={{ fontSize: '14px', fontWeight: 'bold' }}>WiWaste Store</div>
-            <div style={{ fontSize: '10px' }}>123 Retail Avenue, Metro Manila</div>
-            <div style={{ fontSize: '10px', fontWeight: 'bold' }}>
-              {isVatRegistered ? 'VAT REG TIN: 000-123-456-000' : 'NON-VAT OFFICIAL RECEIPT'}
-            </div>
-          </div>
-
-          <div style={{ borderTop: '1px dashed #000', borderBottom: '1px dashed #000', padding: '4px 0', marginBottom: '8px' }}>
-            <div className="flex-row-item">
-              <span>Txn #:</span>
-              <span>#POS-2026-{receipt.transaction_id.slice(-6)}</span>
-            </div>
-            <div className="flex-row-item">
-              <span>Date:</span>
-              <span>{receipt.transaction_date}</span>
-            </div>
-            <div className="flex-row-item">
-              <span>Cashier:</span>
-              <span>{receipt.cashier_name}</span>
-            </div>
-          </div>
-
-          <div style={{ borderBottom: '1px dashed #000', paddingBottom: '6px', marginBottom: '8px' }}>
-            <div className="flex-row-item" style={{ fontWeight: 'bold', marginBottom: '4px' }}>
-              <span style={{ width: '30px' }}>Qty</span>
-              <span style={{ flex: 1 }}>Item</span>
-              <span style={{ textAlign: 'right' }}>Total</span>
-            </div>
-            {receipt.items.map((item, idx) => (
-              <div key={idx} className="flex-row-item" style={{ marginBottom: '2px' }}>
-                <span style={{ width: '30px' }}>{item.quantity}</span>
-                <span style={{ flex: 1, paddingRight: '4px' }}>{item.product_name}</span>
-                <span style={{ textAlign: 'right' }}>{formatCurrency(item.subtotal)}</span>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ marginBottom: '8px' }}>
-            <div className="flex-row-item">
-              <span>Subtotal:</span>
-              <span>{formatCurrency(receipt.total_amount - (isVatRegistered ? receipt.total_amount * 0.12 : 0))}</span>
-            </div>
-            {receipt.seniorPwdName && (
-              <div className="flex-row-item" style={{ fontSize: '9px' }}>
-                <span>Senior/PWD:</span>
-                <span>{receipt.seniorPwdName}</span>
-              </div>
-            )}
-            {receipt.seniorPwdId && (
-              <div className="flex-row-item" style={{ fontSize: '9px' }}>
-                <span>ID No:</span>
-                <span>{receipt.seniorPwdId}</span>
-              </div>
-            )}
-            {isVatRegistered && (
-              <div className="flex-row-item">
-                <span>VAT (12%):</span>
-                <span>{formatCurrency(receipt.total_amount * 0.12)}</span>
-              </div>
-            )}
-            <div className="flex-row-item" style={{ fontWeight: 'bold', fontSize: '13px', borderTop: '1px solid #000', paddingTop: '4px', marginTop: '4px' }}>
-              <span>Grand Total:</span>
-              <span>{formatCurrency(receipt.total_amount)}</span>
-            </div>
-          </div>
-
-          <div style={{ borderTop: '1px dashed #000', paddingTop: '4px', marginBottom: '8px' }}>
-            <div className="flex-row-item">
-              <span>Payment Method:</span>
-              <span>{receipt.payment_method}</span>
-            </div>
-            <div className="flex-row-item">
-              <span>Amount Tendered:</span>
-              <span>{receipt.amount_tendered ? formatCurrency(receipt.amount_tendered) : formatCurrency(receipt.total_amount)}</span>
-            </div>
-            <div className="flex-row-item" style={{ fontWeight: 'bold' }}>
-              <span>Change Due:</span>
-              <span>{formatCurrency(receipt.change_due ?? 0)}</span>
-            </div>
-          </div>
-
-          <div style={{ textAlign: 'center', fontSize: '10px', marginTop: '10px' }}>
-            <div>Thank you for shopping with us!</div>
-            <div>Please come again.</div>
-            <div style={{ marginTop: '4px', fontSize: '9px' }}>Powered by WiWaste POS</div>
-          </div>
-        </div>,
-        document.body
-      )}
+      {receipt && <ReceiptPreview receipt={receipt} isVatRegistered={isVatRegistered} />}
 
     </div>
   );

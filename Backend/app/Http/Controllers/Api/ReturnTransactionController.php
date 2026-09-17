@@ -156,6 +156,7 @@ class ReturnTransactionController extends Controller
             'business_id'   => $user?->business_id,
             'branch_id'     => $user?->branch_id,
             'product_id'    => $saleItem->product_id,
+            'batch_id'      => $saleItem->batch_id ?? null,
             'user_id'       => $userId,
             'movement_type' => 'Return',
             'quantity'      => $data['quantity_returned'],

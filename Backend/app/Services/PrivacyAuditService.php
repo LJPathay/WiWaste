@@ -2,317 +2,251 @@
 
 namespace App\Services;
 
+use App\Models\AuditLog;
 use App\Models\PrivacyProcessingRecord;
 use App\Models\DataSubjectRequest;
 use App\Models\DataBreachIncident;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Carbon\Carbon;
 
 class PrivacyAuditService
 {
     /**
-     * Record a privacy processing activity (DPA Art. 30 accountability)
+     * Log a privacy-related audit event
      */
-    public function recordProcessingActivity(array $data): PrivacyProcessingRecord
+    public function logPrivacyEvent(array $data): \App\Models\AuditLog
     {
-        return PrivacyProcessingRecord::create([
-            'business_id' => $data['business_id'],
-            'data_category' => $data['data_category'],
-            'purpose' => $data['purpose'],
-            'legal_basis' => $data['legal_basis'],
-            'retention_period' => $data['retention_period'],
-            'recipients' => isset($data['recipients']) ? json_encode($data['recipients']) : null,
-            'safeguards' => $data['safeguards'] ?? null,
-            'status' => $data['status'] ?? 'active',
-        ]);
-    }
-
-    /**
-     * Process a data subject request (Access/Erasure/Portability/Rectification/Restriction/Objection)
-     */
-    public function processDataSubjectRequest(array $data): DataSubjectRequest
-    {
-        $request = DataSubjectRequest::create([
-            'business_id' => $data['business_id'],
-            'request_type' => $data['request_type'],
-            'subject_identifier' => $data['subject_identifier'],
-            'status' => 'pending',
-            'requested_at' => now(),
-        ]);
-
-        // Process based on request type
-        switch ($data['request_type']) {
-            case 'access':
-                $this->processAccessRequest($request);
-                break;
-            case 'rectification':
-                $this->processRectificationRequest($request, $data['rectification_data'] ?? []);
-                break;
-            case 'erasure':
-                $this->processErasureRequest($request);
-                break;
-            case 'portability':
-                $this->processPortabilityRequest($request);
-                break;
-            case 'restriction':
-                $this->processRestrictionRequest($request);
-                break;
-            case 'objection':
-                $this->processObjectionRequest($request);
-                break;
-        }
-
-        $request->update([
-            'status' => 'completed',
-            'completed_at' => now(),
-        ]);
-
-        return $request;
-    }
-
-    /**
-     * Process access request - export all personal data for subject
-     */
-    protected function processAccessRequest(DataSubjectRequest $request): array
-    {
-        $subjectId = $request->subject_identifier;
-        $businessId = $request->business_id;
-
-        // Collect all personal data across tables
-        $personalData = [
-            'user_profile' => $this->getUserProfileData($subjectId, $businessId),
-            'transactions' => $this->getTransactionData($subjectId, $businessId),
-            'returns' => $this->getReturnData($subjectId, $businessId),
-            'wastage_records' => $this->getWastageData($subjectId, $businessId),
-            'audit_logs' => $this->getAuditLogData($subjectId, $businessId),
-            'consent_records' => $this->getConsentData($subjectId, $businessId),
-        ];
-
-        // Log the access
-        \App\Models\AuditLog::create([
-            'user_id' => 1, // System user
-            'action' => "Data subject access request fulfilled for {$subjectId}",
-            'entity_type' => 'DataSubjectRequest',
-            'entity_id' => $request->id,
-            'new_values' => json_encode(['request_type' => 'access', 'data_categories' => array_keys($personalData)]),
-            'created_at' => now(),
-            'business_id' => $request->business_id,
-        ]);
-
-        return $personalData;
-    }
-
-    /**
-     * Process erasure request - anonymize/delete personal data
-     */
-    protected function processErasureRequest(DataSubjectRequest $request): void
-    {
-        $subjectId = $request->subject_identifier;
-        $businessId = $request->business_id;
-
-        // Anonymize rather than delete to preserve referential integrity
-        DB::table('User')
-            ->where('User_id', $subjectId)
-            ->where('business_id', $businessId)
-            ->update([
-                'Full_name' => 'Anonymized User',
-                'email' => 'anonymized_' . $subjectId . '@deleted.local',
-                'username' => 'anon_' . $subjectId,
-                'status' => 'Deleted',
+        return DB::transaction(function () use ($data) {
+            $auditLog = \App\Models\AuditLog::create([
+                'user_id' => $data['user_id'] ?? auth()->id() ?? 1,
+                'action' => $data['action'],
+                'entity_type' => $data['entity_type'],
+                'entity_id' => $data['entity_id'],
+                'old_values' => isset($data['old_values']) ? json_encode($data['old_values']) : null,
+                'new_values' => isset($data['new_values']) ? json_encode($data['new_values']) : null,
+                'created_at' => now(),
+                'business_id' => $data['business_id'] ?? auth()->user()?->business_id,
+                'branch_id' => $data['branch_id'] ?? auth()->user()?->branch_id,
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+                'request_id' => Str::uuid(),
             ]);
 
-        // Anonymize in transactions
-        DB::table('Sales_Transaction')
-            ->where('customer_email', $subjectId)
-            ->where('business_id', $businessId)
-            ->update([
-                'customer_name' => 'Anonymized Customer',
-                'customer_email' => 'anonymized@deleted.local',
-                'customer_phone' => null,
-            ]);
+            // Also create a privacy processing record for DPA compliance
+            if (isset($data['privacy_category'])) {
+                $this->recordPrivacyProcessing($data);
+            }
 
-        // Log the erasure
-        \App\Models\AuditLog::create([
-            'user_id' => 1,
-            'action' => "Data subject erasure request fulfilled for {$subjectId}",
+            return $auditLog;
+        });
+    }
+
+    /**
+     * Record privacy processing activity (DPA Art. 30)
+     */
+    protected function recordPrivacyProcessing(array $data): void
+    {
+        PrivacyProcessingRecord::create([
+            'business_id' => $data['business_id'] ?? auth()->user()?->business_id,
+            'processing_purpose' => $data['privacy_purpose'] ?? $data['action'],
+            'legal_basis' => $data['legal_basis'] ?? 'legitimate_interest',
+            'data_categories' => $data['data_categories'] ?? [],
+            'data_subjects' => $data['data_subjects'] ?? 'customers',
+            'recipients' => $data['recipients'] ?? [],
+            'retention_period' => $data['retention_period'] ?? '7_years',
+            'security_measures' => $data['security_measures'] ?? ['encryption', 'access_control'],
+            'dpo_contact' => $data['dpo_contact'] ?? null,
+            'status' => 'active',
+        ]);
+    }
+
+    /**
+     * Log data subject request
+     */
+    public function logDataSubjectRequest(\App\Models\DataSubjectRequest $request, string $action): void
+    {
+        $this->logPrivacyEvent([
+            'action' => "Data Subject Request {$action}",
             'entity_type' => 'DataSubjectRequest',
             'entity_id' => $request->id,
-            'new_values' => json_encode(['request_type' => 'erasure']),
-            'created_at' => now(),
-            'business_id' => $request->business_id,
+            'privacy_category' => 'data_subject_rights',
+            'privacy_purpose' => $request->request_type,
+            'legal_basis' => 'legal_obligation',
+            'data_categories' => ['personal_identifiers', 'contact_info'],
+            'data_subjects' => 'data_subject',
+            'new_values' => [
+                'request_type' => $request->request_type,
+                'status' => $request->status,
+                'action' => $action,
+            ],
         ]);
     }
 
     /**
-     * Process portability request - structured export
+     * Log data breach incident
      */
-    protected function processPortabilityRequest(DataSubjectRequest $request): array
+    public function logBreachIncident(\App\Models\DataBreachIncident $incident, string $action): void
     {
-        $subjectId = $request->subject_identifier;
-        $businessId = $request->business_id;
-
-        $portableData = [
-            'profile' => $this->getUserProfileData($request->subject_identifier, $businessId),
-            'transactions' => $this->getTransactionData($subjectId, $businessId),
-            'preferences' => $this->getPreferenceData($subjectId, $businessId),
-        ];
-
-        return $portableData;
-    }
-
-    /**
-     * Process rectification request
-     */
-    protected function processRectificationRequest(DataSubjectRequest $request, array $data): void
-    {
-        // Implementation would update specific fields based on rectification data
-    }
-
-    /**
-     * Process restriction request
-     */
-    protected function processRestrictionRequest(DataSubjectRequest $request): void
-    {
-        // Mark records as restricted from processing
-    }
-
-    /**
-     * Process objection request
-     */
-    protected function processObjectionRequest(DataSubjectRequest $request): void
-    {
-        // Handle objection to processing
-    }
-
-    /**
-     * Record a data breach incident
-     */
-    public function recordBreachIncident(array $data): DataBreachIncident
-    {
-        $incident = DataBreachIncident::create([
-            'business_id' => $data['business_id'],
-            'detected_at' => $data['detected_at'] ?? now(),
-            'description' => $data['description'],
-            'personal_data_affected' => $data['personal_data_affected'],
-            'risk_assessment' => $data['risk_assessment'] ?? 'medium',
-            'npc_notification_required' => $data['npc_notification_required'] ?? false,
-            'status' => 'open',
-        ]);
-
-        // Log the breach
-        \App\Models\AuditLog::create([
-            'user_id' => 1,
-            'action' => "Data breach incident recorded: {$data['description']}",
+        $this->logPrivacyEvent([
+            'action' => "Data Breach {$action}",
             'entity_type' => 'DataBreachIncident',
             'entity_id' => $incident->id,
-            'new_values' => json_encode($data),
-            'created_at' => now(),
-            'business_id' => $data['business_id'],
+            'privacy_category' => 'breach_incident',
+            'privacy_purpose' => 'breach_management',
+            'legal_basis' => 'legal_obligation',
+            'data_categories' => [$incident->personal_data_affected],
+            'data_subjects' => 'affected_individuals',
+            'recipients' => $incident->npc_notification_required ? ['NPC'] : [],
+            'new_values' => [
+                'description' => $incident->description,
+                'risk_assessment' => $incident->risk_assessment,
+                'status' => $incident->status,
+                'action' => $action,
+            ],
         ]);
+    }
 
-        return $incident;
+    /**
+     * Log consent withdrawal
+     */
+    public function logConsentWithdrawal(int $businessId, string $subjectIdentifier, string $consentType): void
+    {
+        $this->logPrivacyEvent([
+            'action' => 'Consent Withdrawn',
+            'entity_type' => 'Consent',
+            'entity_id' => null,
+            'business_id' => $businessId,
+            'privacy_category' => 'consent_management',
+            'privacy_purpose' => $consentType,
+            'legal_basis' => 'consent',
+            'data_categories' => ['consent_record'],
+            'data_subjects' => 'data_subject',
+            'new_values' => [
+                'subject_identifier' => $subjectIdentifier,
+                'consent_type' => $consentType,
+                'withdrawn_at' => now()->toISOString(),
+            ],
+        ]);
+    }
+
+    /**
+     * Log data export (access/portability)
+     */
+    public function logDataExport(int $businessId, string $subjectIdentifier, string $requestType, array $dataCategories): void
+    {
+        $this->logPrivacyEvent([
+            'action' => 'Data Export',
+            'entity_type' => 'DataExport',
+            'entity_id' => null,
+            'business_id' => $businessId,
+            'privacy_category' => 'data_subject_rights',
+            'privacy_purpose' => $requestType,
+            'legal_basis' => 'legal_obligation',
+            'data_categories' => $dataCategories,
+            'data_subjects' => 'data_subject',
+            'new_values' => [
+                'subject_identifier' => $subjectIdentifier,
+                'export_type' => $requestType,
+                'categories' => $dataCategories,
+            ],
+        ]);
+    }
+
+    /**
+     * Log data erasure
+     */
+    public function logDataErasure(int $businessId, string $subjectIdentifier, array $dataCategories): void
+    {
+        $this->logPrivacyEvent([
+            'action' => 'Data Erasure',
+            'entity_type' => 'DataErasure',
+            'entity_id' => null,
+            'business_id' => $businessId,
+            'privacy_category' => 'data_subject_rights',
+            'privacy_purpose' => 'erasure',
+            'legal_basis' => 'legal_obligation',
+            'data_categories' => $dataCategories,
+            'data_subjects' => 'data_subject',
+            'new_values' => [
+                'subject_identifier' => $subjectIdentifier,
+                'categories_erased' => $dataCategories,
+                'erased_at' => now()->toISOString(),
+            ],
+        ]);
+    }
+
+    /**
+     * Get privacy audit trail for a business
+     */
+    public function getPrivacyAuditTrail(int $businessId, array $filters = []): \Illuminate\Database\Eloquent\Builder
+    {
+        $query = \App\Models\AuditLog::query()
+            ->where('business_id', $businessId)
+            ->whereIn('entity_type', [
+                'DataSubjectRequest',
+                'DataBreachIncident',
+                'PrivacyProcessingRecord',
+                'Consent',
+                'DataExport',
+                'DataErasure',
+            ])
+            ->with('user')
+            ->orderByDesc('created_at');
+
+        if (isset($filters['from_date'])) {
+            $query->whereDate('created_at', '>=', $filters['from_date']);
+        }
+        if (isset($filters['to_date'])) {
+            $query->whereDate('created_at', '<=', $filters['to_date']);
+        }
+        if (isset($filters['entity_type'])) {
+            $query->where('entity_type', $filters['entity_type']);
+        }
+        if (isset($filters['action'])) {
+            $query->where('action', 'like', '%' . $filters['action'] . '%');
+        }
+
+        return $query;
     }
 
     /**
      * Generate privacy compliance report
      */
-    public function generateComplianceReport(int $businessId, string $fromDate, string $toDate): array
+    public function generateComplianceReport(int $businessId, string $from, string $to): array
     {
+        $requests = \App\Models\DataSubjectRequest::where('business_id', $businessId)
+            ->whereBetween('requested_at', [$from, $to])
+            ->get();
+
+        $breaches = \App\Models\DataBreachIncident::where('business_id', $businessId)
+            ->whereBetween('detected_at', [$from, $to])
+            ->get();
+
         $processingRecords = \App\Models\PrivacyProcessingRecord::where('business_id', $businessId)
             ->where('status', 'active')
             ->get();
 
-        $subjectRequests = \App\Models\DataSubjectRequest::where('business_id', $businessId)
-            ->whereBetween('requested_at', [$fromDate, $toDate])
-            ->get();
-
-        $breaches = \App\Models\DataBreachIncident::where('business_id', $businessId)
-            ->whereBetween('detected_at', [$fromDate, $toDate])
-            ->get();
-
         return [
-            'period' => ['from' => $fromDate, 'to' => $toDate],
-            'processing_records' => [
-                'total' => $processingRecords->count(),
-                'by_category' => $processingRecords->groupBy('data_category')->map->count(),
-                'by_legal_basis' => $processingRecords->groupBy('legal_basis')->map->count(),
+            'period' => ['from' => $from, 'to' => $to],
+            'data_subject_requests' => [
+                'total' => $requests->count(),
+                'by_type' => $requests->groupBy('request_type')->map->count(),
+                'by_status' => $requests->groupBy('status')->map->count(),
+                'avg_resolution_days' => $requests->where('status', 'completed')
+                    ->avg(fn($r) => $r->requested_at->diffInDays($r->completed_at)),
             ],
-            'subject_requests' => [
-                'total' => $subjectRequests->count(),
-                'by_type' => $subjectRequests->groupBy('request_type')->map->count(),
-                'by_status' => $subjectRequests->groupBy('status')->map->count(),
-                'avg_resolution_days' => $subjectRequests
-                    ->where('status', 'completed')
-                    ->avg(fn ($r) => $r->requested_at->diffInDays($r->completed_at)),
-            ],
-            'breaches' => [
+            'breach_incidents' => [
                 'total' => $breaches->count(),
                 'by_risk' => $breaches->groupBy('risk_assessment')->map->count(),
                 'npc_notified' => $breaches->where('npc_notified_at', '!=', null)->count(),
                 'subjects_notified' => $breaches->where('subjects_notified_at', '!=', null)->count(),
             ],
+            'processing_records' => [
+                'active' => $processingRecords->where('status', 'active')->count(),
+                'by_category' => $processingRecords->groupBy('data_category')->map->count(),
+                'by_legal_basis' => $processingRecords->groupBy('legal_basis')->map->count(),
+            ],
         ];
-    }
-
-    // Helper methods to fetch personal data
-    protected function getUserProfileData(string $subjectId, int $businessId): array
-    {
-        return DB::table('User')
-            ->where('User_id', $subjectId)
-            ->where('business_id', $businessId)
-            ->first();
-    }
-
-    protected function getTransactionData(string $subjectId, int $businessId): array
-    {
-        return DB::table('Sales_Transaction')
-            ->where(function ($q) use ($subjectId) {
-                $q->where('customer_email', $subjectId)
-                  ->orWhere('customer_phone', $subjectId);
-            })
-            ->where('business_id', $businessId)
-            ->get()
-            ->toArray();
-    }
-
-    protected function getReturnData(string $subjectId, int $businessId): array
-    {
-        return DB::table('Return_Transaction')
-            ->join('Sales_Item', 'Return_Transaction.sale_item_id', '=', 'Sales_Item.sales_item_id')
-            ->join('Sales_Transaction', 'Sales_Item.transaction_id', '=', 'Sales_Transaction.transaction_id')
-            ->where('Sales_Transaction.customer_email', $subjectId)
-            ->where('Sales_Transaction.business_id', $businessId)
-            ->get()
-            ->toArray();
-    }
-
-    protected function getWastageData(string $subjectId, int $businessId): array
-    {
-        return DB::table('Wastage_Record')
-            ->join('User', 'Wastage_Record.user_id', '=', 'User.User_id')
-            ->where('User.User_id', $subjectId)
-            ->where('Wastage_Record.business_id', $businessId)
-            ->get()
-            ->toArray();
-    }
-
-    protected function getAuditLogData(string $subjectId, int $businessId): array
-    {
-        return DB::table('Audit_Log')
-            ->where('user_id', $subjectId)
-            ->where('business_id', $businessId)
-            ->get()
-            ->toArray();
-    }
-
-    protected function getConsentData(string $subjectId, int $businessId): array
-    {
-        // Would check privacy consent records
-        return [];
-    }
-
-    protected function getPreferenceData(string $subjectId, int $businessId): array
-    {
-        // Would check user preferences
-        return [];
     }
 }

@@ -74,9 +74,9 @@ class WastageRecordController extends Controller
         }
         $data['user_id'] = $userId;
 
-        return DB::transaction(function () use ($data, $userId, $user) {
+        return DB::transaction(function () use ($data, $userId, $user, $request) {
             // Deduct from inventory — refuse to go below zero
-            $query = Inventory::where('product_id', $data['product_id']);
+            $query = Inventory::with('product')->where('product_id', $data['product_id']);
             $query = $this->scopeForBusinessAndBranch($query, $request);
             $inventory = $query->first();
 
@@ -103,7 +103,7 @@ class WastageRecordController extends Controller
                 'product_id'    => $data['product_id'],
                 'batch_id'      => $data['batch_id'] ?? null,
                 'user_id'       => $userId,
-                'movement_type' => 'Wastage',
+                'movement_type' => 'Stock Out',
                 'quantity'      => $data['quantity'],
                 'remarks'       => 'Wastage: ' . $data['wastage_type'],
                 'movement_date' => now(),

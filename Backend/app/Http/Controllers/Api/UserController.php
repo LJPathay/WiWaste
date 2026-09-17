@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
@@ -37,7 +36,6 @@ class UserController extends Controller
             'password.regex'   => 'Password must contain uppercase, lowercase, number, and special character.',
         ]);
 
-        $data['password']   = Hash::make($data['password']);
         $data['Created_at'] = now();
 
         $user = User::create($data);
@@ -70,7 +68,7 @@ class UserController extends Controller
         ]);
 
         if ($request->filled('password')) {
-            $data['password'] = Hash::make($request->password);
+            $data['password'] = $request->password;
         }
 
         $user->update($data);

@@ -339,7 +339,7 @@ export function Home() {
       <footer className="bg-slate-50 dark:bg-slate-950 border-t border-[#E2E8F0] dark:border-white/10 py-12">
         <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <p className="text-sm text-[#64748B] dark:text-slate-500">
-            © 2025 WiWaste. Built for Philippine retail. All rights reserved.
+            © 2026 WiWaste. Built for Philippine retail. All rights reserved.
           </p>
         </div>
       </footer>

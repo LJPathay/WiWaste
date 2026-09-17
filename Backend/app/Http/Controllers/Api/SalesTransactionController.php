@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\SalesTransaction;
 use App\Models\SalesItem;
 use App\Models\Inventory;
+use App\Models\FEFOBatch;
 use App\Models\StockMovement;
 use App\Models\AuditLog;
 use App\Jobs\WarmAnalyticsCache;
@@ -32,9 +33,70 @@ class SalesTransactionController extends Controller
         return $query;
     }
 
-    protected function calculateItemVat(float $unitPrice, int $quantity, bool $isVatExempt = false): array
+    /**
+     * Get FEFO batches for a product ordered by earliest expiry first
+     * Returns batches with available stock for the given business and branch
+     */
+    protected function getFEFObatchesForProduct(int $productId, Request $request): \Illuminate\Support\Collection
     {
-        $subtotal = $unitPrice * $quantity;
+        $user = $request->user();
+        
+        return FEFOBatch::where('product_id', $productId)
+            ->where('business_id', $user?->business_id)
+            ->where('branch_id', $user?->branch_id)
+            ->where('status', 'active')
+            ->where('quantity', '>', 0)
+            ->where('expiry_date', '>=', now())
+            ->orderBy('expiry_date')
+            ->orderBy('created_at')
+            ->lockForUpdate()
+            ->get();
+    }
+
+    /**
+     * Deduct stock using FEFO (First Expired, First Out) method
+     * Returns array of [batch_id => quantity_deducted] for stock movement records
+     * Falls back to legacy behavior if no FEFO batches exist
+     */
+    protected function deductStockFEFO(int $productId, int $quantity, Request $request): array
+    {
+        $batches = $this->getFEFObatchesForProduct($productId, $request);
+        
+        // If no FEFO batches exist, fall back to legacy behavior (no batch tracking)
+        if ($batches->isEmpty()) {
+            return ['legacy' => $quantity];
+        }
+        
+        $totalAvailable = $batches->sum('quantity');
+        if ($totalAvailable < $quantity) {
+            throw new \InvalidArgumentException("Insufficient stock across all batches for product #{$productId}. Available: {$totalAvailable}, requested: {$quantity}");
+        }
+        
+        $deductions = [];
+        $remainingQty = $quantity;
+        
+        foreach ($batches as $batch) {
+            if ($remainingQty <= 0) {
+                break;
+            }
+            
+            $deductQty = min($batch->quantity, $remainingQty);
+            $batch->quantity -= $deductQty;
+            $batch->stock_status = Inventory::calcStatus($batch->quantity, $batch->product?->reorder_level ?? 10);
+            $batch->last_updated = now();
+            $batch->save();
+            
+            $deductions[$batch->batch_id] = $deductQty;
+            $remainingQty -= $deductQty;
+        }
+        
+        return $deductions;
+    }
+
+    protected function calculateItemVat(float $sellingPrice, int $quantity, bool $isVatExempt = false): array
+    {
+        // sellingPrice is the actual unit price the customer pays (after all discounts)
+        $subtotal = $sellingPrice * $quantity;
         if ($isVatExempt) {
             return [
                 'vatable_amount' => 0,
@@ -49,24 +111,6 @@ class SalesTransactionController extends Controller
             'vatable_amount' => $vatableAmount,
             'non_vatable_amount' => 0,
             'vat_amount' => $vatAmount,
-        ];
-    }
-
-    protected function applySeniorPWD($subtotal, $discountPct = 0): array
-    {
-        // Senior/PWD gets 20% discount + VAT exemption on the discounted amount
-        $seniorPWDiscount = round($subtotal * self::SENIOR_PWD_DISCOUNT_RATE, 2);
-        $discountedSubtotal = $subtotal - $seniorPWDiscount;
-        
-        // VAT on discounted amount (if not VAT exempt)
-        // For Senior/PWD, the VAT is computed on the VAT-exempt portion
-        $vatExemptAmount = $discountedSubtotal;
-        $vatOnExempt = 0;
-        
-        return [
-            'senior_pwd_discount_amount' => $seniorPWDiscount,
-            'senior_pwd_vat_exempt_amount' => $vatExemptAmount,
-            'discounted_subtotal' => $discountedSubtotal,
         ];
     }
 
@@ -150,224 +194,252 @@ class SalesTransactionController extends Controller
         $user = $request->user();
         $userId = $user?->User_id ?? 1;
 
-        $result = DB::transaction(function () use ($data, $userId, $user) {
-            // First pass: validate stock and calculate totals
+        return DB::transaction(function () use ($data, $userId, $user, $request) {
             $query = Inventory::whereIn('product_id', collect($data['items'])->pluck('product_id'));
             $query = $this->scopeForBusinessAndBranch($query, $request);
-            $lockedInventories = $query->with('product')
-                ->lockForUpdate()
-                ->get()
-                ->keyBy('product_id');
+            $lockedInventories = $query->with('product')->lockForUpdate()->get()->keyBy('product_id');
 
             $isSeniorPWD = in_array($data['senior_pwd_type'] ?? 'none', ['senior', 'pwd']);
-            $seniorPWDiscountRate = self::SENIOR_PWD_DISCOUNT_RATE;
 
-            $totalVat = 0;
-            $totalVatable = 0;
-            $totalNonVatable = 0;
-            $totalSeniorPWDiscount = 0;
-            $totalSeniorPWVatExempt = 0;
-            $totalDiscount = 0;
-            $discountBreakdown = [];
-
-            foreach ($data['items'] as $index => $item) {
-                $inventory = $lockedInventories->get($item['product_id']);
-                if (!$inventory) {
-                    return response()->json([
-                        'message' => "No inventory record for product #{$item['product_id']}.",
-                    ], 422);
-                }
-                if ($inventory->current_stock < $item['quantity']) {
-                    $productName = $inventory->product?->product_name ?? "Product #{$item['product_id']}";
-                    return response()->json([
-                        'message' => "Insufficient stock for {$productName}. Available: {$inventory->current_stock}, requested: {$item['quantity']}.",
-                    ], 422);
-                }
-
-                $unitPrice = $item['unit_price'];
-                $quantity = $item['quantity'];
-                $discountPct = $item['discount_pct'] ?? 0;
-                $discountAmt = $item['discount_amount'] ?? 0;
-                $isSeniorPWDItem = $isSeniorPWD && $item['quantity'] > 0;
-
-                $subtotal = $unitPrice * $quantity;
-
-                // Apply item-level discount
-                if ($discountAmt > 0) {
-                    $subtotal -= $discountAmt;
-                    $totalDiscount += $discountAmt;
-                    $discountBreakdown[] = [
-                        'type' => 'item_discount',
-                        'product_id' => $item['product_id'],
-                        'amount' => $discountAmt,
-                    ];
-                } elseif ($discountPct > 0) {
-                    $discountAmt = round($subtotal * $discountPct, 2);
-                    $subtotal -= $discountAmt;
-                    $totalDiscount += $discountAmt;
-                    $discountBreakdown[] = [
-                        'type' => 'item_discount_pct',
-                        'product_id' => $item['product_id'],
-                        'pct' => $discountPct,
-                        'amount' => $discountAmt,
-                    ];
-                }
-
-                // Apply Senior/PWD discount
-                $seniorPWDiscount = 0;
-                $seniorPWVatExempt = 0;
-                if ($isSeniorPWDItem) {
-                    $seniorPWDiscount = round($subtotal * $seniorPWDiscountRate, 2);
-                    $subtotal -= $seniorPWDiscount;
-                    $totalSeniorPWDiscount += $seniorPWDiscount;
-                    $totalSeniorPWVatExempt += $subtotal; // VAT exempt after discount
-                    $discountBreakdown[] = [
-                        'type' => 'senior_pwd_discount',
-                        'product_id' => $item['product_id'],
-                        'rate' => self::SENIOR_PWD_DISCOUNT_RATE,
-                        'amount' => $seniorPWDiscount,
-                    ];
-                } else {
-                    // Not senior/PWD - calculate VAT normally
-                    $vatCalc = $this->calculateItemVat($unitPrice, $quantity, false);
-                    $totalVat += $vatCalc['vat_amount'];
-                    $totalVatable += $vatCalc['vatable_amount'];
-                    $totalNonVatable += $vatCalc['non_vatable_amount'];
-                }
+            [$totals, $validationError] = $this->validateAndCalculateTotals($data['items'], $lockedInventories, $isSeniorPWD, $request);
+            if ($validationError) {
+                return $validationError;
             }
 
-            $totalAmount = collect($data['items'])->sum(fn ($i) => $i['quantity'] * $i['unit_price']) - $totalDiscount - $totalSeniorPWDiscount;
-
-            $transactionData = [
-                'user_id'                    => $userId,
-                'total_amount'               => round($totalAmount, 2),
-                'vat_amount'                 => round($totalVat, 2),
-                'vatable_amount'             => round($totalVatable, 2),
-                'non_vatable_amount'         => round($totalNonVatable, 2),
-                'senior_pwd_discount_amount' => round($totalSeniorPWDiscount, 2),
-                'senior_pwd_vat_exempt_amount' => round($totalSeniorPWVatExempt, 2),
-                'discount_amount'            => round($totalDiscount, 2),
-                'discount_breakdown'         => $discountBreakdown,
-                'transaction_date'           => now(),
-                'payment_method'             => $data['payment_method'],
-                'payment_reference'          => $data['payment_reference'] ?? null,
-                'payment_status'             => 'Paid',
-                'amount_tendered'            => $data['amount_tendered'] ?? null,
-                'change_due'                 => $data['change_due'] ?? null,
-                'senior_pwd_name'            => $data['senior_pwd_name'] ?? null,
-                'senior_pwd_id'              => $data['senior_pwd_id'] ?? null,
-                'senior_pwd_type'            => $data['senior_pwd_type'] ?? 'none',
-                'customer_name'              => $data['customer_name'] ?? null,
-                'customer_phone'             => $data['customer_phone'] ?? null,
-                'customer_email'             => $data['customer_email'] ?? null,
-                'status'                     => 'Completed',
-            ];
-
-            if ($user && $user->business_id) {
-                $transactionData['business_id'] = $user->business_id;
-            }
-            if ($user && $user->branch_id) {
-                $transactionData['branch_id'] = $user->branch_id;
-            }
-
-            $transaction = SalesTransaction::create($transactionData);
-
-            foreach ($data['items'] as $item) {
-                $unitPrice = $item['unit_price'];
-                $quantity = $item['quantity'];
-                $discountPct = $item['discount_pct'] ?? 0;
-                $discountAmt = $item['discount_amount'] ?? 0;
-                $isSeniorPWDItem = $isSeniorPWD && $item['quantity'] > 0;
-
-                $subtotal = $unitPrice * $quantity;
-
-                // Apply discounts
-                if ($discountAmt > 0) {
-                    $subtotal -= $discountAmt;
-                } elseif ($discountPct > 0) {
-                    $discountAmt = round($subtotal * $discountPct, 2);
-                    $subtotal -= $discountAmt;
-                }
-
-                $seniorPWDiscount = 0;
-                $isVatExempt = false;
-                if ($isSeniorPWDItem) {
-                    $seniorPWDiscount = round($subtotal * $seniorPWDiscountRate, 2);
-                    $subtotal -= $seniorPWDiscount;
-                    $isVatExempt = true;
-                }
-
-                // Calculate VAT for this item
-                $vatCalc = $this->calculateItemVat($unitPrice, $quantity, $isVatExempt);
-
-                $saleItem = SalesItem::create([
-                    'transaction_id'      => $transaction->transaction_id,
-                    'product_id'          => $item['product_id'],
-                    'quantity'            => $quantity,
-                    'unit_price'          => $unitPrice,
-                    'original_price'      => ($discountPct ?? 0)
-                        ? round($unitPrice / (1 - $discountPct), 2)
-                        : null,
-                    'subtotal'            => round($subtotal, 2),
-                    'vat_amount'          => $vatCalc['vat_amount'],
-                    'vatable_amount'      => $vatCalc['vatable_amount'],
-                    'discount_amount'     => $discountAmt + $seniorPWDiscount,
-                    'discount_pct'        => $discountPct ?: null,
-                    'is_senior_pwd_exempt' => $isSeniorPWDItem,
-                    'override_reason'     => $item['override_reason'] ?? null,
-                ]);
-
-                $inventory = $lockedInventories->get($item['product_id']);
-                if ($inventory) {
-                    $inventory->current_stock -= $quantity;
-                    $inventory->stock_status  = Inventory::calcStatus($inventory->current_stock, $inventory->product?->reorder_level ?? 10);
-                    $inventory->last_updated  = now();
-                    $inventory->save();
-                }
-
-                StockMovement::create([
-                    'business_id'   => $user?->business_id,
-                    'branch_id'     => $user?->branch_id,
-                    'product_id'    => $item['product_id'],
-                    'user_id'       => $userId,
-                    'movement_type' => 'Sale',
-                    'quantity'      => $quantity,
-                    'remarks'       => 'Sale - Txn #' . $transaction->transaction_id,
-                    'movement_date' => now(),
-                    'sale_item_id'  => $saleItem->sales_item_id,
-                ]);
-            }
-
-            AuditLog::create([
-                'user_id'       => $userId,
-                'action'        => "POS sale #{$transaction->transaction_id}: {$totalAmount} via {$data['payment_method']}",
-                'entity_type'   => 'Sales',
-                'entity_id'     => $transaction->transaction_id,
-                'old_values'    => null,
-                'new_values'    => json_encode([
-                    'total' => $totalAmount, 
-                    'items' => count($data['items']),
-                    'vat' => $totalVat,
-                    'senior_pwd_discount' => $totalSeniorPWDiscount,
-                ]),
-                'created_at'    => now(),
-                'business_id'   => $user?->business_id,
-                'branch_id'     => $user?->branch_id,
-            ]);
+            $transaction = $this->createTransaction($data, $userId, $user, $totals);
+            $this->processSaleItems($data['items'], $transaction, $lockedInventories, $isSeniorPWD, $userId, $user, $request);
+            $this->logSaleAudit($userId, $transaction, $data, $totals, $user);
 
             WarmAnalyticsCache::dispatch();
 
             return response()->json([
                 'message'        => 'Transaction completed.',
                 'transaction_id' => $transaction->transaction_id,
-                'total_amount'   => $totalAmount,
-                'vat_amount'     => round($totalVat, 2),
-                'vatable_amount' => round($totalVatable, 2),
-                'senior_pwd_discount' => round($totalSeniorPWDiscount, 2),
+                'total_amount'   => $totals['totalAmount'],
+                'vat_amount'     => round($totals['totalVat'], 2),
+                'vatable_amount' => round($totals['totalVatable'], 2),
+                'senior_pwd_discount' => round($totals['totalSeniorPWDiscount'], 2),
             ], 201);
         });
+    }
 
-        return $result;
+    protected function validateAndCalculateTotals(array $items, $lockedInventories, bool $isSeniorPWD, Request $request): array
+    {
+        $totals = [
+            'totalVat' => 0,
+            'totalVatable' => 0,
+            'totalNonVatable' => 0,
+            'totalSeniorPWDiscount' => 0,
+            'totalSeniorPWVatExempt' => 0,
+            'totalDiscount' => 0,
+            'discountBreakdown' => [],
+        ];
+
+        foreach ($items as $item) {
+            $inventory = $lockedInventories->get($item['product_id']);
+            if (!$inventory) {
+                return [null, response()->json([
+                    'message' => "No inventory record for product #{$item['product_id']}.",
+                ], 422)];
+            }
+
+            $batches = $this->getFEFObatchesForProduct($item['product_id'], $request);
+            $totalAvailable = $batches->isEmpty() ? $inventory->current_stock : $batches->sum('quantity');
+
+            if ($totalAvailable < $item['quantity']) {
+                $productName = $inventory->product?->product_name ?? "Product #{$item['product_id']}";
+                return [null, response()->json([
+                    'message' => "Insufficient stock for {$productName}. Available: {$totalAvailable}, requested: {$item['quantity']}.",
+                ], 422)];
+            }
+
+            $this->accumulateItemTotals($item, $isSeniorPWD, $totals);
+        }
+
+        $totals['totalAmount'] = collect($items)->sum(fn ($i) => $i['quantity'] * $i['unit_price'])
+            - $totals['totalDiscount'] - $totals['totalSeniorPWDiscount'];
+
+        return [$totals, null];
+    }
+
+    protected function accumulateItemTotals(array $item, bool $isSeniorPWD, array &$totals): void
+    {
+        $discounts = $this->calculateItemDiscounts($item, $isSeniorPWD);
+        $subtotal = $discounts['subtotal'];
+        $discountAmt = $discounts['discountAmt'];
+        $seniorPWDiscount = $discounts['seniorPWDiscount'];
+
+        if ($discountAmt > 0) {
+            $totals['totalDiscount'] += $discountAmt;
+            $totals['discountBreakdown'][] = [
+                'type' => ($item['discount_amount'] ?? 0) > 0 ? 'item_discount' : 'item_discount_pct',
+                'product_id' => $item['product_id'],
+                'amount' => $discountAmt,
+            ];
+        }
+
+        if ($discounts['isSeniorPWDItem']) {
+            $totals['totalSeniorPWDiscount'] += $seniorPWDiscount;
+            $totals['totalSeniorPWVatExempt'] += $subtotal;
+            $totals['discountBreakdown'][] = [
+                'type' => 'senior_pwd_discount',
+                'product_id' => $item['product_id'],
+                'rate' => self::SENIOR_PWD_DISCOUNT_RATE,
+                'amount' => $seniorPWDiscount,
+            ];
+        } else {
+            $vatCalc = $this->calculateItemVat($item['unit_price'], $item['quantity'], false);
+            $totals['totalVat'] += $vatCalc['vat_amount'];
+            $totals['totalVatable'] += $vatCalc['vatable_amount'];
+            $totals['totalNonVatable'] += $vatCalc['non_vatable_amount'];
+        }
+    }
+
+    protected function calculateItemDiscounts(array $item, bool $isSeniorPWD): array
+    {
+        $unitPrice = $item['unit_price'];
+        $quantity = $item['quantity'];
+        $discountPct = $item['discount_pct'] ?? 0;
+        $discountAmt = $item['discount_amount'] ?? 0;
+        $isSeniorPWDItem = $isSeniorPWD && $quantity > 0;
+        $subtotal = $unitPrice * $quantity;
+
+        if ($discountAmt > 0) {
+            $subtotal -= $discountAmt;
+        } elseif ($discountPct > 0) {
+            $discountAmt = round($subtotal * $discountPct, 2);
+            $subtotal -= $discountAmt;
+        }
+
+        $seniorPWDiscount = 0;
+        $isVatExempt = false;
+        if ($isSeniorPWDItem) {
+            $seniorPWDiscount = round($subtotal * self::SENIOR_PWD_DISCOUNT_RATE, 2);
+            $subtotal -= $seniorPWDiscount;
+            $isVatExempt = true;
+        }
+
+        return [
+            'subtotal' => $subtotal,
+            'discountAmt' => $discountAmt,
+            'discountPct' => $discountPct,
+            'seniorPWDiscount' => $seniorPWDiscount,
+            'isSeniorPWDItem' => $isSeniorPWDItem,
+            'isVatExempt' => $isVatExempt,
+        ];
+    }
+
+    protected function createTransaction(array $data, int $userId, $user, array $totals): SalesTransaction
+    {
+        $totalAmount = $totals['totalAmount'];
+
+        $transactionData = [
+            'user_id'                      => $userId,
+            'total_amount'                 => round($totalAmount, 2),
+            'vat_amount'                   => round($totals['totalVat'], 2),
+            'vatable_amount'               => round($totals['totalVatable'], 2),
+            'non_vatable_amount'           => round($totals['totalNonVatable'], 2),
+            'senior_pwd_discount_amount'   => round($totals['totalSeniorPWDiscount'], 2),
+            'senior_pwd_vat_exempt_amount' => round($totals['totalSeniorPWVatExempt'], 2),
+            'discount_amount'              => round($totals['totalDiscount'], 2),
+            'discount_breakdown'           => $totals['discountBreakdown'],
+            'transaction_date'             => now(),
+            'payment_method'               => $data['payment_method'],
+            'payment_reference'            => $data['payment_reference'] ?? null,
+            'payment_status'               => 'Paid',
+            'amount_tendered'              => $data['amount_tendered'] ?? null,
+            'change_due'                   => $data['change_due'] ?? null,
+            'senior_pwd_name'              => $data['senior_pwd_name'] ?? null,
+            'senior_pwd_id'                => $data['senior_pwd_id'] ?? null,
+            'senior_pwd_type'              => $data['senior_pwd_type'] ?? 'none',
+            'customer_name'                => $data['customer_name'] ?? null,
+            'customer_phone'               => $data['customer_phone'] ?? null,
+            'customer_email'               => $data['customer_email'] ?? null,
+            'status'                       => 'Completed',
+        ];
+
+        if ($user && $user->business_id) {
+            $transactionData['business_id'] = $user->business_id;
+        }
+        if ($user && $user->branch_id) {
+            $transactionData['branch_id'] = $user->branch_id;
+        }
+
+        return SalesTransaction::create($transactionData);
+    }
+
+    protected function processSaleItems(array $items, SalesTransaction $transaction, $lockedInventories, bool $isSeniorPWD, int $userId, $user, Request $request): void
+    {
+        foreach ($items as $item) {
+            $discounts = $this->calculateItemDiscounts($item, $isSeniorPWD);
+
+            $sellingPrice = $item['quantity'] > 0 ? round($discounts['subtotal'] / $item['quantity'], 2) : $item['unit_price'];
+            $vatCalc = $this->calculateItemVat($sellingPrice, $item['quantity'], $discounts['isVatExempt']);
+
+            $saleItem = SalesItem::create([
+                'transaction_id'       => $transaction->transaction_id,
+                'product_id'           => $item['product_id'],
+                'quantity'             => $item['quantity'],
+                'unit_price'           => $item['unit_price'],
+                'original_price'       => ($discounts['discountPct'] ?? 0) ? round($item['unit_price'] / (1 - $discounts['discountPct']), 2) : null,
+                'subtotal'             => round($discounts['subtotal'], 2),
+                'vat_amount'           => $vatCalc['vat_amount'],
+                'vatable_amount'       => $vatCalc['vatable_amount'],
+                'discount_amount'      => $discounts['discountAmt'] + $discounts['seniorPWDiscount'],
+                'discount_pct'         => $discounts['discountPct'] ?: null,
+                'is_senior_pwd_exempt' => $discounts['isSeniorPWDItem'],
+                'override_reason'      => $item['override_reason'] ?? null,
+            ]);
+
+            $batchDeductions = $this->deductStockFEFO($item['product_id'], $item['quantity'], $request);
+            $this->recordStockDeductions($batchDeductions, $item, $saleItem, $lockedInventories, $userId, $user, $transaction);
+        }
+    }
+
+    protected function recordStockDeductions(array $batchDeductions, array $item, SalesItem $saleItem, $lockedInventories, int $userId, $user, SalesTransaction $transaction): void
+    {
+        foreach ($batchDeductions as $batchId => $deductQty) {
+            $inventory = $lockedInventories->get($item['product_id']);
+            if ($inventory) {
+                $inventory->current_stock -= $deductQty;
+                $inventory->stock_status = Inventory::calcStatus($inventory->current_stock, $inventory->product?->reorder_level ?? 10);
+                $inventory->last_updated = now();
+                $inventory->save();
+            }
+
+            StockMovement::create([
+                'business_id'   => $user?->business_id,
+                'branch_id'     => $user?->branch_id,
+                'product_id'    => $item['product_id'],
+                'batch_id'      => $batchId === 'legacy' ? null : $batchId,
+                'user_id'       => $userId,
+                'movement_type' => $batchId === 'legacy' ? 'Stock Out' : 'Sale',
+                'quantity'      => $deductQty,
+                'remarks'       => 'Sale - Txn #' . $transaction->transaction_id,
+                'movement_date' => now(),
+                'sale_item_id'  => $saleItem->sales_item_id,
+            ]);
+        }
+    }
+
+    protected function logSaleAudit(int $userId, SalesTransaction $transaction, array $data, array $totals, $user): void
+    {
+        AuditLog::create([
+            'user_id'     => $userId,
+            'action'      => "POS sale #{$transaction->transaction_id}: {$totals['totalAmount']} via {$data['payment_method']}",
+            'entity_type' => 'Sales',
+            'entity_id'   => $transaction->transaction_id,
+            'old_values'  => null,
+            'new_values'  => json_encode([
+                'total' => $totals['totalAmount'],
+                'items' => count($data['items']),
+                'vat' => $totals['totalVat'],
+                'senior_pwd_discount' => $totals['totalSeniorPWDiscount'],
+            ]),
+            'created_at'  => now(),
+            'business_id' => $user?->business_id,
+            'branch_id'   => $user?->branch_id,
+        ]);
     }
 
     public function show(Request $request, int $id)
@@ -408,14 +480,14 @@ class SalesTransactionController extends Controller
             'items'             => $transaction->salesItems->map(fn ($item) => [
                 'id'                 => $item->sales_item_id,
                 'product_name'       => $item->product?->product_name,
-                'sku'               => $item->product?->barcode,
-                'quantity'          => $item->quantity,
-                'unit_price'        => $item->unit_price,
-                'subtotal'          => $item->subtotal,
-                'vat_amount'        => $item->vat_amount,
-                'vatable_amount'    => $item->vatable_amount,
-                'discount_amount'   => $item->discount_amount,
-                'discount_pct'      => $item->discount_pct,
+                'sku'                => $item->product?->barcode,
+                'quantity'           => $item->quantity,
+                'unit_price'         => $item->unit_price,
+                'subtotal'           => $item->subtotal,
+                'vat_amount'         => $item->vat_amount,
+                'vatable_amount'     => $item->vatable_amount,
+                'discount_amount'    => $item->discount_amount,
+                'discount_pct'       => $item->discount_pct,
                 'is_senior_pwd_exempt' => $item->is_senior_pwd_exempt,
             ]),
         ]);
@@ -432,43 +504,91 @@ class SalesTransactionController extends Controller
         }
 
         $business = $transaction->branch?->business ?? $transaction->business;
+        $branch = $transaction->branch;
+
+        // Generate receipt serial number (ATP + date + sequence)
+        $receiptSerial = 'ATP-' . $transaction->transaction_id . '-' . now()->format('YmdHis');
 
         return response()->json([
             'receipt' => [
+                // BIR Required Fields
+                'atp_number' => $business?->atp_number ?? 'ATP-000000000',
+                'atp_expiry' => $business?->atp_expiry ?? null,
+                'permit_number' => $business?->permit_number ?? null,
+                'receipt_serial' => $receiptSerial,
+                
+                // Business Information
+                'business_name' => $business?->name ?? 'WiWaste',
+                'business_trade_name' => $business?->trade_name ?? null,
+                'business_address' => $branch?->address ?? $business?->address ?? 'N/A',
+                'business_tin' => $business?->tin ?? 'N/A',
+                'business_vat_reg' => $business?->vat_registered ? 'VAT' : 'NON-VAT',
+                
+                // Branch Information
+                'branch_name' => $branch?->name ?? null,
+                'branch_address' => $branch?->address ?? null,
+                'branch_code' => $branch?->code ?? null,
+                
+                // Transaction Information
                 'transaction_id' => $transaction->transaction_id,
                 'transaction_date' => $transaction->transaction_date,
-                'business_name' => $business?->name ?? 'WiWaste',
-                'business_address' => $transaction->branch?->address ?? 'N/A',
-                'business_tin' => $business?->tin ?? 'N/A',
+                'transaction_time' => $transaction->transaction_date ? $transaction->transaction_date->format('H:i:s') : null,
+                
+                // Cashier
                 'cashier' => $transaction->user?->Full_name ?? 'Cashier',
+                'cashier_id' => $transaction->user_id,
+                
+                // Payment
                 'payment_method' => $transaction->payment_method,
                 'payment_reference' => $transaction->payment_reference,
+                'amount_tendered' => $transaction->amount_tendered,
+                'change_due' => $transaction->change_due,
+                
+                // Senior/PWD
                 'senior_pwd' => $transaction->senior_pwd_type !== 'none' ? [
                     'type' => $transaction->senior_pwd_type,
                     'id' => $transaction->senior_pwd_id,
                     'name' => $transaction->senior_pwd_name,
                     'discount' => $transaction->senior_pwd_discount_amount,
                 ] : null,
+                
+                // Items with VAT breakdown
                 'items' => $transaction->salesItems->map(fn ($item) => [
                     'product_name' => $item->product?->product_name,
                     'quantity' => $item->quantity,
                     'unit_price' => $item->unit_price,
+                    'discount_amount' => $item->discount_amount,
+                    'discount_pct' => $item->discount_pct,
+                    'subtotal' => $item->subtotal,
                     'vat_amount' => $item->vat_amount,
                     'vatable_amount' => $item->vatable_amount,
+                    'non_vatable_amount' => $item->non_vatable_amount,
                     'discount_amount' => $item->discount_amount,
-                    'subtotal' => $item->subtotal,
                     'is_senior_pwd_exempt' => $item->is_senior_pwd_exempt,
                 ]),
+                
+                // VAT Breakdown (BIR Compliant)
+                'vat_breakdown' => [
+                    'vatable_sales' => $transaction->vatable_amount,
+                    'vat_exempt_sales' => $transaction->non_vatable_amount + $transaction->senior_pwd_vat_exempt_amount,
+                    'zero_rated_sales' => 0,
+                    'vat_amount' => $transaction->vat_amount,
+                ],
+                
+                // Totals
                 'totals' => [
-                    'subtotal' => $transaction->total_amount + $transaction->discount_amount + $transaction->senior_pwd_discount_amount,
+                    'gross_sales' => $transaction->total_amount + $transaction->discount_amount + $transaction->senior_pwd_discount_amount,
                     'discount' => $transaction->discount_amount,
                     'senior_pwd_discount' => $transaction->senior_pwd_discount_amount,
                     'senior_pwd_vat_exempt' => $transaction->senior_pwd_vat_exempt_amount,
                     'vatable_sales' => $transaction->vatable_amount,
                     'non_vatable_sales' => $transaction->non_vatable_amount,
+                    'vat_exempt_sales' => $transaction->senior_pwd_vat_exempt_amount,
                     'vat_amount' => $transaction->vat_amount,
                     'total' => $transaction->total_amount,
                 ],
+                
+                // Payment
                 'payment' => [
                     'method' => $transaction->payment_method,
                     'reference' => $transaction->payment_reference,

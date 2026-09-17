@@ -36,6 +36,8 @@ class SalesTransaction extends Model
         'customer_name',
         'customer_phone',
         'customer_email',
+        'paymongo_intent_id',
+        'paymongo_checkout_url',
     ];
 
     protected $casts = [
@@ -51,6 +53,8 @@ class SalesTransaction extends Model
         'global_discount_pct' => 'decimal:2',
         'transaction_date' => 'datetime',
         'discount_breakdown' => 'json',
+        'paymongo_intent_id' => 'string',
+        'paymongo_checkout_url' => 'string',
     ];
 
     public function business()

@@ -5,6 +5,7 @@ import { MainLayout } from "./components/layout/MainLayout";
 import { AuthLayout } from "./components/layout/AuthLayout";
 import { DashboardLayout } from "./components/layout/DashboardLayout";
 import { CashierLayout } from "./components/layout/CashierLayout";
+import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { PageLoader } from "./components/ui/PageLoader";
 import PrivacyBanner from "./components/ui/PrivacyBanner";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
@@ -90,59 +91,95 @@ export const router = createBrowserRouter([
          ],
      },
 
-     // ── Authenticated dashboard (always shows sidebar) ──
-     {
-         Component: DashboardLayout,
-         children: [
-             // Dashboard overview & sub-pages
-             { path: "dashboard", Component: Dashboard },
-             { path: "dashboard/inventory", Component: InventoryDashboard },
-             { path: "dashboard/predictive", Component: PredictiveAnalyticsPage },
-             { path: "dashboard/leakage", Component: LeakageDetectionPage },
-             { path: "dashboard/fefo", Component: FefoTrackingPage },
-             { path: "dashboard/vendors", Component: VendorCreditsPage },
-// Owner/Administrator routes
-            { path: "owner/users", Component: ManageUsers },
-            { path: "owner/products", Component: ManageProducts },
-            { path: "owner/categories", Component: ManageCategories },
-            { path: "owner/suppliers", Component: ManageSuppliers },
-            { path: "owner/settings", Component: SystemSettings },
-            { path: "owner/reports", Component: GenerateReports },
-            { path: "owner/audit-logs", Component: AuditLogs },
-            { path: "owner/purchase-orders", Component: PurchaseOrders },
-            { path: "owner/performance", Component: InventoryPerformance },
-            { path: "owner/overstock", Component: OverstockRisks },
-            { path: "owner/replenishment", Component: Replenishment },
-            { path: "owner/supplier-performance", Component: SupplierPerformance },
-            { path: "owner/executive-reports", Component: ExecutiveReports },
-            // Sprint 5: Admin privacy & compliance
-            { path: "admin/privacy-requests", Component: PrivacyRequests },
-            { path: "admin/breach-incidents", Component: BreachIncidents },
-            { path: "admin/data-retention", Component: DataRetentionConfig },
-            { path: "reorder/dashboard", Component: ReorderDashboard },
-// Inventory routes
-            { path: "inventory/wastage", Component: RecordWastage },
-            { path: "inventory/manage", Component: ManageInventory },
-            { path: "inventory/fefo", Component: FEFOTracking },
-            { path: "inventory/recommendations", Component: Recommendations },
-            { path: "inventory/stock-receiving", Component: StockReceiving },
-            { path: "inventory/movements", Component: StockMovements },
-            { path: "inventory/suppliers", Component: InventorySuppliers },
-            { path: "inventory/reports", Component: InventoryReports },
-            { path: "inventory/recalls", Component: RecallManagement },
-            { path: "inventory/sanitation", Component: SanitationChecklist },
-            // Reports routes
-            { path: "reports/sales", Component: SalesReports },
-         ],
-     },
+      // ── Authenticated dashboard (always shows sidebar) ──
+      {
+          Component: DashboardLayout,
+          children: [
+              // Dashboard overview — accessible to all authenticated users
+              { path: "dashboard", Component: Dashboard },
+              { path: "dashboard/inventory", Component: InventoryDashboard },
+              { path: "dashboard/predictive", Component: PredictiveAnalyticsPage },
+              { path: "dashboard/leakage", Component: LeakageDetectionPage },
+              { path: "dashboard/fefo", Component: FefoTrackingPage },
+              { path: "dashboard/vendors", Component: VendorCreditsPage },
 
-     // ── Cashier terminal: no manager sidebar, kiosk-style interface ──
-     {
-         Component: CashierLayout,
-         children: [
-             { path: "cashier/pos", Component: POSTerminal },
-             { path: "cashier/returns", Component: ReturnsRefunds },
-             { path: "cashier/history", Component: CashierHistory },
-         ],
-     },
+              // ── Owner/Administrator routes ──
+              {
+                element: <ProtectedRoute allowedRoles={['owner']} />,
+                children: [
+                  { path: "owner/users", Component: ManageUsers },
+                  { path: "owner/products", Component: ManageProducts },
+                  { path: "owner/categories", Component: ManageCategories },
+                  { path: "owner/suppliers", Component: ManageSuppliers },
+                  { path: "owner/settings", Component: SystemSettings },
+                  { path: "owner/reports", Component: GenerateReports },
+                  { path: "owner/audit-logs", Component: AuditLogs },
+                  { path: "owner/purchase-orders", Component: PurchaseOrders },
+                  { path: "owner/performance", Component: InventoryPerformance },
+                  { path: "owner/overstock", Component: OverstockRisks },
+                  { path: "owner/replenishment", Component: Replenishment },
+                  { path: "owner/supplier-performance", Component: SupplierPerformance },
+                  { path: "owner/executive-reports", Component: ExecutiveReports },
+                ],
+              },
+
+              // ── Admin privacy & compliance routes (owner only) ──
+              {
+                element: <ProtectedRoute allowedRoles={['owner']} />,
+                children: [
+                  { path: "admin/privacy-requests", Component: PrivacyRequests },
+                  { path: "admin/breach-incidents", Component: BreachIncidents },
+                  { path: "admin/data-retention", Component: DataRetentionConfig },
+                ],
+              },
+
+              // ── Reorder dashboard (owner + inventory) ──
+              {
+                element: <ProtectedRoute allowedRoles={['owner', 'inventory']} />,
+                children: [
+                  { path: "reorder/dashboard", Component: ReorderDashboard },
+                ],
+              },
+
+              // ── Inventory routes (owner + inventory) ──
+              {
+                element: <ProtectedRoute allowedRoles={['owner', 'inventory']} />,
+                children: [
+                  { path: "inventory/wastage", Component: RecordWastage },
+                  { path: "inventory/manage", Component: ManageInventory },
+                  { path: "inventory/fefo", Component: FEFOTracking },
+                  { path: "inventory/recommendations", Component: Recommendations },
+                  { path: "inventory/stock-receiving", Component: StockReceiving },
+                  { path: "inventory/movements", Component: StockMovements },
+                  { path: "inventory/suppliers", Component: InventorySuppliers },
+                  { path: "inventory/reports", Component: InventoryReports },
+                  { path: "inventory/recalls", Component: RecallManagement },
+                  { path: "inventory/sanitation", Component: SanitationChecklist },
+                ],
+              },
+
+              // ── Reports routes (owner only) ──
+              {
+                element: <ProtectedRoute allowedRoles={['owner']} />,
+                children: [
+                  { path: "reports/sales", Component: SalesReports },
+                ],
+              },
+          ],
+      },
+
+      // ── Cashier terminal: no manager sidebar, kiosk-style interface ──
+      {
+          element: <ProtectedRoute allowedRoles={['cashier']} />,
+          children: [
+              {
+                Component: CashierLayout,
+                children: [
+                    { path: "cashier/pos", Component: POSTerminal },
+                    { path: "cashier/returns", Component: ReturnsRefunds },
+                    { path: "cashier/history", Component: CashierHistory },
+                ],
+              },
+          ],
+      },
  ]);

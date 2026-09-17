@@ -113,97 +113,101 @@ class DashboardController extends Controller
         $days = (int) $period;
         $startDate = now()->subDays($days);
 
-        // Sales trend
-        $salesTrend = SalesTransaction::where('status', 'Completed')
-            ->where('transaction_date', '>=', $startDate)
-            ->select(
-                DB::raw('DATE(transaction_date) as date'),
-                DB::raw('SUM(total_amount) as value')
-            )
-            ->groupBy('date')
-            ->orderBy('date')
-            ->get();
+        $data = Cache::remember("dashboard.ownerAnalytics.{$days}", 300, function () use ($startDate) {
+            // Sales trend
+            $salesTrend = SalesTransaction::where('status', 'Completed')
+                ->where('transaction_date', '>=', $startDate)
+                ->select(
+                    DB::raw('DATE(transaction_date) as date'),
+                    DB::raw('SUM(total_amount) as value')
+                )
+                ->groupBy('date')
+                ->orderBy('date')
+                ->get();
 
-        // Wastage trend
-        $wastageTrend = WastageRecord::where('date_recorded', '>=', $startDate)
-            ->select(
-                DB::raw('DATE(date_recorded) as date'),
-                DB::raw('SUM(estimated_loss) as value')
-            )
-            ->groupBy('date')
-            ->orderBy('date')
-            ->get();
+            // Wastage trend
+            $wastageTrend = WastageRecord::where('date_recorded', '>=', $startDate)
+                ->select(
+                    DB::raw('DATE(date_recorded) as date'),
+                    DB::raw('SUM(estimated_loss) as value')
+                )
+                ->groupBy('date')
+                ->orderBy('date')
+                ->get();
 
-        // Leakage by category
-        $leakageByCategory = DB::select("
-            SELECT
-                c.category_name as category,
-                COALESCE(SUM(w.estimated_loss), 0) as value,
-                COALESCE(SUM(w.quantity), 0) as quantity
-            FROM Wastage_Record w
-            JOIN Product p ON w.product_id = p.product_id
-            JOIN Category c ON p.category_id = c.category_id
-            WHERE w.date_recorded >= ?
-            GROUP BY c.category_id, c.category_name
-            ORDER BY value DESC
-        ", [$startDate]);
+            // Leakage by category
+            $leakageByCategory = DB::select("
+                SELECT
+                    c.category_name as category,
+                    COALESCE(SUM(w.estimated_loss), 0) as value,
+                    COALESCE(SUM(w.quantity), 0) as quantity
+                FROM Wastage_Record w
+                JOIN Product p ON w.product_id = p.product_id
+                JOIN Category c ON p.category_id = c.category_id
+                WHERE w.date_recorded >= ?
+                GROUP BY c.category_id, c.category_name
+                ORDER BY value DESC
+            ", [$startDate]);
 
-        $totalLeakage = array_sum(array_column($leakageByCategory, 'value'));
-        foreach ($leakageByCategory as &$item) {
-            $item->percentage = $totalLeakage > 0 ? round(($item->value / $totalLeakage) * 100, 1) : 0;
-        }
-        unset($item);
+            $totalLeakage = array_sum(array_column($leakageByCategory, 'value'));
+            foreach ($leakageByCategory as &$item) {
+                $item->percentage = $totalLeakage > 0 ? round(($item->value / $totalLeakage) * 100, 1) : 0;
+            }
+            unset($item);
 
-        // Inventory health
-        $inventoryHealth = [
-            'healthy' => Inventory::where('stock_status', 'Normal')->count(),
-            'low_stock' => Inventory::where('stock_status', 'Low Stock')->count(),
-            'overstock' => Inventory::where('stock_status', 'Overstock')->count(),
-            'expiring_soon' => DB::table('FEFO_Batch')
-                ->where('status', 'active')
-                ->where('expiry_date', '>=', now())
-                ->where('expiry_date', '<=', now()->addDays(30))
-                ->count(),
-            'expired' => DB::table('FEFO_Batch')
-                ->where('expiry_date', '<', now())
-                ->count(),
-        ];
+            // Inventory health
+            $inventoryHealth = [
+                'healthy' => Inventory::where('stock_status', 'Normal')->count(),
+                'low_stock' => Inventory::where('stock_status', 'Low Stock')->count(),
+                'overstock' => Inventory::where('stock_status', 'Overstock')->count(),
+                'expiring_soon' => DB::table('FEFO_Batch')
+                    ->where('status', 'active')
+                    ->where('expiry_date', '>=', now())
+                    ->where('expiry_date', '<=', now()->addDays(30))
+                    ->count(),
+                'expired' => DB::table('FEFO_Batch')
+                    ->where('expiry_date', '<', now())
+                    ->count(),
+            ];
 
-        // Top wasted products
-        $topWastedProducts = DB::select("
-            SELECT
-                w.product_id,
-                p.product_name as name,
-                COALESCE(SUM(w.estimated_loss), 0) as loss,
-                COALESCE(SUM(w.quantity), 0) as quantity
-            FROM Wastage_Record w
-            JOIN Product p ON w.product_id = p.product_id
-            WHERE w.date_recorded >= ?
-            GROUP BY w.product_id, p.product_name
-            ORDER BY loss DESC
-            LIMIT 10
-        ", [$startDate]);
+            // Top wasted products
+            $topWastedProducts = DB::select("
+                SELECT
+                    w.product_id,
+                    p.product_name as name,
+                    COALESCE(SUM(w.estimated_loss), 0) as loss,
+                    COALESCE(SUM(w.quantity), 0) as quantity
+                FROM Wastage_Record w
+                JOIN Product p ON w.product_id = p.product_id
+                WHERE w.date_recorded >= ?
+                GROUP BY w.product_id, p.product_name
+                ORDER BY loss DESC
+                LIMIT 10
+            ", [$startDate]);
 
-        // Payment method breakdown
-        $paymentBreakdown = SalesTransaction::where('status', 'Completed')
-            ->where('transaction_date', '>=', $startDate)
-            ->select('payment_method', DB::raw('SUM(total_amount) as revenue'))
-            ->groupBy('payment_method')
-            ->get();
+            // Payment method breakdown
+            $paymentBreakdown = SalesTransaction::where('status', 'Completed')
+                ->where('transaction_date', '>=', $startDate)
+                ->select('payment_method', DB::raw('SUM(total_amount) as revenue'))
+                ->groupBy('payment_method')
+                ->get();
 
-        // Average forecast confidence
-        $avgConfidence = DB::table('Forecast_Result')
-            ->where('created_at', '>=', now()->subDays(30))
-            ->avg('confidence');
+            // Average forecast confidence
+            $avgConfidence = DB::table('Forecast_Result')
+                ->where('created_at', '>=', now()->subDays(30))
+                ->avg('confidence');
 
-        return response()->json([
-            'sales_trend' => $salesTrend,
-            'wastage_trend' => $wastageTrend,
-            'leakage_by_category' => $leakageByCategory,
-            'inventory_health' => $inventoryHealth,
-            'top_wasted_products' => $topWastedProducts,
-            'payment_breakdown' => $paymentBreakdown,
-            'forecast_confidence' => $avgConfidence ? round((float) $avgConfidence, 1) : null,
-        ]);
+            return [
+                'sales_trend' => $salesTrend,
+                'wastage_trend' => $wastageTrend,
+                'leakage_by_category' => $leakageByCategory,
+                'inventory_health' => $inventoryHealth,
+                'top_wasted_products' => $topWastedProducts,
+                'payment_breakdown' => $paymentBreakdown,
+                'forecast_confidence' => $avgConfidence ? round((float) $avgConfidence, 1) : null,
+            ];
+        });
+
+        return response()->json($data);
     }
 }

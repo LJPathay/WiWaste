@@ -505,7 +505,7 @@ export function DashboardLayout() {
                 </header>
 
                 {/* Page content */}
-                <div className="theme-content min-w-0 flex-1 relative bg-white dark:bg-slate-950 border-0 outline-none shadow-none transition-colors duration-200 overflow-y-auto" id="main-content">
+                <div className="theme-content min-w-0 flex-1 relative p-6 bg-white dark:bg-slate-950 border-0 outline-none shadow-none transition-colors duration-200 overflow-y-auto" id="main-content">
                   <Breadcrumb />
                   <Outlet />
                 </div>

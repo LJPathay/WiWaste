@@ -11,42 +11,15 @@ import { users as usersApi, type ApiUser, type CreateUserPayload } from '../../s
 import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
 import { ActionButton } from '../../components/shared/DataTableActions';
 import { Pagination } from '../../components/ui/pagination';
-
-const ITEMS_PER_PAGE = 5;
-
-const ROLE_CONFIG = {
-  'Admin': {
-    label: 'Admin',
-    icon: Shield,
-    iconColor: 'text-emerald-600 dark:text-emerald-400',
-    badgeClass: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50',
-    description: 'Full system control & user management',
-  },
-  'Inventory': {
-    label: 'Inventory Staff',
-    icon: Package,
-    iconColor: 'text-[#006a61] dark:text-[#7ef0cf]',
-    badgeClass: 'bg-teal-50 text-teal-700 dark:bg-teal-950/40 dark:text-teal-300 border border-teal-200 dark:border-teal-800/50',
-    description: 'Manage stock, products & wastage',
-  },
-  'Business Owner': {
-    label: 'Business Owner',
-    icon: Briefcase,
-    iconColor: 'text-amber-600 dark:text-amber-400',
-    badgeClass: 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800/50',
-    description: 'Reports, financial insights & POS',
-  },
-} as const;
-
-const maskEmail = (email: string) => {
-  if (!email || !email.includes('@')) return email;
-  const [name, domain] = email.split('@');
-  if (name.length <= 2) {
-    return `${name[0]}*@${domain}`;
-  }
-  const maskedName = `${name[0]}${'*'.repeat(Math.min(name.length - 2, 5))}${name[name.length - 1]}`;
-  return `${maskedName}@${domain}`;
-};
+import {
+  ITEMS_PER_PAGE,
+  ROLE_CONFIG,
+  maskEmail,
+  type UserForm,
+  EMPTY_FORM,
+  getPasswordRules,
+  isPasswordValid,
+} from './UserConstants';
 
 export function ManageUsers() {
   const { data: userList, loading, error, addItem, updateItem, removeItem, refetch } = useOptimisticList(usersApi.list);
@@ -201,19 +174,11 @@ export function ManageUsers() {
     )
   );
 
-  const getPasswordRules = (pwd: string) => [
-    { id: 'length', label: 'At least 6 characters', met: pwd.length >= 6 },
-    { id: 'upper', label: 'One uppercase letter (A-Z)', met: /[A-Z]/.test(pwd) },
-    { id: 'lower', label: 'One lowercase letter (a-z)', met: /[a-z]/.test(pwd) },
-    { id: 'number', label: 'One number (0-9)', met: /[0-9]/.test(pwd) },
-    { id: 'special', label: 'One special character (!@#$%^&*)', met: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(pwd) },
-  ];
-
   const passwordRules = getPasswordRules(form.password);
-  const isPasswordValid = passwordRules.every(r => r.met);
+  const passwordValid = isPasswordValid(form.password);
 
   const resetForm = () => {
-    setForm({ Full_name: '', username: '', password: '', email: '', role: 'Inventory', status: 'Active' });
+    setForm(EMPTY_FORM);
     setFormError('');
     setRoleDropdownOpen(false);
   };
@@ -224,7 +189,7 @@ export function ManageUsers() {
       setFormError('Please resolve duplicate user validation errors before submitting.');
       return;
     }
-    if (!isPasswordValid) {
+    if (!passwordValid) {
       setFormError('Password does not meet all policy requirements.');
       return;
     }
@@ -251,7 +216,7 @@ export function ManageUsers() {
       setFormError('A user with this full name already exists.');
       return;
     }
-    if (form.password && !isPasswordValid) {
+    if (form.password && !passwordValid) {
       setFormError('Password does not meet all policy requirements.');
       return;
     }
@@ -762,7 +727,7 @@ export function ManageUsers() {
                     value={form.password}
                     onChange={e => setForm(prev => ({ ...prev, password: e.target.value }))}
                     className={`h-8 w-full bg-slate-50 dark:bg-slate-800 border pr-10 pl-3 rounded-lg text-xs focus:outline-none focus:ring-1 text-slate-900 dark:text-slate-100 ${
-                      form.password && !isPasswordValid
+                      form.password && !passwordValid
                         ? 'border-amber-400 focus:ring-amber-400'
                         : 'border-slate-200 dark:border-white/10 focus:ring-[#006a61]'
                     }`}
@@ -875,7 +840,7 @@ export function ManageUsers() {
 
               <button
                 type="submit"
-                disabled={submitting || isDuplicateName || isDuplicateUsername || !isPasswordValid}
+                disabled={submitting || isDuplicateName || isDuplicateUsername || !passwordValid}
                 className="h-8 w-full bg-[#006a61] hover:bg-[#00574f] text-white rounded-lg text-xs font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
               >
                 {submitting ? 'Adding User...' : 'Add User'}
@@ -1047,7 +1012,7 @@ export function ManageUsers() {
 
               <button
                 type="submit"
-                disabled={submitting || isDuplicateName || (Boolean(form.password) && !isPasswordValid)}
+                disabled={submitting || isDuplicateName || (Boolean(form.password) && !passwordValid)}
                 className="h-8 w-full bg-[#006a61] hover:bg-[#00574f] text-white rounded-lg text-xs font-semibold transition-all disabled:opacity-50 shadow-sm"
               >
                 {submitting ? 'Saving Changes...' : 'Save Changes'}

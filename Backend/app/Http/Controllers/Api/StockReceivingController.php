@@ -283,23 +283,21 @@ class StockReceivingController extends Controller
     protected function validateTemperature(StockReceivingItem $item, array &$itemData): ?string
     {
         $product = $item->product;
-        if (!$product || empty($itemData['temperature_at_receipt'])) {
-            return null;
+        $warning = null;
+
+        if ($product && !empty($itemData['temperature_at_receipt'])) {
+            $temp = $itemData['temperature_at_receipt'];
+
+            if ($product->required_temp_min !== null && $temp < $product->required_temp_min) {
+                $itemData['condition_check_passed'] = false;
+                $warning = "Item {$item->receiving_item_id} ({$product->product_name}): Temperature {$temp}°C is below required minimum {$product->required_temp_min}°C";
+            } elseif ($product->required_temp_max !== null && $temp > $product->required_temp_max) {
+                $itemData['condition_check_passed'] = false;
+                $warning = "Item {$item->receiving_item_id} ({$product->product_name}): Temperature {$temp}°C exceeds required maximum {$product->required_temp_max}°C";
+            }
         }
 
-        $temp = $itemData['temperature_at_receipt'];
-
-        if ($product->required_temp_min !== null && $temp < $product->required_temp_min) {
-            $itemData['condition_check_passed'] = false;
-            return "Item {$item->receiving_item_id} ({$product->product_name}): Temperature {$temp}°C is below required minimum {$product->required_temp_min}°C";
-        }
-
-        if ($product->required_temp_max !== null && $temp > $product->required_temp_max) {
-            $itemData['condition_check_passed'] = false;
-            return "Item {$item->receiving_item_id} ({$product->product_name}): Temperature {$temp}°C exceeds required maximum {$product->required_temp_max}°C";
-        }
-
-        return null;
+        return $warning;
     }
 
     protected function processReceiveItems(StockReceiving $receiving, array $items, $user): array

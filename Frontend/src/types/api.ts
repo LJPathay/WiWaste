@@ -1,6 +1,9 @@
 // All TypeScript types/interfaces for the WiWaste API
 
 // ─── Common ─────────────────────────────────────────────
+export type SeniorPwdType = 'senior' | 'pwd' | 'none';
+export type ExpirySeverity = 'critical' | 'high' | 'medium' | 'low';
+
 export interface PaginatedResponse<T> {
   data: T[];
   current_page: number;
@@ -271,7 +274,7 @@ export interface ApiSalesTransaction {
   customer_phone?: string | null;
   customer_email?: string | null;
   senior_pwd_id?: string | null;
-  senior_pwd_type?: 'senior' | 'pwd' | 'none';
+  senior_pwd_type?: SeniorPwdType;
 }
 
 export interface ApiSalesItem {
@@ -301,7 +304,7 @@ export interface CreateSalePayload {
   change_due?: number;
   senior_pwd_name?: string | null;
   senior_pwd_id?: string | null;
-  senior_pwd_type?: 'senior' | 'pwd' | 'none';
+  senior_pwd_type?: SeniorPwdType;
   items: Array<{
     product_id: number;
     quantity: number;
@@ -694,7 +697,7 @@ export interface ApiSeniorPwdTransaction {
   transaction_id: number;
   date: string;
   cashier: string;
-  senior_pwd_type: 'senior' | 'pwd' | 'none';
+  senior_pwd_type: SeniorPwdType;
   senior_pwd_id: string | null;
   senior_pwd_name: string | null;
   senior_pwd_discount: number;
@@ -870,7 +873,7 @@ export interface ApiAlertBatch {
   quantity: number;
   expiry_date: string;
   days_left: number;
-  severity: 'critical' | 'high' | 'medium' | 'low';
+  severity: ExpirySeverity;
   business_id?: number;
   branch_id?: number;
 }
@@ -885,7 +888,7 @@ export interface ApiAlertSupplier {
   fda_cpr_expiry?: string | null;
   lto_days_remaining?: number | null;
   cpr_days_remaining?: number | null;
-  severity: 'critical' | 'high' | 'medium' | 'low';
+  severity: ExpirySeverity;
 }
 
 export interface ApiExpiringResponse {
@@ -936,7 +939,7 @@ export interface ApiRecall {
   batch_number?: string;
   supplier_id?: number;
   reason: string;
-  severity: 'low' | 'medium' | 'high' | 'critical';
+  severity: ExpirySeverity;
   status: 'draft' | 'active' | 'quarantined' | 'notified' | 'resolved' | 'closed';
   affected_batches: Array<{ batch_id: number; quantity: number }>;
   total_quantity_affected: number;
@@ -1046,7 +1049,7 @@ export interface ApiDataBreachIncident {
   id: number;
   description: string;
   personal_data_affected: string;
-  risk_assessment: 'low' | 'medium' | 'high' | 'critical';
+  risk_assessment: ExpirySeverity;
   status: 'open' | 'investigating' | 'contained' | 'notified' | 'resolved' | 'closed';
   detected_at: string;
   npc_notified_at: string | null;

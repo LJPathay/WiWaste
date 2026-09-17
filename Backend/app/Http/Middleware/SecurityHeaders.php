@@ -12,6 +12,14 @@ class SecurityHeaders
     {
         $response = $next($request);
 
+        // Only apply restrictive COEP/CORP/COOP headers to non-API routes
+        // (API responses are cross-origin and these headers block them)
+        if (!$request->is('api/*')) {
+            $response->headers->set('Cross-Origin-Opener-Policy', 'same-origin');
+            $response->headers->set('Cross-Origin-Resource-Policy', 'same-origin');
+            $response->headers->set('Cross-Origin-Embedder-Policy', 'require-corp');
+        }
+
         // Content Security Policy
         $csp = [
             "default-src 'self'",
@@ -33,9 +41,6 @@ class SecurityHeaders
         $response->headers->set('X-XSS-Protection', '1; mode=block');
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
         $response->headers->set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-        $response->headers->set('Cross-Origin-Opener-Policy', 'same-origin');
-        $response->headers->set('Cross-Origin-Resource-Policy', 'same-origin');
-        $response->headers->set('Cross-Origin-Embedder-Policy', 'require-corp');
 
         // HSTS (only in production with HTTPS)
         if (config('app.env') === 'production' && $request->isSecure()) {

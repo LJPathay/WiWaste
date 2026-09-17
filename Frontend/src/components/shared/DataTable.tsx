@@ -249,7 +249,7 @@ export function DataTable<T extends Record<string, unknown>>({
       </div>
 
       {pinnedCol && (
-        <div className="pointer-events-none absolute top-0 bottom-0 left-[var(--pinned-width)] w-px bg-slate-200 dark:bg-white/10 shadow-[2px_0_8px_rgba(0,0,0,0.04)] z-10" />
+        <div className="pointer-events-none absolute top-0 bottom-0 left-[var(--pinned-width)] w-px bg-transparent z-10" />
       )}
 
       {pagination && (

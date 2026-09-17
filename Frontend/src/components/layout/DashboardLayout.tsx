@@ -373,7 +373,7 @@ export function DashboardLayout() {
 
         {/* ── Desktop Sidebar ── */}
         <aside
-          className={`hidden md:flex flex-none flex-col overflow-hidden bg-[#f5f5f5] dark:bg-slate-950 text-gray-700 dark:text-slate-300 transition-all duration-300 h-screen sticky top-0 border-r border-slate-200 dark:border-white/10 transition-colors duration-200 ${sidebarWidth}`}
+          className={`hidden md:flex flex-none flex-col overflow-hidden bg-[#f5f5f5] dark:bg-slate-950 text-gray-700 dark:text-slate-300 transition-all duration-300 h-screen sticky top-0 transition-colors duration-200 ${sidebarWidth}`}
         >
           <SidebarInner
             compact={collapsed}
@@ -505,7 +505,7 @@ export function DashboardLayout() {
                 </header>
 
                 {/* Page content */}
-                <div className="theme-content min-w-0 flex-1 relative p-6 bg-white dark:bg-slate-950 border-0 outline-none shadow-none transition-colors duration-200 overflow-y-auto" id="main-content">
+                <div className="theme-content min-w-0 flex-1 relative bg-white dark:bg-slate-950 border-0 outline-none shadow-none transition-colors duration-200 overflow-y-auto" id="main-content">
                   <Breadcrumb />
                   <Outlet />
                 </div>

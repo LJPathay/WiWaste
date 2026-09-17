@@ -76,7 +76,7 @@ class WastageRecordController extends Controller
 
         return DB::transaction(function () use ($data, $userId, $user, $request) {
             // Deduct from inventory — refuse to go below zero
-            $query = Inventory::where('product_id', $data['product_id']);
+            $query = Inventory::with('product')->where('product_id', $data['product_id']);
             $query = $this->scopeForBusinessAndBranch($query, $request);
             $inventory = $query->first();
 

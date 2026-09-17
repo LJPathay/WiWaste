@@ -26,7 +26,7 @@ class InventoryController extends Controller
 
     public function index(Request $request)
     {
-        $query = Inventory::with('product.category');
+        $query = Inventory::with('product.category', 'product.supplier');
         $query = $this->scopeForBusinessAndBranch($query, $request);
 
         if ($search = $request->input('search')) {
@@ -72,7 +72,7 @@ class InventoryController extends Controller
             'remarks'    => 'nullable|string|max:255',
         ]);
 
-        $query = Inventory::where('product_id', $data['product_id']);
+        $query = Inventory::with('product')->where('product_id', $data['product_id']);
         $query = $this->scopeForBusinessAndBranch($query, $request);
         $inventory = $query->firstOrFail();
 
@@ -122,7 +122,7 @@ class InventoryController extends Controller
             'batch_id' => 'nullable|integer|exists:FEFO_Batch,batch_id',
         ]);
 
-        $query = Inventory::where('product_id', $data['product_id']);
+        $query = Inventory::with('product')->where('product_id', $data['product_id']);
         $query = $this->scopeForBusinessAndBranch($query, $request);
         $inventory = $query->firstOrFail();
 

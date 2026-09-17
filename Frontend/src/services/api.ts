@@ -19,6 +19,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   if (!res.ok) {
     if (res.status === 401) {
       localStorage.removeItem('wiwaste_token');
+      localStorage.removeItem('wiwaste_user');
+      localStorage.removeItem('wiwaste-session');
+      window.location.href = '/login';
+      throw new Error('Session expired. Please log in again.');
     }
     const err = await res.json().catch(() => ({ message: 'Unknown error' }));
     throw new Error(err.message ?? `HTTP ${res.status}`);

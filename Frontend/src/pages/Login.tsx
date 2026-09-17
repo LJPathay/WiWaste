@@ -31,7 +31,7 @@ export function Login() {
       localStorage.setItem('wiwaste_token', result.token);
       localStorage.setItem('wiwaste_user', JSON.stringify(result.user));
 
-      const uiRole: UserRole = result.user.role === 'Admin' ? 'owner' : (result.user.role === 'Inventory' ? 'inventory' : 'cashier');
+      const uiRole: UserRole = (result.user.role === 'Admin' || result.user.role === 'Owner') ? 'owner' : (result.user.role === 'Inventory' ? 'inventory' : 'cashier');
 
       setStoredSession({
         id: String(result.user.id ?? result.user.email ?? username),

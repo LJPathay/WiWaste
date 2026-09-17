@@ -114,24 +114,6 @@ class SalesTransactionController extends Controller
         ];
     }
 
-    protected function applySeniorPWD($subtotal, $discountPct = 0): array
-    {
-        // Senior/PWD gets 20% discount + VAT exemption on the discounted amount
-        $seniorPWDiscount = round($subtotal * self::SENIOR_PWD_DISCOUNT_RATE, 2);
-        $discountedSubtotal = $subtotal - $seniorPWDiscount;
-        
-        // VAT on discounted amount (if not VAT exempt)
-        // For Senior/PWD, the VAT is computed on the VAT-exempt portion
-        $vatExemptAmount = $discountedSubtotal;
-        $vatOnExempt = 0;
-        
-        return [
-            'senior_pwd_discount_amount' => $seniorPWDiscount,
-            'senior_pwd_vat_exempt_amount' => $vatExemptAmount,
-            'discounted_subtotal' => $discountedSubtotal,
-        ];
-    }
-
     public function index(Request $request)
     {
         $query = SalesTransaction::with(['user', 'salesItems.product']);

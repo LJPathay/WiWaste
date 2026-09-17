@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\DB;
 
 class LossPredictionService
 {
+    use QueriesSalesVelocity;
+
     public const CACHE_KEY = 'loss.risk.scores';
 
     public const CACHE_TTL = 3600;
@@ -127,20 +129,6 @@ class LossPredictionService
     private function salesTotals(): Collection
     {
         return $this->salesByWindow(120)->keyBy('product_id');
-    }
-
-    /**
-     * @return Collection<int, object>
-     */
-    private function salesByWindow(int $days): Collection
-    {
-        return DB::table('Sales_Item')
-            ->join('Sales_Transaction', 'Sales_Transaction.transaction_id', '=', 'Sales_Item.transaction_id')
-            ->where('Sales_Transaction.status', 'Completed')
-            ->whereBetween('Sales_Transaction.transaction_date', [now()->subDays($days), now()])
-            ->select('Sales_Item.product_id', DB::raw('SUM(Sales_Item.quantity) AS total'))
-            ->groupBy('Sales_Item.product_id')
-            ->get();
     }
 
     /**

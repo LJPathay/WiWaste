@@ -6,65 +6,31 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    private const INDEXES = [
+        ['table' => 'Stock_Movement',    'columns' => ['product_id', 'movement_date'],                      'name' => 'idx_movement_product_date'],
+        ['table' => 'Sales_Transaction', 'columns' => ['business_id', 'branch_id', 'transaction_date'],     'name' => 'idx_sales_biz_branch_date'],
+        ['table' => 'Inventory',         'columns' => ['business_id', 'branch_id', 'product_id'],           'name' => 'idx_inventory_biz_branch_product'],
+        ['table' => 'FEFO_Batch',        'columns' => ['product_id', 'status', 'expiry_date'],             'name' => 'idx_fefo_product_status_expiry'],
+        ['table' => 'Audit_Log',         'columns' => ['created_at'],                                       'name' => 'idx_auditlog_created'],
+        ['table' => 'User',              'columns' => ['username'],                                          'name' => 'idx_user_username'],
+        ['table' => 'Stock_Receiving',   'columns' => ['business_id', 'branch_id'],                         'name' => 'idx_stock_receiving_biz_branch'],
+    ];
+
     public function up(): void
     {
-        Schema::connection('mysql')->table('Stock_Movement', function (Blueprint $table) {
-            $table->index(['product_id', 'movement_date'], 'idx_movement_product_date');
-        });
-
-        Schema::connection('mysql')->table('Sales_Transaction', function (Blueprint $table) {
-            $table->index(['business_id', 'branch_id', 'transaction_date'], 'idx_sales_biz_branch_date');
-        });
-
-        Schema::connection('mysql')->table('Inventory', function (Blueprint $table) {
-            $table->index(['business_id', 'branch_id', 'product_id'], 'idx_inventory_biz_branch_product');
-        });
-
-        Schema::connection('mysql')->table('FEFO_Batch', function (Blueprint $table) {
-            $table->index(['product_id', 'status', 'expiry_date'], 'idx_fefo_product_status_expiry');
-        });
-
-        Schema::connection('mysql')->table('Audit_Log', function (Blueprint $table) {
-            $table->index('created_at', 'idx_auditlog_created');
-        });
-
-        Schema::connection('mysql')->table('User', function (Blueprint $table) {
-            $table->index('username', 'idx_user_username');
-        });
-
-        Schema::connection('mysql')->table('Stock_Receiving', function (Blueprint $table) {
-            $table->index(['business_id', 'branch_id'], 'idx_stock_receiving_biz_branch');
-        });
+        foreach (self::INDEXES as $index) {
+            Schema::connection('mysql')->table($index['table'], function (Blueprint $table) use ($index) {
+                $table->index($index['columns'], $index['name']);
+            });
+        }
     }
 
     public function down(): void
     {
-        Schema::connection('mysql')->table('Stock_Movement', function (Blueprint $table) {
-            $table->dropIndex('idx_movement_product_date');
-        });
-
-        Schema::connection('mysql')->table('Sales_Transaction', function (Blueprint $table) {
-            $table->dropIndex('idx_sales_biz_branch_date');
-        });
-
-        Schema::connection('mysql')->table('Inventory', function (Blueprint $table) {
-            $table->dropIndex('idx_inventory_biz_branch_product');
-        });
-
-        Schema::connection('mysql')->table('FEFO_Batch', function (Blueprint $table) {
-            $table->dropIndex('idx_fefo_product_status_expiry');
-        });
-
-        Schema::connection('mysql')->table('Audit_Log', function (Blueprint $table) {
-            $table->dropIndex('idx_auditlog_created');
-        });
-
-        Schema::connection('mysql')->table('User', function (Blueprint $table) {
-            $table->dropIndex('idx_user_username');
-        });
-
-        Schema::connection('mysql')->table('Stock_Receiving', function (Blueprint $table) {
-            $table->dropIndex('idx_stock_receiving_biz_branch');
-        });
+        foreach (self::INDEXES as $index) {
+            Schema::connection('mysql')->table($index['table'], function (Blueprint $table) use ($index) {
+                $table->dropIndex($index['name']);
+            });
+        }
     }
 };

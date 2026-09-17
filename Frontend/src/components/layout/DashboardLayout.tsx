@@ -215,7 +215,7 @@ const SidebarInner = memo(function SidebarInner({
   currentPath: string;
 }) {
   return (
-    <div className="flex h-full flex-col bg-[#f5f5f5] dark:bg-slate-900 transition-colors duration-200">
+    <div className="flex h-full flex-col bg-[#f5f5f5] dark:bg-slate-950 transition-colors duration-200">
       <div className="px-3 py-3 bg-white dark:bg-slate-950">
         <div className="flex items-center justify-between gap-2">
           <div className={`flex min-w-0 items-center flex-1 ${compact ? 'justify-center' : 'justify-start'}`}>
@@ -259,7 +259,7 @@ const SidebarInner = memo(function SidebarInner({
 
       <NavItems compact={compact} onClose={onClose} sidebarGroups={sidebarGroups} currentPath={currentPath} />
 
-      <div className="border-t border-gray-200 dark:border-white/10 p-3 bg-white dark:bg-slate-900 flex items-center gap-2">
+      <div className="border-t border-gray-200 dark:border-white/10 p-3 bg-white dark:bg-slate-950 flex items-center gap-2">
         <div className="flex-shrink-0">
           <ThemeToggle compact />
         </div>
@@ -373,7 +373,7 @@ export function DashboardLayout() {
 
         {/* ── Desktop Sidebar ── */}
         <aside
-          className={`hidden md:flex flex-none flex-col overflow-hidden bg-[#f5f5f5] dark:bg-slate-900 text-gray-700 dark:text-slate-300 transition-all duration-300 h-screen sticky top-0 transition-colors duration-200 ${sidebarWidth}`}
+          className={`hidden md:flex flex-none flex-col overflow-hidden bg-[#f5f5f5] dark:bg-slate-950 text-gray-700 dark:text-slate-300 transition-all duration-300 h-screen sticky top-0 border-r border-slate-200 dark:border-white/10 transition-colors duration-200 ${sidebarWidth}`}
         >
           <SidebarInner
             compact={collapsed}
@@ -505,12 +505,12 @@ export function DashboardLayout() {
                 </header>
 
                 {/* Page content */}
-                <div className="theme-content min-w-0 flex-1 relative p-6 bg-transparent dark:bg-transparent border-0 outline-none shadow-none transition-colors duration-200" id="main-content">
+                <div className="theme-content min-w-0 flex-1 relative p-6 bg-white dark:bg-slate-950 border-0 outline-none shadow-none transition-colors duration-200 overflow-y-auto" id="main-content">
                   <Breadcrumb />
                   <Outlet />
                 </div>
                 {/* Footer */}
-                <footer className="bg-white/50 dark:bg-slate-900/50 py-4 px-6 flex-shrink-0" id="footer" role="contentinfo">
+                <footer className="bg-white/50 dark:bg-slate-950/50 py-4 px-6 flex-shrink-0" id="footer" role="contentinfo">
                   <p className="text-xs text-center text-slate-500 dark:text-slate-400">
                     © 2026 WiWaste. All rights reserved.
                   </p>

@@ -461,7 +461,7 @@ export function GenerateReports() {
               data={optPlan.plan}
               rowKey={(row) => row.product_id}
               emptyMessage="No SKUs to reorder under this budget."
-              hoverActions={false}
+              
             />
 
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-1">
@@ -547,7 +547,7 @@ export function GenerateReports() {
               data={filteredSales}
               rowKey={(row) => row.id}
               emptyMessage="No sales transactions found."
-              hoverActions={false}
+              
             />
           </div>
         </div>
@@ -561,7 +561,7 @@ export function GenerateReports() {
           data={compilations}
           rowKey={(row) => row.id}
           emptyMessage="No compilations found."
-          hoverActions={false}
+          
           pagination={
             <div className="px-4 py-2 text-[9px] text-slate-400">
               {compilations.length} report{compilations.length !== 1 ? 's' : ''} compiled
@@ -577,7 +577,7 @@ export function GenerateReports() {
           data={returnsData}
           rowKey={(row) => row.id}
           emptyMessage="No returns data available."
-          hoverActions={false}
+          
         />
       </div>
 

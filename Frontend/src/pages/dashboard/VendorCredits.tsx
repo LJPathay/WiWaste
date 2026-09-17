@@ -20,9 +20,9 @@ function getDaysUntil(date: Date) {
 }
 
 function getDeadlineRisk(daysUntilDeadline: number) {
-  if (daysUntilDeadline < 0) return { label: 'Missed', color: '#ef4444', tone: 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300', border: 'border-l-rose-500' };
-  if (daysUntilDeadline <= 10) return { label: 'Urgent', color: '#f59e0b', tone: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300', border: 'border-l-amber-500' };
-  return { label: 'Open', color: '#14b8a6', tone: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300', border: 'border-l-teal-400' };
+  if (daysUntilDeadline < 0) return { label: 'Missed', color: '#94a3b8', tone: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300', border: 'border-l-slate-400' };
+  if (daysUntilDeadline <= 10) return { label: 'Urgent', color: '#94a3b8', tone: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300', border: 'border-l-slate-400' };
+  return { label: 'Open', color: '#94a3b8', tone: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400', border: 'border-l-slate-300' };
 }
 
 const columns: DataTableColumn<typeof MOCK_VENDOR_RETURNS[number]>[] = [
@@ -31,16 +31,15 @@ const columns: DataTableColumn<typeof MOCK_VENDOR_RETURNS[number]>[] = [
   { key: 'returnItems', header: 'Processed By', truncate: true, minWidth: '100px', render: (row) => row.returnItems.slice(0, 2).join(', ') + (row.returnItems.length > 2 ? ` +${row.returnItems.length - 2}` : '') },
   { key: 'returnDeadline', header: 'Date', minWidth: '100px', render: (row) => {
     const days = getDaysUntil(row.returnDeadline);
-    const cls = days < 0 ? 'text-rose-600 dark:text-rose-400' : days <= 10 ? 'text-amber-600 dark:text-amber-400' : 'text-teal-600 dark:text-teal-400';
-    return <span className={`font-semibold ${cls}`}>{days < 0 ? `${Math.abs(days)}d overdue` : `${days}d left`}</span>;
+    return <span className="font-semibold text-slate-600 dark:text-slate-400">{days < 0 ? `${Math.abs(days)}d overdue` : `${days}d left`}</span>;
   }},
   { key: 'eligibleCredit', header: 'Refund', numeric: true, minWidth: '100px', render: (row) => currencyFormatter.format(row.eligibleCredit) },
 ];
 
 function getActionLabel(daysUntilDeadline: number) {
-  if (daysUntilDeadline < 0) return { label: 'Request Exception', color: 'text-rose-700 bg-rose-50 dark:bg-rose-500/10 dark:text-rose-300' };
-  if (daysUntilDeadline <= 10) return { label: 'File Claim Now', color: 'text-amber-700 bg-amber-50 dark:bg-amber-500/10 dark:text-amber-300' };
-  return { label: 'Prepare Docs', color: 'text-teal-700 bg-teal-50 dark:bg-teal-500/10 dark:text-teal-300' };
+  if (daysUntilDeadline < 0) return { label: 'Request Exception', color: 'text-slate-700 bg-slate-100 dark:bg-slate-800 dark:text-slate-300' };
+  if (daysUntilDeadline <= 10) return { label: 'File Claim Now', color: 'text-slate-700 bg-slate-100 dark:bg-slate-800 dark:text-slate-300' };
+  return { label: 'Prepare Docs', color: 'text-slate-600 bg-slate-100 dark:bg-slate-800 dark:text-slate-400' };
 }
 
 export function VendorCreditsPage() {

@@ -369,8 +369,8 @@ export function ManageUsers() {
       render: (row) => (
         <>
           {row.status === 'Active' && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/40">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Active
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700/50">
+              <span className="w-1.5 h-1.5 rounded-full bg-slate-500" /> Active
             </span>
           )}
           {row.status === 'Inactive' && (
@@ -379,8 +379,8 @@ export function ManageUsers() {
             </span>
           )}
           {row.status === 'Quarantined' && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 shadow-sm">
-              <ShieldOff className="h-3 w-3 text-amber-600 dark:text-amber-400" /> Quarantined
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700/50">
+              <ShieldOff className="h-3 w-3 text-slate-500 dark:text-slate-400" /> Quarantined
             </span>
           )}
         </>
@@ -458,7 +458,6 @@ export function ManageUsers() {
         rowKey={(row) => (row as unknown as ApiUser).id}
         onRowClick={(row) => setViewingUser(row as unknown as ApiUser)}
         emptyMessage="No matching users found."
-        hoverActions={false}
         actions={(row) => {
           const u = row as unknown as ApiUser;
           return (
@@ -526,7 +525,7 @@ export function ManageUsers() {
       >
         <div className="p-3.5 border-b border-slate-200 dark:border-white/10 space-y-2.5">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-lg">
+            <div className="flex flex-wrap items-center gap-1">
               <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 px-2 uppercase tracking-wider">Status:</span>
               {[
                 { id: 'all', label: 'All Accounts', count: allCount },
@@ -542,20 +541,14 @@ export function ManageUsers() {
                     onClick={() => setStatusFilter(tab.id as 'all' | 'Active' | 'Inactive' | 'Quarantined')}
                     className={`flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
                       isSelected
-                        ? tab.id === 'Quarantined'
-                          ? 'bg-amber-500 text-white shadow-sm'
-                          : 'bg-white dark:bg-slate-950 text-[#006a61] dark:text-[#7ef0cf] shadow-sm'
+                        ? 'bg-white dark:bg-slate-950 text-[#006a61] dark:text-[#7ef0cf] shadow-sm'
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                     }`}
                   >
                     {TabIcon && <TabIcon className="h-3.5 w-3.5" />}
                     <span>{tab.label}</span>
                     {tab.count > 0 && (
-                      <span className={`px-1.5 py-0.2 rounded-full text-[9px] ${
-                        isSelected && tab.id === 'Quarantined'
-                          ? 'bg-amber-700 text-amber-100'
-                          : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
-                      }`}>
+                      <span className="px-1.5 py-0.2 rounded-full text-[9px] bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                         {tab.count}
                       </span>
                     )}

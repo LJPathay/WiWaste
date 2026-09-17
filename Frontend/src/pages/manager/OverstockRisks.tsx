@@ -229,7 +229,6 @@ export function OverstockRisks() {
           rowKey={(row) => row.id}
           showHeader={true}
           emptyMessage="No items match your search."
-          hoverActions={false}
           rowClassName={(row) => row.applied ? 'opacity-60' : ''}
           actions={(row) => (
             row.applied ? (

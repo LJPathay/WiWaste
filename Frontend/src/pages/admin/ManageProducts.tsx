@@ -386,10 +386,10 @@ export function ManageProducts() {
             return (
               <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
                 p.stock <= 0
-                  ? 'bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-400'
+                  ? 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
                   : p.stock <= p.reorder_level
-                  ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400'
-                  : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400'
+                  ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                  : 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200'
               }`}>
                 {p.stock} units ({p.stock_status})
               </span>
@@ -407,7 +407,7 @@ export function ManageProducts() {
               <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
                 p.status === 'Discontinued'
                   ? 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-400'
-                  : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400'
+                  : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
               }`}>
                 {p.status ?? 'Active'}
               </span>
@@ -485,7 +485,7 @@ export function ManageProducts() {
       <div className="space-y-2">
         <div className="bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm p-3.5 space-y-3">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-lg">
+            <div className="flex flex-wrap items-center gap-1">
               <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 px-2 uppercase tracking-wider">Status:</span>
               {[
                 { id: 'all', label: 'All Products', count: allCount },
@@ -589,9 +589,7 @@ export function ManageProducts() {
           emptyMessage="No products found."
           rowClassName={(row) => {
             const p = row as unknown as ApiProduct;
-            return [
-              p.status === 'Discontinued' ? 'opacity-60 bg-slate-50/40 dark:bg-slate-900/30' : '',
-            ].filter(Boolean).join(' ');
+            return p.status === 'Discontinued' ? 'opacity-60' : '';
           }}
           actions={(row) => {
             const p = row as unknown as ApiProduct;

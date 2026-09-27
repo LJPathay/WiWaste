@@ -158,14 +158,9 @@ export function Login() {
                 </div>
                 {/* Password Field */}
                 <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300" htmlFor="password">
-                      Password
-                    </label>
-                    <a className="text-xs font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 hover:underline transition" href="#forgot">
-                      Forgot password?
-                    </a>
-                  </div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300" htmlFor="password">
+                    Password
+                  </label>
                   <div className="relative rounded-lg shadow-sm">
                     <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -206,6 +201,9 @@ export function Login() {
                       </svg>
                     </button>
                   </div>
+                  <a className="block text-right text-xs font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 hover:underline transition" href="/forgot-password">
+                    Forgot password?
+                  </a>
                 </div>
                 {/* Primary Submit CTA */}
                 <div className="pt-2">

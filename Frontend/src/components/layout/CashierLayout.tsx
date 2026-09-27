@@ -1,8 +1,11 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { PageLoader } from '../ui/PageLoader';
 
 export function CashierLayout() {
-  const { user: session, logout } = useAuth();
+  const { user: session, logout, loading } = useAuth();
+
+  if (loading) return <PageLoader />;
 
   if (!session || session.role !== 'cashier') {
     logout();

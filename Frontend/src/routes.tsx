@@ -63,6 +63,7 @@ const PrivacyRequests = lazyPage(() => import("./pages/admin/PrivacyRequests"), 
 const BreachIncidents = lazyPage(() => import("./pages/admin/BreachIncidents"), "BreachIncidents");
 const DataRetentionConfig = lazyPage(() => import("./pages/admin/DataRetentionConfig"), "DataRetentionConfig");
 const ReorderDashboard = lazyPage(() => import("./pages/reorder/ReorderDashboard"), "ReorderDashboard");
+const ForgotPassword = lazyPage(() => import("./pages/ForgotPassword"), "ForgotPassword");
 
 export const router = createBrowserRouter([
      // ── Public marketing site ──
@@ -83,13 +84,14 @@ export const router = createBrowserRouter([
          ],
      },
 
-     // ── Auth pages (login / register) ──
-     {
-         Component: AuthLayout,
-         children: [
-             { path: "login", Component: Login },
-         ],
-     },
+      // ── Auth pages (login / register) ──
+      {
+          Component: AuthLayout,
+          children: [
+              { path: "login", Component: Login },
+              { path: "forgot-password", Component: ForgotPassword },
+          ],
+      },
 
       // ── Authenticated dashboard (always shows sidebar) ──
       {

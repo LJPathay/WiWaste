@@ -296,7 +296,7 @@ export function DashboardLayout() {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { user: session, logout } = useAuth();
+  const { user: session, logout, loading } = useAuth();
 
   const sidebarGroups = useMemo(() => (session ? (sidebarGroupsByRole[session.role] ?? []) : []), [session]);
   const sidebarWidth = collapsed ? 'w-[76px]' : 'w-[248px]';
@@ -351,6 +351,8 @@ export function DashboardLayout() {
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [mobileOpen]);
+
+  if (loading) return <div className="h-screen flex items-center justify-center bg-white dark:bg-slate-950"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600" /></div>;
 
   if (!session) {
     return <Navigate to="/login" replace />;

@@ -8,6 +8,7 @@ import { formatCurrency } from '../../utils/cashierData';
 import { privacy as privacyApi, type ApiRetentionPolicy, type ApiRetentionSummary } from '../../services/api';
 import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
 import { Pagination } from '../../components/ui/pagination';
+import { useApi } from '../../hooks/useApi';
 
 const ENTITY_TYPES = [
   { value: 'audit_logs', label: 'Audit Logs', icon: <History className="w-4 h-4" />, description: 'System audit trail records' },

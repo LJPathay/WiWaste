@@ -8,6 +8,8 @@ import { formatCurrency } from '../../utils/cashierData';
 import { privacy as privacyApi, type ApiDataSubjectRequest, type ApiPrivacyComplianceReport } from '../../services/api';
 import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
 import { Pagination } from '../../components/ui/pagination';
+import { useDebounce } from '../../hooks/useDebounce';
+import { useApi } from '../../hooks/useApi';
 
 const REQUEST_TYPES = [
   { value: 'access', label: 'Access', icon: <Eye className="w-3 h-3" />, description: 'Request copy of personal data' },

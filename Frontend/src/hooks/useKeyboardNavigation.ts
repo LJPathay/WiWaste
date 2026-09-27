@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState, useRef } from 'react';
 
 interface UseKeyboardNavigationOptions {
   onEscape?: () => void;

@@ -9,6 +9,8 @@ import { formatCurrency } from '../../utils/cashierData';
 import { privacy as privacyApi, type ApiDataBreachIncident, type ApiBreachStatistics } from '../../services/api';
 import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
 import { Pagination } from '../../components/ui/pagination';
+import { useDebounce } from '../../hooks/useDebounce';
+import { useApi } from '../../hooks/useApi';
 
 const STATUS_BADGES: Record<string, { label: string; cls: string; icon: React.ReactNode }> = {
   open: { label: 'Open', cls: 'bg-red-50 text-red-700 border border-red-100', icon: <AlertTriangle className="w-3 h-3" /> },

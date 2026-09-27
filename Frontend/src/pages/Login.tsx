@@ -47,8 +47,9 @@ export function Login() {
       });
 
       navigate(uiRole === 'cashier' ? '/cashier/pos' : '/dashboard');
-    } catch {
-      setError('Invalid username or password');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Invalid username or password';
+      setError(message);
     } finally {
       setLoading(false);
     }

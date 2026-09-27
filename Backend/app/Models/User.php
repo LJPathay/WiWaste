@@ -14,7 +14,10 @@ class User extends Authenticatable
     public $timestamps = false;
 
     protected $fillable = [
-        'Full_name',
+        'first_name',
+        'middle_name',
+        'surname',
+        'contact_number',
         'username',
         'password',
         'email',
@@ -32,6 +35,11 @@ class User extends Authenticatable
     protected $casts = [
         'password' => 'hashed',
     ];
+
+    public function getFullNameAttribute(): string
+    {
+        return trim($this->first_name . ' ' . $this->surname);
+    }
 
     public function business()
     {

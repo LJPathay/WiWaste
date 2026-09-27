@@ -74,21 +74,22 @@ class DatabaseSeeder extends Seeder
     private function seedUsers(): void
     {
         $users = [
-            ['username' => 'admin',     'Full_name' => 'Lia Cruz',       'password' => 'admin123',     'email' => 'admin@ipharmamart.com',     'role' => 'Owner',           'status' => 'Active'],
-            ['username' => 'inventory', 'Full_name' => 'Mia Stockwell',  'password' => 'inventory123', 'email' => 'inventory@ipharmamart.com', 'role' => 'Inventory',        'status' => 'Active'],
-            ['username' => 'cashier',   'Full_name' => 'Carlo Reyes',    'password' => 'cashier123',   'email' => 'cashier@ipharmamart.com',   'role' => 'Cashier',         'status' => 'Active'],
+            ['username' => 'admin',     'first_name' => 'Lia',       'surname' => 'Cruz',      'password' => 'admin123',     'email' => 'admin@ipharmamart.com',     'role' => 'Owner',           'status' => 'Active'],
+            ['username' => 'inventory', 'first_name' => 'Mia',       'surname' => 'Stockwell', 'password' => 'inventory123', 'email' => 'inventory@ipharmamart.com', 'role' => 'Inventory',        'status' => 'Active'],
+            ['username' => 'cashier',   'first_name' => 'Carlo',     'surname' => 'Reyes',     'password' => 'cashier123',   'email' => 'cashier@ipharmamart.com',   'role' => 'Cashier',         'status' => 'Active'],
         ];
 
         foreach ($users as $u) {
             $user = User::firstOrCreate(
                 ['username' => $u['username']],
                 [
-                    'Full_name'  => $u['Full_name'],
-                    'password'   => $u['password'],
-                    'email'      => $u['email'],
-                    'role'       => $u['role'],
-                    'status'     => $u['status'],
-                    'Created_at' => now(),
+                    'first_name'  => $u['first_name'],
+                    'surname'     => $u['surname'],
+                    'password'    => $u['password'],
+                    'email'       => $u['email'],
+                    'role'        => $u['role'],
+                    'status'      => $u['status'],
+                    'Created_at'  => now(),
                 ]
             );
             $this->userMap[$u['username']] = $user->User_id;

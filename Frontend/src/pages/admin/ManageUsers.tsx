@@ -113,7 +113,8 @@ export function ManageUsers() {
   const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
 
   const [form, setForm] = useState<CreateUserPayload>({
-    Full_name: '', username: '', password: '', email: '',
+    first_name: '', middle_name: '', surname: '', contact_number: '',
+    username: '', password: '', email: '',
     role: 'Inventory', status: 'Active',
   });
 
@@ -158,9 +159,9 @@ export function ManageUsers() {
   const paginatedUsers = filteredUsers.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
   const isDuplicateName = Boolean(
-    form.Full_name.trim() &&
+    (form.first_name.trim() || form.surname.trim()) &&
     users.some(u => 
-      u.name.trim().toLowerCase() === form.Full_name.trim().toLowerCase() && 
+      u.name.trim().toLowerCase() === `${form.first_name} ${form.surname}`.trim().toLowerCase() && 
       (!editingUser || u.id !== editingUser.id)
     )
   );
@@ -224,7 +225,10 @@ export function ManageUsers() {
     setFormError('');
     try {
       const payload: Partial<CreateUserPayload> = {
-        Full_name: form.Full_name,
+        first_name: form.first_name,
+        middle_name: form.middle_name,
+        surname: form.surname,
+        contact_number: form.contact_number,
         email: form.email,
         role: form.role,
         status: form.status,
@@ -289,7 +293,14 @@ export function ManageUsers() {
   const openEdit = (user: ApiUser) => {
     setViewingUser(null);
     setEditingUser(user);
-    setForm({ Full_name: user.name, username: user.username, password: '', email: user.email ?? '', role: user.role, status: user.status });
+    setForm({
+      first_name: user.first_name ?? user.name?.split(' ')[0] ?? '',
+      middle_name: user.middle_name ?? '',
+      surname: user.surname ?? user.name?.split(' ').slice(-1)[0] ?? '',
+      contact_number: user.contact_number ?? '',
+      username: user.username, password: '', email: user.email ?? '',
+      role: user.role, status: user.status,
+    });
     setFormError('');
     setIsEditOpen(true);
   };
@@ -634,27 +645,71 @@ export function ManageUsers() {
             </div>
 
             <form onSubmit={handleAddUser} className="space-y-3">
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">
+                    First Name <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Jane"
+                    value={form.first_name}
+                    onChange={e => setForm(prev => ({ ...prev, first_name: e.target.value }))}
+                    className={`h-8 w-full bg-slate-50 dark:bg-slate-800 border px-3 rounded-lg text-xs focus:outline-none focus:ring-1 text-slate-900 dark:text-slate-100 ${
+                      isDuplicateName
+                        ? 'border-rose-500 focus:ring-rose-500'
+                        : 'border-slate-200 dark:border-white/10 focus:ring-[#006a61]'
+                    }`}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">
+                    Middle Name
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. M."
+                    value={form.middle_name}
+                    onChange={e => setForm(prev => ({ ...prev, middle_name: e.target.value }))}
+                    className="h-8 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">
+                    Surname <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Doe"
+                    value={form.surname}
+                    onChange={e => setForm(prev => ({ ...prev, surname: e.target.value }))}
+                    className={`h-8 w-full bg-slate-50 dark:bg-slate-800 border px-3 rounded-lg text-xs focus:outline-none focus:ring-1 text-slate-900 dark:text-slate-100 ${
+                      isDuplicateName
+                        ? 'border-rose-500 focus:ring-rose-500'
+                        : 'border-slate-200 dark:border-white/10 focus:ring-[#006a61]'
+                    }`}
+                  />
+                </div>
+              </div>
+              {isDuplicateName && (
+                <p className="text-rose-500 text-[10px] font-semibold flex items-center gap-1">
+                  <AlertTriangle className="h-3 w-3" /> A user with this name already exists.
+                </p>
+              )}
+
               <div>
                 <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">
-                  Full Name <span className="text-rose-500">*</span>
+                  Contact Number
                 </label>
                 <input
                   type="text"
-                  required
-                  placeholder="e.g. Jane Doe"
-                  value={form.Full_name}
-                  onChange={e => setForm(prev => ({ ...prev, Full_name: e.target.value }))}
-                  className={`h-8 w-full bg-slate-50 dark:bg-slate-800 border px-3 rounded-lg text-xs focus:outline-none focus:ring-1 text-slate-900 dark:text-slate-100 ${
-                    isDuplicateName
-                      ? 'border-rose-500 focus:ring-rose-500'
-                      : 'border-slate-200 dark:border-white/10 focus:ring-[#006a61]'
-                  }`}
+                  placeholder="e.g. 09171234567"
+                  value={form.contact_number}
+                  onChange={e => setForm(prev => ({ ...prev, contact_number: e.target.value }))}
+                  className="h-8 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100"
                 />
-                {isDuplicateName && (
-                  <p className="text-rose-500 text-[10px] font-semibold mt-1 flex items-center gap-1">
-                    <AlertTriangle className="h-3 w-3" /> Full Name already exists in the system.
-                  </p>
-                )}
               </div>
 
               <div>
@@ -682,10 +737,11 @@ export function ManageUsers() {
 
               <div>
                 <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">
-                  Email Address
+                  Email Address <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="email"
+                  required
                   placeholder="e.g. jane@wiwaste.com"
                   value={form.email}
                   onChange={e => setForm(prev => ({ ...prev, email: e.target.value }))}
@@ -859,22 +915,61 @@ export function ManageUsers() {
             </div>
 
             <form onSubmit={handleEditUser} className="space-y-3">
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">
+                    First Name
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={form.first_name}
+                    onChange={e => setForm(prev => ({ ...prev, first_name: e.target.value }))}
+                    className={`h-8 w-full bg-slate-50 dark:bg-slate-800 border px-3 rounded-lg text-xs focus:outline-none focus:ring-1 text-slate-900 dark:text-slate-100 ${
+                      isDuplicateName ? 'border-rose-500 focus:ring-rose-500' : 'border-slate-200 dark:border-white/10 focus:ring-[#006a61]'
+                    }`}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">
+                    Middle Name
+                  </label>
+                  <input
+                    type="text"
+                    value={form.middle_name}
+                    onChange={e => setForm(prev => ({ ...prev, middle_name: e.target.value }))}
+                    className="h-8 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">
+                    Surname
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={form.surname}
+                    onChange={e => setForm(prev => ({ ...prev, surname: e.target.value }))}
+                    className={`h-8 w-full bg-slate-50 dark:bg-slate-800 border px-3 rounded-lg text-xs focus:outline-none focus:ring-1 text-slate-900 dark:text-slate-100 ${
+                      isDuplicateName ? 'border-rose-500 focus:ring-rose-500' : 'border-slate-200 dark:border-white/10 focus:ring-[#006a61]'
+                    }`}
+                  />
+                </div>
+              </div>
+              {isDuplicateName && (
+                <p className="text-rose-500 text-[10px] font-semibold">A user with this name already exists.</p>
+              )}
+
               <div>
                 <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">
-                  Full Name
+                  Contact Number
                 </label>
                 <input
                   type="text"
-                  required
-                  value={form.Full_name}
-                  onChange={e => setForm(prev => ({ ...prev, Full_name: e.target.value }))}
-                  className={`h-8 w-full bg-slate-50 dark:bg-slate-800 border px-3 rounded-lg text-xs focus:outline-none focus:ring-1 text-slate-900 dark:text-slate-100 ${
-                    isDuplicateName ? 'border-rose-500 focus:ring-rose-500' : 'border-slate-200 dark:border-white/10 focus:ring-[#006a61]'
-                  }`}
+                  value={form.contact_number}
+                  onChange={e => setForm(prev => ({ ...prev, contact_number: e.target.value }))}
+                  className="h-8 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100"
                 />
-                {isDuplicateName && (
-                  <p className="text-rose-500 text-[10px] font-semibold mt-1">Full Name already exists.</p>
-                )}
               </div>
 
               <div>
@@ -1034,10 +1129,27 @@ export function ManageUsers() {
             </div>
 
             <div className="space-y-3">
-              <div>
-                <label className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Full Name</label>
-                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 mt-0.5">{viewingUser.name}</p>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">First Name</label>
+                  <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 mt-0.5">{viewingUser.first_name ?? viewingUser.name?.split(' ')[0]}</p>
+                </div>
+                <div>
+                  <label className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Middle Name</label>
+                  <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 mt-0.5">{viewingUser.middle_name || '—'}</p>
+                </div>
+                <div>
+                  <label className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Surname</label>
+                  <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 mt-0.5">{viewingUser.surname ?? viewingUser.name?.split(' ').slice(-1)[0]}</p>
+                </div>
               </div>
+
+              {viewingUser.contact_number && (
+                <div>
+                  <label className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Contact Number</label>
+                  <p className="text-sm text-slate-700 dark:text-slate-300 mt-0.5">{viewingUser.contact_number}</p>
+                </div>
+              )}
 
               <div>
                 <label className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Username</label>
@@ -1068,24 +1180,21 @@ export function ManageUsers() {
               <div>
                 <label className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Account Status</label>
                 <div className="mt-0.5">
-                  <select
-                    value={viewingUser.status}
-                    onChange={async (e) => {
-                      const newStatus = e.target.value as 'Active' | 'Inactive' | 'Quarantined';
-                      try {
-                        await usersApi.update(viewingUser.id, { status: newStatus });
-                        updateItem(viewingUser.id, { ...viewingUser, status: newStatus });
-                        setViewingUser({ ...viewingUser, status: newStatus });
-                      } catch (err) {
-                        alert(err instanceof Error ? err.message : 'Failed to update status');
-                      }
-                    }}
-                    className="h-8 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100 cursor-pointer"
-                  >
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
-                    <option value="Quarantined">Quarantined</option>
-                  </select>
+                  {viewingUser.status === 'Active' && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700/50">
+                      <span className="w-1.5 h-1.5 rounded-full bg-slate-500" /> Active
+                    </span>
+                  )}
+                  {viewingUser.status === 'Inactive' && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700/50">
+                      <span className="w-1.5 h-1.5 rounded-full bg-slate-400" /> Inactive
+                    </span>
+                  )}
+                  {viewingUser.status === 'Quarantined' && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700/50">
+                      <ShieldOff className="h-3 w-3 text-slate-500 dark:text-slate-400" /> Quarantined
+                    </span>
+                  )}
                 </div>
               </div>
 

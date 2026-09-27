@@ -74,7 +74,7 @@ class AuthController extends Controller
             'token' => $token,
             'user'  => [
                 'id'       => $user->User_id,
-                'name'     => $user->Full_name,
+                'name'     => $user->full_name,
                 'username' => $user->username,
                 'email'    => $user->email,
                 'role'     => $user->role,
@@ -94,7 +94,7 @@ class AuthController extends Controller
         $user = $request->user();
         return response()->json([
             'id'       => $user->User_id,
-            'name'     => $user->Full_name,
+            'name'     => $user->full_name,
             'username' => $user->username,
             'email'    => $user->email,
             'role'     => $user->role,

@@ -18,6 +18,10 @@ export interface PaginatedResponse<T> {
 export interface ApiUser {
   id: number;
   name: string;
+  first_name: string;
+  middle_name?: string;
+  surname: string;
+  contact_number?: string;
   username: string;
   email: string;
   role: 'Owner' | 'Inventory' | 'Business Owner' | 'Cashier' | 'Pharmacist';
@@ -28,10 +32,13 @@ export interface ApiUser {
 }
 
 export interface CreateUserPayload {
-  Full_name: string;
+  first_name: string;
+  middle_name?: string;
+  surname: string;
+  contact_number?: string;
   username: string;
   password: string;
-  email?: string;
+  email: string;
   role: 'Owner' | 'Inventory' | 'Business Owner' | 'Cashier' | 'Pharmacist';
   status: 'Active' | 'Inactive' | 'Quarantined';
   business_id?: number;

@@ -37,7 +37,10 @@ export const maskEmail = (email: string) => {
 };
 
 export interface UserForm {
-  Full_name: string;
+  first_name: string;
+  middle_name: string;
+  surname: string;
+  contact_number: string;
   username: string;
   email: string;
   password: string;
@@ -46,7 +49,10 @@ export interface UserForm {
 }
 
 export const EMPTY_FORM: UserForm = {
-  Full_name: '',
+  first_name: '',
+  middle_name: '',
+  surname: '',
+  contact_number: '',
   username: '',
   email: '',
   password: '',

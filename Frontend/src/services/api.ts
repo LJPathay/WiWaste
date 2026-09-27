@@ -139,6 +139,7 @@ export const users = {
   delete: (id: number) => request(`/users/${id}`, { method: 'DELETE' }),
   quarantine: (id: number) => request(`/users/${id}/quarantine`, { method: 'POST' }),
   reactivate: (id: number) => request(`/users/${id}/reactivate`, { method: 'POST' }),
+  archive: (id: number) => request(`/users/${id}/archive`, { method: 'POST' }),
 };
 
 // ─── Categories ─────────────────────────────────────────

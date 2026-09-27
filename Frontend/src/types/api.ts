@@ -25,7 +25,7 @@ export interface ApiUser {
   username: string;
   email: string;
   role: 'Owner' | 'Inventory' | 'Business Owner' | 'Cashier' | 'Pharmacist';
-  status: 'Active' | 'Inactive' | 'Quarantined';
+  status: 'Active' | 'Inactive' | 'Quarantined' | 'Archived';
   created_at?: string;
   business_id?: number;
   branch_id?: number;
@@ -40,7 +40,7 @@ export interface CreateUserPayload {
   password: string;
   email: string;
   role: 'Owner' | 'Inventory' | 'Business Owner' | 'Cashier' | 'Pharmacist';
-  status: 'Active' | 'Inactive' | 'Quarantined';
+  status: 'Active' | 'Inactive' | 'Quarantined' | 'Archived';
   business_id?: number;
   branch_id?: number;
 }

@@ -62,6 +62,10 @@ class AuthController extends Controller
             return response()->json(['message' => 'Your account has been quarantined. Contact an administrator.'], 403);
         }
 
+        if ($user->status === 'Archived') {
+            return response()->json(['message' => 'Your account has been archived.'], 403);
+        }
+
         // Clear failed attempts on successful login
         $this->loginAttemptService->clearAttempts($email);
 

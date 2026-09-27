@@ -22,7 +22,7 @@ import {
 
 export function ManageUsers() {
   const { data: userList, loading, error, addItem, updateItem, removeItem, refetch } = useOptimisticList(usersApi.list);
-  const [statusFilter, setStatusFilter] = useState<'all' | 'Active' | 'Inactive' | 'Quarantined'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'Active' | 'Inactive' | 'Quarantined' | 'Archived'>('all');
   const [roleFilter, setRoleFilter] = useState<'all' | 'Owner' | 'Inventory' | 'Business Owner'>('all');
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -106,7 +106,7 @@ export function ManageUsers() {
   
   const [quarantineModalUser, setQuarantineModalUser] = useState<ApiUser | null>(null);
   const [reactivateModalUser, setReactivateModalUser] = useState<ApiUser | null>(null);
-  const [deleteModalUser, setDeleteModalUser] = useState<ApiUser | null>(null);
+  const [archiveModalUser, setArchiveModalUser] = useState<ApiUser | null>(null);
 
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
@@ -143,7 +143,8 @@ export function ManageUsers() {
       statusFilter === 'Quarantined' ? u.status === 'Quarantined' :
       statusFilter === 'Active' ? u.status === 'Active' :
       statusFilter === 'Inactive' ? u.status === 'Inactive' :
-      u.status !== 'Quarantined';
+      statusFilter === 'Archived' ? u.status === 'Archived' :
+      u.status !== 'Quarantined' && u.status !== 'Archived';
 
     const matchesRole = roleFilter === 'all' || u.role === roleFilter;
 
@@ -275,16 +276,16 @@ export function ManageUsers() {
     }
   };
 
-  const handleDeleteConfirm = async () => {
-    if (!deleteModalUser) return;
+  const handleArchiveConfirm = async () => {
+    if (!archiveModalUser) return;
     setSubmitting(true);
     try {
-      await usersApi.delete(deleteModalUser.id);
-      removeItem(deleteModalUser.id);
-      setDeleteModalUser(null);
+      await usersApi.archive(archiveModalUser.id);
+      updateItem(archiveModalUser.id, { ...archiveModalUser, status: 'Archived' });
+      setArchiveModalUser(null);
       await refetch();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to permanently delete user');
+      alert(err instanceof Error ? err.message : 'Failed to archive user');
     } finally {
       setSubmitting(false);
     }
@@ -308,7 +309,8 @@ export function ManageUsers() {
   const activeCount = users.filter(u => u.status === 'Active').length;
   const inactiveCount = users.filter(u => u.status === 'Inactive').length;
   const quarantinedCount = users.filter(u => u.status === 'Quarantined').length;
-  const allCount = users.filter(u => u.status !== 'Quarantined').length;
+  const archivedCount = users.filter(u => u.status === 'Archived').length;
+  const allCount = users.filter(u => u.status !== 'Quarantined' && u.status !== 'Archived').length;
 
   const isFiltered = statusFilter !== 'all' || roleFilter !== 'all' || search !== '';
 
@@ -494,10 +496,10 @@ export function ManageUsers() {
                     onClick={() => setReactivateModalUser(u)}
                   />
                   <ActionButton
-                    icon={<Trash2 className="h-3.5 w-3.5" />}
-                    label="Delete"
+                    icon={<UserX className="h-3.5 w-3.5" />}
+                    label="Archive"
                     variant="danger"
-                    onClick={() => setDeleteModalUser(u)}
+                    onClick={() => setArchiveModalUser(u)}
                   />
                 </>
               )}
@@ -542,13 +544,14 @@ export function ManageUsers() {
                 { id: 'Active', label: 'Active', count: activeCount },
                 { id: 'Inactive', label: 'Inactive', count: inactiveCount },
                 { id: 'Quarantined', label: 'Quarantined', count: quarantinedCount, icon: ShieldOff },
+                { id: 'Archived', label: 'Archived', count: archivedCount, icon: UserX },
               ].map(tab => {
                 const TabIcon = tab.icon;
                 const isSelected = statusFilter === tab.id;
                 return (
                   <button
                     key={tab.id}
-                    onClick={() => setStatusFilter(tab.id as 'all' | 'Active' | 'Inactive' | 'Quarantined')}
+                    onClick={() => setStatusFilter(tab.id as 'all' | 'Active' | 'Inactive' | 'Quarantined' | 'Archived')}
                     className={`flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
                       isSelected
                         ? 'bg-white dark:bg-slate-950 text-[#006a61] dark:text-[#7ef0cf] shadow-sm'
@@ -1251,12 +1254,12 @@ export function ManageUsers() {
                   </button>
                   <button
                     onClick={() => {
-                      setDeleteModalUser(viewingUser);
+                      setArchiveModalUser(viewingUser);
                       setViewingUser(null);
                     }}
                     className="h-8 flex-1 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold transition-all inline-flex items-center justify-center gap-1"
                   >
-                    <Trash2 className="h-3.5 w-3.5" /> Delete
+                    <UserX className="h-3.5 w-3.5" /> Archive
                   </button>
                 </>
               )}
@@ -1349,44 +1352,42 @@ export function ManageUsers() {
 
       <Tutorial steps={tutorialSteps} isOpen={showTutorial} onClose={() => setShowTutorial(false)} />
 
-      {deleteModalUser && (
+      {archiveModalUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-3">
           <div className="bg-white dark:bg-slate-900 rounded-xl border border-rose-200 dark:border-rose-800/40 w-full max-w-md p-4 relative shadow-2xl">
-            <button onClick={() => setDeleteModalUser(null)} className="absolute top-3 right-3 text-slate-400 hover:text-slate-600">
+            <button onClick={() => setArchiveModalUser(null)} className="absolute top-3 right-3 text-slate-400 hover:text-slate-600">
               <X className="h-4 w-4" />
             </button>
             <div className="flex items-center gap-2.5 mb-2.5">
               <div className="p-2.5 rounded-full bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400">
-                <AlertTriangle className="h-5 w-5" />
+                <UserX className="h-5 w-5" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-rose-600 dark:text-rose-400">Permanent Deletion</h3>
-                <p className="text-xs text-slate-500">Irreversible action warning</p>
+                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Archive User Account</h3>
+                <p className="text-xs text-slate-500">Remove from active user list</p>
               </div>
             </div>
 
             <p className="text-xs text-slate-600 dark:text-slate-300 mb-3 leading-relaxed">
-              Are you sure you want to permanently delete <strong className="text-slate-900 dark:text-slate-100">{deleteModalUser.name}</strong> (@{deleteModalUser.username})?
+              Are you sure you want to archive <strong className="text-slate-900 dark:text-slate-100">{archiveModalUser.name}</strong> (@{archiveModalUser.username})?
               <br /><br />
-              <span className="text-rose-600 dark:text-rose-400 font-semibold">
-                This action cannot be undone. All user access and records will be permanently removed from the system.
-              </span>
+              This user will be blocked from logging in and moved to the <strong className="text-rose-600 dark:text-rose-400">Archived</strong> list. This action can be reversed by an administrator.
             </p>
 
             <div className="flex items-center justify-end gap-2">
               <button
-                onClick={() => setDeleteModalUser(null)}
+                onClick={() => setArchiveModalUser(null)}
                 className="h-8 px-3 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-all"
               >
                 Cancel
               </button>
               <button
-                onClick={handleDeleteConfirm}
+                onClick={handleArchiveConfirm}
                 disabled={submitting}
                 className="h-8 px-3 text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition-all shadow-sm disabled:opacity-50 flex items-center gap-1.5"
               >
-                <Trash2 className="h-3.5 w-3.5" />
-                {submitting ? 'Deleting...' : 'Permanently Delete'}
+                <UserX className="h-3.5 w-3.5" />
+                {submitting ? 'Archiving...' : 'Archive User'}
               </button>
             </div>
           </div>

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\AuditLog;
 use Illuminate\Http\Request;
 
 class UserController extends Controller
@@ -44,7 +45,6 @@ class UserController extends Controller
             'password.regex'   => 'Password must contain uppercase, lowercase, number, and special character.',
         ]);
 
-        // Map 'Admin' to 'Owner' — Admin is not in the DB enum
         if (($data['role'] ?? '') === 'Admin') {
             $data['role'] = 'Owner';
         }
@@ -99,9 +99,23 @@ class UserController extends Controller
             'status'         => 'sometimes|in:Active,Inactive,Quarantined',
         ]);
 
-        // Map 'Admin' to 'Owner'
         if (($data['role'] ?? '') === 'Admin') {
             $data['role'] = 'Owner';
+        }
+
+        // Audit log for status changes
+        if (isset($data['status']) && $data['status'] !== $user->status) {
+            $oldStatus = $user->status;
+            $newStatus = $data['status'];
+            AuditLog::create([
+                'user_id'     => auth()->id() ?? null,
+                'action'      => "Status changed: {$oldStatus} -> {$newStatus}",
+                'entity_type' => 'User',
+                'entity_id'   => $id,
+                'old_values'  => json_encode(['status' => $oldStatus]),
+                'new_values'  => json_encode(['status' => $newStatus]),
+                'created_at'  => now(),
+            ]);
         }
 
         if ($request->filled('password')) {
@@ -122,14 +136,57 @@ class UserController extends Controller
     public function quarantine($id)
     {
         $user = User::findOrFail($id);
+        $oldStatus = $user->status;
         $user->update(['status' => 'Quarantined']);
+
+        AuditLog::create([
+            'user_id'     => auth()->id() ?? null,
+            'action'      => "Status changed: {$oldStatus} -> Quarantined",
+            'entity_type' => 'User',
+            'entity_id'   => $id,
+            'old_values'  => json_encode(['status' => $oldStatus]),
+            'new_values'  => json_encode(['status' => 'Quarantined']),
+            'created_at'  => now(),
+        ]);
+
         return response()->json(['message' => 'User quarantined.']);
     }
 
     public function reactivate($id)
     {
         $user = User::findOrFail($id);
+        $oldStatus = $user->status;
         $user->update(['status' => 'Active']);
+
+        AuditLog::create([
+            'user_id'     => auth()->id() ?? null,
+            'action'      => "Status changed: {$oldStatus} -> Active",
+            'entity_type' => 'User',
+            'entity_id'   => $id,
+            'old_values'  => json_encode(['status' => $oldStatus]),
+            'new_values'  => json_encode(['status' => 'Active']),
+            'created_at'  => now(),
+        ]);
+
         return response()->json(['message' => 'User reactivated.']);
+    }
+
+    public function archive($id)
+    {
+        $user = User::findOrFail($id);
+        $oldStatus = $user->status;
+        $user->update(['status' => 'Archived']);
+
+        AuditLog::create([
+            'user_id'     => auth()->id() ?? null,
+            'action'      => "Status changed: {$oldStatus} -> Archived",
+            'entity_type' => 'User',
+            'entity_id'   => $id,
+            'old_values'  => json_encode(['status' => $oldStatus]),
+            'new_values'  => json_encode(['status' => 'Archived']),
+            'created_at'  => now(),
+        ]);
+
+        return response()->json(['message' => 'User archived.']);
     }
 }

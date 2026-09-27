@@ -56,6 +56,7 @@ Route::middleware([SecurityHeaders::class, ForceHttps::class, RateLimitMiddlewar
     Route::apiResource('/users', UserController::class);
     Route::post('/users/{id}/quarantine',  [UserController::class, 'quarantine']);
     Route::post('/users/{id}/reactivate',  [UserController::class, 'reactivate']);
+    Route::post('/users/{id}/archive',     [UserController::class, 'archive']);
 
     // Lookup tables
     Route::apiResource('/categories', CategoryController::class);

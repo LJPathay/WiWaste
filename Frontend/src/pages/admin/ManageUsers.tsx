@@ -23,7 +23,7 @@ import {
 export function ManageUsers() {
   const { data: userList, loading, error, addItem, updateItem, removeItem, refetch } = useOptimisticList(usersApi.list);
   const [statusFilter, setStatusFilter] = useState<'all' | 'Active' | 'Inactive' | 'Quarantined' | 'Archived'>('all');
-  const [roleFilter, setRoleFilter] = useState<'all' | 'Owner' | 'Inventory' | 'Business Owner'>('all');
+  const [roleFilter, setRoleFilter] = useState<'all' | 'Owner' | 'Inventory' | 'Cashier'>('all');
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [unmaskedEmailIds, setUnmaskedEmailIds] = useState<Set<number>>(new Set());
@@ -474,13 +474,6 @@ export function ManageUsers() {
           const u = row as unknown as ApiUser;
           return (
             <div className="flex items-center justify-end gap-1">
-              {u.status !== 'Quarantined' && (
-                <ActionButton
-                  icon={<Edit2 className="h-3.5 w-3.5" />}
-                  label="Edit"
-                  onClick={() => openEdit(u)}
-                />
-              )}
               {u.status === 'Inactive' && (
                 <ActionButton
                   icon={<Lock className="h-3.5 w-3.5" />}
@@ -575,13 +568,13 @@ export function ManageUsers() {
                 <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Role:</span>
                 <select
                   value={roleFilter}
-                  onChange={e => setRoleFilter(e.target.value as 'all' | 'Owner' | 'Inventory' | 'Business Owner')}
+                  onChange={e => setRoleFilter(e.target.value as 'all' | 'Owner' | 'Inventory' | 'Cashier')}
                   className="h-8 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-xs font-medium rounded-lg px-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#006a61]"
                 >
                   <option value="all">All Roles</option>
                   <option value="Owner">Owner</option>
                   <option value="Inventory">Inventory Staff</option>
-                  <option value="Business Owner">Business Owner</option>
+                  <option value="Cashier">Cashier</option>
                 </select>
               </div>
 

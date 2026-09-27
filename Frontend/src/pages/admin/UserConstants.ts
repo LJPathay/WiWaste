@@ -17,12 +17,12 @@ export const ROLE_CONFIG = {
     badgeClass: 'bg-teal-50 text-teal-700 dark:bg-teal-950/40 dark:text-teal-300 border border-teal-200 dark:border-teal-800/50',
     description: 'Manage stock, products & wastage',
   },
-  'Business Owner': {
-    label: 'Business Owner',
+  'Cashier': {
+    label: 'Cashier',
     icon: Briefcase,
     iconColor: 'text-amber-600 dark:text-amber-400',
     badgeClass: 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800/50',
-    description: 'Reports, financial insights & POS',
+    description: 'Point-of-sale operations & transactions',
   },
 } as const;
 
@@ -44,7 +44,7 @@ export interface UserForm {
   username: string;
   email: string;
   password: string;
-  role: 'Owner' | 'Inventory' | 'Business Owner';
+  role: 'Owner' | 'Inventory' | 'Cashier';
   status: 'Active' | 'Inactive' | 'Quarantined';
 }
 

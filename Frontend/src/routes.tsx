@@ -1,6 +1,6 @@
 import { lazy, Suspense } from "react";
 import type { ComponentType } from "react";
-import { createBrowserRouter } from "react-router";
+import { createBrowserRouter, Navigate } from "react-router";
 import { MainLayout } from "./components/layout/MainLayout";
 import { AuthLayout } from "./components/layout/AuthLayout";
 import { DashboardLayout } from "./components/layout/DashboardLayout";
@@ -107,6 +107,7 @@ export const router = createBrowserRouter([
               {
                 element: <ProtectedRoute allowedRoles={['owner']} />,
                 children: [
+                  { index: true, element: <Navigate to="/owner/users" replace /> },
                   { path: "owner/users", Component: ManageUsers },
                   { path: "owner/products", Component: ManageProducts },
                   { path: "owner/categories", Component: ManageCategories },

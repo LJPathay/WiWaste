@@ -76,7 +76,7 @@ class DatabaseSeeder extends Seeder
         $users = [
             ['username' => 'admin',     'Full_name' => 'Lia Cruz',       'password' => 'admin123',     'email' => 'admin@ipharmamart.com',     'role' => 'Owner',           'status' => 'Active'],
             ['username' => 'inventory', 'Full_name' => 'Mia Stockwell',  'password' => 'inventory123', 'email' => 'inventory@ipharmamart.com', 'role' => 'Inventory',        'status' => 'Active'],
-            ['username' => 'cashier',   'Full_name' => 'Carlo Reyes',    'password' => 'cashier123',   'email' => 'cashier@ipharmamart.com',   'role' => 'Business Owner',   'status' => 'Active'],
+            ['username' => 'cashier',   'Full_name' => 'Carlo Reyes',    'password' => 'cashier123',   'email' => 'cashier@ipharmamart.com',   'role' => 'Cashier',         'status' => 'Active'],
         ];
 
         foreach ($users as $u) {

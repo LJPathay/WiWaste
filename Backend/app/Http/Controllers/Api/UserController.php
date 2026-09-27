@@ -36,11 +36,24 @@ class UserController extends Controller
             'password.regex'   => 'Password must contain uppercase, lowercase, number, and special character.',
         ]);
 
+        // Map 'Admin' to 'Owner' — Admin is not in the DB enum
+        if (($data['role'] ?? '') === 'Admin') {
+            $data['role'] = 'Owner';
+        }
+
         $data['Created_at'] = now();
 
         $user = User::create($data);
 
-        return response()->json(['message' => 'User created.', 'id' => $user->User_id], 201);
+        return response()->json([
+            'id'         => $user->User_id,
+            'name'       => $user->Full_name,
+            'username'   => $user->username,
+            'email'      => $user->email,
+            'role'       => $user->role,
+            'status'     => $user->status,
+            'created_at' => $user->Created_at,
+        ], 201);
     }
 
     public function show($id)
@@ -66,6 +79,11 @@ class UserController extends Controller
             'role'      => 'sometimes|in:Admin,Inventory,Business Owner',
             'status'    => 'sometimes|in:Active,Inactive,Quarantined',
         ]);
+
+        // Map 'Admin' to 'Owner'
+        if (($data['role'] ?? '') === 'Admin') {
+            $data['role'] = 'Owner';
+        }
 
         if ($request->filled('password')) {
             $data['password'] = $request->password;

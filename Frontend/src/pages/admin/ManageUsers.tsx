@@ -23,7 +23,7 @@ import {
 export function ManageUsers() {
   const { data: userList, loading, error, addItem, updateItem, removeItem, refetch } = useOptimisticList(usersApi.list);
   const [statusFilter, setStatusFilter] = useState<'all' | 'Active' | 'Inactive' | 'Quarantined'>('all');
-  const [roleFilter, setRoleFilter] = useState<'all' | 'Admin' | 'Inventory' | 'Business Owner'>('all');
+  const [roleFilter, setRoleFilter] = useState<'all' | 'Owner' | 'Inventory' | 'Business Owner'>('all');
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [unmaskedEmailIds, setUnmaskedEmailIds] = useState<Set<number>>(new Set());
@@ -146,9 +146,9 @@ export function ManageUsers() {
 
     const matchesRole = roleFilter === 'all' || u.role === roleFilter;
 
-    const matchesSearch = u.name.toLowerCase().includes(search.toLowerCase()) ||
-                          u.username.toLowerCase().includes(search.toLowerCase()) ||
-                          u.email?.toLowerCase().includes(search.toLowerCase());
+    const matchesSearch = (u.name?.toLowerCase() ?? '').includes(search.toLowerCase()) ||
+                          (u.username?.toLowerCase() ?? '').includes(search.toLowerCase()) ||
+                          (u.email?.toLowerCase() ?? '').includes(search.toLowerCase());
     return matchesStatus && matchesRole && matchesSearch;
   });
 
@@ -561,11 +561,11 @@ export function ManageUsers() {
                 <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Role:</span>
                 <select
                   value={roleFilter}
-                  onChange={e => setRoleFilter(e.target.value as 'all' | 'Admin' | 'Inventory' | 'Business Owner')}
+                  onChange={e => setRoleFilter(e.target.value as 'all' | 'Owner' | 'Inventory' | 'Business Owner')}
                   className="h-8 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-xs font-medium rounded-lg px-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#006a61]"
                 >
                   <option value="all">All Roles</option>
-                  <option value="Admin">Admin</option>
+                  <option value="Owner">Owner</option>
                   <option value="Inventory">Inventory Staff</option>
                   <option value="Business Owner">Business Owner</option>
                 </select>

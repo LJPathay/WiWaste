@@ -3,8 +3,8 @@ import { Shield, Package, Briefcase } from 'lucide-react';
 export const ITEMS_PER_PAGE = 5;
 
 export const ROLE_CONFIG = {
-  'Admin': {
-    label: 'Admin',
+  'Owner': {
+    label: 'Owner',
     icon: Shield,
     iconColor: 'text-emerald-600 dark:text-emerald-400',
     badgeClass: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50',
@@ -41,7 +41,7 @@ export interface UserForm {
   username: string;
   email: string;
   password: string;
-  role: 'Admin' | 'Inventory' | 'Business Owner';
+  role: 'Owner' | 'Inventory' | 'Business Owner';
   status: 'Active' | 'Inactive' | 'Quarantined';
 }
 
@@ -56,7 +56,7 @@ export const EMPTY_FORM: UserForm = {
 
 export function getPasswordRules(password: string) {
   return [
-    { id: 'length', label: 'At least 6 characters', met: password.length >= 6 },
+    { id: 'length', label: 'At least 8 characters', met: password.length >= 8 },
     { id: 'upper', label: 'One uppercase letter (A-Z)', met: /[A-Z]/.test(password) },
     { id: 'lower', label: 'One lowercase letter (a-z)', met: /[a-z]/.test(password) },
     { id: 'number', label: 'One number (0-9)', met: /\d/.test(password) },

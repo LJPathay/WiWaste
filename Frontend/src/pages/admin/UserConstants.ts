@@ -37,28 +37,31 @@ export const maskEmail = (email: string) => {
 };
 
 export interface UserForm {
-  first_name: string;
-  middle_name: string;
-  surname: string;
+  full_name: string;
   contact_number: string;
-  username: string;
-  email: string;
-  password: string;
   role: 'Owner' | 'Inventory' | 'Cashier';
-  status: 'Active' | 'Inactive' | 'Quarantined';
 }
 
 export const EMPTY_FORM: UserForm = {
-  first_name: '',
-  middle_name: '',
-  surname: '',
+  full_name: '',
   contact_number: '',
-  username: '',
-  email: '',
-  password: '',
   role: 'Inventory',
-  status: 'Active',
 };
+
+export const DEFAULT_PASSWORD = 'WiWaste123!';
+
+export function generateUsername(fullName: string): string {
+  return fullName
+    .toLowerCase()
+    .replace(/[^a-z\s]/g, '')
+    .replace(/\s+/g, '')
+    .slice(0, 20);
+}
+
+export function generateEmail(fullName: string): string {
+  const username = generateUsername(fullName);
+  return username ? `${username}@wiwaste.com` : '';
+}
 
 export function getPasswordRules(password: string) {
   return [

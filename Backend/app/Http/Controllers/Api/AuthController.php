@@ -25,27 +25,29 @@ class AuthController extends Controller
             'password' => 'required|string',
         ]);
 
-        $email = $request->username;
+        $identifier = $request->username;
         $ip = $request->ip();
         $userAgent = $request->userAgent();
 
         // Check if account is locked
-        if ($this->loginAttemptService->isLocked($email)) {
-            $remainingMinutes = $this->loginAttemptService->getRemainingLockoutMinutes($email);
+        if ($this->loginAttemptService->isLocked($identifier)) {
+            $remainingMinutes = $this->loginAttemptService->getRemainingLockoutMinutes($identifier);
             return response()->json([
                 'message' => "Account locked due to too many failed attempts. Try again in {$remainingMinutes} minutes.",
             ], 429);
         }
 
-        $user = User::where('username', $email)->first();
+        $user = User::where('username', $identifier)
+            ->orWhere('email', $identifier)
+            ->first();
 
         if (! $user || ! Hash::check($request->password, $user->password)) {
             // Record failed attempt
-            $this->loginAttemptService->recordFailedAttempt($email, $ip, $userAgent);
+            $this->loginAttemptService->recordFailedAttempt($identifier, $ip, $userAgent);
 
             // Re-check if now locked after this attempt
-            if ($this->loginAttemptService->isLocked($email)) {
-                $remainingMinutes = $this->loginAttemptService->getRemainingLockoutMinutes($email);
+            if ($this->loginAttemptService->isLocked($identifier)) {
+                $remainingMinutes = $this->loginAttemptService->getRemainingLockoutMinutes($identifier);
                 return response()->json([
                     'message' => "Account locked due to too many failed attempts. Try again in {$remainingMinutes} minutes.",
                 ], 429);
@@ -67,7 +69,7 @@ class AuthController extends Controller
         }
 
         // Clear failed attempts on successful login
-        $this->loginAttemptService->clearAttempts($email);
+        $this->loginAttemptService->clearAttempts($identifier);
 
         // Record successful login
         $this->loginAttemptService->recordSuccessfulAttempt($user, $ip, $userAgent);

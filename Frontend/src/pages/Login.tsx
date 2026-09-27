@@ -5,7 +5,7 @@ import { useAuth, type UserRole } from '../hooks/useAuth';
 export function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -13,15 +13,15 @@ export function Login() {
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
-    if (!username || !password) {
-      setError('Please enter username and password');
+    if (!email || !password) {
+      setError('Please enter email and password');
       return;
     }
     setLoading(true);
     setError(null);
 
     try {
-      const user = await login(username, password);
+      const user = await login(email, password);
       navigate(user.role === 'cashier' ? '/cashier/pos' : '/dashboard');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Invalid username or password';
@@ -132,10 +132,10 @@ export function Login() {
                     {error}
                   </div>
                 )}
-                {/* Username Field */}
+                {/* Email Field */}
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300" htmlFor="username">
-                    Username
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300" htmlFor="email">
+                    Email
                   </label>
                   <div className="relative rounded-lg shadow-sm">
                     <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -145,13 +145,13 @@ export function Login() {
                     </div>
                     <input
                       className="block w-full pl-10 pr-3.5 py-3.5 text-sm bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-colors"
-                      id="username"
-                      name="username"
-                      placeholder="Enter username"
+                      id="email"
+                      name="email"
+                      placeholder="you@example.com"
                       required
-                      type="text"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       disabled={loading}
                     />
                   </div>

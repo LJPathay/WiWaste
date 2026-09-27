@@ -17,9 +17,9 @@ export function ForgotPassword() {
   }
 
   return (
-    <div className="min-h-full flex flex-col lg:flex-row bg-slate-50 dark:bg-slate-950">
+    <div className="min-h-screen flex flex-col lg:flex-row bg-slate-50 dark:bg-slate-950">
       {/* Left brand panel */}
-      <aside className="relative hidden lg:flex lg:w-[50%] xl:w-[52%] overflow-hidden flex-col justify-between p-8 xl:p-12 bg-slate-50 dark:bg-slate-900">
+      <aside className="relative hidden lg:flex lg:w-1/2 overflow-hidden flex-col justify-between p-8 xl:p-12 bg-slate-50 dark:bg-slate-900">
         <div className="relative z-10 flex flex-col h-full">
           <div className="flex items-center gap-3 mb-16">
             <img src="/images/logo.PNG" alt="WiWaste" className="h-12 w-12 rounded-xl object-cover" />
@@ -37,7 +37,7 @@ export function ForgotPassword() {
       </aside>
 
       {/* Right form panel */}
-      <main className="flex-1 flex items-center justify-center p-6 sm:p-12">
+      <main className="flex-1 flex items-center justify-center p-6 sm:p-8">
         <div className="w-full max-w-md">
           <div className="lg:hidden flex items-center gap-3 mb-10">
             <img src="/images/logo.PNG" alt="WiWaste" className="h-10 w-10 rounded-xl object-cover" />

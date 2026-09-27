@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { auth } from '../services/api';
-import { setStoredSession, type UserRole } from '../utils/mockAuthAndFeatures';
+import { useAuth, type UserRole } from '../hooks/useAuth';
 
 export function Login() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -20,33 +20,9 @@ export function Login() {
     setLoading(true);
     setError(null);
 
-    const companyMap: Record<UserRole, string> = {
-      owner: 'WiWaste Owner Administration',
-      inventory: 'WiWaste Inventory Floor',
-      cashier: 'Ipharma Mart POS',
-    };
-
     try {
-      const result = await auth.login(username, password);
-      localStorage.setItem('wiwaste_token', result.token);
-      localStorage.setItem('wiwaste_user', JSON.stringify(result.user));
-
-      let uiRole: UserRole = 'cashier';
-      if (result.user.role === 'Admin' || result.user.role === 'Owner') {
-        uiRole = 'owner';
-      } else if (result.user.role === 'Inventory') {
-        uiRole = 'inventory';
-      }
-
-      setStoredSession({
-        id: String(result.user.id ?? result.user.email ?? username),
-        email: result.user.email || `${username}@ipharmamart.com`,
-        name: result.user.name,
-        company: companyMap[uiRole],
-        role: uiRole,
-      });
-
-      navigate(uiRole === 'cashier' ? '/cashier/pos' : '/dashboard');
+      const user = await login(username, password);
+      navigate(user.role === 'cashier' ? '/cashier/pos' : '/dashboard');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Invalid username or password';
       setError(message);

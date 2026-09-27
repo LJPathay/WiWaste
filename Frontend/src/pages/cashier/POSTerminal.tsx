@@ -23,7 +23,7 @@ import {
   type PosPaymentMethod,
   type SalesTransaction,
 } from '../../utils/cashierData';
-import { clearStoredSession, getStoredSession } from '../../utils/mockAuthAndFeatures';
+import { useAuth } from '../../hooks/useAuth';
 import { products as productsApi, sales as salesApi, type CreateSalePayload } from '../../services/api';
 import {
   type CartLine,
@@ -43,7 +43,7 @@ import { ReceiptPreview } from './ReceiptPreview';
 export function POSTerminal() {
   const { toasts, dismiss, success, error } = useToast();
   const { setAction } = useHeaderAction();
-  const session = getStoredSession();
+  const { user: session, logout } = useAuth();
   const navigate = useNavigate();
   const barcodeRef = useRef<HTMLInputElement | null>(null);
   
@@ -612,7 +612,7 @@ export function POSTerminal() {
               if (cart.length > 0) {
                 setShowExitConfirm(true);
               } else {
-                clearStoredSession();
+                logout();
                 navigate('/login');
               }
             }}
@@ -1314,7 +1314,7 @@ export function POSTerminal() {
               <button onClick={() => setShowExitConfirm(false)} className="flex-1 py-2 bg-slate-100 text-slate-600 font-bold rounded-lg hover:bg-slate-200">Cancel (Esc)</button>
               <button 
                 onClick={() => {
-                  clearStoredSession();
+                  logout();
                   navigate('/login');
                 }} 
                 className="flex-1 py-2 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700"

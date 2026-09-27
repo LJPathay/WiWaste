@@ -1,11 +1,11 @@
 import { Navigate, Outlet } from 'react-router-dom';
-import { getStoredSession, clearStoredSession } from '../../utils/mockAuthAndFeatures';
+import { useAuth } from '../../hooks/useAuth';
 
 export function CashierLayout() {
-  const session = getStoredSession();
+  const { user: session, logout } = useAuth();
 
   if (!session || session.role !== 'cashier') {
-    clearStoredSession();
+    logout();
     return <Navigate to="/login" replace />;
   }
 

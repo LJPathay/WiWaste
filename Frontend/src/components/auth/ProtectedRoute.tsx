@@ -1,12 +1,12 @@
 import { Navigate, Outlet } from 'react-router-dom';
-import { getStoredSession, type UserRole } from '../../utils/mockAuthAndFeatures';
+import { useAuth, type UserRole } from '../../hooks/useAuth';
 
 interface ProtectedRouteProps {
   readonly allowedRoles: readonly UserRole[];
 }
 
 export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
-  const session = getStoredSession();
+  const { user: session } = useAuth();
 
   if (!session) {
     return <Navigate to="/login" replace />;

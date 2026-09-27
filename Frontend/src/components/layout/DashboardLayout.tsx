@@ -32,7 +32,8 @@ import {
 import { ThemeToggle } from '../ThemeToggle';
 import { ErrorBoundary } from '../ui/ErrorBoundary';
 import { Breadcrumb } from '../ui/breadcrumb';
-import { clearStoredSession, getRoleDisplayName, getStoredSession, type UserRole } from '../../utils/mockAuthAndFeatures';
+import { getRoleDisplayName } from '../../utils/mockAuthAndFeatures';
+import { useAuth, type UserRole } from '../../hooks/useAuth';
 
 const BRAND_ICON = '/images/logo.PNG';
 const BRAND_WORDMARK = '/images/Logo_full.PNG';
@@ -295,8 +296,7 @@ export function DashboardLayout() {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-
-  const session = getStoredSession();
+  const { user: session, logout } = useAuth();
 
   const sidebarGroups = useMemo(() => (session ? (sidebarGroupsByRole[session.role] ?? []) : []), [session]);
   const sidebarWidth = collapsed ? 'w-[76px]' : 'w-[248px]';
@@ -357,7 +357,7 @@ export function DashboardLayout() {
   }
 
   const handleLogout = () => {
-    clearStoredSession();
+    logout();
     navigate('/');
   };
 

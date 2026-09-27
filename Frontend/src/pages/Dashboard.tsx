@@ -1,10 +1,10 @@
 import { POSTerminal } from './cashier/POSTerminal';
 import { DashboardOverview } from './dashboard/Overview';
 import { InventoryDashboard } from './dashboard/InventoryDashboard';
-import { getStoredSession } from '../utils/mockAuthAndFeatures';
+import { useAuth } from '../hooks/useAuth';
 
 export function Dashboard() {
-  const session = getStoredSession();
+  const { user: session } = useAuth();
 
   if (session?.role === 'inventory') return <InventoryDashboard />;
   if (session?.role === 'cashier') return <POSTerminal />;

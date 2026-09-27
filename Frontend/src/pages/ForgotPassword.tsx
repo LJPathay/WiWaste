@@ -19,20 +19,16 @@ export function ForgotPassword() {
   return (
     <div className="min-h-screen flex flex-col lg:flex-row bg-slate-50 dark:bg-slate-950">
       {/* Left brand panel */}
-      <aside className="relative hidden lg:flex lg:w-1/2 overflow-hidden flex-col justify-between p-8 xl:p-12 bg-slate-50 dark:bg-slate-900">
-        <div className="relative z-10 flex flex-col h-full">
-          <div className="flex items-center gap-3 mb-16">
-            <img src="/images/logo.PNG" alt="WiWaste" className="h-12 w-12 rounded-xl object-cover" />
-            <span className="text-2xl font-bold text-[#0b1c30] dark:text-white tracking-tight">WiWaste</span>
-          </div>
-          <div className="mt-auto">
-            <h1 className="text-4xl font-bold text-[#0b1c30] dark:text-white leading-tight mb-4">
-              Password Recovery
-            </h1>
-            <p className="text-slate-500 dark:text-slate-400 text-base leading-relaxed">
-              Enter your registered email address and we'll send you a link to reset your password.
-            </p>
-          </div>
+      <aside className="relative hidden lg:flex lg:w-1/2 overflow-hidden flex-col items-center justify-center p-8 xl:p-12 bg-slate-50 dark:bg-slate-900">
+        <div className="relative z-10 text-center max-w-md">
+          <img src="/images/logo.PNG" alt="WiWaste" className="h-14 w-14 rounded-xl object-cover mx-auto mb-6" />
+          <span className="text-2xl font-bold text-[#0b1c30] dark:text-white tracking-tight block mb-10">WiWaste</span>
+          <h1 className="text-4xl font-bold text-[#0b1c30] dark:text-white leading-tight mb-4">
+            Password Recovery
+          </h1>
+          <p className="text-slate-500 dark:text-slate-400 text-base leading-relaxed">
+            Enter your registered email address and we'll send you a link to reset your password.
+          </p>
         </div>
       </aside>
 

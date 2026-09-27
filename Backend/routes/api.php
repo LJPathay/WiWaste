@@ -49,8 +49,8 @@ use App\Http\Middleware\ValidateApiInput;
 Route::middleware([SecurityHeaders::class, ForceHttps::class, RateLimitMiddleware::class])->group(function () {
     // Auth
     Route::post('/login',  [AuthController::class, 'login']);
-    Route::post('/logout', [AuthController::class, 'logout']);
-    Route::get('/me',      [AuthController::class, 'me']);
+    Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
+    Route::get('/me',      [AuthController::class, 'me'])->middleware('auth:sanctum');
 
     // User management
     Route::apiResource('/users', UserController::class);

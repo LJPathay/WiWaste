@@ -128,7 +128,7 @@ function TooltipContent({
             role="tooltip"
             className={cn(
                 "absolute bottom-full mb-2 z-[999] w-64 rounded-md px-3 py-2 text-[11px] font-medium shadow-lg",
-                "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900",
+                "bg-white text-slate-900 dark:bg-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700",
                 alignClass,
                 className
             )}

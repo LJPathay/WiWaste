@@ -161,8 +161,24 @@ export const users = {
 };
 
 // ─── Categories ─────────────────────────────────────────
+export interface PaginatedCategoriesResponse {
+  data: ApiCategory[];
+  meta: {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+  };
+}
+
 export const categories = {
-  list: () => request<ApiCategory[]>('/categories'),
+  list: (page = 1, perPage = 15, search = '') => {
+    const params = new URLSearchParams();
+    params.set('page', page.toString());
+    params.set('per_page', perPage.toString());
+    if (search) params.set('search', search);
+    return request<PaginatedCategoriesResponse>(`/categories?${params.toString()}`);
+  },
   create: (name: string) =>
     request('/categories', { method: 'POST', body: JSON.stringify({ Category_name: name }) }),
   update: (id: number, name: string) =>
@@ -171,8 +187,24 @@ export const categories = {
 };
 
 // ─── Suppliers ──────────────────────────────────────────
+export interface PaginatedSuppliersResponse {
+  data: ApiSupplier[];
+  meta: {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+  };
+}
+
 export const suppliers = {
-  list: () => request<ApiSupplier[]>('/suppliers'),
+  list: (page = 1, perPage = 15, search = '') => {
+    const params = new URLSearchParams();
+    params.set('page', page.toString());
+    params.set('per_page', perPage.toString());
+    if (search) params.set('search', search);
+    return request<PaginatedSuppliersResponse>(`/suppliers?${params.toString()}`);
+  },
   show: (id: number) => request<ApiSupplierDetail>(`/suppliers/${id}`),
   create: (data: CreateSupplierPayload) =>
     request('/suppliers', { method: 'POST', body: JSON.stringify(data) }),

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Search, Plus, Edit2, Archive, Loader2, Info, Briefcase, AlertCircle } from 'lucide-react';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { Tutorial } from '../../components/ui/Tutorial';
@@ -10,8 +10,8 @@ import {
   FormField,
   inputCls,
 } from '../../components/ui/Toast';
-import { useOptimisticList } from '../../hooks/useOptimisticList';
-import { suppliers as suppliersApi, type ApiSupplier } from '../../services/api';
+import { useApi } from '../../hooks/useApi';
+import { suppliers as suppliersApi, type ApiSupplier, type PaginatedSuppliersResponse } from '../../services/api';
 import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
 import { ActionButton } from '../../components/shared/DataTableActions';
 import { Pagination } from '../../components/ui/pagination';
@@ -84,9 +84,7 @@ const columns: DataTableColumn<ApiSupplier & Record<string, unknown>>[] = [
 ];
 
 export function ManageSuppliers() {
-  const { data: supplierList, loading, error: fetchError, addItem, updateItem, removeItem, refetch: refetchSuppliers } = useOptimisticList(suppliersApi.list);
   const { toasts, dismiss, success, error } = useToast();
-
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<'name-asc' | 'name-desc' | 'products-desc' | 'products-asc' | 'id-desc'>('name-asc');
   const [currentPage, setCurrentPage] = useState(1);
@@ -96,6 +94,11 @@ export function ManageSuppliers() {
   const [showEmptyNotification, setShowEmptyNotification] = useState(false);
   const [notificationCountdown, setNotificationCountdown] = useState(20);
   const [showTutorial, setShowTutorial] = useState(false);
+
+  const { data: supplierList, loading, error: fetchError, refetch: refetchSuppliers } = useApi<PaginatedSuppliersResponse>(
+    () => suppliersApi.list(currentPage, ITEMS_PER_PAGE, search),
+    { dedupeKey: `suppliers-${currentPage}-${search}` }
+  );
 
   const tutorialSteps = [
     {
@@ -149,7 +152,7 @@ export function ManageSuppliers() {
   const [archivingSupplier, setArchivingSupplier] = useState<ApiSupplier | null>(null);
   const [archiveLoading, setArchiveLoading] = useState(false);
 
-  const suppliers = supplierList ?? [];
+  const suppliers = supplierList?.data ?? [];
 
   useEffect(() => {
     if (suppliers.length === 0 && search === '' && !loading && !fetchError) {
@@ -188,27 +191,13 @@ export function ManageSuppliers() {
     suppliers.some(s => s?.id !== editingSupplier.id && s?.contact_number && typeof s.contact_number === 'string' && s.contact_number.trim() === editForm.contact_number.trim())
   );
 
-  const filtered = [...suppliers]
-    .filter(s =>
-      s && s.name && typeof s.name === 'string' && (
-        s.name.toLowerCase().includes((search || '').toLowerCase()) ||
-        (s.contact_person?.toLowerCase() ?? '').includes((search || '').toLowerCase()) ||
-        (s.contact_number ?? '').includes(search)
-      )
-    )
-    .sort((a, b) => {
-      if (sortBy === 'name-asc') return (a.name || '').localeCompare(b.name || '');
-      if (sortBy === 'name-desc') return (b.name || '').localeCompare(a.name || '');
-      if (sortBy === 'products-desc') return (b.product_count ?? 0) - (a.product_count ?? 0);
-      if (sortBy === 'products-asc') return (a.product_count ?? 0) - (b.product_count ?? 0);
-      if (sortBy === 'id-desc') return (b.id ?? 0) - (a.id ?? 0);
-      return 0;
-    });
+  // Server-side filtering, so no client-side filtering needed
+  const filtered = suppliers;
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, filtered.length);
-  const paginatedSuppliers = filtered.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  const totalPages = supplierList?.meta?.last_page ?? 1;
+  const totalItems = supplierList?.meta?.total ?? 0;
+  const startIndex = supplierList?.meta ? ((supplierList.meta.current_page - 1) * supplierList.meta.per_page) + 1 : 0;
+  const endIndex = supplierList?.meta ? Math.min(supplierList.meta.current_page * supplierList.meta.per_page, supplierList.meta.total) : 0;
 
   const isAllSelected = paginatedSuppliers.length > 0 && paginatedSuppliers.every(s => selectedIds.includes(s.id));
 
@@ -231,11 +220,10 @@ export function ManageSuppliers() {
     setIsBulkDeleting(true);
     try {
       await Promise.all(selectedIds.map(id => suppliersApi.delete(id)));
-      selectedIds.forEach(id => removeItem(id));
-      success(`Successfully deleted ${selectedIds.length} suppliers.`);
       setSelectedIds([]);
       setShowBulkDeleteConfirm(false);
-      refetchSuppliers();
+      await refetchSuppliers();
+      success(`Successfully deleted ${selectedIds.length} suppliers.`);
     } catch (err) {
       error(err instanceof Error ? err.message : 'Failed to delete selected suppliers.');
     } finally {
@@ -267,19 +255,10 @@ export function ManageSuppliers() {
 
     setAddLoading(true);
     try {
-      const created = (await suppliersApi.create(addForm)) as ApiSupplier;
+      await suppliersApi.create(addForm);
       setIsAddOpen(false);
-      const newItem: ApiSupplier = {
-        id: created.id,
-        name: created.name ?? addForm.supplier_name.trim(),
-        contact_person: created.contact_person ?? (addForm.contact_person.trim() || null),
-        contact_number: created.contact_number ?? addForm.contact_number.trim(),
-        address: created.address ?? (addForm.address.trim() || null),
-        product_count: created.product_count ?? 0,
-      };
-      addItem(newItem);
       await refetchSuppliers();
-      success(`Supplier "${newItem.name}" added successfully.`);
+      success(`Supplier added successfully.`);
     } catch (err) {
       error(err instanceof Error ? err.message : 'Failed to add supplier');
     } finally {
@@ -317,11 +296,10 @@ export function ManageSuppliers() {
 
     setEditLoading(true);
     try {
-      const updated = await suppliersApi.update(editingSupplier.id, editForm) as ApiSupplier;
-      updateItem(editingSupplier.id, updated);
+      await suppliersApi.update(editingSupplier.id, editForm);
       setEditingSupplier(null);
       await refetchSuppliers();
-      success(`Supplier "${editForm.supplier_name}" updated successfully.`);
+      success(`Supplier updated successfully.`);
     } catch (err) {
       error(err instanceof Error ? err.message : 'Failed to update supplier');
     } finally {
@@ -335,7 +313,6 @@ export function ManageSuppliers() {
     try {
       await suppliersApi.delete(archivingSupplier.id);
       const name = archivingSupplier.name;
-      removeItem(archivingSupplier.id);
       setArchivingSupplier(null);
       await refetchSuppliers();
       success(`Supplier "${name}" has been deleted.`);
@@ -499,16 +476,16 @@ export function ManageSuppliers() {
             />
           </>
         )}
-        pagination={
-          <Pagination
-            page={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-            totalItems={filtered.length}
-            perPage={ITEMS_PER_PAGE}
-            label="Suppliers"
-          />
-        }
+pagination={
+            <Pagination
+              page={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              totalItems={totalItems}
+              perPage={ITEMS_PER_PAGE}
+              label="Suppliers"
+            />
+          }
       />
 
       {/* Empty State Notification */}

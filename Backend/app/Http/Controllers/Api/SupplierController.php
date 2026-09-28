@@ -22,11 +22,25 @@ class SupplierController extends Controller
 
     public function index(Request $request)
     {
+        $perPage = min((int) $request->get('per_page', 15), 100);
+        $page = (int) $request->get('page', 1);
+
         $query = Supplier::withCount('products');
         $query = $this->scopeForBusiness($query, $request);
 
-        return response()->json(
-            $query->get()->map(fn ($s) => [
+        // Allow filtering
+        if ($request->has('search')) {
+            $search = $request->get('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('supplier_name', 'like', "%{$search}%")
+                  ->orWhere('contact_person', 'like', "%{$search}%");
+            });
+        }
+
+        $paginated = $query->paginate($perPage, ['*'], 'page', $page);
+
+        return response()->json([
+            'data' => $paginated->items()->map(fn ($s) => [
                 'id'             => $s->supplier_id,
                 'name'           => $s->supplier_name,
                 'contact_person' => $s->contact_person,
@@ -38,8 +52,14 @@ class SupplierController extends Controller
                 'fda_lto_expiry' => $s->fda_lto_expiry,
                 'fda_cpr_number' => $s->fda_cpr_number,
                 'fda_cpr_expiry' => $s->fda_cpr_expiry,
-            ])
-        );
+            ]),
+            'meta' => [
+                'current_page' => $paginated->currentPage(),
+                'last_page'    => $paginated->lastPage(),
+                'per_page'     => $paginated->perPage(),
+                'total'        => $paginated->total(),
+            ],
+        ]);
     }
 
     public function store(Request $request)

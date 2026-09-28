@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Search, Plus, Edit2, Archive, Info, Loader2,
   Check, Grid, Sparkles,
@@ -9,8 +9,8 @@ import {
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { Tutorial } from '../../components/ui/Tutorial';
 import { Toast, useToast, ConfirmDialog, Modal, FormField, inputCls } from '../../components/ui/Toast';
-import { useOptimisticList } from '../../hooks/useOptimisticList';
-import { categories as categoriesApi, type ApiCategory } from '../../services/api';
+import { useApi } from '../../hooks/useApi';
+import { categories as categoriesApi, type ApiCategory, type PaginatedCategoriesResponse } from '../../services/api';
 import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
 import { ActionButton } from '../../components/shared/DataTableActions';
 import { Pagination } from '../../components/ui/pagination';
@@ -86,8 +86,6 @@ const getCategoryIcon = (categoryName: string = '') => {
 
 export function ManageCategories() {
   const { toasts, dismiss, success, error } = useToast();
-  const { data: categoryList, loading, error: fetchError, addItem, updateItem, removeItem, refetch: refetchCategories } = useOptimisticList(categoriesApi.list);
-  
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<'name-asc' | 'name-desc' | 'products-desc' | 'products-asc' | 'id-desc'>('name-asc');
   const [currentPage, setCurrentPage] = useState(1);
@@ -97,6 +95,11 @@ export function ManageCategories() {
   const [showEmptyNotification, setShowEmptyNotification] = useState(false);
   const [notificationCountdown, setNotificationCountdown] = useState(20);
   const [showTutorial, setShowTutorial] = useState(false);
+
+  const { data: categoryList, loading, error: fetchError, refetch: refetchCategories } = useApi<PaginatedCategoriesResponse>(
+    () => categoriesApi.list(currentPage, ITEMS_PER_PAGE, search),
+    { dedupeKey: `categories-${currentPage}-${search}` }
+  );
 
   const tutorialSteps = [
     {
@@ -155,7 +158,7 @@ export function ManageCategories() {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [deleteName, setDeleteName] = useState('');
 
-  const categories = categoryList ?? [];
+  const categories = categoryList?.data ?? [];
 
   useEffect(() => {
     if (categories.length === 0 && search === '' && !loading && !fetchError) {
@@ -187,21 +190,13 @@ export function ManageCategories() {
     categories.some(c => c?.id !== editingCategory.id && c?.name && typeof c.name === 'string' && c.name.trim().toLowerCase() === editName.trim().toLowerCase())
   );
 
-  const filteredCategories = [...categories]
-    .filter(c => c && c.name && typeof c.name === 'string' && c.name.toLowerCase().includes((search || '').toLowerCase()))
-    .sort((a, b) => {
-      if (sortBy === 'name-asc') return (a.name || '').localeCompare(b.name || '');
-      if (sortBy === 'name-desc') return (b.name || '').localeCompare(a.name || '');
-      if (sortBy === 'products-desc') return (b.product_count ?? 0) - (a.product_count ?? 0);
-      if (sortBy === 'products-asc') return (a.product_count ?? 0) - (b.product_count ?? 0);
-      if (sortBy === 'id-desc') return (b.id ?? 0) - (a.id ?? 0);
-      return 0;
-    });
+  // Server-side filtering, so no client-side filtering needed
+  const filteredCategories = categories;
 
-  const totalPages = Math.max(1, Math.ceil(filteredCategories.length / ITEMS_PER_PAGE));
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, filteredCategories.length);
-  const paginatedCategories = filteredCategories.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  const totalPages = categoryList?.meta?.last_page ?? 1;
+  const totalItems = categoryList?.meta?.total ?? 0;
+  const startIndex = categoryList?.meta ? ((categoryList.meta.current_page - 1) * categoryList.meta.per_page) + 1 : 0;
+  const endIndex = categoryList?.meta ? Math.min(categoryList.meta.current_page * categoryList.meta.per_page, categoryList.meta.total) : 0;
 
   const isAllSelected = paginatedCategories.length > 0 && paginatedCategories.every(c => selectedIds.includes(c.id));
 
@@ -224,11 +219,10 @@ export function ManageCategories() {
     setIsBulkDeleting(true);
     try {
       await Promise.all(selectedIds.map(id => categoriesApi.delete(id)));
-      selectedIds.forEach(id => removeItem(id));
-      success(`Successfully deleted ${selectedIds.length} categories.`);
       setSelectedIds([]);
       setShowBulkDeleteConfirm(false);
-      refetchCategories();
+      await refetchCategories();
+      success(`Successfully deleted ${selectedIds.length} categories.`);
     } catch (err) {
       error(err instanceof Error ? err.message : 'Failed to delete selected categories.');
     } finally {
@@ -298,26 +292,18 @@ export function ManageCategories() {
     setSubmitting(true);
     setFormError('');
     try {
-      const addedItems: ApiCategory[] = [];
       for (const catName of validNames) {
-        const created = await categoriesApi.create(catName) as ApiCategory;
-        const newItem: ApiCategory = {
-          id: created.id,
-          name: created.name ?? catName,
-          product_count: created.product_count ?? 0,
-        };
-        addedItems.push(newItem);
-        addItem(newItem);
+        await categoriesApi.create(catName);
       }
       setNames(['']);
       setSelectedTypes(['']);
       setIsAddOpen(false);
       await refetchCategories();
       
-      if (addedItems.length === 1) {
-        success(`Category "${addedItems[0].name}" created successfully.`);
+      if (validNames.length === 1) {
+        success(`Category "${validNames[0]}" created successfully.`);
       } else {
-        success(`Successfully created ${addedItems.length} categories.`);
+        success(`Successfully created ${validNames.length} categories.`);
       }
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to add category');
@@ -339,11 +325,10 @@ export function ManageCategories() {
     setSubmitting(true);
     setFormError('');
     try {
-      const updated = await categoriesApi.update(editingCategory.id, cleanName) as ApiCategory;
+      await categoriesApi.update(editingCategory.id, cleanName);
       setEditName('');
       setIsEditOpen(false);
       setEditingCategory(null);
-      updateItem(editingCategory.id, updated);
       await refetchCategories();
       success(`Category updated successfully.`);
     } catch (err) {
@@ -356,7 +341,6 @@ export function ManageCategories() {
   const handleDelete = async (id: number) => {
     try {
       await categoriesApi.delete(id);
-      removeItem(id);
       await refetchCategories();
       success('Category deleted successfully.');
     } catch (err) {
@@ -555,7 +539,7 @@ export function ManageCategories() {
               page={currentPage}
               totalPages={totalPages}
               onPageChange={setCurrentPage}
-              totalItems={filteredCategories.length}
+              totalItems={totalItems}
               perPage={ITEMS_PER_PAGE}
               label="categories"
             />

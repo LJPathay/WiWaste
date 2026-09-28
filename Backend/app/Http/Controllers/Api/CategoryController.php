@@ -8,15 +8,36 @@ use Illuminate\Http\Request;
 
 class CategoryController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return response()->json(
-            Category::withCount('products')->get()->map(fn ($c) => [
+        $perPage = min((int) $request->get('per_page', 15), 100);
+        $page = (int) $request->get('page', 1);
+
+        $query = Category::withCount('products');
+
+        // Allow filtering
+        if ($request->has('search')) {
+            $search = $request->get('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('Category_name', 'like', "%{$search}%");
+            });
+        }
+
+        $paginated = $query->paginate($perPage, ['*'], 'page', $page);
+
+        return response()->json([
+            'data' => $paginated->items()->map(fn ($c) => [
                 'id'            => $c->Category_id,
                 'name'          => $c->Category_name,
                 'product_count' => $c->products_count,
-            ])
-        );
+            ]),
+            'meta' => [
+                'current_page' => $paginated->currentPage(),
+                'last_page'    => $paginated->lastPage(),
+                'per_page'     => $paginated->perPage(),
+                'total'        => $paginated->total(),
+            ],
+        ]);
     }
 
     public function store(Request $request)

@@ -59,7 +59,7 @@ export function useAuth() {
     } finally {
       if (mountedRef.current) setLoading(false);
     }
-  }, [user]);
+  }, []);
 
   useEffect(() => {
     mountedRef.current = true;

@@ -2,14 +2,22 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth, type UserRole } from '../hooks/useAuth';
 
+import { useEffect } from 'react';
+
 export function Login() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      navigate(user.role === 'cashier' ? '/cashier/pos' : '/dashboard', { replace: true });
+    }
+  }, [user, navigate]);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -123,10 +131,7 @@ export function Login() {
           <div className="w-full bg-white dark:bg-slate-900 rounded-2xl shadow-card border border-slate-200/80 dark:border-slate-800 overflow-hidden max-w-lg" data-purpose="login-card">
             <div className="p-8 sm:p-12 space-y-6">
               {/* Login Form Fields */}
-              <form action="#" className="space-y-6" data-purpose="login-form" method="POST" onSubmit={(e) => {
-                e.preventDefault();
-                handleLogin(e as React.FormEvent);
-              }}>
+              <form className="space-y-6" data-purpose="login-form" onSubmit={handleLogin}>
                 {error && (
                   <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg dark:bg-red-900/20 dark:border-red-800 dark:text-red-400" role="alert">
                     {error}

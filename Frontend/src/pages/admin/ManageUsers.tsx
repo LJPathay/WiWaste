@@ -42,12 +42,12 @@ export function ManageUsers() {
 
   const [full_name, setFullName] = useState('');
 
-  const users = userList ?? [];
+  const users: ApiUser[] = Array.isArray(userList) ? userList : [];
 
-  const autoUsername = useMemo(() => generateUsername(full_name), [full_name]);
-  const autoEmail = useMemo(() => generateEmail(full_name), [full_name]);
+  const autoUsername = useMemo(() => generateUsername(full_name ?? ''), [full_name]);
+  const autoEmail = useMemo(() => generateEmail(full_name ?? ''), [full_name]);
 
-  const filteredUsers = users.filter(u => {
+  const filteredUsers: ApiUser[] = (users ?? []).filter(u => {
     const matchesStatus = statusFilter === 'Archived'
       ? u.status === 'Archived'
       : u.status !== 'Archived';

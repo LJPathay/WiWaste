@@ -65,6 +65,10 @@ function TooltipTrigger({
         }
     };
 
+    const triggerProps = asChild && React.isValidElement(children)
+        ? (children as React.ReactElement).props
+        : {};
+
     const sharedProps = {
         onClick: handleToggle,
         onMouseEnter: () => { if (timerRef.current) clearTimeout(timerRef.current); setOpen(true); },
@@ -72,7 +76,23 @@ function TooltipTrigger({
     };
 
     if (asChild && React.isValidElement(children)) {
-        return React.cloneElement(children as React.ReactElement<React.ButtonHTMLAttributes<HTMLButtonElement>>, { ...props, ...sharedProps });
+        const child = children as React.ReactElement<React.ButtonHTMLAttributes<HTMLButtonElement>>;
+        return React.cloneElement(child, {
+            ...props,
+            ...sharedProps,
+            onClick: (e) => {
+                handleToggle(e);
+                child.props.onClick?.(e);
+            },
+            onMouseEnter: (e) => {
+                sharedProps.onMouseEnter(e);
+                child.props.onMouseEnter?.(e);
+            },
+            onMouseLeave: (e) => {
+                sharedProps.onMouseLeave(e);
+                child.props.onMouseLeave?.(e);
+            },
+        });
     }
 
     return (
@@ -107,7 +127,8 @@ function TooltipContent({
         <div
             role="tooltip"
             className={cn(
-                "absolute bottom-full mb-2 z-[999] w-64 rounded-md px-3 py-2 text-xs shadow-md",
+                "absolute bottom-full mb-2 z-[999] w-64 rounded-md px-3 py-2 text-[11px] font-medium shadow-lg",
+                "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900",
                 alignClass,
                 className
             )}

@@ -192,8 +192,8 @@ export function ManageUsers() {
     });
   };
 
-  const archivedCount = users.filter(u => u.status === 'Archived').length;
-  const activeCount = users.filter(u => u.status !== 'Archived').length;
+  const archivedCount = (users ?? []).filter(u => u.status === 'Archived').length;
+  const activeCount = (users ?? []).filter(u => u.status !== 'Archived').length;
   const isFiltered = statusFilter !== 'all' || roleFilter !== 'all' || search !== '';
 
   const columns: DataTableColumn<ApiUser>[] = [

@@ -298,12 +298,18 @@ export function DashboardLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { user: session, logout, loading } = useAuth();
 
-  const sidebarGroups = useMemo(() => (session ? (sidebarGroupsByRole[session.role] ?? []) : []), [session]);
+  const sidebarGroups = useMemo(() => {
+    if (!session) return [];
+    const roleGroups = sidebarGroupsByRole[session.role];
+    return roleGroups ?? [];
+  }, [session?.role]);
+
   const sidebarWidth = collapsed ? 'w-[76px]' : 'w-[248px]';
 
   const [visitedPages, setVisitedPages] = useState<SidebarItem[]>([]);
   const [headerStyle, setHeaderStyle] = useState<'quick-access' | 'action-text' | 'welcome-text'>('quick-access');
 
+  // Header style persistence - extracted to avoid re-running
   useEffect(() => {
     const readHeaderStyle = () => {
       const saved = localStorage.getItem('wiwaste_header_style') as 'quick-access' | 'action-text' | 'welcome-text' | null;
@@ -312,16 +318,21 @@ export function DashboardLayout() {
       }
     };
     readHeaderStyle();
+    const handler = (e: StorageEvent) => { if (e.key === 'wiwaste_header_style') readHeaderStyle(); };
+    window.addEventListener('storage', handler);
     window.addEventListener('wiwaste_header_style_change', readHeaderStyle);
-    return () => window.removeEventListener('wiwaste_header_style_change', readHeaderStyle);
+    return () => {
+      window.removeEventListener('storage', handler);
+      window.removeEventListener('wiwaste_header_style_change', readHeaderStyle);
+    };
   }, []);
 
-  useEffect(() => {
-    if (!location.pathname) return;
+  // Page visit tracking - memoized to avoid recalculation on every render
+  const updateVisitedPages = useCallback((pathname: string) => {
     try {
       const raw = localStorage.getItem('wiwaste_page_visits_v1') || '{}';
       const visits: Record<string, number> = JSON.parse(raw);
-      visits[location.pathname] = (visits[location.pathname] || 0) + 1;
+      visits[pathname] = (visits[pathname] || 0) + 1;
       localStorage.setItem('wiwaste_page_visits_v1', JSON.stringify(visits));
 
       const allItems = sidebarGroups.flatMap(g => g.items);
@@ -331,7 +342,12 @@ export function DashboardLayout() {
 
       setVisitedPages(sorted.slice(0, 4));
     } catch { /* fallback */ }
-  }, [location.pathname, session?.role, sidebarGroups]);
+  }, [sidebarGroups]);
+
+  useEffect(() => {
+    if (!location.pathname) return;
+    updateVisitedPages(location.pathname);
+  }, [location.pathname, updateVisitedPages]);
 
   // Mobile sidebar focus trap
   const sidebarRef = useRef<HTMLDivElement>(null);

@@ -1,20 +1,20 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Area,
-  AreaChart,
-  Bar,
-  BarChart,
   CartesianGrid,
   ResponsiveContainer,
-  Tooltip,
   XAxis,
   YAxis,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
 } from 'recharts';
+import {
+  LazyAreaChart,
+  LazyArea,
+  LazyPieChart,
+  LazyPie,
+  LazyCell,
+  LazyTooltip,
+  LazyLegend,
+} from '../../components/charts/LazyCharts';
 import {
   ArrowUpRight,
   ChevronRight,
@@ -278,8 +278,8 @@ export function DashboardOverview() {
             </div>
             <div className="h-52">
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
+                <LazyPieChart>
+                  <LazyPie
                     data={leakageChartData}
                     dataKey={leakageViewMode === 'value' ? 'amount' : leakageViewMode === 'quantity' ? 'quantity' : 'percentage'}
                     nameKey="name"
@@ -292,15 +292,15 @@ export function DashboardOverview() {
                     labelLine={false}
                   >
                     {leakageChartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={LEAKAGE_COLORS[index % LEAKAGE_COLORS.length]} />
+                      <LazyCell key={`cell-${index}`} fill={LEAKAGE_COLORS[index % LEAKAGE_COLORS.length]} />
                     ))}
-                  </Pie>
-                  <Tooltip
+                  </LazyPie>
+                  <LazyTooltip
                     formatter={(value) => leakageViewMode === 'value' ? currencyFormatter.format(value) : value}
                     contentStyle={CHART_TOOLTIP_STYLE}
                   />
-                  <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '11px' }} />
-                </PieChart>
+                  <LazyLegend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '11px' }} />
+                </LazyPieChart>
               </ResponsiveContainer>
             </div>
           </div>
@@ -401,13 +401,13 @@ export function DashboardOverview() {
             </div>
             <div className="h-48">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={salesTrendData}>
+                <LazyAreaChart data={salesTrendData}>
                   <ChartGradients />
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_COLORS.grid} />
                   <XAxis dataKey="date" tick={{ fontSize: 11, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} />
                   <YAxis tick={{ fontSize: 11, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} tickFormatter={(v) => `₱${(v / 1000).toFixed(0)}k`} />
-                  <Tooltip formatter={(value) => currencyFormatter.format(Number(value))} contentStyle={ChartTooltipStyle()} />
-                  <Area
+                  <LazyTooltip formatter={(value) => currencyFormatter.format(Number(value))} contentStyle={ChartTooltipStyle()} />
+                  <LazyArea
                     type="monotone"
                     dataKey="value"
                     stroke={CHART_COLORS.primary}
@@ -419,7 +419,7 @@ export function DashboardOverview() {
                     animationEasing={animationEasing}
                     animationBegin={CHART_DEFAULTS.animationBegin}
                   />
-                </AreaChart>
+                </LazyAreaChart>
               </ResponsiveContainer>
             </div>
           </div>
@@ -442,13 +442,13 @@ export function DashboardOverview() {
             </div>
             <div className="h-48">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={wastageTrendData}>
+                <LazyAreaChart data={wastageTrendData}>
                   <ChartGradients />
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_COLORS.grid} />
                   <XAxis dataKey="date" tick={{ fontSize: 10, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} />
                   <YAxis tick={{ fontSize: 10, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} tickFormatter={(v) => `₱${(v / 1000).toFixed(0)}k`} />
-                  <Tooltip formatter={(value) => currencyFormatter.format(Number(value))} contentStyle={ChartTooltipStyle()} />
-                  <Area
+                  <LazyTooltip formatter={(value) => currencyFormatter.format(Number(value))} contentStyle={ChartTooltipStyle()} />
+                  <LazyArea
                     type="monotone"
                     dataKey="value"
                     stroke={CHART_COLORS.danger}
@@ -460,7 +460,7 @@ export function DashboardOverview() {
                     animationEasing={animationEasing}
                     animationBegin={CHART_DEFAULTS.animationBegin}
                   />
-                </AreaChart>
+                </LazyAreaChart>
               </ResponsiveContainer>
             </div>
           </div>

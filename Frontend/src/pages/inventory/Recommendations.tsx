@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { recommendation as recommendationApi, type ApiRecommendation } from "../../services/api";
+import { recommendations as recommendationApi, type ApiRecommendation } from "../../services/api";
 import { Info, Search, CheckCircle, TrendingDown, Clock, ChevronRight, X, Check } from 'lucide-react';
 import { Toast, useToast, ConfirmDialog, Modal } from '../../components/ui/Toast';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';

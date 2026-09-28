@@ -4,6 +4,8 @@ import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContaine
 import { Toast, useToast, ConfirmDialog } from '../../components/ui/Toast';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
+import { ChartGradients, ChartTooltipStyle } from '../../components/charts/ChartGradients';
+import { CHART_DEFAULTS, CHART_COLORS, useChartAnimation, useReducedMotion } from '../../components/charts/ChartConfig';
 
 interface PerformanceMock {
   id: string;
@@ -53,6 +55,9 @@ export function SupplierPerformance() {
   const { toasts, dismiss, success } = useToast();
   const [suppliers, setSuppliers] = useState<PerformanceMock[]>(SUPPLIERS);
   const [confirm, setConfirm] = useState<{ open: boolean; supplierId: string; name: string } | null>(null);
+
+  const { isAnimationActive, animationDuration, animationEasing } = useChartAnimation();
+  const reducedMotion = useReducedMotion();
 
   const chartData = suppliers.map((s) => ({
     name: s.name.split(' ')[0],
@@ -113,16 +118,33 @@ export function SupplierPerformance() {
           <div className="h-56 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} layout="vertical" margin={{ left: 16, right: 40, top: 8, bottom: 8 }}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e8edf5" />
-                <XAxis type="number" tick={{ fontSize: 11 }} stroke="#94a3b8" />
-                <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 11 }} stroke="#94a3b8" />
-                <Tooltip />
+                <ChartGradients />
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={CHART_COLORS.grid} />
+                <XAxis type="number" tick={{ fontSize: 11, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} />
+                <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 11, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} />
+                <Tooltip contentStyle={ChartTooltipStyle()} />
                 <Legend />
-                <Bar dataKey="On-Time %" radius={[0, 4, 4, 0]} fill="#006a61">
-                  <LabelList dataKey="On-Time %" position="right" style={{ fill: '#64748b', fontSize: 10, fontWeight: 600 }} />
+                <Bar
+                  dataKey="On-Time %"
+                  radius={[0, 4, 4, 0]}
+                  fill={CHART_COLORS.primary}
+                  isAnimationActive={isAnimationActive}
+                  animationDuration={animationDuration}
+                  animationEasing={animationEasing}
+                  animationBegin={CHART_DEFAULTS.animationBegin}
+                >
+                  <LabelList dataKey="On-Time %" position="right" style={{ fill: CHART_COLORS.text, fontSize: 10, fontWeight: 600 }} />
                 </Bar>
-                <Bar dataKey="Return Rate" radius={[0, 4, 4, 0]} fill="#f87171">
-                  <LabelList dataKey="Return Rate" position="right" style={{ fill: '#64748b', fontSize: 10, fontWeight: 600 }} />
+                <Bar
+                  dataKey="Return Rate"
+                  radius={[0, 4, 4, 0]}
+                  fill={CHART_COLORS.danger}
+                  isAnimationActive={isAnimationActive}
+                  animationDuration={animationDuration}
+                  animationEasing={animationEasing}
+                  animationBegin={CHART_DEFAULTS.animationBegin}
+                >
+                  <LabelList dataKey="Return Rate" position="right" style={{ fill: CHART_COLORS.text, fontSize: 10, fontWeight: 600 }} />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -135,14 +157,48 @@ export function SupplierPerformance() {
           <div className="h-56 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={TREND_DATA}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e8edf5" />
-                <XAxis dataKey="month" tick={{ fontSize: 11 }} stroke="#94a3b8" />
-                <YAxis domain={[85, 100]} tick={{ fontSize: 11 }} stroke="#94a3b8" />
-                <Tooltip />
+                <ChartGradients />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_COLORS.grid} />
+                <XAxis dataKey="month" tick={{ fontSize: 11, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} />
+                <YAxis domain={[85, 100]} tick={{ fontSize: 11, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} />
+                <Tooltip contentStyle={ChartTooltipStyle()} />
                 <Legend />
-                <Line type="linear" dataKey="unilab" name="Unilab" stroke="#006a61" strokeWidth={2} dot={false} />
-                <Line type="linear" dataKey="purefoods" name="Purefoods" stroke="#f59e0b" strokeWidth={2} dot={false} />
-                <Line type="linear" dataKey="urc" name="URC" stroke="#6366f1" strokeWidth={2} dot={false} />
+                <Line
+                  type="linear"
+                  dataKey="unilab"
+                  name="Unilab"
+                  stroke={CHART_COLORS.primary}
+                  strokeWidth={2}
+                  dot={false}
+                  isAnimationActive={isAnimationActive}
+                  animationDuration={animationDuration}
+                  animationEasing={animationEasing}
+                  animationBegin={CHART_DEFAULTS.animationBegin}
+                />
+                <Line
+                  type="linear"
+                  dataKey="purefoods"
+                  name="Purefoods"
+                  stroke={CHART_COLORS.warning}
+                  strokeWidth={2}
+                  dot={false}
+                  isAnimationActive={isAnimationActive}
+                  animationDuration={animationDuration}
+                  animationEasing={animationEasing}
+                  animationBegin={CHART_DEFAULTS.animationBegin}
+                />
+                <Line
+                  type="linear"
+                  dataKey="urc"
+                  name="URC"
+                  stroke={CHART_COLORS.secondary}
+                  strokeWidth={2}
+                  dot={false}
+                  isAnimationActive={isAnimationActive}
+                  animationDuration={animationDuration}
+                  animationEasing={animationEasing}
+                  animationBegin={CHART_DEFAULTS.animationBegin}
+                />
               </LineChart>
             </ResponsiveContainer>
           </div>

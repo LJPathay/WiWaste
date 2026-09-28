@@ -7,6 +7,8 @@ import { DataTable } from '../../components/shared/DataTable';
 import type { DataTableColumn } from '../../components/shared/DataTable';
 import { inventoryAnalytics } from '../../services/api';
 import type { ApiTurnoverResponse } from '../../services/api';
+import { ChartGradients, ChartTooltipStyle } from '../../components/charts/ChartGradients';
+import { CHART_DEFAULTS, CHART_COLORS, useChartAnimation, useReducedMotion } from '../../components/charts/ChartConfig';
 
 const currencyFormatter = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 });
 
@@ -31,6 +33,9 @@ export function InventoryPerformance() {
   const [exporting, setExporting] = useState(false);
   const [turnoverData, setTurnoverData] = useState<ApiTurnoverResponse | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const { isAnimationActive, animationDuration, animationEasing } = useChartAnimation();
+  const reducedMotion = useReducedMotion();
 
   useEffect(() => {
     inventoryAnalytics.turnover()
@@ -98,12 +103,22 @@ export function InventoryPerformance() {
           <div className="h-48 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={products.slice(0, 10)}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e8edf5" />
-                <XAxis dataKey="product_name" tick={{ fontSize: 10 }} stroke="#94a3b8" angle={-45} textAnchor="end" height={80} />
-                <YAxis tick={{ fontSize: 11 }} stroke="#94a3b8" />
-                <Tooltip />
+                <ChartGradients />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_COLORS.grid} />
+                <XAxis dataKey="product_name" tick={{ fontSize: 10, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} angle={-45} textAnchor="end" height={80} />
+                <YAxis tick={{ fontSize: 11, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} />
+                <Tooltip contentStyle={ChartTooltipStyle()} />
                 <Legend />
-                <Bar dataKey="turnover_rate" name="Turnover Rate (x)" radius={[6, 6, 0, 0]} fill="#006a61" />
+                <Bar
+                  dataKey="turnover_rate"
+                  name="Turnover Rate (x)"
+                  radius={[6, 6, 0, 0]}
+                  fill={CHART_COLORS.primary}
+                  isAnimationActive={isAnimationActive}
+                  animationDuration={animationDuration}
+                  animationEasing={animationEasing}
+                  animationBegin={CHART_DEFAULTS.animationBegin}
+                />
               </ComposedChart>
             </ResponsiveContainer>
           </div>

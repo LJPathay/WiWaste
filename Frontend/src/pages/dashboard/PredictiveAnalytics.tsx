@@ -17,6 +17,8 @@ import { useDashboardData } from '../../hooks/useDashboardData';
 import { forecast as forecastApi, type ApiForecastOverview } from '../../services/api';
 import { retailExamples } from '../../utils/mockAuthAndFeatures';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
+import { ChartGradients, ChartTooltipStyle } from '../../components/charts/ChartGradients';
+import { CHART_DEFAULTS, CHART_COLORS, useChartAnimation, useReducedMotion } from '../../components/charts/ChartConfig';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -25,13 +27,6 @@ function formatPeriod(period: string): string {
   const label = MONTHS[(month ?? 1) - 1] ?? '';
   return `${label} ${day} '${String(year).slice(-2)}`;
 }
-
-const chartTooltipStyle = {
-  borderRadius: '10px',
-  border: '1px solid #E5E7EB',
-  boxShadow: '0 4px 16px rgba(0,0,0,0.07)',
-  fontSize: '12px',
-};
 
 // Mock stock movement data for predictive view
 const mockPredictiveMovement = [
@@ -58,6 +53,9 @@ export function PredictiveAnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
+
+  const { isAnimationActive, animationDuration, animationEasing } = useChartAnimation();
+  const reducedMotion = useReducedMotion();
 
   const loadOverview = useCallback(() => {
     setLoading(true);
@@ -226,27 +224,47 @@ export function PredictiveAnalyticsPage() {
             <div className="h-52">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={mockPredictiveMovement}>
-                  <defs>
-                    <linearGradient id="stockInGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#0F766E" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#0F766E" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="stockOutGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="wastageGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#EF4444" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#EF4444" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
-                  <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#94a3b8' }} stroke="#E5E7EB" />
-                  <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} stroke="#E5E7EB" />
-                  <Tooltip contentStyle={chartTooltipStyle} />
-                  <Area type="monotone" dataKey="stock_in" name="Stock In" stroke="#0F766E" fill="url(#stockInGrad)" strokeWidth={2} />
-                  <Area type="monotone" dataKey="stock_out" name="Stock Out" stroke="#3B82F6" fill="url(#stockOutGrad)" strokeWidth={2} />
-                  <Area type="monotone" dataKey="wastage" name="Wastage" stroke="#EF4444" fill="url(#wastageGrad)" strokeWidth={2} />
+                  <ChartGradients />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_COLORS.grid} />
+                  <XAxis dataKey="date" tick={{ fontSize: 11, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} />
+                  <YAxis tick={{ fontSize: 11, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} />
+                  <Tooltip contentStyle={ChartTooltipStyle()} />
+                  <Area
+                    type="monotone"
+                    dataKey="stock_in"
+                    name="Stock In"
+                    stroke={CHART_COLORS.primary}
+                    fill="url(#chart-stock-in-fill)"
+                    strokeWidth={2}
+                    isAnimationActive={isAnimationActive}
+                    animationDuration={animationDuration}
+                    animationEasing={animationEasing}
+                    animationBegin={CHART_DEFAULTS.animationBegin}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="stock_out"
+                    name="Stock Out"
+                    stroke={CHART_COLORS.secondary}
+                    fill="url(#chart-stock-out-fill)"
+                    strokeWidth={2}
+                    isAnimationActive={isAnimationActive}
+                    animationDuration={animationDuration}
+                    animationEasing={animationEasing}
+                    animationBegin={CHART_DEFAULTS.animationBegin}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="wastage"
+                    name="Wastage"
+                    stroke={CHART_COLORS.danger}
+                    fill="url(#chart-wastage-fill)"
+                    strokeWidth={2}
+                    isAnimationActive={isAnimationActive}
+                    animationDuration={animationDuration}
+                    animationEasing={animationEasing}
+                    animationBegin={CHART_DEFAULTS.animationBegin}
+                  />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -273,15 +291,35 @@ export function PredictiveAnalyticsPage() {
             <div className="h-48">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={mockPredictiveWastage}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
-                  <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} stroke="#E5E7EB" />
-                  <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} stroke="#E5E7EB" tickFormatter={(v) => `₱${(v / 1000).toFixed(0)}k`} />
-                  <Tooltip
-                    formatter={(value) => `₱${value.toLocaleString()}`}
-                    contentStyle={chartTooltipStyle}
+                  <ChartGradients />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_COLORS.grid} />
+                  <XAxis dataKey="date" tick={{ fontSize: 10, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} />
+                  <YAxis tick={{ fontSize: 10, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} tickFormatter={(v) => `₱${(v / 1000).toFixed(0)}k`} />
+                  <Tooltip formatter={(value) => `₱${value.toLocaleString()}`} contentStyle={ChartTooltipStyle()} />
+                  <Line
+                    type="monotone"
+                    dataKey="predicted"
+                    name="Predicted"
+                    stroke={CHART_COLORS.secondary}
+                    strokeWidth={2}
+                    dot={{ r: 3 }}
+                    isAnimationActive={isAnimationActive}
+                    animationDuration={animationDuration}
+                    animationEasing={animationEasing}
+                    animationBegin={CHART_DEFAULTS.animationBegin}
                   />
-                  <Line type="monotone" dataKey="predicted" name="Predicted" stroke="#3B82F6" strokeWidth={2} dot={{ r: 3 }} />
-                  <Line type="monotone" dataKey="actual" name="Actual" stroke="#EF4444" strokeWidth={2} dot={{ r: 3 }} />
+                  <Line
+                    type="monotone"
+                    dataKey="actual"
+                    name="Actual"
+                    stroke={CHART_COLORS.danger}
+                    strokeWidth={2}
+                    dot={{ r: 3 }}
+                    isAnimationActive={isAnimationActive}
+                    animationDuration={animationDuration}
+                    animationEasing={animationEasing}
+                    animationBegin={CHART_DEFAULTS.animationBegin}
+                  />
                 </LineChart>
               </ResponsiveContainer>
             </div>

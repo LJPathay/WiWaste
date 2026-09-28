@@ -30,6 +30,8 @@ import {
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { useDashboardData } from '../../hooks/useDashboardData';
 import { useKpiHighlight } from '../../hooks/useKpiHighlight';
+import { ChartGradients, ChartTooltipStyle } from '../../components/charts/ChartGradients';
+import { CHART_DEFAULTS, CHART_COLORS, useReducedMotion } from '../../components/charts/ChartConfig';
 
 const currencyFormatter = new Intl.NumberFormat('en-PH', {
   style: 'currency',
@@ -38,13 +40,6 @@ const currencyFormatter = new Intl.NumberFormat('en-PH', {
 });
 
 const LEAKAGE_COLORS = ['#006a61', '#f97316', '#f59e0b', '#eab308', '#22c55e'];
-
-const CHART_TOOLTIP_STYLE = {
-  borderRadius: '10px',
-  border: '1px solid #E5E7EB',
-  boxShadow: '0 4px 16px rgba(0,0,0,0.07)',
-  fontSize: '12px',
-};
 
 export function DashboardOverview() {
   const { data, overview, ownerAnalytics, loading } = useDashboardData();
@@ -55,6 +50,8 @@ export function DashboardOverview() {
   const [leakageViewMode, setLeakageViewMode] = useState<'value' | 'quantity' | 'percentage'>('value');
 
   const activeKpi = clickedKpi ?? highlightedKpi;
+  const { isAnimationActive, animationDuration, animationEasing } = useChartAnimation();
+  const reducedMotion = useReducedMotion();
 
   const kpiSectionRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -405,20 +402,23 @@ export function DashboardOverview() {
             <div className="h-48">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={salesTrendData}>
-                  <defs>
-                    <linearGradient id="salesFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#0F766E" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#0F766E" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
-                  <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#94a3b8' }} stroke="#E5E7EB" />
-                  <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} stroke="#E5E7EB" tickFormatter={(v) => `₱${(v / 1000).toFixed(0)}k`} />
-                  <Tooltip
-                    formatter={(value) => currencyFormatter.format(Number(value))}
-                    contentStyle={CHART_TOOLTIP_STYLE}
+                  <ChartGradients />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_COLORS.grid} />
+                  <XAxis dataKey="date" tick={{ fontSize: 11, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} />
+                  <YAxis tick={{ fontSize: 11, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} tickFormatter={(v) => `₱${(v / 1000).toFixed(0)}k`} />
+                  <Tooltip formatter={(value) => currencyFormatter.format(Number(value))} contentStyle={ChartTooltipStyle()} />
+                  <Area
+                    type="monotone"
+                    dataKey="value"
+                    stroke={CHART_COLORS.primary}
+                    fill="url(#chart-primary-fill)"
+                    strokeWidth={2}
+                    name="Revenue"
+                    isAnimationActive={isAnimationActive}
+                    animationDuration={animationDuration}
+                    animationEasing={animationEasing}
+                    animationBegin={CHART_DEFAULTS.animationBegin}
                   />
-                  <Area type="monotone" dataKey="value" stroke="#0F766E" fill="url(#salesFill)" strokeWidth={2} name="Revenue" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -443,20 +443,23 @@ export function DashboardOverview() {
             <div className="h-48">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={wastageTrendData}>
-                  <defs>
-                    <linearGradient id="wastageFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#EF4444" stopOpacity={0.25} />
-                      <stop offset="95%" stopColor="#EF4444" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
-                  <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} stroke="#E5E7EB" />
-                  <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} stroke="#E5E7EB" tickFormatter={(v) => `₱${(v / 1000).toFixed(0)}k`} />
-                  <Tooltip
-                    formatter={(value) => currencyFormatter.format(Number(value))}
-                    contentStyle={CHART_TOOLTIP_STYLE}
+                  <ChartGradients />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_COLORS.grid} />
+                  <XAxis dataKey="date" tick={{ fontSize: 10, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} />
+                  <YAxis tick={{ fontSize: 10, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} tickFormatter={(v) => `₱${(v / 1000).toFixed(0)}k`} />
+                  <Tooltip formatter={(value) => currencyFormatter.format(Number(value))} contentStyle={ChartTooltipStyle()} />
+                  <Area
+                    type="monotone"
+                    dataKey="value"
+                    stroke={CHART_COLORS.danger}
+                    fill="url(#chart-danger-fill)"
+                    strokeWidth={2}
+                    name="Wastage"
+                    isAnimationActive={isAnimationActive}
+                    animationDuration={animationDuration}
+                    animationEasing={animationEasing}
+                    animationBegin={CHART_DEFAULTS.animationBegin}
                   />
-                  <Area type="monotone" dataKey="value" stroke="#EF4444" fill="url(#wastageFill)" strokeWidth={2} name="Wastage" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>

@@ -14,6 +14,8 @@ import { useState } from 'react';
 import { AlertTriangle, ArrowLeft, Clock3, Info, Package, PackageSearch, RotateCcw, Tag } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
+import { ChartGradients, ChartTooltipStyle } from '../../components/charts/ChartGradients';
+import { CHART_DEFAULTS, CHART_COLORS, useChartAnimation, useReducedMotion } from '../../components/charts/ChartConfig';
 
 const currencyFormatter = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 });
 
@@ -34,6 +36,9 @@ function getRisk(daysToExpiry: number) {
 
 export function FefoTrackingPage() {
   const [batchFEFO] = useState(MOCK_BATCHES);
+
+  const { isAnimationActive, animationDuration, animationEasing } = useChartAnimation();
+  const reducedMotion = useReducedMotion();
 
   const fefoChart = batchFEFO.map((item) => ({
     name: item.batchId,
@@ -105,18 +110,39 @@ export function FefoTrackingPage() {
         <div className="h-72 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={fefoChart}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e8edf5" />
-              <XAxis dataKey="name" tick={{ fontSize: 12 }} stroke="#94a3b8" />
-              <YAxis yAxisId="days" tick={{ fontSize: 12 }} stroke="#94a3b8" label={{ value: 'Days to Expiry', angle: -90, position: 'insideLeft', style: { fill: '#94a3b8', fontSize: 12 } }} />
-              <YAxis yAxisId="drop" orientation="right" tick={{ fontSize: 12 }} stroke="#94a3b8" label={{ value: 'Price Drop %', angle: 90, position: 'insideRight', style: { fill: '#94a3b8', fontSize: 12 } }} />
-              <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 24px rgba(0,0,0,0.08)' }} />
-              <ReferenceLine yAxisId="days" y={7} stroke="#f59e0b" strokeDasharray="4 4" label={{ value: '7-day risk', fontSize: 11, fill: '#f59e0b' }} />
-              <Bar yAxisId="days" dataKey="daysToExpiry" name="Days to expiry" radius={[12, 12, 0, 0]}>
+              <ChartGradients />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_COLORS.grid} />
+              <XAxis dataKey="name" tick={{ fontSize: 12, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} />
+              <YAxis yAxisId="days" tick={{ fontSize: 12, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} label={{ value: 'Days to Expiry', angle: -90, position: 'insideLeft', style: { fill: CHART_COLORS.text, fontSize: 12 } }} />
+              <YAxis yAxisId="drop" orientation="right" tick={{ fontSize: 12, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} label={{ value: 'Price Drop %', angle: 90, position: 'insideRight', style: { fill: CHART_COLORS.text, fontSize: 12 } }} />
+              <Tooltip contentStyle={ChartTooltipStyle()} />
+              <ReferenceLine yAxisId="days" y={7} stroke={CHART_COLORS.warning} strokeDasharray="4 4" label={{ value: '7-day risk', fontSize: 11, fill: CHART_COLORS.warning }} />
+              <Bar
+                yAxisId="days"
+                dataKey="daysToExpiry"
+                name="Days to expiry"
+                radius={[12, 12, 0, 0]}
+                isAnimationActive={isAnimationActive}
+                animationDuration={animationDuration}
+                animationEasing={animationEasing}
+                animationBegin={CHART_DEFAULTS.animationBegin}
+              >
                 {fefoChart.map((item) => (
                   <Cell key={item.name} fill={item.risk.color} />
                 ))}
               </Bar>
-              <Line yAxisId="drop" type="linear" dataKey="priceDrop" name="Recommended price drop %" stroke="#0ea5e9" strokeWidth={3} />
+              <Line
+                yAxisId="drop"
+                type="linear"
+                dataKey="priceDrop"
+                name="Recommended price drop %"
+                stroke={CHART_COLORS.info}
+                strokeWidth={3}
+                isAnimationActive={isAnimationActive}
+                animationDuration={animationDuration}
+                animationEasing={animationEasing}
+                animationBegin={CHART_DEFAULTS.animationBegin}
+              />
             </ComposedChart>
           </ResponsiveContainer>
         </div>

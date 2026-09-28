@@ -4,6 +4,8 @@ import { AlertCircle, AlertTriangle, ArrowLeft, Info, RefreshCw, ShieldAlert } f
 import { Link } from 'react-router-dom';
 import { lossRisk, type ApiLossRiskItem, type ApiLossRiskSummary, type RiskTier } from '../../services/api';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
+import { ChartGradients, ChartTooltipStyle } from '../../components/charts/ChartGradients';
+import { CHART_DEFAULTS, CHART_COLORS, useChartAnimation, useReducedMotion } from '../../components/charts/ChartConfig';
 
 const currencyFormatter = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 });
 
@@ -47,6 +49,9 @@ export function LeakageDetectionPage() {
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const { isAnimationActive, animationDuration, animationEasing } = useChartAnimation();
+  const reducedMotion = useReducedMotion();
 
   const loadResults = useCallback(() => {
     setLoading(true);
@@ -227,12 +232,22 @@ export function LeakageDetectionPage() {
             <div className="h-48 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={categoryData} layout="vertical" margin={{ left: 16, right: 80, top: 8, bottom: 8 }} barSize={24}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e8edf5" />
-                  <XAxis type="number" tick={{ fontSize: 11 }} stroke="#94a3b8" />
-                  <YAxis type="category" dataKey="name" width={150} tick={{ fontSize: 11 }} stroke="#94a3b8" />
-                  <Tooltip formatter={(value) => currencyFormatter.format(Number(value))} contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 24px rgba(0,0,0,0.08)' }} />
-                  <Bar dataKey="amount" radius={[0, 10, 10, 0]} fill="#ef4444" name="Expected loss">
-                    <LabelList dataKey="amount" position="right" formatter={(value: number) => currencyFormatter.format(value)} style={{ fill: '#64748b', fontSize: 10, fontWeight: 600 }} />
+                  <ChartGradients />
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={CHART_COLORS.grid} />
+                  <XAxis type="number" tick={{ fontSize: 11, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} />
+                  <YAxis type="category" dataKey="name" width={150} tick={{ fontSize: 11, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} />
+                  <Tooltip formatter={(value) => currencyFormatter.format(Number(value))} contentStyle={ChartTooltipStyle()} />
+                  <Bar
+                    dataKey="amount"
+                    radius={[0, 10, 10, 0]}
+                    fill={CHART_COLORS.danger}
+                    name="Expected loss"
+                    isAnimationActive={isAnimationActive}
+                    animationDuration={animationDuration}
+                    animationEasing={animationEasing}
+                    animationBegin={CHART_DEFAULTS.animationBegin}
+                  >
+                    <LabelList dataKey="amount" position="right" formatter={(value: number) => currencyFormatter.format(value)} style={{ fill: CHART_COLORS.text, fontSize: 10, fontWeight: 600 }} />
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>

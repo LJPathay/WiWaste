@@ -4,6 +4,8 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Toast, useToast, ConfirmDialog } from '../../components/ui/Toast';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
+import { ChartGradients, ChartTooltipStyle } from '../../components/charts/ChartGradients';
+import { CHART_DEFAULTS, CHART_COLORS, useChartAnimation, useReducedMotion } from '../../components/charts/ChartConfig';
 
 const OVERSTOCK_TREND_DATA = [
   { month: 'Jan', exposure: 125000 },
@@ -121,6 +123,9 @@ export function OverstockRisks() {
   const [search, setSearch] = useState('');
   const [confirm, setConfirm] = useState<{ open: boolean; item: OverstockItem | null }>({ open: false, item: null });
 
+  const { isAnimationActive, animationDuration, animationEasing } = useChartAnimation();
+  const reducedMotion = useReducedMotion();
+
   const totalExposure = useMemo(() => items.reduce((sum, i) => sum + i.excessQty * i.unitCost, 0), [items]);
   const appliedCount = items.filter((i) => i.applied).length;
 
@@ -188,11 +193,23 @@ export function OverstockRisks() {
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={OVERSTOCK_TREND_DATA}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e8edf5" />
-                <XAxis dataKey="month" tick={{ fontSize: 11 }} stroke="#94a3b8" />
-                <YAxis tick={{ fontSize: 11 }} stroke="#94a3b8" tickFormatter={v => `₱${(v / 1000).toFixed(0)}k`} />
-                <Tooltip formatter={(v: number) => currencyFormatter.format(v)} />
-                <Line type="linear" dataKey="exposure" name="Exposure" stroke="#ef4444" strokeWidth={2} dot={{ r: 3 }} />
+                <ChartGradients />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_COLORS.grid} />
+                <XAxis dataKey="month" tick={{ fontSize: 11, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} />
+                <YAxis tick={{ fontSize: 11, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} tickFormatter={v => `₱${(v / 1000).toFixed(0)}k`} />
+                <Tooltip formatter={(v: number) => currencyFormatter.format(v)} contentStyle={ChartTooltipStyle()} />
+                <Line
+                  type="linear"
+                  dataKey="exposure"
+                  name="Exposure"
+                  stroke={CHART_COLORS.danger}
+                  strokeWidth={2}
+                  dot={{ r: 3 }}
+                  isAnimationActive={isAnimationActive}
+                  animationDuration={animationDuration}
+                  animationEasing={animationEasing}
+                  animationBegin={CHART_DEFAULTS.animationBegin}
+                />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -203,11 +220,25 @@ export function OverstockRisks() {
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={OVERSTOCK_CATEGORY_DATA} dataKey="value" nameKey="category" cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={2}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
+                <Pie
+                  data={OVERSTOCK_CATEGORY_DATA}
+                  dataKey="value"
+                  nameKey="category"
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={80}
+                  paddingAngle={2}
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  labelLine={false}
+                  isAnimationActive={isAnimationActive}
+                  animationDuration={animationDuration}
+                  animationEasing={animationEasing}
+                  animationBegin={CHART_DEFAULTS.animationBegin}
+                >
                   {OVERSTOCK_CATEGORY_DATA.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
                 </Pie>
-                <Tooltip formatter={(v: number) => currencyFormatter.format(v)} />
+                <Tooltip formatter={(v: number) => currencyFormatter.format(v)} contentStyle={ChartTooltipStyle()} />
                 <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '11px' }} />
               </PieChart>
             </ResponsiveContainer>

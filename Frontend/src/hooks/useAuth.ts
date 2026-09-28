@@ -4,8 +4,21 @@ import { auth, type ApiUser } from '../services/api';
 export type UserRole = 'owner' | 'inventory' | 'cashier';
 
 function mapRole(apiRole: string): UserRole {
-  if (apiRole === 'Admin' || apiRole === 'Owner') return 'owner';
-  if (apiRole === 'Inventory') return 'inventory';
+  const normalized = apiRole?.toLowerCase().trim();
+  console.debug('[Auth] Raw role from API:', apiRole, '→ normalized:', normalized);
+  
+  // Owner/Admin roles - exact matches only
+  const ownerRoles = ['admin', 'owner', 'administrator', 'superadmin', 'super_admin', 'manager', 'supervisor', 'root'];
+  if (ownerRoles.includes(normalized)) return 'owner';
+  
+  if (normalized === 'inventory' || normalized === 'stock') return 'inventory';
+  if (normalized === 'pharmacist') return 'owner';
+  
+  // Cashier roles
+  const cashierRoles = ['cashier', 'sales', 'pos'];
+  if (cashierRoles.includes(normalized)) return 'cashier';
+  
+  console.warn('[Auth] Unknown role, defaulting to cashier:', apiRole);
   return 'cashier';
 }
 
@@ -35,49 +48,92 @@ export function useAuth() {
   const [user, setUser] = useState<AuthUser | null>(getStoredUser);
   const [loading, setLoading] = useState(true);
   const mountedRef = useRef(true);
+  const initializedRef = useRef(false);
+  const cleanupRef = useRef(false);
 
   // Verify token with /me on mount and when refetch is called
   const verifyToken = useCallback(async () => {
     try {
+      console.debug('[Auth] verifyToken: checking token...', localStorage.getItem('wiwaste_token')?.substring(0, 20) + '...');
       const apiUser = await auth.me();
+      console.debug('[Auth] verifyToken /me response:', apiUser);
+      // Handle different possible response structures
+      const userData = apiUser?.data || apiUser;
+      if (!userData?.role) {
+        console.warn('[Auth] verifyToken: no role in response:', apiUser);
+        throw new Error('Invalid /me response: no role');
+      }
       const mapped: AuthUser = {
-        id: apiUser.id,
-        email: apiUser.email,
-        name: apiUser.name,
-        role: mapRole(apiUser.role),
-        apiRole: apiUser.role,
+        id: userData.id,
+        email: userData.email,
+        name: userData.name,
+        role: mapRole(userData.role),
+        apiRole: userData.role,
       };
-      if (mountedRef.current) {
+      console.debug('[Auth] verifyToken success, mapped role:', mapped.role, 'from apiRole:', mapped.apiRole);
+      if (!cleanupRef.current) {
         setUser(mapped);
         localStorage.setItem('wiwaste_user', JSON.stringify(mapped));
       }
-    } catch {
-      if (mountedRef.current) {
+    } catch (err) {
+      console.error('[Auth] verifyToken failed:', err);
+      // Don't clear user if we have a valid session from login (persisted in localStorage)
+      const storedUser = getStoredUser();
+      if (storedUser && storedUser.role) {
+        console.debug('[Auth] verifyToken failed but using stored user:', storedUser.role);
+        if (!cleanupRef.current) {
+          setUser(storedUser);
+        }
+      } else if (!cleanupRef.current) {
         setUser(null);
         localStorage.removeItem('wiwaste_user');
       }
     } finally {
-      if (mountedRef.current) setLoading(false);
+      console.debug('[Auth] verifyToken finally, cleanupRef:', cleanupRef.current, 'setting loading to false');
+      if (!cleanupRef.current) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
+    console.debug('[Auth] useEffect running, initialized:', initializedRef.current);
+    if (initializedRef.current) return;
+    initializedRef.current = true;
     mountedRef.current = true;
+    cleanupRef.current = false;
     verifyToken();
-    return () => { mountedRef.current = false; };
+    return () => { 
+      console.debug('[Auth] useEffect cleanup');
+      cleanupRef.current = true;
+      mountedRef.current = false; 
+    };
   }, [verifyToken]);
 
   const login = useCallback(async (username: string, password: string) => {
     const result = await auth.login(username, password);
+    console.debug('[Auth] Login raw response:', JSON.stringify(result, null, 2));
     // Backend now returns { access_token, user } in data
-    const accessToken = result.data.access_token;
+    // Handle different possible response structures
+    const accessToken = result?.data?.access_token || result?.access_token || result?.token;
+    if (!accessToken) {
+      console.error('[Auth] No access_token in response:', result);
+      throw new Error('Invalid login response');
+    }
+    localStorage.setItem('wiwaste_token', accessToken);
+    console.debug('[Auth] Token stored:', accessToken.substring(0, 20) + '...');
+    
+    const userData = result?.data?.user || result?.user;
+    if (!userData) {
+      console.error('[Auth] No user in response:', result);
+      throw new Error('Invalid login response: no user data');
+    }
     const mapped: AuthUser = {
-      id: result.data.user.id,
-      email: result.data.user.email,
-      name: result.data.user.name,
-      role: mapRole(result.data.user.role),
-      apiRole: result.data.user.role,
+      id: userData.id,
+      email: userData.email,
+      name: userData.name,
+      role: mapRole(userData.role),
+      apiRole: userData.role,
     };
+    console.debug('[Auth] Login successful, mapped role:', mapped.role, 'from apiRole:', mapped.apiRole);
     setUser(mapped);
     localStorage.setItem('wiwaste_user', JSON.stringify(mapped));
     return mapped;

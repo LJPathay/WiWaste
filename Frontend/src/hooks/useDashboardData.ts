@@ -20,6 +20,7 @@ export function useDashboardData() {
 
     async function load() {
       try {
+        console.debug('[Dashboard] Loading data...');
         const [d, ov, analytics] = await Promise.all([
           (async () => {
             const session = getStoredSession();
@@ -27,26 +28,20 @@ export function useDashboardData() {
             const role = session?.role ?? inferRoleFromEmail(email);
             return initializeDashboard(email, 'password', role);
           })(),
-          ownerDashboard.overview().catch(() => null),
-          ownerDashboard.analytics({ period: '30' }).catch(() => null),
+          ownerDashboard.overview().then(r => { console.debug('[Dashboard] overview:', r); return r; }).catch(e => { console.error('[Dashboard] overview failed:', e); return null; }),
+          ownerDashboard.analytics({ period: '30' }).then(r => { console.debug('[Dashboard] analytics:', r); return r; }).catch(e => { console.error('[Dashboard] analytics failed:', e); return null; }),
         ]);
         if (mounted) {
           setData(d);
           setOverview(ov);
           setOwnerAnalytics(analytics);
         }
-      } catch {
+      } catch (e) {
+        console.error('[Dashboard] load failed:', e);
         const analyticsData = getPredictiveAnalytics();
         if (mounted) {
           setData({
-            user: {
-              id: 'guest',
-              email: 'guest@example.com',
-              name: 'Guest User',
-              company: 'Demo Co',
-              role: 'inventory',
-              loginTime: new Date(),
-            },
+            user: { id: 'guest', email: 'guest@example.com', name: 'Guest User', company: 'Demo Co', role: 'inventory', loginTime: new Date() },
             predictiveAnalytics: analyticsData,
             prescriptiveDecisions: [],
             profitLeakage: [],
@@ -63,9 +58,7 @@ export function useDashboardData() {
     }
 
     load();
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, []);
 
   return { data, overview, ownerAnalytics, loading };

@@ -193,6 +193,7 @@ export function ManageSuppliers() {
 
   // Server-side filtering, so no client-side filtering needed
   const filtered = suppliers;
+  const paginatedSuppliers = filtered;
 
   const totalPages = supplierList?.meta?.last_page ?? 1;
   const totalItems = supplierList?.meta?.total ?? 0;

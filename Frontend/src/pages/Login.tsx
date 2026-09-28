@@ -2,8 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth, type UserRole } from '../hooks/useAuth';
 
-import { useEffect } from 'react';
-
 export function Login() {
   const navigate = useNavigate();
   const { login, user } = useAuth();
@@ -12,12 +10,6 @@ export function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
-
-  useEffect(() => {
-    if (user) {
-      navigate(user.role === 'cashier' ? '/cashier/pos' : '/dashboard', { replace: true });
-    }
-  }, [user, navigate]);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -41,7 +33,7 @@ export function Login() {
 
   return (
     <div className="min-h-full flex flex-col lg:flex-row bg-slate-50 dark:bg-slate-950">
-      <style jsx>{`
+      <style>{`
         .bg-grid-pattern {
           background-image: radial-gradient(rgba(16, 185, 129, 0.08) 1px, transparent 1px);
           background-size: 24px 24px;

@@ -6,6 +6,7 @@ import { AuthLayout } from "./components/layout/AuthLayout";
 import { DashboardLayout } from "./components/layout/DashboardLayout";
 import { CashierLayout } from "./components/layout/CashierLayout";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
+import { DashboardRedirect } from "./components/auth/DashboardRedirect";
 import { PageLoader } from "./components/ui/PageLoader";
 import PrivacyBanner from "./components/ui/PrivacyBanner";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
@@ -94,11 +95,16 @@ export const router = createBrowserRouter([
       },
 
       // ── Authenticated dashboard (always shows sidebar) ──
-      {
-          Component: DashboardLayout,
-          children: [
-              // Dashboard overview — accessible to all authenticated users
-              { path: "dashboard", Component: Dashboard },
+{
+            Component: DashboardLayout,
+            children: [
+                // Dashboard overview — redirect based on role
+                {
+                  element: <ProtectedRoute allowedRoles={['owner', 'inventory', 'cashier']} />,
+                  children: [
+                    { path: "dashboard", Component: DashboardRedirect },
+                  ],
+                },
               { path: "dashboard/inventory", Component: InventoryDashboard },
               { path: "dashboard/predictive", Component: PredictiveAnalyticsPage },
               { path: "dashboard/leakage", Component: LeakageDetectionPage },

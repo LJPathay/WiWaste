@@ -56,6 +56,7 @@ export function ManageUsers() {
 
   // Server-side filtering, so no client-side filtering needed
   const filteredUsers: ApiUser[] = users;
+  const paginatedUsers = filteredUsers;
 
   const totalPages = userList?.meta?.last_page ?? 1;
   const totalItems = userList?.meta?.total ?? 0;
@@ -300,8 +301,8 @@ export function ManageUsers() {
     </div>
   );
 
-  if (error) {
-    const errorCode = error.match(/\((\d+)\)/)?.[1] || 'Unknown';
+  if (apiError) {
+    const errorCode = apiError.message.match(/\((\d+)\)/)?.[1] || 'Unknown';
     return (
       <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800/40 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">

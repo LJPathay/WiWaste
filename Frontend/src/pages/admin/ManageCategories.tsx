@@ -198,6 +198,7 @@ export function ManageCategories() {
   const startIndex = categoryList?.meta ? ((categoryList.meta.current_page - 1) * categoryList.meta.per_page) + 1 : 0;
   const endIndex = categoryList?.meta ? Math.min(categoryList.meta.current_page * categoryList.meta.per_page, categoryList.meta.total) : 0;
 
+  const paginatedCategories = filteredCategories;
   const isAllSelected = paginatedCategories.length > 0 && paginatedCategories.every(c => selectedIds.includes(c.id));
 
   const toggleSelectAll = () => {

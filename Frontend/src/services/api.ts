@@ -95,6 +95,7 @@ function getToken(): string | null {
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
+  console.debug('[API] Request:', path, 'Token:', token?.substring(0, 20) + '...');
   const res = await fetch(`${BASE_URL}${path}`, {
     ...options,
     headers: {
@@ -104,12 +105,15 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
       ...((options.headers as Record<string, string>) ?? {}),
     },
   });
+  console.debug('[API] Response:', path, 'Status:', res.status);
   if (!res.ok) {
     if (res.status === 401) {
       localStorage.removeItem('wiwaste_token');
       localStorage.removeItem('wiwaste_user');
       localStorage.removeItem('wiwaste-session');
-      window.location.href = '/login';
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
       throw new Error('Session expired. Please log in again.');
     }
     const err = await res.json().catch(() => ({ message: 'Unknown error' }));

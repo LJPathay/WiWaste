@@ -30,8 +30,8 @@ import {
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { useDashboardData } from '../../hooks/useDashboardData';
 import { useKpiHighlight } from '../../hooks/useKpiHighlight';
-import { ChartGradients, ChartTooltipStyle } from '../../components/charts/ChartGradients';
-import { CHART_DEFAULTS, CHART_COLORS, useReducedMotion } from '../../components/charts/ChartConfig';
+import { ChartGradients } from '../../components/charts/ChartGradients';
+import { CHART_DEFAULTS, CHART_COLORS, CHART_TOOLTIP_STYLE, useChartAnimation, useReducedMotion } from '../../components/charts/ChartConfig';
 
 const currencyFormatter = new Intl.NumberFormat('en-PH', {
   style: 'currency',
@@ -48,6 +48,9 @@ export function DashboardOverview() {
   const highlightedKpi = useKpiHighlight(5000);
   const [salesPeriod, setSalesPeriod] = useState('30');
   const [leakageViewMode, setLeakageViewMode] = useState<'value' | 'quantity' | 'percentage'>('value');
+
+  // Debug: log what we got
+  console.debug('[DashboardOverview] loading:', loading, 'overview:', overview, 'data:', data, 'ownerAnalytics:', ownerAnalytics);
 
   const activeKpi = clickedKpi ?? highlightedKpi;
   const { isAnimationActive, animationDuration, animationEasing } = useChartAnimation();

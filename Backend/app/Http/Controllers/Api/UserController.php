@@ -9,21 +9,55 @@ use Illuminate\Http\Request;
 
 class UserController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return response()->json(User::all()->map(fn ($u) => [
-            'id'             => $u->User_id,
-            'name'           => $u->full_name,
-            'first_name'     => $u->first_name,
-            'middle_name'    => $u->middle_name,
-            'surname'        => $u->surname,
-            'contact_number' => $u->contact_number,
-            'username'       => $u->username,
-            'email'          => $u->email,
-            'role'           => $u->role,
-            'status'         => $u->status,
-            'created_at'     => $u->Created_at,
-        ]));
+        $perPage = min((int) $request->get('per_page', 15), 100);
+        $page = (int) $request->get('page', 1);
+
+        $query = User::query();
+
+        // Allow filtering
+        if ($request->has('search')) {
+            $search = $request->get('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('username', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('first_name', 'like', "%{$search}%")
+                  ->orWhere('surname', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->has('role')) {
+            $query->where('role', $request->get('role'));
+        }
+
+        if ($request->has('status')) {
+            $query->where('status', $request->get('status'));
+        }
+
+        $paginated = $query->paginate($perPage, ['*'], 'page', $page);
+
+        return response()->json([
+            'data' => $paginated->items()->map(fn ($u) => [
+                'id'             => $u->User_id,
+                'name'           => $u->full_name,
+                'first_name'     => $u->first_name,
+                'middle_name'    => $u->middle_name,
+                'surname'        => $u->surname,
+                'contact_number' => $u->contact_number,
+                'username'       => $u->username,
+                'email'          => $u->email,
+                'role'           => $u->role,
+                'status'         => $u->status,
+                'created_at'     => $u->Created_at,
+            ]),
+            'meta' => [
+                'current_page' => $paginated->currentPage(),
+                'last_page'    => $paginated->lastPage(),
+                'per_page'     => $paginated->perPage(),
+                'total'        => $paginated->total(),
+            ],
+        ]);
     }
 
     public function store(Request $request)

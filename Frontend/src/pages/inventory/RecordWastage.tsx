@@ -38,7 +38,7 @@ export function RecordWastage() {
   const [submitting, setSubmitting] = useState(false);
   const [confirmData, setConfirmData] = useState<{ productId?: number; name: string; qty: number; unitCost: number; totalCost: number; reason: string } | null>(null);
 
-  const catalogOptions = (apiProducts ?? []).map(p => ({ id: p.id, name: p.name, sku: p.sku, cost: p.cost_price }));
+  const catalogOptions = (apiProducts?.data ?? []).map(p => ({ id: p.id, name: p.name, sku: p.sku, cost: p.cost_price }));
 
   const records = useMemo(() => (wastageRecords ?? []).map(r => ({
     id: String(r.id),

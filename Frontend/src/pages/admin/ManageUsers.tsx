@@ -5,10 +5,12 @@ import {
   UserX, Eye, EyeOff, ChevronDown, Check, Lock
 } from 'lucide-react';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
-import { useOptimisticList } from '../../hooks/useOptimisticList';
-import { users as usersApi, type ApiUser, type CreateUserPayload } from '../../services/api';
+import { Tutorial } from '../../components/ui/Tutorial';
+import { useApi } from '../../hooks/useApi';
+import { users as usersApi, type ApiUser, type CreateUserPayload, type PaginatedUsersResponse } from '../../services/api';
 import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
 import { Pagination } from '../../components/ui/pagination';
+import { Toast, useToast } from '../../components/ui/Toast';
 import {
   ITEMS_PER_PAGE, ROLE_CONFIG, maskEmail, EMPTY_FORM,
   DEFAULT_PASSWORD, generateUsername, generateEmail,
@@ -16,13 +18,18 @@ import {
 } from './UserConstants';
 
 export function ManageUsers() {
-  const { data: userList, loading, error, addItem, updateItem, refetch } = useOptimisticList(usersApi.list);
+  const { toasts, dismiss, error: showError, success: showSuccess } = useToast();
   const [statusFilter, setStatusFilter] = useState<'all' | 'Archived'>('all');
   const [roleFilter, setRoleFilter] = useState<'all' | 'Owner' | 'Inventory' | 'Cashier'>('all');
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [unmaskedEmailIds, setUnmaskedEmailIds] = useState<Set<number>>(new Set());
   const [isAllEmailsUnmasked, setIsAllEmailsUnmasked] = useState(false);
+
+  const { data: userList, loading, error: apiError, refetch } = useApi<PaginatedUsersResponse>(
+    () => usersApi.list(currentPage, ITEMS_PER_PAGE, search, roleFilter === 'all' ? '' : roleFilter, statusFilter === 'all' ? '' : statusFilter),
+    { dedupeKey: `users-${currentPage}-${search}-${roleFilter}-${statusFilter}` }
+  );
 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -42,26 +49,18 @@ export function ManageUsers() {
 
   const [full_name, setFullName] = useState('');
 
-  const users: ApiUser[] = Array.isArray(userList) ? userList : [];
+  const users: ApiUser[] = userList?.data ?? [];
 
   const autoUsername = useMemo(() => generateUsername(full_name ?? ''), [full_name]);
   const autoEmail = useMemo(() => generateEmail(full_name ?? ''), [full_name]);
 
-  const filteredUsers: ApiUser[] = (users ?? []).filter(u => {
-    const matchesStatus = statusFilter === 'Archived'
-      ? u.status === 'Archived'
-      : u.status !== 'Archived';
-    const matchesRole = roleFilter === 'all' || u.role === roleFilter;
-    const matchesSearch = (u.name?.toLowerCase() ?? '').includes(search.toLowerCase()) ||
-                          (u.username?.toLowerCase() ?? '').includes(search.toLowerCase()) ||
-                          (u.email?.toLowerCase() ?? '').includes(search.toLowerCase());
-    return matchesStatus && matchesRole && matchesSearch;
-  });
+  // Server-side filtering, so no client-side filtering needed
+  const filteredUsers: ApiUser[] = users;
 
-  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / ITEMS_PER_PAGE));
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, filteredUsers.length);
-  const paginatedUsers = filteredUsers.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  const totalPages = userList?.meta?.last_page ?? 1;
+  const totalItems = userList?.meta?.total ?? 0;
+  const startIndex = userList?.meta ? ((userList.meta.current_page - 1) * userList.meta.per_page) + 1 : 0;
+  const endIndex = userList?.meta ? Math.min(userList.meta.current_page * userList.meta.per_page, userList.meta.total) : 0;
 
   const isDuplicateName = Boolean(
     full_name.trim() &&
@@ -117,10 +116,9 @@ export function ManageUsers() {
         role: form.role,
         status: 'Active',
       };
-      const created = await usersApi.create(payload) as ApiUser;
+      await usersApi.create(payload);
       resetForm();
       setIsAddOpen(false);
-      addItem(created);
       await refetch();
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to add user');
@@ -143,8 +141,7 @@ export function ManageUsers() {
         contact_number: form.contact_number,
         role: form.role,
       };
-      const updated = await usersApi.update(editingUser.id, payload) as ApiUser;
-      updateItem(editingUser.id, updated);
+      await usersApi.update(editingUser.id, payload);
       setIsEditOpen(false);
       await refetch();
     } catch (err) {
@@ -159,11 +156,10 @@ export function ManageUsers() {
     setSubmitting(true);
     try {
       await usersApi.archive(archiveModalUser.id);
-      updateItem(archiveModalUser.id, { ...archiveModalUser, status: 'Archived' });
       setArchiveModalUser(null);
       await refetch();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to archive user');
+      console.error('Failed to archive user:', err);
     } finally {
       setSubmitting(false);
     }
@@ -355,10 +351,10 @@ export function ManageUsers() {
               {filteredUsers.length === 0 ? (
                 <span>No users match your filters</span>
               ) : (
-                <span>Showing <strong className="font-semibold text-slate-700 dark:text-slate-200">{startIndex + 1}</strong> to <strong className="font-semibold text-slate-700 dark:text-slate-200">{endIndex}</strong> of <strong className="font-semibold text-slate-700 dark:text-slate-200">{filteredUsers.length}</strong> Users</span>
+                <span>Showing <strong className="font-semibold text-slate-700 dark:text-slate-200">{startIndex}</strong> to <strong className="font-semibold text-slate-700 dark:text-slate-200">{endIndex}</strong> of <strong className="font-semibold text-slate-700 dark:text-slate-200">{totalItems}</strong> Users</span>
               )}
             </div>
-            <Pagination page={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} totalItems={filteredUsers.length} perPage={ITEMS_PER_PAGE} label="Users" />
+            <Pagination page={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} totalItems={totalItems} perPage={ITEMS_PER_PAGE} label="Users" />
           </div>
         }
         className="border-0"

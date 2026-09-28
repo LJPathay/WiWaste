@@ -130,8 +130,26 @@ export const auth = {
 };
 
 // ─── Users ──────────────────────────────────────────────
+export interface PaginatedUsersResponse {
+  data: ApiUser[];
+  meta: {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+  };
+}
+
 export const users = {
-  list: (page = 1) => request<ApiUser[]>(`/users?page=${page}`),
+  list: (page = 1, perPage = 15, search = '', role = '', status = '') => {
+    const params = new URLSearchParams();
+    params.set('page', page.toString());
+    params.set('per_page', perPage.toString());
+    if (search) params.set('search', search);
+    if (role) params.set('role', role);
+    if (status) params.set('status', status);
+    return request<PaginatedUsersResponse>(`/users?${params.toString()}`);
+  },
   create: (data: CreateUserPayload) =>
     request('/users', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: number, data: Partial<CreateUserPayload>) =>

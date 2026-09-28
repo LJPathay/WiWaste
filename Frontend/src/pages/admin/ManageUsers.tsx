@@ -66,7 +66,7 @@ export function ManageUsers() {
   const isDuplicateName = Boolean(
     full_name.trim() &&
     users.some(u =>
-      u.name.trim().toLowerCase() === full_name.trim().toLowerCase() &&
+      (u.name?.trim()?.toLowerCase() ?? '') === full_name.trim().toLowerCase() &&
       (!editingUser || u.id !== editingUser.id)
     )
   );
@@ -82,6 +82,7 @@ export function ManageUsers() {
   };
 
   function splitName(full: string): { first_name: string; middle_name: string; surname: string } {
+    if (!full?.trim()) return { first_name: '', middle_name: '', surname: '' };
     const parts = full.trim().split(/\s+/);
     if (parts.length === 1) return { first_name: parts[0], middle_name: '', surname: '' };
     if (parts.length === 2) return { first_name: parts[0], middle_name: '', surname: parts[1] };

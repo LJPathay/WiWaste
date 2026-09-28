@@ -51,6 +51,7 @@ export const EMPTY_FORM: UserForm = {
 export const DEFAULT_PASSWORD = 'WiWaste123!';
 
 export function generateUsername(fullName: string): string {
+  if (!fullName?.trim()) return '';
   return fullName
     .toLowerCase()
     .replace(/[^a-z\s]/g, '')

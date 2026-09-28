@@ -244,32 +244,32 @@ export function ManageUsers() {
       key: 'actions', header: '', align: 'center', minWidth: '80px', pinned: true,
       render: (row) => (
         <div className="flex items-center justify-center gap-1">
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); setViewingUser(row); }}
-            className="h-7 w-7 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-[#006a61] hover:text-white transition-all inline-flex items-center justify-center"
-            title="View Details"
-          >
-            <Eye className="h-3.5 w-3.5" />
-          </button>
           {row.status !== 'Archived' && (
             <>
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); const u = row; setViewingUser(null); setTimeout(() => openEdit(u), 0); }}
-                className="h-7 w-7 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-emerald-600 hover:text-white transition-all inline-flex items-center justify-center"
-                title="Edit"
-              >
-                <Edit2 className="h-3.5 w-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); setArchiveModalUser(row); }}
-                className="h-7 w-7 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-rose-600 hover:text-white transition-all inline-flex items-center justify-center"
-                title="Archive"
-              >
-                <UserX className="h-3.5 w-3.5" />
-              </button>
+              <UITooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); const u = row; setViewingUser(null); setTimeout(() => openEdit(u), 0); }}
+                    className="h-7 w-7 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-emerald-600 hover:text-white transition-all inline-flex items-center justify-center"
+                  >
+                    <Edit2 className="h-3.5 w-3.5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900">Edit user</TooltipContent>
+              </UITooltip>
+              <UITooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setArchiveModalUser(row); }}
+                    className="h-7 w-7 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-rose-600 hover:text-white transition-all inline-flex items-center justify-center"
+                  >
+                    <UserX className="h-3.5 w-3.5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900">Archive user</TooltipContent>
+              </UITooltip>
             </>
           )}
         </div>

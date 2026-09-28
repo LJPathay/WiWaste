@@ -27,9 +27,12 @@ export const ROLE_CONFIG = {
 } as const;
 
 export const maskEmail = (email: string) => {
-  if (!email?.includes('@')) return email;
-  const [name, domain] = email.split('@');
-  if (name?.length <= 2) {
+  if (!email?.includes('@')) return email ?? '';
+  const parts = email.split('@');
+  if (parts.length !== 2) return email;
+  const [name, domain] = parts;
+  if (!name?.length) return email;
+  if (name.length <= 2) {
     return `${name[0]}*@${domain}`;
   }
   const maskedName = `${name[0]}${'*'.repeat(Math.min(name.length - 2, 5))}${name.at(-1)}`;

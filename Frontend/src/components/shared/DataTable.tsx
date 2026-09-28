@@ -83,7 +83,7 @@ export function DataTable<T extends Record<string, unknown>>({
   const [hoveredRow, setHoveredRow] = useState<string | number | null>(null);
   const tableRef = useRef<HTMLTableElement>(null);
 
-  const allKeys = data.map(rowKey);
+  const allKeys = (data ?? []).map(rowKey);
   const allSelected = allKeys.length > 0 && allKeys.every(k => selectedKeys.has(k));
   const someSelected = allKeys.some(k => selectedKeys.has(k)) && !allSelected;
 
@@ -165,10 +165,10 @@ export function DataTable<T extends Record<string, unknown>>({
             </TableHeader>
           )}
           <TableBody>
-            {data.length === 0 ? (
+            {(!data?.length) ? (
               <TableRow className="hover:bg-transparent">
                 <TableCell
-                  colSpan={columns.length + (selectable ? 1 : 0) + (actions ? 1 : 0)}
+                  colSpan={(columns?.length ?? 0) + (selectable ? 1 : 0) + (actions ? 1 : 0)}
                   className="text-center py-12"
                 >
                   {emptyState ?? (

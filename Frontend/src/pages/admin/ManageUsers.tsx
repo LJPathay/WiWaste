@@ -75,7 +75,17 @@ export function ManageUsers() {
   const passwordValid = isPasswordValid(form.password);
 
   const resetForm = () => {
-    setForm(EMPTY_FORM);
+    setForm({
+      first_name: '',
+      middle_name: '',
+      surname: '',
+      contact_number: '',
+      username: '',
+      password: '',
+      email: '',
+      role: 'Inventory',
+      status: 'Active',
+    });
     setFullName('');
     setFormError('');
     setRoleDropdownOpen(false);

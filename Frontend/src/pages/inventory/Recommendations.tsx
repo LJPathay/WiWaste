@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { recommendation as recommendationApi, type ApiRecommendation } from "../../services/api";
 import { Info, Search, CheckCircle, TrendingDown, Clock, ChevronRight, X, Check } from 'lucide-react';
 import { Toast, useToast, ConfirmDialog, Modal } from '../../components/ui/Toast';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
@@ -6,30 +7,6 @@ import { DataTable, type DataTableColumn } from '../../components/shared/DataTab
 import { ActionButton } from '../../components/shared/DataTableActions';
 import { Pagination } from '../../components/ui/pagination';
 
-type MockRecommendation = {
-  recommendation_id: number;
-  product_name: string;
-  sku: string;
-  category: string;
-  current_stock: number;
-  recommended_stock: number;
-  confidence_score: number;
-  recommendation_type: string;
-  status: string;
-  rejection_reason?: string;
-  reviewed_by?: string;
-};
-
-const MOCK_RECS: MockRecommendation[] = [
-  { recommendation_id: 1, product_name: 'Lucky Me! Pancit Canton (Caldereta)', sku: 'LMPC-001', category: 'Instant Noodles', current_stock: 8, recommended_stock: 120, confidence_score: 0.94, recommendation_type: 'Restock', status: 'pending' },
-  { recommendation_id: 2, product_name: 'Nestle All Purpose Cream 250ml', sku: 'NAP-250', category: 'Dairy', current_stock: 4, recommended_stock: 80, confidence_score: 0.91, recommendation_type: 'Restock', status: 'pending' },
-  { recommendation_id: 3, product_name: 'Mega Sardines Tomato 155g', sku: 'MST-155', category: 'Canned Goods', current_stock: 200, recommended_stock: 50, confidence_score: 0.87, recommendation_type: 'Reduce Stock', status: 'pending' },
-  { recommendation_id: 4, product_name: 'Coke 1.5L', sku: 'COKE-15', category: 'Beverages', current_stock: 45, recommended_stock: 45, confidence_score: 0.82, recommendation_type: 'Maintain', status: 'approved', reviewed_by: 'Inventory Staff' },
-  { recommendation_id: 5, product_name: 'Gardenia Whole Wheat Bread', sku: 'GWW-400', category: 'Bakery', current_stock: 3, recommended_stock: 60, confidence_score: 0.93, recommendation_type: 'Restock', status: 'pending' },
-  { recommendation_id: 6, product_name: 'Del Monte Pineapple Tidbits', sku: 'DMP-432', category: 'Canned Goods', current_stock: 150, recommended_stock: 30, confidence_score: 0.78, recommendation_type: 'Reduce Stock', status: 'rejected', rejection_reason: 'Stock level is sufficient for current demand.', reviewed_by: 'Senior Inventory Staff' },
-  { recommendation_id: 7, product_name: 'Bear Brand Powdered Milk 900g', sku: 'BBP-900', category: 'Dairy', current_stock: 18, recommended_stock: 90, confidence_score: 0.88, recommendation_type: 'Restock', status: 'pending' },
-  { recommendation_id: 8, product_name: 'Palmolive Shampoo 200ml', sku: 'PLM-200', category: 'Personal Care', current_stock: 12, recommended_stock: 70, confidence_score: 0.85, recommendation_type: 'Restock', status: 'pending' },
-];
 
 function getTypeLabel(type: string): { label: string; cls: string } {
   if (type === 'Restock') return { label: 'Restock', cls: 'bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800' };
@@ -51,9 +28,20 @@ const WORKFLOW_STEPS = [
   { label: 'Promo Activated', active: false },
 ];
 
+const loadRecommendations = async () => {
+    try {
+      const data = await recommendationApi.list();
+      setRecommendations(data.data);
+    } catch (error) {
+      console.error("Failed to load recommendations:", error);
+      // Keep empty array if API fails
+      setRecommendations([]);
+    }
+  };
+
 const PAGE_SIZE = 5;
 
-const columns: DataTableColumn<MockRecommendation>[] = [
+const columns: DataTableColumn<ApiRecommendation>[] = [
   {
     key: 'product_name',
     header: 'Product',
@@ -126,18 +114,21 @@ const columns: DataTableColumn<MockRecommendation>[] = [
 export function Recommendations() {
   const { toasts, dismiss, success } = useToast();
 
-  const [mockRecs, setMockRecs] = useState<MockRecommendation[]>(MOCK_RECS);
+  const [recommendations, setRecommendations] = useState<ApiRecommendation[]>([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [selectedRec, setSelectedRec] = useState<MockRecommendation | null>(null);
+  const [selectedRec, setSelectedRec] = useState<ApiRecommendation | null>(null);
   const [rejectingId, setRejectingId] = useState<number | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [confirmApprove, setConfirmApprove] = useState<number | null>(null);
   const [processing, setProcessing] = useState(false);
   const [page, setPage] = useState(1);
 
+useEffect(() => {
+    loadRecommendations();
+  }, []);
   const filtered = useMemo(() => {
-    let list = mockRecs;
+    let list = recommendations;
     if (search) {
       const q = search.toLowerCase();
       list = list.filter(r =>
@@ -149,20 +140,20 @@ export function Recommendations() {
       list = list.filter(r => r.status === statusFilter);
     }
     return list;
-  }, [mockRecs, search, statusFilter]);
+  }, [recommendations, search, statusFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const pendingCount = mockRecs.filter(r => r.status === 'pending').length;
-  const approvedCount = mockRecs.filter(r => r.status === 'approved').length;
-  const rejectedCount = mockRecs.filter(r => r.status === 'rejected').length;
+  const pendingCount = recommendations.filter(r => r.status === 'pending').length;
+  const approvedCount = recommendations.filter(r => r.status === 'approved').length;
+  const rejectedCount = recommendations.filter(r => r.status === 'rejected').length;
 
   const handleApprove = async () => {
     if (confirmApprove === null) return;
     setProcessing(true);
     await new Promise(r => setTimeout(r, 600));
-    setMockRecs(prev => prev.map(r =>
+    setRecommendations(prev => prev.map(r =>
       r.recommendation_id === confirmApprove
         ? { ...r, status: 'approved', reviewed_by: 'Inventory Staff' }
         : r
@@ -177,7 +168,7 @@ export function Recommendations() {
     if (rejectingId === null || !rejectReason.trim()) return;
     setProcessing(true);
     await new Promise(r => setTimeout(r, 600));
-    setMockRecs(prev => prev.map(r =>
+    setRecommendations(prev => prev.map(r =>
       r.recommendation_id === rejectingId
         ? { ...r, status: 'rejected', rejection_reason: rejectReason.trim(), reviewed_by: 'Inventory Staff' }
         : r

@@ -12,7 +12,14 @@ export function useOptimisticList<T extends { id: number }>(
     setError(null);
     try {
       const result = await fetcher();
-      const items = Array.isArray(result) ? result : result.data;
+      // Ensure we always have an array, even if the API returns unexpected data
+      let items: T[] = [];
+      if (Array.isArray(result)) {
+        items = result;
+      } else if (result && typeof result === 'object' && Array.isArray(result.data)) {
+        items = result.data;
+      }
+      // items is guaranteed to be an array
       setData(items);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
@@ -24,17 +31,34 @@ export function useOptimisticList<T extends { id: number }>(
   useEffect(() => { fetch(); }, [fetch]);
 
   const addItem = useCallback((item: T) => {
-    setData(prev => prev ? [...prev, item] : [item]);
+    setData(prev => {
+      // Ensure prev is an array before attempting to spread it
+      if (Array.isArray(prev)) {
+        return [...prev, item];
+      }
+      // If prev is not an array, treat it as empty and return a new array with just the item
+      return [item];
+    });
   }, []);
 
   const updateItem = useCallback((id: number, updates: Partial<T>) => {
-    setData(prev =>
-      prev ? prev.map(item => item.id === id ? { ...item, ...updates } : item) : prev
-    );
+    setData(prev => {
+      // If prev is null or not an array, return it as-is (nothing to update)
+      if (!prev || !Array.isArray(prev)) {
+        return prev;
+      }
+      return prev.map(item => item.id === id ? { ...item, ...updates } : item);
+    });
   }, []);
 
   const removeItem = useCallback((id: number) => {
-    setData(prev => prev ? prev.filter(item => item.id !== id) : prev);
+    setData(prev => {
+      // If prev is null or not an array, return it as-is (nothing to remove)
+      if (!prev || !Array.isArray(prev)) {
+        return prev;
+      }
+      return prev.filter(item => item.id !== id);
+    });
   }, []);
 
   return { data, loading, error, refetch: fetch, addItem, updateItem, removeItem, setData };

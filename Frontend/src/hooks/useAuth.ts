@@ -18,11 +18,10 @@ export interface AuthUser {
 }
 
 const STORAGE_KEY_USER = 'wiwaste_user';
-const STORAGE_KEY_TOKEN = 'wiwaste_token';
 
 function getStoredUser(): AuthUser | null {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY_USER);
+    const raw = localStorage.getItem('wiwaste_user');
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!parsed?.role) return null;
@@ -32,33 +31,13 @@ function getStoredUser(): AuthUser | null {
   }
 }
 
-function getStoredToken(): string | null {
-  return localStorage.getItem(STORAGE_KEY_TOKEN);
-}
-
 export function useAuth() {
   const [user, setUser] = useState<AuthUser | null>(getStoredUser);
   const [loading, setLoading] = useState(true);
-  const tokenRef = useRef<string | null>(getStoredToken());
   const mountedRef = useRef(true);
 
-  // Only verify token with /me when token changes, not on every mount
+  // Verify token with /me on mount and when refetch is called
   const verifyToken = useCallback(async () => {
-    const token = getStoredToken();
-    if (!token) {
-      setUser(null);
-      setLoading(false);
-      return;
-    }
-
-    // Skip if same token and user already loaded
-    if (tokenRef.current === token && user) {
-      setLoading(false);
-      return;
-    }
-
-    tokenRef.current = token;
-
     try {
       const apiUser = await auth.me();
       const mapped: AuthUser = {
@@ -70,13 +49,12 @@ export function useAuth() {
       };
       if (mountedRef.current) {
         setUser(mapped);
-        localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(mapped));
+        localStorage.setItem('wiwaste_user', JSON.stringify(mapped));
       }
     } catch {
       if (mountedRef.current) {
         setUser(null);
-        localStorage.removeItem(STORAGE_KEY_TOKEN);
-        localStorage.removeItem(STORAGE_KEY_USER);
+        localStorage.removeItem('wiwaste_user');
       }
     } finally {
       if (mountedRef.current) setLoading(false);
@@ -91,13 +69,14 @@ export function useAuth() {
 
   const login = useCallback(async (username: string, password: string) => {
     const result = await auth.login(username, password);
-    localStorage.setItem(STORAGE_KEY_TOKEN, result.token);
+    // Backend now returns { access_token, user } in data
+    const accessToken = result.data.access_token;
     const mapped: AuthUser = {
-      id: result.user.id,
-      email: result.user.email,
-      name: result.user.name,
-      role: mapRole(result.user.role),
-      apiRole: result.user.role,
+      id: result.data.user.id,
+      email: result.data.user.email,
+      name: result.data.user.name,
+      role: mapRole(result.data.user.role),
+      apiRole: result.data.user.role,
     };
     setUser(mapped);
     localStorage.setItem('wiwaste_user', JSON.stringify(mapped));
@@ -106,8 +85,7 @@ export function useAuth() {
 
   const logout = useCallback(async () => {
     try { await auth.logout(); } catch { /* ignore */ }
-    localStorage.removeItem(STORAGE_KEY_TOKEN);
-    localStorage.removeItem(STORAGE_KEY_USER);
+    localStorage.removeItem('wiwaste_user');
     setUser(null);
   }, []);
 

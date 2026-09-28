@@ -87,7 +87,7 @@ export type {
   ApiRetentionSummary,
 } from '../types/api';
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api';
+const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api/v1';
 
 function getToken(): string | null {
   return localStorage.getItem('wiwaste_token');
@@ -119,14 +119,20 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 }
 
 // ─── Auth ───────────────────────────────────────────────
+export interface LoginResponse {
+  access_token: string;
+  user: ApiUser;
+}
+
 export const auth = {
   login: (username: string, password: string) =>
-    request<{ token: string; user: ApiUser }>('/login', {
+    request<{ data: LoginResponse }>('/login', {
       method: 'POST',
       body: JSON.stringify({ username, password }),
     }),
   logout: () => request('/logout', { method: 'POST' }),
   me: () => request<ApiUser>('/me'),
+  refresh: () => request('/refresh', { method: 'POST' }),
 };
 
 // ─── Users ──────────────────────────────────────────────

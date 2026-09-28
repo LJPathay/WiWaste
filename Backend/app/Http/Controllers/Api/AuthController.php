@@ -2,14 +2,13 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\LoginAttemptService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
-class AuthController extends Controller
+class AuthController extends BaseApiController
 {
     protected LoginAttemptService $loginAttemptService;
 
@@ -32,9 +31,7 @@ class AuthController extends Controller
         // Check if account is locked
         if ($this->loginAttemptService->isLocked($identifier)) {
             $remainingMinutes = $this->loginAttemptService->getRemainingLockoutMinutes($identifier);
-            return response()->json([
-                'message' => "Account locked due to too many failed attempts. Try again in {$remainingMinutes} minutes.",
-            ], 429);
+            return $this->tooManyRequests("Account locked due to too many failed attempts. Try again in {$remainingMinutes} minutes.");
         }
 
         $user = User::where('username', $identifier)
@@ -48,24 +45,22 @@ class AuthController extends Controller
             // Re-check if now locked after this attempt
             if ($this->loginAttemptService->isLocked($identifier)) {
                 $remainingMinutes = $this->loginAttemptService->getRemainingLockoutMinutes($identifier);
-                return response()->json([
-                    'message' => "Account locked due to too many failed attempts. Try again in {$remainingMinutes} minutes.",
-                ], 429);
+                return $this->tooManyRequests("Account locked due to too many failed attempts. Try again in {$remainingMinutes} minutes.");
             }
 
             throw ValidationException::withMessages(['username' => ['Invalid credentials.']]);
         }
 
         if ($user->status === 'Inactive') {
-            return response()->json(['message' => 'Your account has been deactivated.'], 403);
+            return $this->forbidden('Your account has been deactivated.');
         }
 
         if ($user->status === 'Quarantined') {
-            return response()->json(['message' => 'Your account has been quarantined. Contact an administrator.'], 403);
+            return $this->forbidden('Your account has been quarantined. Contact an administrator.');
         }
 
         if ($user->status === 'Archived') {
-            return response()->json(['message' => 'Your account has been archived.'], 403);
+            return $this->forbidden('Your account has been archived.');
         }
 
         // Clear failed attempts on successful login
@@ -74,31 +69,44 @@ class AuthController extends Controller
         // Record successful login
         $this->loginAttemptService->recordSuccessfulAttempt($user, $ip, $userAgent);
 
-        $token = $user->createToken('wiwaste-token')->plainTextToken;
+        // Create access token (short-lived: 15 minutes)
+        $accessToken = $user->createToken('wiwaste-access', ['access'], now()->addMinutes(15))->plainTextToken;
 
-        return response()->json([
-            'token' => $token,
-            'user'  => [
-                'id'       => $user->User_id,
-                'name'     => $user->full_name,
-                'username' => $user->username,
-                'email'    => $user->email,
-                'role'     => $user->role,
-                'status'   => $user->status,
-            ],
-        ]);
+        // Create refresh token (long-lived: 7 days)
+        $refreshToken = $user->createToken('wiwaste-refresh', ['refresh'], now()->addDays(7))->plainTextToken;
+
+        $userData = [
+            'id'       => $user->User_id,
+            'name'     => $user->full_name,
+            'username' => $user->username,
+            'email'    => $user->email,
+            'role'     => $user->role,
+            'status'   => $user->status,
+        ];
+
+        // Set refresh token as HttpOnly cookie (secure, same-site)
+        $cookie = cookie('refresh_token', $refreshToken, 10080, '/', null, true, true, false, 'lax'); // 7 days = 10080 minutes
+
+        return $this->created([
+            'access_token' => $accessToken,
+            'user'         => $userData,
+        ], 'Login successful')->withCookie($cookie);
     }
 
     public function logout(Request $request)
     {
         $request->user()->currentAccessToken()->delete();
-        return response()->json(['message' => 'Logged out successfully.']);
+        
+        // Clear refresh token cookie
+        $cookie = cookie('refresh_token', '', -1, '/', null, true, true, false, 'lax');
+
+        return $this->success(null, 'Logged out successfully.')->withCookie($cookie);
     }
 
     public function me(Request $request)
     {
         $user = $request->user();
-        return response()->json([
+        return $this->success([
             'id'       => $user->User_id,
             'name'     => $user->full_name,
             'username' => $user->username,
@@ -106,5 +114,45 @@ class AuthController extends Controller
             'role'     => $user->role,
             'status'   => $user->status,
         ]);
+    }
+
+    public function refresh(Request $request)
+    {
+        // Get refresh token from HttpOnly cookie
+        $refreshToken = $request->cookie('refresh_token');
+
+        if (! $refreshToken) {
+            return $this->unauthorized('Refresh token not found.');
+        }
+
+        // Find the token in database
+        $token = $request->user()->tokens()->where('token', hash('sha256', $refreshToken))->first();
+
+        if (! $token || ! $token->abilities->contains('refresh')) {
+            return $this->unauthorized('Invalid refresh token.');
+        }
+
+        // Check if refresh token is expired
+        if ($token->expires_at && $token->expires_at->isPast()) {
+            $token->delete();
+            return $this->unauthorized('Refresh token expired. Please log in again.');
+        }
+
+        $user = $request->user();
+
+        // Revoke old refresh token
+        $token->delete();
+
+        // Create new access token (15 minutes)
+        $accessToken = $request->user()->createToken('wiwaste-access', ['access'], now()->addMinutes(15))->plainTextToken;
+
+        // Create new refresh token (7 days)
+        $newRefreshToken = $request->user()->createToken('wiwaste-refresh', ['refresh'], now()->addDays(7))->plainTextToken;
+
+        $cookie = cookie('refresh_token', $newRefreshToken, 10080, '/', null, true, true, false, 'lax');
+
+        return $this->success([
+            'access_token' => $accessToken,
+        ], 'Token refreshed successfully')->withCookie($cookie);
     }
 }

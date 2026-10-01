@@ -4,14 +4,14 @@ import { useAuth } from '../../hooks/useAuth';
 import { PageLoader } from '../ui/PageLoader';
 
 export function DashboardRedirect() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (user) {
+    if (!loading && user) {
       navigate(user.role === 'cashier' ? '/cashier/pos' : '/dashboard', { replace: true });
     }
-  }, [user, navigate]);
+  }, [user, loading, navigate]);
 
   return <PageLoader />;
 }

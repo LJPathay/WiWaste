@@ -146,6 +146,7 @@ export function useAuth() {
     console.debug('[Auth] Login successful, mapped role:', mapped.role, 'from apiRole:', mapped.apiRole);
     setUser(mapped);
     localStorage.setItem('wiwaste_user', JSON.stringify(mapped));
+    setLoading(false);
     return mapped;
   }, []);
 

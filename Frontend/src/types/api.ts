@@ -258,6 +258,37 @@ export interface ApiWastageFlag {
   branch_id?: number;
 }
 
+// ─── Stock Counts ──────────────────────────────────────────
+export interface ApiStockCount {
+  id: number;
+  product_id: number;
+  product_name: string;
+  sku: string;
+  batch_id?: number | null;
+  batch_number?: string | null;
+  counted_by: string;
+  system_qty: number;
+  counted_qty: number;
+  variance: number;
+  notes?: string | null;
+  status: 'pending' | 'approved' | 'rejected';
+  created_at: string;
+  approved_by?: string | null;
+  approved_at?: string | null;
+  rejection_reason?: string | null;
+  business_id?: number;
+  branch_id?: number;
+}
+
+export interface CreateStockCountPayload {
+  business_id?: number;
+  branch_id?: number;
+  product_id: number;
+  batch_id?: number;
+  counted_qty: number;
+  notes?: string;
+}
+
 export interface CreateWastagePayload {
   business_id?: number;
   branch_id?: number;

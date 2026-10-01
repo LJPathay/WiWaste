@@ -78,6 +78,12 @@ Route::prefix('v1')->middleware([SecurityHeaders::class, ForceHttps::class, Rate
     Route::get('/inventory/near-expiry', [InventoryController::class, 'nearExpiry']);
     Route::get('/inventory/movements',   [InventoryController::class, 'allMovements']);
 
+    // Stock Counts (cycle count)
+    Route::get('/stock-counts',         [StockCountController::class, 'index']);
+    Route::post('/stock-counts',        [StockCountController::class, 'store']);
+    Route::post('/stock-counts/{id}/approve', [StockCountController::class, 'approve']);
+    Route::post('/stock-counts/{id}/reject',  [StockCountController::class, 'reject']);
+
     // Stock Receiving (PO-based receiving)
     Route::get('/stock-receiving',                       [StockReceivingController::class, 'index']);
     Route::post('/stock-receiving',                      [StockReceivingController::class, 'store']);
@@ -291,6 +297,12 @@ Route::middleware([SecurityHeaders::class, ForceHttps::class, RateLimitMiddlewar
     Route::post('/inventory/receive',    [InventoryController::class, 'receive']);
     Route::get('/inventory/near-expiry', [InventoryController::class, 'nearExpiry']);
     Route::get('/inventory/movements',   [InventoryController::class, 'allMovements']);
+
+    // Stock Counts (cycle count)
+    Route::get('/stock-counts',         [StockCountController::class, 'index']);
+    Route::post('/stock-counts',        [StockCountController::class, 'store']);
+    Route::post('/stock-counts/{id}/approve', [StockCountController::class, 'approve']);
+    Route::post('/stock-counts/{id}/reject',  [StockCountController::class, 'reject']);
 
     // Stock Receiving (PO-based receiving)
     Route::get('/stock-receiving',                       [StockReceivingController::class, 'index']);

@@ -19,7 +19,9 @@ export type {
   ApiStockMovement,
   ApiWastage,
   ApiWastageFlag,
+  ApiStockCount,
   CreateWastagePayload,
+  CreateStockCountPayload,
   ApiSalesTransaction,
   ApiSalesItem,
   CreateSalePayload,
@@ -311,6 +313,23 @@ export const wastageFlags = {
   confirm: (id: number) => request(`/wastage-flags/${id}/confirm`, { method: 'POST' }),
   reject: (id: number, rejection_reason: string) =>
     request(`/wastage-flags/${id}/reject`, { method: 'POST', body: JSON.stringify({ rejection_reason }) }),
+};
+
+// ─── Stock Counts ──────────────────────────────────────────
+export const stockCounts = {
+  list: (params?: { status?: string; product_id?: number; page?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.status) qs.set('status', params.status);
+    if (params?.product_id) qs.set('product_id', String(params.product_id));
+    if (params?.page) qs.set('page', String(params.page));
+    const q = qs.toString();
+    return request<PaginatedResponse<ApiStockCount>>(`/stock-counts${q ? '?' + q : ''}`);
+  },
+  create: (data: CreateStockCountPayload) =>
+    request('/stock-counts', { method: 'POST', body: JSON.stringify(data) }),
+  approve: (id: number) => request(`/stock-counts/${id}/approve`, { method: 'POST' }),
+  reject: (id: number, rejection_reason: string) =>
+    request(`/stock-counts/${id}/reject`, { method: 'POST', body: JSON.stringify({ rejection_reason }) }),
 };
 
 // ─── Stock Receiving ────────────────────────────────────

@@ -69,6 +69,12 @@ export type {
   ApiLossRiskSummary,
   ApiLossRiskItemsResponse,
   ApiLossRiskSummaryResponse,
+  ApiSalesWastageOverview,
+  ApiSalesWastageCategoryBreakdown,
+  ApiTopWastedProduct,
+  ApiSlowMover,
+  ApiSalesWastageTimeSeries,
+  ApiFlagsSummary,
   ApiAlertBatch,
   ApiAlertSupplier,
   ApiExpiringResponse,
@@ -428,6 +434,34 @@ export const reports = {
     const q = qs.toString();
     return request<ApiSeniorPwdTransaction[]>(`/reports/senior-pwd-log${q ? '?' + q : ''}`);
   },
+};
+
+// ─── Sales vs Wastage Dashboard ────────────────────────────
+export const salesWastage = {
+  overview: (params?: { from?: string; to?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.from) qs.set('from', params.from);
+    if (params?.to) qs.set('to', params.to);
+    const q = qs.toString();
+    return request<ApiSalesWastageOverview>(`/sales-wastage/overview${q ? '?' + q : ''}`);
+  },
+  timeSeries: (params?: { from?: string; to?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.from) qs.set('from', params.from);
+    if (params?.to) qs.set('to', params.to);
+    const q = qs.toString();
+    return request<ApiSalesWastageTimeSeries[]>(`/sales-wastage/time-series${q ? '?' + q : ''}`);
+  },
+  exportCsv: (params?: { from?: string; to?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.from) qs.set('from', params.from);
+    if (params?.to) qs.set('to', params.to);
+    const q = qs.toString();
+    return fetch(`${BASE_URL}/sales-wastage/export${q ? '?' + q : ''}`, {
+      headers: { Authorization: `Bearer ${getToken()}` },
+    }).then((res) => res.blob());
+  },
+  flagsSummary: () => request<ApiFlagsSummary>('/sales-wastage/flags-summary'),
 };
 
 // ─── Settings ───────────────────────────────────────────

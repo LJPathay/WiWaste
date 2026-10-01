@@ -139,6 +139,14 @@ Route::prefix('v1')->middleware([SecurityHeaders::class, ForceHttps::class, Rate
     Route::get('/dashboard/overview', [DashboardController::class, 'overview']);
     Route::get('/dashboard/owner-analytics', [DashboardController::class, 'ownerAnalytics']);
 
+    // Sales vs Wastage Dashboard (Owner only)
+    Route::prefix('/sales-wastage')->group(function () {
+        Route::get('/overview', [SalesWastageDashboardController::class, 'overview']);
+        Route::get('/time-series', [SalesWastageDashboardController::class, 'timeSeries']);
+        Route::get('/export', [SalesWastageDashboardController::class, 'exportCsv']);
+        Route::get('/flags-summary', [SalesWastageDashboardController::class, 'flagSummary']);
+    });
+
     // Purchase Orders
     Route::get('/purchase-orders',             [PurchaseOrderController::class, 'index']);
     Route::post('/purchase-orders',            [PurchaseOrderController::class, 'store']);
@@ -358,6 +366,14 @@ Route::middleware([SecurityHeaders::class, ForceHttps::class, RateLimitMiddlewar
     // Dashboard
     Route::get('/dashboard/overview', [DashboardController::class, 'overview']);
     Route::get('/dashboard/owner-analytics', [DashboardController::class, 'ownerAnalytics']);
+
+    // Sales vs Wastage Dashboard (Owner only)
+    Route::prefix('/sales-wastage')->group(function () {
+        Route::get('/overview', [SalesWastageDashboardController::class, 'overview']);
+        Route::get('/time-series', [SalesWastageDashboardController::class, 'timeSeries']);
+        Route::get('/export', [SalesWastageDashboardController::class, 'exportCsv']);
+        Route::get('/flags-summary', [SalesWastageDashboardController::class, 'flagSummary']);
+    });
 
     // Purchase Orders
     Route::get('/purchase-orders',             [PurchaseOrderController::class, 'index']);

@@ -1161,3 +1161,53 @@ export interface ApiRetentionSummary {
   total_records_purged: number;
   next_scheduled_purge: string | null;
 }
+
+// ─── Sales vs Wastage Dashboard ──────────────────────────────────
+export interface ApiSalesWastageOverview {
+  period: { from: string; to: string };
+  summary: {
+    units_sold: number;
+    units_wasted: number;
+    total_units: number;
+    wastage_rate_pct: number;
+    near_expiry_batches: number;
+  };
+  category_breakdown: ApiSalesWastageCategoryBreakdown[];
+  top_wasted_products: ApiTopWastedProduct[];
+  waste_by_reason: Record<string, number>;
+  slow_movers: ApiSlowMover[];
+}
+
+export interface ApiSalesWastageCategoryBreakdown {
+  category: string;
+  units_sold: number;
+  units_wasted: number;
+  wastage_rate: number;
+}
+
+export interface ApiTopWastedProduct {
+  product_id: number;
+  product_name: string;
+  sku: string;
+  units_wasted: number;
+  wastage_value: number;
+}
+
+export interface ApiSlowMover {
+  product_id: number;
+  product_name: string;
+  sku: string;
+  units_sold: number;
+  stock: number;
+}
+
+export interface ApiSalesWastageTimeSeries {
+  date: string;
+  units_sold: number;
+  units_wasted: number;
+}
+
+export interface ApiFlagsSummary {
+  pending_count: number;
+  by_reason: Record<string, number>;
+}

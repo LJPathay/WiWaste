@@ -31,7 +31,7 @@ import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../comp
 import { useDashboardData } from '../../hooks/useDashboardData';
 import { useKpiHighlight } from '../../hooks/useKpiHighlight';
 import { ChartGradients, ChartTooltipStyle } from '../../components/charts/ChartGradients';
-import { CHART_DEFAULTS, CHART_COLORS, useChartAnimation, useReducedMotion } from '../../components/charts/ChartConfig';
+import { CHART_DEFAULTS, CHART_COLORS, CHART_TOOLTIP_STYLE, useChartAnimation, useReducedMotion } from '../../components/charts/ChartConfig';
 
 const currencyFormatter = new Intl.NumberFormat('en-PH', {
   style: 'currency',

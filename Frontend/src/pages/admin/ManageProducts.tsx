@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Info, Loader2, Package, AlertCircle, Printer } from 'lucide-react';
+import { Search, Plus, Info, Loader2, Package, AlertCircle, Printer, Eye, Download, RotateCw, X } from 'lucide-react';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { Tutorial } from '../../components/ui/Tutorial';
 import { Modal, FormField, inputCls, useToast, Toast, ConfirmDialog } from '../../components/ui/Toast';
@@ -36,6 +36,9 @@ export function ManageProducts() {
   const [selectedProduct, setSelectedProduct] = useState<ApiProduct | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showLabelModal, setShowLabelModal] = useState(false);
+  const [labelProduct, setLabelProduct] = useState<ApiProduct | null>(null);
+  const [labelFormat, setLabelFormat] = useState<'png' | 'svg'>('png');
   const [showEmptyNotification, setShowEmptyNotification] = useState(false);
   const [notificationCountdown, setNotificationCountdown] = useState(20);
   const [showTutorial, setShowTutorial] = useState(false);
@@ -604,8 +607,9 @@ export function ManageProducts() {
                   icon={<Printer className="h-3.5 w-3.5" />}
                   label="Print Label"
                   onClick={() => {
-                    const barcode = p.sku ?? p.id.toString();
-                    window.open(`${import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api/v1'}/products/${p.id}/label`, '_blank');
+                    setLabelProduct(p);
+                    setLabelFormat('png');
+                    setShowLabelModal(true);
                   }}
                 />
                 <ActionButton
@@ -794,6 +798,96 @@ export function ManageProducts() {
               {processing ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Saving Changes…</> : 'Save Changes'}
             </button>
           </form>
+        </Modal>
+      )}
+
+      {/* Label Preview Modal */}
+      {showLabelModal && labelProduct && (
+        <Modal
+          title="Print Barcode Label"
+          onClose={() => { setShowLabelModal(false); setLabelProduct(null); }}
+          className="max-w-md"
+          contentClassName="p-4"
+          titleClassName="text-base"
+        >
+          <div className="space-y-4">
+            <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6 text-center">
+              <div className="mb-4">
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Product</p>
+                <p className="text-lg font-bold text-slate-900 dark:text-white truncate">{labelProduct.name}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">SKU: <span className="font-mono font-medium">{labelProduct.sku ?? labelProduct.id}</span></p>
+              </div>
+              <div className="relative inline-block bg-white p-4 rounded-lg border border-slate-200 dark:border-slate-700 dark:bg-slate-800">
+                <img
+                  src={`${import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api/v1'}/products/${labelProduct.id}/label?format=${labelFormat}`}
+                  alt={`Barcode label for ${labelProduct.name}`}
+                  className="max-w-full h-auto"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = `${import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api/v1'}/products/${labelProduct.id}/label?format=png`;
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+              <label className="text-xs font-medium text-slate-700 dark:text-slate-300">Format:</label>
+              <select
+                value={labelFormat}
+                onChange={(e) => setLabelFormat(e.target.value as 'png' | 'svg')}
+                className="h-8 px-3 text-xs bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#006a61]"
+              >
+                <option value="png">PNG (Raster)</option>
+                <option value="svg">SVG (Vector)</option>
+              </select>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  const printWindow = window.open('', '_blank');
+                  if (printWindow) {
+                    printWindow.document.write(`
+                      <html>
+                        <head>
+                          <title>Print Label - ${labelProduct.name}</title>
+                          <style>
+                            @media print {
+                              @page { margin: 0; size: auto; }
+                              body { margin: 0; padding: 20px; }
+                              img { max-width: 100%; height: auto; }
+                            }
+                          </style>
+                        </head>
+                        <body onload="window.print(); window.close();">
+                          <img src="${import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api/v1'}/products/${labelProduct.id}/label?format=png" />
+                        </body>
+                      </html>
+                    `);
+                    printWindow.document.close();
+                  }
+                }}
+                className="flex-1 h-9 bg-[#006a61] hover:bg-[#00574f] text-white rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5"
+              >
+                <Printer className="h-3.5 w-3.5" />
+                Print
+              </button>
+              <button
+                onClick={() => {
+                  const link = document.createElement('a');
+                  link.href = `${import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api/v1'}/products/${labelProduct.id}/label?format=${labelFormat}`;
+                  link.download = `label-${labelProduct.sku ?? labelProduct.id}.${labelFormat}`;
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                }}
+                className="flex-1 h-9 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-900 dark:text-slate-100 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 border border-slate-200 dark:border-slate-600"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Download
+              </button>
+            </div>
+          </div>
         </Modal>
       )}
 

@@ -64,9 +64,9 @@ export function ManageUsers() {
   const endIndex = userList?.meta ? Math.min(userList.meta.current_page * userList.meta.per_page, userList.meta.total) : 0;
 
   const isDuplicateName = Boolean(
-    full_name.trim() &&
+    fullName.trim() &&
     users.some(u =>
-      (u.name?.trim()?.toLowerCase() ?? '') === full_name.trim().toLowerCase() &&
+      (u.name?.trim()?.toLowerCase() ?? '') === fullName.trim().toLowerCase() &&
       (!editingUser || u.id !== editingUser.id)
     )
   );

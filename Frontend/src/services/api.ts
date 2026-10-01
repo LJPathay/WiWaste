@@ -18,6 +18,7 @@ export type {
   ApiInventoryMovements,
   ApiStockMovement,
   ApiWastage,
+  ApiWastageFlag,
   CreateWastagePayload,
   ApiSalesTransaction,
   ApiSalesItem,
@@ -294,6 +295,22 @@ export const wastage = {
   list: (page = 1) => request<PaginatedResponse<ApiWastage>>(`/wastage?page=${page}`),
   record: (data: CreateWastagePayload) =>
     request('/wastage', { method: 'POST', body: JSON.stringify(data) }),
+};
+
+// ─── Wastage Flags ────────────────────────────────────────
+export const wastageFlags = {
+  list: (params?: { status?: string; page?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.status) qs.set('status', params.status);
+    if (params?.page) qs.set('page', String(params.page));
+    const q = qs.toString();
+    return request<PaginatedResponse<ApiWastageFlag>>(`/wastage-flags${q ? '?' + q : ''}`);
+  },
+  flag: (data: { product_id: number; batch_id?: number; quantity: number; reason: string; notes?: string }) =>
+    request('/wastage-flags', { method: 'POST', body: JSON.stringify(data) }),
+  confirm: (id: number) => request(`/wastage-flags/${id}/confirm`, { method: 'POST' }),
+  reject: (id: number, rejection_reason: string) =>
+    request(`/wastage-flags/${id}/reject`, { method: 'POST', body: JSON.stringify({ rejection_reason }) }),
 };
 
 // ─── Stock Receiving ────────────────────────────────────

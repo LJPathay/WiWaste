@@ -238,6 +238,26 @@ export interface ApiWastage {
   batch_id?: number | null;
 }
 
+export interface ApiWastageFlag {
+  id: number;
+  product_id: number;
+  product_name: string;
+  sku: string;
+  batch_id?: number | null;
+  batch_number?: string | null;
+  flagged_by: string;
+  quantity: number;
+  reason: 'expired' | 'damaged' | 'recalled' | 'spoiled' | 'other';
+  notes?: string | null;
+  status: 'pending' | 'confirmed' | 'rejected';
+  created_at: string;
+  reviewed_by?: string | null;
+  reviewed_at?: string | null;
+  rejection_reason?: string | null;
+  business_id?: number;
+  branch_id?: number;
+}
+
 export interface CreateWastagePayload {
   business_id?: number;
   branch_id?: number;

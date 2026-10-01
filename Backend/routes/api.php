@@ -89,6 +89,12 @@ Route::prefix('v1')->middleware([SecurityHeaders::class, ForceHttps::class, Rate
     Route::get('/wastage',  [WastageRecordController::class, 'index']);
     Route::post('/wastage', [WastageRecordController::class, 'store']);
 
+    // Wastage Flags (Cashier flag → Inventory confirm)
+    Route::get('/wastage-flags',        [WastageFlagController::class, 'index']);
+    Route::post('/wastage-flags',       [WastageFlagController::class, 'store']);
+    Route::post('/wastage-flags/{id}/confirm', [WastageFlagController::class, 'confirm']);
+    Route::post('/wastage-flags/{id}/reject',  [WastageFlagController::class, 'reject']);
+
     // Health Check
     Route::get('/health', fn () => response()->json(['status' => 'ok', 'service' => 'laravel', 'version' => '1.0.0']));
 
@@ -296,6 +302,12 @@ Route::middleware([SecurityHeaders::class, ForceHttps::class, RateLimitMiddlewar
     // Wastage
     Route::get('/wastage',  [WastageRecordController::class, 'index']);
     Route::post('/wastage', [WastageRecordController::class, 'store']);
+
+    // Wastage Flags (Cashier flag → Inventory confirm)
+    Route::get('/wastage-flags',        [WastageFlagController::class, 'index']);
+    Route::post('/wastage-flags',       [WastageFlagController::class, 'store']);
+    Route::post('/wastage-flags/{id}/confirm', [WastageFlagController::class, 'confirm']);
+    Route::post('/wastage-flags/{id}/reject',  [WastageFlagController::class, 'reject']);
 
     // Health Check
     Route::get('/health', fn () => response()->json(['status' => 'ok', 'service' => 'laravel', 'version' => '1.0.0']));

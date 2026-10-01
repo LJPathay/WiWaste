@@ -160,14 +160,13 @@ export function POSTerminal() {
   }, [recordingAction, handleHotkeyRecord]);
 
   const filteredProducts = useMemo(() => {
-    const source = resolveCatalogSource(catalog, cashierProducts, catalogError);
     const q = search.toLowerCase();
-    return source.filter(p => {
+    return catalog.filter(p => {
       const matchCat = activeCategory === 'all' || p.category_id === activeCategory;
       const matchSearch = !q || p.product_name.toLowerCase().includes(q) || p.barcode.includes(q);
       return matchCat && matchSearch;
     });
-  }, [search, activeCategory, catalog, catalogError]);
+  }, [search, activeCategory, catalog]);
 
   const addProduct = useCallback((product: CashierProduct, qtyOverride?: number) => {
     const desiredQty = qtyOverride ?? 1;
@@ -196,6 +195,11 @@ export function POSTerminal() {
     );
     if (localMatch) {
       addProduct(localMatch);
+      // Add to catalog for future search/display
+      setCatalog(prev => {
+        if (prev.some(p => p.product_id === localMatch.product_id)) return prev;
+        return [...prev, localMatch];
+      });
       setSearch('');
       barcodeRef.current?.focus();
       return;
@@ -204,13 +208,18 @@ export function POSTerminal() {
       const result = await productsApi.lookup(code);
       const product: CashierProduct = apiProductToCashier(result);
       addProduct(product);
+      // Add to catalog for future search/display
+      setCatalog(prev => {
+        if (prev.some(p => p.product_id === product.product_id)) return prev;
+        return [...prev, product];
+      });
       setSearch('');
     } catch {
       error(`Product not found: ${code}`);
     }
     setPluBuffer('');
     barcodeRef.current?.focus();
-  }, [addProduct, error, setSearch, setPluBuffer]);
+  }, [addProduct, error, setSearch, setPluBuffer, setCatalog]);
 
   const updateQty = useCallback((productId: string, qty: number) => {
     if (qty < 1) {
@@ -341,19 +350,26 @@ export function POSTerminal() {
     barcodeRef.current?.focus();
   }, []);
 
-  // Load the live product catalog so every cart line carries the real DB product_id.
+  // Debounced search for product name (300ms)
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    let cancelled = false;
-    productsApi.list({ per_page: 100 })
-      .then(res => {
-        if (cancelled) return;
-        const mapped = res.data.map(apiProductToCashier);
-        setCatalog(mapped);
-        saveCachedCatalog(mapped);
-      })
-      .catch(() => { if (!cancelled) setCatalogError(true); });
-    return () => { cancelled = true; };
-  }, []);
+    if (search.length < 3) return;
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    searchTimeoutRef.current = setTimeout(async () => {
+      try {
+        const res = await productsApi.list({ search, per_page: 50 });
+        const products = res.data.map(apiProductToCashier);
+        setCatalog(prev => {
+          const existingIds = new Set(prev.map(p => p.product_id));
+          const newProducts = products.filter(p => !existingIds.has(p.product_id));
+          return [...prev, ...newProducts];
+        });
+      } catch {
+        // Ignore search errors
+      }
+    }, 300);
+    return () => { if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current); };
+  }, [search]);
 
   const totalItems = cart.reduce((sum, l) => sum + l.quantity, 0);
   const subtotal = cart.reduce((sum, l) => sum + l.product.selling_price * l.quantity, 0);

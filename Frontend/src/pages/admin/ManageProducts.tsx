@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Info, Loader2, Package, AlertCircle } from 'lucide-react';
+import { Search, Plus, Info, Loader2, Package, AlertCircle, Printer } from 'lucide-react';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { Tutorial } from '../../components/ui/Tutorial';
 import { Modal, FormField, inputCls, useToast, Toast, ConfirmDialog } from '../../components/ui/Toast';
@@ -601,6 +601,14 @@ export function ManageProducts() {
                   onClick={() => openEdit(p)}
                 />
                 <ActionButton
+                  icon={<Printer className="h-3.5 w-3.5" />}
+                  label="Print Label"
+                  onClick={() => {
+                    const barcode = p.sku ?? p.id.toString();
+                    window.open(`${import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api/v1'}/products/${p.id}/label`, '_blank');
+                  }}
+                />
+                <ActionButton
                   icon={<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>}
                   label={p.status === 'Discontinued' ? 'Re-activate' : 'Archive'}
                   variant={p.status === 'Discontinued' ? 'default' : 'danger'}
@@ -649,10 +657,24 @@ export function ManageProducts() {
                 onChange={e => setAddForm(f => ({ ...f, product_name: e.target.value }))} className="h-8 text-xs" />
               {isDuplicateAddName && <p className="text-red-500 text-[10px] mt-1">Product name already exists.</p>}
             </FormField>
-            <FormField label="SKU / Barcode (Leave blank for automatic SKU generation)">
-              <input type="text" placeholder="Auto-generated if empty" value={addForm.barcode}
-                onChange={e => setAddForm(f => ({ ...f, barcode: e.target.value }))} className="h-8 text-xs" />
+            <FormField label="SKU / Barcode (Scan or enter manually)">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Scan barcode — auto-generates SKU if empty"
+                  value={addForm.barcode}
+                  onChange={e => setAddForm(f => ({ ...f, barcode: e.target.value }))}
+                  onBlur={() => {
+                    // Debounced unique check could go here
+                  }}
+                  className="h-10 text-base font-mono bg-white dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-600 rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-transparent transition-all shadow-inner"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  autoFocus
+                />
+              </div>
               {isDuplicateAddBarcode && <p className="text-red-500 text-[10px] mt-1">SKU / Barcode already exists.</p>}
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">USB scanner acts as keyboard — just scan the product</p>
             </FormField>
             <div className="grid grid-cols-2 gap-2">
               <FormField label="Category">
@@ -714,9 +736,19 @@ export function ManageProducts() {
               {isDuplicateEditName && <p className="text-red-500 text-[10px] mt-1">Product name already exists.</p>}
             </FormField>
             <FormField label="SKU / Barcode">
-              <input type="text" placeholder="Barcode" value={editForm.barcode}
-                onChange={e => setEditForm(f => ({ ...f, barcode: e.target.value }))} className="h-8 text-xs" />
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Scan barcode"
+                  value={editForm.barcode}
+                  onChange={e => setEditForm(f => ({ ...f, barcode: e.target.value }))}
+                  className="h-10 text-base font-mono bg-white dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-600 rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-transparent transition-all shadow-inner"
+                  inputMode="numeric"
+                  autoComplete="off"
+                />
+              </div>
               {isDuplicateEditBarcode && <p className="text-red-500 text-[10px] mt-1">SKU / Barcode already exists.</p>}
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">USB scanner acts as keyboard — just scan the product</p>
             </FormField>
             <div className="grid grid-cols-2 gap-2">
               <FormField label="Category">

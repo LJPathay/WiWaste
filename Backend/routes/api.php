@@ -68,6 +68,7 @@ Route::prefix('v1')->middleware([SecurityHeaders::class, ForceHttps::class, Rate
     // Products
     Route::apiResource('/products', ProductController::class);
     Route::get('/products/lookup/{code}', [ProductController::class, 'lookup']);
+    Route::get('/products/{id}/label', [ProductController::class, 'label']);
 
     // Inventory
     Route::get('/inventory',             [InventoryController::class, 'index']);
@@ -273,6 +274,7 @@ Route::middleware([SecurityHeaders::class, ForceHttps::class, RateLimitMiddlewar
     // Products
     Route::apiResource('/products', ProductController::class);
     Route::get('/products/lookup/{code}', [ProductController::class, 'lookup']);
+    Route::get('/products/{id}/label', [ProductController::class, 'label']);
 
     // Inventory
     Route::get('/inventory',             [InventoryController::class, 'index']);

@@ -7,6 +7,8 @@ use App\Models\Product;
 use App\Models\Inventory;
 use App\Models\AuditLog;
 use Illuminate\Http\Request;
+use Picqer\Barcode\BarcodeGeneratorPNG;
+use Picqer\Barcode\BarcodeGeneratorSVG;
 
 class ProductController extends Controller
 {
@@ -303,5 +305,30 @@ class ProductController extends Controller
             'is_rx_only'             => $product->is_rx_only,
             'ddb_schedule'           => $product->ddb_schedule,
         ]);
+    }
+
+    public function label(Request $request, $id)
+    {
+        $query = Product::where('product_id', $id);
+        $query = $this->scopeForBusinessAndBranch($query, $request);
+        $product = $query->firstOrFail();
+
+        $barcode = $product->barcode ?? (string) $product->product_id;
+        $format = $request->query('format', 'png');
+
+        if ($format === 'svg') {
+            $generator = new BarcodeGeneratorSVG();
+            $barcodeImage = $generator->getBarcode($barcode, $generator::TYPE_CODE_128, 2, 50);
+            return response($barcodeImage)
+                ->header('Content-Type', 'image/svg+xml')
+                ->header('Content-Disposition', 'inline; filename="label-' . $barcode . '.svg"');
+        }
+
+        $generator = new BarcodeGeneratorPNG();
+        $barcodeImage = $generator->getBarcode($barcode, $generator::TYPE_CODE_128, 2, 50);
+
+        return response($barcodeImage)
+            ->header('Content-Type', 'image/png')
+            ->header('Content-Disposition', 'inline; filename="label-' . $barcode . '.png"');
     }
 }

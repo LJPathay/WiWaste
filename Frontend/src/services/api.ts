@@ -242,6 +242,10 @@ export const products = {
   update: (id: number, data: Partial<CreateProductPayload>) =>
     request(`/products/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: number) => request(`/products/${id}`, { method: 'DELETE' }),
+  label: (id: number, format: 'png' | 'svg' = 'png') =>
+    fetch(`${BASE_URL}/products/${id}/label?format=${format}`, {
+      headers: { Authorization: `Bearer ${getToken()}` },
+    }).then((res) => res.blob()),
 };
 
 // ─── Inventory ──────────────────────────────────────────

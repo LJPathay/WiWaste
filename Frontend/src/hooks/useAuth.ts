@@ -4,22 +4,32 @@ import { auth, type ApiUser } from '../services/api';
 export type UserRole = 'owner' | 'inventory' | 'cashier';
 
 function mapRole(apiRole: string): UserRole {
-  const normalized = apiRole?.toLowerCase().trim();
+  const normalized = apiRole?.trim();
   console.debug('[Auth] Raw role from API:', apiRole, '→ normalized:', normalized);
-  
-  // Owner/Admin roles - exact matches only
-  const ownerRoles = ['admin', 'owner', 'administrator', 'superadmin', 'super_admin', 'manager', 'supervisor', 'root'];
-  if (ownerRoles.includes(normalized)) return 'owner';
-  
-  if (normalized === 'inventory' || normalized === 'stock') return 'inventory';
-  if (normalized === 'pharmacist') return 'owner';
-  
-  // Cashier roles
-  const cashierRoles = ['cashier', 'sales', 'pos'];
-  if (cashierRoles.includes(normalized)) return 'cashier';
-  
-  console.warn('[Auth] Unknown role, defaulting to cashier:', apiRole);
-  return 'cashier';
+
+  // Canonical role mapping (DB values: Owner, Inventory, Cashier)
+  switch (normalized) {
+    case 'Owner':
+      return 'owner';
+    case 'Inventory':
+      return 'inventory';
+    case 'Cashier':
+      return 'cashier';
+    // Legacy support
+    case 'Business Owner':
+    case 'Admin':
+    case 'Administrator':
+      return 'owner';
+    case 'Stock':
+    case 'Pharmacist':
+      return 'inventory';
+    case 'Sales':
+    case 'POS':
+      return 'cashier';
+    default:
+      console.warn('[Auth] Unknown role, defaulting to cashier:', apiRole);
+      return 'cashier';
+  }
 }
 
 export interface AuthUser {

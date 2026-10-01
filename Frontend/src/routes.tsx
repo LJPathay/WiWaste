@@ -11,6 +11,7 @@ import { PageLoader } from "./components/ui/PageLoader";
 import PrivacyBanner from "./components/ui/PrivacyBanner";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
+import { NotFound } from "./pages/NotFound";
 
 function lazyPage(imp: () => Promise<Record<string, unknown>>, name: string) {
   const Comp = lazy(() => imp().then(m => ({ default: m[name] as ComponentType<unknown> })));
@@ -67,34 +68,34 @@ const ReorderDashboard = lazyPage(() => import("./pages/reorder/ReorderDashboard
 const ForgotPassword = lazyPage(() => import("./pages/ForgotPassword"), "ForgotPassword");
 
 export const router = createBrowserRouter([
-     // ── Public marketing site ──
-     {
-         path: "/",
-         element: (
-           <>
-             <PrivacyBanner />
-             <MainLayout />
-           </>
-         ),
-         children: [
-             { index: true, Component: Home },
-             { path: "pricing", Component: Pricing },
-             { path: "solutions", Component: Solutions },
-             { path: "privacy", Component: PrivacyPolicy },
-             { path: "terms", Component: TermsOfService },
-         ],
-     },
-
-      // ── Auth pages (login / register) ──
+      // ── Public marketing site ──
       {
-          Component: AuthLayout,
+          path: "/",
+          element: (
+            <>
+              <PrivacyBanner />
+              <MainLayout />
+            </>
+          ),
           children: [
-              { path: "login", Component: Login },
-              { path: "forgot-password", Component: ForgotPassword },
+              { index: true, Component: Home },
+              { path: "pricing", Component: Pricing },
+              { path: "solutions", Component: Solutions },
+              { path: "privacy", Component: PrivacyPolicy },
+              { path: "terms", Component: TermsOfService },
           ],
       },
 
-      // ── Authenticated dashboard (always shows sidebar) ──
+       // ── Auth pages (login / register) ──
+       {
+           Component: AuthLayout,
+           children: [
+               { path: "login", Component: Login },
+               { path: "forgot-password", Component: ForgotPassword },
+           ],
+       },
+
+       // ── Authenticated dashboard (always shows sidebar) ──
 {
             Component: DashboardLayout,
             children: [
@@ -191,4 +192,10 @@ export const router = createBrowserRouter([
               },
           ],
       },
- ]);
+
+      // Catch-all 404 route (MUST BE LAST)
+      {
+        path: "*",
+        Component: NotFound,
+      },
+  ]);

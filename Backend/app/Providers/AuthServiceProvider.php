@@ -14,6 +14,7 @@ use App\Policies\UserPolicy;
 use App\Policies\ReportPolicy;
 use App\Policies\SettingsPolicy;
 use App\Policies\FEFOPolicy;
+use App\Policies\CashierPolicy;
 
 class AuthServiceProvider extends ServiceProvider
 {
@@ -67,6 +68,16 @@ class AuthServiceProvider extends ServiceProvider
         Gate::define('wastage.view', [WastagePolicy::class, 'view']);
         Gate::define('wastage.create', [WastagePolicy::class, 'create']);
         Gate::define('wastage.approve', [WastagePolicy::class, 'approve']);
+        Gate::define('wastage.flag', [WastagePolicy::class, 'flag']);
+        Gate::define('wastage.confirm', [WastagePolicy::class, 'confirm']);
+        Gate::define('wastage.edit', [WastagePolicy::class, 'edit']);
+        Gate::define('wastage.delete', [WastagePolicy::class, 'delete']);
+
+        // ── Cashier gates ──
+        Gate::define('pos.access', [CashierPolicy::class, 'posAccess']);
+        Gate::define('sale.create', [CashierPolicy::class, 'saleCreate']);
+        Gate::define('sale.viewOwn', [CashierPolicy::class, 'saleViewOwn']);
+        Gate::define('receipt.print', [CashierPolicy::class, 'receiptPrint']);
 
         // ── User gates ──
         Gate::define('user.viewAny', [UserPolicy::class, 'viewAny']);
@@ -94,7 +105,7 @@ class AuthServiceProvider extends ServiceProvider
 
         // ── Super-admin bypass ──
         Gate::before(function (User $user) {
-            if ($user->role === 'Admin') {
+            if ($user->role === 'Owner') {
                 return true;
             }
         });

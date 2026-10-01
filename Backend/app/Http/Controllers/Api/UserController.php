@@ -55,10 +55,6 @@ class UserController extends BaseApiController
     {
         $data = $request->validated();
 
-        if (($data['role'] ?? '') === 'Admin') {
-            $data['role'] = 'Owner';
-        }
-
         $data['Created_at'] = now();
 
         $user = User::create($data);
@@ -100,10 +96,6 @@ class UserController extends BaseApiController
         $user = User::findOrFail($id);
 
         $data = $request->validated();
-
-        if (($data['role'] ?? '') === 'Admin') {
-            $data['role'] = 'Owner';
-        }
 
         // Audit log for status changes
         if (isset($data['status']) && $data['status'] !== $user->status) {

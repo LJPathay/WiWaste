@@ -99,11 +99,11 @@ export const router = createBrowserRouter([
 {
             Component: DashboardLayout,
             children: [
-                // Dashboard overview — redirect based on role
+                // Dashboard overview — show role-appropriate dashboard
                 {
                   element: <ProtectedRoute allowedRoles={['owner', 'inventory', 'cashier']} />,
                   children: [
-                    { path: "dashboard", Component: DashboardRedirect },
+                    { path: "dashboard", Component: Dashboard },
                   ],
                 },
               { path: "dashboard/inventory", Component: InventoryDashboard },

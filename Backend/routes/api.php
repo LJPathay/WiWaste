@@ -74,6 +74,8 @@ Route::prefix('v1')->middleware([SecurityHeaders::class, ForceHttps::class, Rate
     Route::get('/inventory',             [InventoryController::class, 'index']);
     Route::post('/inventory/stock-in',   [InventoryController::class, 'stockIn']);
     Route::post('/inventory/stock-out',  [InventoryController::class, 'stockOut']);
+    Route::post('/inventory/receive',    [InventoryController::class, 'receive']);
+    Route::get('/inventory/near-expiry', [InventoryController::class, 'nearExpiry']);
     Route::get('/inventory/movements',   [InventoryController::class, 'allMovements']);
 
     // Stock Receiving (PO-based receiving)
@@ -280,6 +282,8 @@ Route::middleware([SecurityHeaders::class, ForceHttps::class, RateLimitMiddlewar
     Route::get('/inventory',             [InventoryController::class, 'index']);
     Route::post('/inventory/stock-in',   [InventoryController::class, 'stockIn']);
     Route::post('/inventory/stock-out',  [InventoryController::class, 'stockOut']);
+    Route::post('/inventory/receive',    [InventoryController::class, 'receive']);
+    Route::get('/inventory/near-expiry', [InventoryController::class, 'nearExpiry']);
     Route::get('/inventory/movements',   [InventoryController::class, 'allMovements']);
 
     // Stock Receiving (PO-based receiving)

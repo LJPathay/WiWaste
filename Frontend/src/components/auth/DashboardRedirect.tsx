@@ -9,7 +9,12 @@ export function DashboardRedirect() {
 
   useEffect(() => {
     if (!loading && user) {
-      navigate(user.role === 'cashier' ? '/cashier/pos' : '/dashboard', { replace: true });
+      const target = user.role === 'cashier' 
+        ? '/cashier/pos' 
+        : user.role === 'owner' 
+          ? '/owner/users' 
+          : '/inventory/manage';
+      navigate(target, { replace: true });
     }
   }, [user, loading, navigate]);
 

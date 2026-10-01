@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Inventory;
+use App\Models\FEFOBatch;
 use App\Models\StockMovement;
 use App\Models\AuditLog;
 use App\Jobs\WarmAnalyticsCache;
@@ -110,6 +111,119 @@ class InventoryController extends Controller
 
             return response()->json(['message' => 'Stock added.', 'new_stock' => $inventory->current_stock]);
         });
+    }
+
+    public function receive(Request $request)
+    {
+        $data = $request->validate([
+            'product_id' => 'required|integer|exists:Product,product_id',
+            'quantity'   => 'required|integer|min:1',
+            'batch_number' => 'required|string|max:50',
+            'expiry_date' => 'required|date|after_or_equal:today',
+            'remarks'    => 'nullable|string|max:255',
+        ]);
+
+        $query = Inventory::with('product')->where('product_id', $data['product_id']);
+        $query = $this->scopeForBusinessAndBranch($query, $request);
+        $inventory = $query->firstOrFail();
+
+        return DB::transaction(function () use ($data, $request, $inventory) {
+            $user = $request->user();
+
+            // Create or find batch
+            $batch = FEFOBatch::where('product_id', $data['product_id'])
+                ->where('batch_number', $data['batch_number'])
+                ->where('business_id', $user?->business_id)
+                ->where('branch_id', $user?->branch_id)
+                ->first();
+
+            if (!$batch) {
+                $batch = FEFOBatch::create([
+                    'business_id' => $user?->business_id,
+                    'branch_id' => $user?->branch_id,
+                    'product_id' => $data['product_id'],
+                    'batch_number' => $data['batch_number'],
+                    'quantity' => 0,
+                    'expiry_date' => $data['expiry_date'],
+                    'status' => 'active',
+                    'received_date' => now()->toDateString(),
+                    'created_by' => $user?->User_id ?? 1,
+                ]);
+            } else {
+                $batch->expiry_date = $data['expiry_date'];
+                $batch->status = 'active';
+                $batch->save();
+            }
+
+            $batch->quantity += $data['quantity'];
+            $batch->save();
+
+            $inventory->current_stock += $data['quantity'];
+            $inventory->stock_status = Inventory::calcStatus($inventory->current_stock, $inventory->product?->reorder_level ?? 10);
+            $inventory->last_updated = now();
+            $inventory->save();
+
+            StockMovement::create([
+                'business_id'   => $user?->business_id,
+                'branch_id'     => $user?->branch_id,
+                'product_id'    => $data['product_id'],
+                'batch_id'      => $batch->batch_id,
+                'user_id'       => $user?->User_id ?? 1,
+                'movement_type' => 'Stock In',
+                'quantity'      => $data['quantity'],
+                'remarks'       => $data['remarks'] ?? 'Received: Batch ' . $data['batch_number'],
+                'movement_date' => now(),
+            ]);
+
+            AuditLog::create([
+                'user_id'       => $user?->User_id ?? 1,
+                'action'        => "Received {$data['quantity']} units of {$inventory->product?->product_name} (Batch: {$data['batch_number']}, Expiry: {$data['expiry_date']})",
+                'entity_type'   => 'Inventory',
+                'entity_id'     => $inventory->inventory_id,
+                'old_values'    => null,
+                'new_values'    => json_encode(['current_stock' => $inventory->current_stock, 'batch_number' => $data['batch_number'], 'expiry_date' => $data['expiry_date']]),
+                'created_at'    => now(),
+                'business_id'   => $user?->business_id,
+                'branch_id'     => $user?->branch_id,
+            ]);
+
+            WarmAnalyticsCache::dispatch();
+
+            return response()->json([
+                'message' => 'Stock received with batch tracking.',
+                'new_stock' => $inventory->current_stock,
+                'batch_id' => $batch->batch_id,
+            ]);
+        });
+    }
+
+    public function nearExpiry(Request $request)
+    {
+        $days = $request->input('days', 90);
+
+        $batches = FEFOBatch::where('business_id', $request->user()?->business_id)
+            ->where('branch_id', $request->user()?->branch_id)
+            ->where('status', 'active')
+            ->where('quantity', '>', 0)
+            ->where('expiry_date', '<=', now()->addDays($days))
+            ->where('expiry_date', '>=', now())
+            ->with(['product.category', 'product.supplier'])
+            ->orderBy('expiry_date')
+            ->get()
+            ->map(fn ($b) => [
+                'batch_id' => $b->batch_id,
+                'product_id' => $b->product_id,
+                'product_name' => $b->product?->product_name,
+                'sku' => $b->product?->barcode,
+                'category' => $b->product?->category?->Category_name,
+                'batch_number' => $b->batch_number,
+                'quantity' => $b->quantity,
+                'expiry_date' => $b->expiry_date,
+                'days_until_expiry' => now()->diffInDays($b->expiry_date, false),
+                'supplier' => $b->product?->supplier?->supplier_name,
+            ]);
+
+        return response()->json($batches);
     }
 
     public function stockOut(Request $request)

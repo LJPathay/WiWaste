@@ -262,6 +262,9 @@ export const inventory = {
     request('/inventory/stock-in', { method: 'POST', body: JSON.stringify(data) }),
   stockOut: (data: { product_id: number; quantity: number; remarks?: string }) =>
     request('/inventory/stock-out', { method: 'POST', body: JSON.stringify(data) }),
+  receive: (data: { product_id: number; quantity: number; batch_number: string; expiry_date: string; remarks?: string }) =>
+    request('/inventory/receive', { method: 'POST', body: JSON.stringify(data) }),
+  nearExpiry: (days = 90) => request(`/inventory/near-expiry?days=${days}`),
   movements: (id: number) =>
     request<ApiInventoryMovements>(`/inventory/${id}/movements`),
   allMovements: (params?: {

@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState, useEffect, useCallback } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { 
   Barcode, Search, Trash2, CreditCard, Wallet, Banknote, Plus, Minus, 
   User, Receipt, Clock, ArrowRight, Printer, CheckCircle2,
@@ -167,6 +168,24 @@ export function POSTerminal() {
       return matchCat && matchSearch;
     });
   }, [search, activeCategory, catalog]);
+
+  // Ordered products (pinned first) for virtualized grid
+  const orderedProducts = useMemo(() => {
+    const pinnedProducts = pinnedOrder
+      .map(id => filteredProducts.find(p => p.product_id === id))
+      .filter((p): p is CashierProduct => !!p);
+    const unpinned = filteredProducts.filter(p => !pinnedOrder.includes(p.product_id));
+    return [...pinnedProducts, ...unpinned];
+  }, [filteredProducts, pinnedOrder]);
+
+  // Virtualizer for product grid
+  const parentRef = useRef<HTMLDivElement>(null);
+  const virtualizer = useVirtualizer({
+    count: orderedProducts.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 180,
+    overscan: 5,
+  });
 
   const addProduct = useCallback((product: CashierProduct, qtyOverride?: number) => {
     const desiredQty = qtyOverride ?? 1;
@@ -709,83 +728,85 @@ export function POSTerminal() {
 
           </div>
 
-          {/* Product Grid - More compact to fit 8-15 */}
-          <div className="flex-1 overflow-y-auto p-4 hide-scrollbar dark:bg-slate-900">
-            <div className="grid grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2.5">
-              {(() => {
-                // Build display order: pinned products first (in pinned order), then the rest
-                const pinnedProducts = pinnedOrder
-                  .map(id => filteredProducts.find(p => p.product_id === id))
-                  .filter((p): p is CashierProduct => !!p);
-                const unpinned = filteredProducts.filter(p => !pinnedOrder.includes(p.product_id));
-                const ordered = [...pinnedProducts, ...unpinned];
-                return ordered.map((product) => {
-                  const slotIndex = pinnedOrder.indexOf(product.product_id);
-                  const slotKey = slotIndex !== -1 && slotIndex < 10 ? hotkeys[`product_${slotIndex}` as ProductSlotKey] : null;
-                  const isDragging = draggedProduct?.product_id === product.product_id;
-                  const isDragOver = dragOverId === product.product_id;
-                  return (
-                  <div
-                    key={product.product_id}
-                    draggable
-                    onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; setDraggedProduct(product); }}
-                    onDragEnd={() => { setDraggedProduct(null); setDragOverId(null); }}
-                    onDragOver={(e) => { e.preventDefault(); setDragOverId(product.product_id); }}
-                    onDragLeave={() => setDragOverId(null)}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      if (!draggedProduct || draggedProduct.product_id === product.product_id) return;
-                      setPinnedOrder(prev => {
-                        // Build current full ordered list
-                        const pinnedProds = prev
-                          .map(id => filteredProducts.find(p => p.product_id === id))
-                          .filter((p): p is CashierProduct => !!p);
-                        const unpinnedProds = filteredProducts.filter(p => !prev.includes(p.product_id));
-                        const current = [...pinnedProds, ...unpinnedProds].map(p => p.product_id);
-                        // Reorder
-                        const from = current.indexOf(draggedProduct.product_id);
-                        const to = current.indexOf(product.product_id);
-                        const next = [...current];
-                        next.splice(from, 1);
-                        next.splice(to, 0, draggedProduct.product_id);
-                        // Only keep first 10 as pinned
-                        const newPinned = next.slice(0, 10);
-                        localStorage.setItem('pos_pinned_order', JSON.stringify(newPinned));
-                        return newPinned;
-                      });
-                      setDragOverId(null);
-                    }}
-                    onClick={() => addProduct(product)}
-                    className={`flex flex-col bg-white dark:bg-slate-800 rounded-lg border p-2 shadow-sm hover:shadow-md hover:border-[#0F766E] cursor-pointer transition-all active:scale-[0.97] min-h-[70px] relative ${
-                      isDragging ? 'opacity-40 scale-95' : ''
-                    } ${
-                      isDragOver ? 'border-[#0F766E] ring-2 ring-[#0F766E]/30 scale-[1.02]' : 'border-[#E5E7EB] dark:border-slate-700'
-                    }`}
-                  >
-                    {slotKey && (
-                      <span className="absolute top-1 right-1 text-[9px] font-black uppercase bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500 px-1 rounded leading-tight">{slotKey}</span>
-                    )}
-                    <div className="flex-1 flex flex-col justify-between pt-1">
-                      <p className="text-[11px] font-bold text-slate-800 dark:text-slate-100 leading-tight line-clamp-2 mb-1">{product.product_name}</p>
-                      <div className="flex items-center justify-between mt-auto">
-                        <p className="text-xs font-black text-slate-900 dark:text-slate-100">{formatCurrency(product.selling_price)}</p>
-                        <button className="flex items-center justify-center w-5 h-5 rounded bg-[#16A34A] text-white hover:bg-[#15803d]">
-                          <Plus className="w-3 h-3" />
-                        </button>
+          {/* Product Grid - Virtualized for 4K+ products */}
+          <div className="flex-1 p-4 hide-scrollbar dark:bg-slate-900">
+            <div className="relative" style={{ height: '100%' }}>
+              <div ref={parentRef} className="h-full overflow-auto">
+                <div style={{ height: virtualizer.getTotalSize() }}>
+                  {virtualizer.getVirtualItems().map((virtualRow) => {
+                    const product = orderedProducts[virtualRow.index];
+                    const slotIndex = pinnedOrder.indexOf(product.product_id);
+                    const slotKey = slotIndex !== -1 && slotIndex < 10 ? hotkeys[`product_${slotIndex}` as ProductSlotKey] : null;
+                    const isDragging = draggedProduct?.product_id === product.product_id;
+                    const isDragOver = dragOverId === product.product_id;
+                    return (
+                      <div
+                        key={product.product_id}
+                        draggable
+                        onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; setDraggedProduct(product); }}
+                        onDragEnd={() => { setDraggedProduct(null); setDragOverId(null); }}
+                        onDragOver={(e) => { e.preventDefault(); setDragOverId(product.product_id); }}
+                        onDragLeave={() => setDragOverId(null)}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          if (!draggedProduct || draggedProduct.product_id === product.product_id) return;
+                          setPinnedOrder(prev => {
+                            const pinnedProds = prev
+                              .map(id => filteredProducts.find(p => p.product_id === id))
+                              .filter((p): p is CashierProduct => !!p);
+                            const unpinnedProds = filteredProducts.filter(p => !prev.includes(p.product_id));
+                            const current = [...pinnedProds, ...unpinnedProds].map(p => p.product_id);
+                            const from = current.indexOf(draggedProduct.product_id);
+                            const to = current.indexOf(product.product_id);
+                            const next = [...current];
+                            next.splice(from, 1);
+                            next.splice(to, 0, draggedProduct.product_id);
+                            const newPinned = next.slice(0, 10);
+                            localStorage.setItem('pos_pinned_order', JSON.stringify(newPinned));
+                            return newPinned;
+                          });
+                          setDragOverId(null);
+                        }}
+                        onClick={() => addProduct(product)}
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: `${virtualRow.size}px`,
+                          transform: `translateY(${virtualRow.start}px)`,
+                        }}
+                        className={`flex flex-col bg-white dark:bg-slate-800 rounded-lg border p-2 shadow-sm hover:shadow-md hover:border-[#0F766E] cursor-pointer transition-all active:scale-[0.97] min-h-[70px] relative ${
+                          isDragging ? 'opacity-40 scale-95' : ''
+                        } ${
+                          isDragOver ? 'border-[#0F766E] ring-2 ring-[#0F766E]/30 scale-[1.02]' : 'border-[#E5E7EB] dark:border-slate-700'
+                        }`}
+                      >
+                        {slotKey && (
+                          <span className="absolute top-1 right-1 text-[9px] font-black uppercase bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500 px-1 rounded leading-tight">{slotKey}</span>
+                        )}
+                        <div className="flex-1 flex flex-col justify-between pt-1">
+                          <p className="text-[11px] font-bold text-slate-800 dark:text-slate-100 leading-tight line-clamp-2 mb-1">{product.product_name}</p>
+                          <div className="flex items-center justify-between mt-auto">
+                            <p className="text-xs font-black text-slate-900 dark:text-slate-100">{formatCurrency(product.selling_price)}</p>
+                            <button className="flex items-center justify-center w-5 h-5 rounded bg-[#16A34A] text-white hover:bg-[#15803d]">
+                              <Plus className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
                       </div>
+                    );
+                  })}
+                  {orderedProducts.length === 0 && (
+                    <div style={{ position: 'relative', height: '200px' }} className="flex items-center justify-center text-center text-slate-400">
+                      <SearchIcon className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                      <p className="text-sm font-medium">
+                        {catalogError && catalog.length === 0 ? 'Unable to load products — check that the backend is running' : 'No products match your search'}
+                      </p>
                     </div>
-                  </div>
-                  );
-                });
-              })()}
-              {filteredProducts.length === 0 && (
-                <div className="col-span-full py-16 text-center text-slate-400">
-                  <SearchIcon className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                  <p className="text-sm font-medium">
-                    {catalogError && catalog.length === 0 ? 'Unable to load products — check that the backend is running' : 'No products match your search'}
-                  </p>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
           </div>
         </section>

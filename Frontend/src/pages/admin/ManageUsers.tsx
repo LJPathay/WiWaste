@@ -47,12 +47,12 @@ export function ManageUsers() {
     role: 'Inventory', status: 'Active',
   });
 
-  const [full_name, setFullName] = useState('');
+  const fullName = useMemo(() => [form.first_name, form.middle_name, form.surname].filter(Boolean).join(' '), [form.first_name, form.middle_name, form.surname]);
 
   const users: ApiUser[] = userList?.data ?? [];
 
-  const autoUsername = useMemo(() => generateUsername(full_name ?? ''), [full_name]);
-  const autoEmail = useMemo(() => generateEmail(full_name ?? ''), [full_name]);
+  const autoUsername = useMemo(() => generateUsername(fullName), [fullName]);
+  const autoEmail = useMemo(() => generateEmail(fullName), [fullName]);
 
   // Server-side filtering, so no client-side filtering needed
   const filteredUsers: ApiUser[] = users;
@@ -86,7 +86,6 @@ export function ManageUsers() {
       role: 'Inventory',
       status: 'Active',
     });
-    setFullName('');
     setFormError('');
     setRoleDropdownOpen(false);
   };
@@ -107,9 +106,10 @@ export function ManageUsers() {
     setSubmitting(true);
     setFormError('');
     try {
-      const nameParts = splitName(full_name);
       const payload: CreateUserPayload = {
-        ...nameParts,
+        first_name: form.first_name,
+        middle_name: form.middle_name,
+        surname: form.surname,
         contact_number: form.contact_number,
         username: autoUsername,
         email: autoEmail,
@@ -136,9 +136,10 @@ export function ManageUsers() {
     setSubmitting(true);
     setFormError('');
     try {
-      const nameParts = splitName(full_name);
       const payload: Partial<CreateUserPayload> = {
-        ...nameParts,
+        first_name: form.first_name,
+        middle_name: form.middle_name,
+        surname: form.surname,
         contact_number: form.contact_number,
         role: form.role,
       };
@@ -169,7 +170,6 @@ export function ManageUsers() {
   const openEdit = (user: ApiUser) => {
     setViewingUser(null);
     setEditingUser(user);
-    setFullName(user.name ?? `${user.first_name ?? ''} ${user.surname ?? ''}`.trim());
     setForm({
       first_name: user.first_name ?? '', middle_name: user.middle_name ?? '',
       surname: user.surname ?? '', contact_number: user.contact_number ?? '',
@@ -424,15 +424,29 @@ export function ManageUsers() {
             </div>
 
             <form onSubmit={handleAddUser} className="space-y-3">
-              <div>
-                <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">Full Name <span className="text-rose-500">*</span></label>
-                <input type="text" required placeholder="e.g. Juan Dela Cruz" value={full_name}
-                  onChange={e => setFullName(e.target.value)}
-                  className={`h-8 w-full bg-slate-50 dark:bg-slate-800 border px-3 rounded-lg text-xs focus:outline-none focus:ring-1 text-slate-900 dark:text-slate-100 ${isDuplicateName ? 'border-rose-500 focus:ring-rose-500' : 'border-slate-200 dark:border-white/10 focus:ring-[#006a61]'}`} />
-                {isDuplicateName && <p className="text-rose-500 text-[10px] font-semibold mt-1 flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> A user with this name already exists.</p>}
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">First Name <span className="text-rose-500">*</span></label>
+                  <input type="text" required placeholder="First" value={form.first_name}
+                    onChange={e => setForm(prev => ({ ...prev, first_name: e.target.value }))}
+                    className={`h-8 w-full bg-slate-50 dark:bg-slate-800 border px-3 rounded-lg text-xs focus:outline-none focus:ring-1 text-slate-900 dark:text-slate-100 ${isDuplicateName ? 'border-rose-500 focus:ring-rose-500' : 'border-slate-200 dark:border-white/10 focus:ring-[#006a61]'}`} />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">Middle Name</label>
+                  <input type="text" placeholder="Middle" value={form.middle_name}
+                    onChange={e => setForm(prev => ({ ...prev, middle_name: e.target.value }))}
+                    className="h-8 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100" />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">Last Name <span className="text-rose-500">*</span></label>
+                  <input type="text" required placeholder="Last" value={form.surname}
+                    onChange={e => setForm(prev => ({ ...prev, surname: e.target.value }))}
+                    className={`h-8 w-full bg-slate-50 dark:bg-slate-800 border px-3 rounded-lg text-xs focus:outline-none focus:ring-1 text-slate-900 dark:text-slate-100 ${isDuplicateName ? 'border-rose-500 focus:ring-rose-500' : 'border-slate-200 dark:border-white/10 focus:ring-[#006a61]'}`} />
+                </div>
               </div>
+              {isDuplicateName && <p className="text-rose-500 text-[10px] font-semibold mt-1 flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> A user with this name already exists.</p>}
 
-              {full_name.trim() && (
+              {fullName.trim() && (
                 <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-white/5 space-y-1.5">
                   <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Auto-generated credentials:</span>
                   <div className="flex items-center gap-2 text-xs">
@@ -499,7 +513,7 @@ export function ManageUsers() {
                 </div>
               )}
 
-              <button type="submit" disabled={submitting || isDuplicateName || !full_name.trim()}
+              <button type="submit" disabled={submitting || isDuplicateName || !form.first_name.trim() || !form.surname.trim()}
                 className="h-8 w-full bg-[#006a61] hover:bg-[#00574f] text-white rounded-lg text-xs font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm">
                 {submitting ? 'Adding User...' : 'Add User'}
               </button>
@@ -524,13 +538,27 @@ export function ManageUsers() {
             </div>
 
             <form onSubmit={handleEditUser} className="space-y-3">
-              <div>
-                <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">Full Name</label>
-                <input type="text" required value={full_name}
-                  onChange={e => setFullName(e.target.value)}
-                  className={`h-8 w-full bg-slate-50 dark:bg-slate-800 border px-3 rounded-lg text-xs focus:outline-none focus:ring-1 text-slate-900 dark:text-slate-100 ${isDuplicateName ? 'border-rose-500 focus:ring-rose-500' : 'border-slate-200 dark:border-white/10 focus:ring-[#006a61]'}`} />
-                {isDuplicateName && <p className="text-rose-500 text-[10px] font-semibold mt-1">A user with this name already exists.</p>}
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">First Name <span className="text-rose-500">*</span></label>
+                  <input type="text" required value={form.first_name}
+                    onChange={e => setForm(prev => ({ ...prev, first_name: e.target.value }))}
+                    className={`h-8 w-full bg-slate-50 dark:bg-slate-800 border px-3 rounded-lg text-xs focus:outline-none focus:ring-1 text-slate-900 dark:text-slate-100 ${isDuplicateName ? 'border-rose-500 focus:ring-rose-500' : 'border-slate-200 dark:border-white/10 focus:ring-[#006a61]'}`} />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">Middle Name</label>
+                  <input type="text" value={form.middle_name}
+                    onChange={e => setForm(prev => ({ ...prev, middle_name: e.target.value }))}
+                    className="h-8 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100" />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">Last Name <span className="text-rose-500">*</span></label>
+                  <input type="text" required value={form.surname}
+                    onChange={e => setForm(prev => ({ ...prev, surname: e.target.value }))}
+                    className={`h-8 w-full bg-slate-50 dark:bg-slate-800 border px-3 rounded-lg text-xs focus:outline-none focus:ring-1 text-slate-900 dark:text-slate-100 ${isDuplicateName ? 'border-rose-500 focus:ring-rose-500' : 'border-slate-200 dark:border-white/10 focus:ring-[#006a61]'}`} />
+                </div>
               </div>
+              {isDuplicateName && <p className="text-rose-500 text-[10px] font-semibold mt-1">A user with this name already exists.</p>}
 
               <div>
                 <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">Contact Number</label>
@@ -574,7 +602,7 @@ export function ManageUsers() {
 
               {formError && <p className="text-rose-600 text-xs font-semibold">{formError}</p>}
 
-              <button type="submit" disabled={submitting || isDuplicateName}
+              <button type="submit" disabled={submitting || isDuplicateName || !form.first_name.trim() || !form.surname.trim()}
                 className="h-8 w-full bg-[#006a61] hover:bg-[#00574f] text-white rounded-lg text-xs font-semibold transition-all disabled:opacity-50 shadow-sm">
                 {submitting ? 'Saving Changes...' : 'Save Changes'}
               </button>

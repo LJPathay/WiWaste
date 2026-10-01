@@ -58,11 +58,10 @@ export function useAuth() {
   const [user, setUser] = useState<AuthUser | null>(getStoredUser);
   const [loading, setLoading] = useState(true);
   const mountedRef = useRef(true);
-  const initializedRef = useRef(false);
-  const cleanupRef = useRef(false);
 
   // Verify token with /me on mount and when refetch is called
   const verifyToken = useCallback(async () => {
+    if (!mountedRef.current) return;
     try {
       console.debug('[Auth] verifyToken: checking token...', localStorage.getItem('wiwaste_token')?.substring(0, 20) + '...');
       const apiUser = await auth.me();
@@ -81,7 +80,7 @@ export function useAuth() {
         apiRole: userData.role,
       };
       console.debug('[Auth] verifyToken success, mapped role:', mapped.role, 'from apiRole:', mapped.apiRole);
-      if (!cleanupRef.current) {
+      if (mountedRef.current) {
         setUser(mapped);
         localStorage.setItem('wiwaste_user', JSON.stringify(mapped));
       }
@@ -91,29 +90,25 @@ export function useAuth() {
       const storedUser = getStoredUser();
       if (storedUser && storedUser.role) {
         console.debug('[Auth] verifyToken failed but using stored user:', storedUser.role);
-        if (!cleanupRef.current) {
+        if (mountedRef.current) {
           setUser(storedUser);
         }
-      } else if (!cleanupRef.current) {
+      } else if (mountedRef.current) {
         setUser(null);
         localStorage.removeItem('wiwaste_user');
       }
     } finally {
-      console.debug('[Auth] verifyToken finally, cleanupRef:', cleanupRef.current, 'setting loading to false');
-      if (!cleanupRef.current) setLoading(false);
+      console.debug('[Auth] verifyToken finally, setting loading to false');
+      if (mountedRef.current) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    console.debug('[Auth] useEffect running, initialized:', initializedRef.current);
-    if (initializedRef.current) return;
-    initializedRef.current = true;
+    console.debug('[Auth] useEffect running, mounted:', mountedRef.current);
     mountedRef.current = true;
-    cleanupRef.current = false;
     verifyToken();
     return () => { 
       console.debug('[Auth] useEffect cleanup');
-      cleanupRef.current = true;
       mountedRef.current = false; 
     };
   }, [verifyToken]);

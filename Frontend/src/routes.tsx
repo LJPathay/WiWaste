@@ -34,6 +34,7 @@ const PredictiveAnalyticsPage = lazyPage(() => import("./pages/dashboard/Predict
 const LeakageDetectionPage = lazyPage(() => import("./pages/dashboard/LeakageDetection"), "LeakageDetectionPage");
 const FefoTrackingPage = lazyPage(() => import("./pages/dashboard/FefoTracking"), "FefoTrackingPage");
 const VendorCreditsPage = lazyPage(() => import("./pages/dashboard/VendorCredits"), "VendorCreditsPage");
+const SalesWastageDashboard = lazyPage(() => import("./pages/dashboard/SalesWastageDashboard"), "SalesWastageDashboard");
 const ManageUsers = lazyPage(() => import("./pages/admin/ManageUsers"), "ManageUsers");
 const ManageProducts = lazyPage(() => import("./pages/admin/ManageProducts"), "ManageProducts");
 const ManageCategories = lazyPage(() => import("./pages/admin/ManageCategories"), "ManageCategories");
@@ -111,6 +112,7 @@ export const router = createBrowserRouter([
               { path: "dashboard/leakage", Component: LeakageDetectionPage },
               { path: "dashboard/fefo", Component: FefoTrackingPage },
               { path: "dashboard/vendors", Component: VendorCreditsPage },
+              { path: "dashboard/sales-wastage", Component: SalesWastageDashboard },
 
               // ── Owner/Administrator routes ──
               {

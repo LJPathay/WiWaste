@@ -175,7 +175,8 @@ export const FormSelect = forwardRef<HTMLSelectElement, FormSelectProps>(
           </p>
         )}
     </div>
-  );
+    );
+  }
 );
 
 FormSelect.displayName = 'FormSelect';

@@ -6,6 +6,10 @@ vi.mock('../services/api', () => ({
   dashboard: {
     overview: vi.fn().mockRejectedValue(new Error('offline')),
   },
+  ownerDashboard: {
+    overview: vi.fn().mockRejectedValue(new Error('offline')),
+    analytics: vi.fn().mockRejectedValue(new Error('offline')),
+  },
 }));
 
 describe('useDashboardData', () => {

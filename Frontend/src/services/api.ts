@@ -146,6 +146,32 @@ export const auth = {
   logout: () => request('/logout', { method: 'POST' }),
   me: () => request<ApiUser>('/me'),
   refresh: () => request('/refresh', { method: 'POST' }),
+
+  /** Step 1 — request a 6-digit reset code for an account. */
+  forgotPassword: (email: string) =>
+    request<null>('/password/forgot', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+
+  /** Step 2 — verify the emailed code before allowing a reset. */
+  verifyOtp: (email: string, otp: string) =>
+    request<{ verified: boolean }>('/password/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email, otp }),
+    }),
+
+  /** Step 3 — consume the code and set the new password. */
+  resetPassword: (email: string, otp: string, password: string, passwordConfirmation: string) =>
+    request<null>('/password/reset', {
+      method: 'POST',
+      body: JSON.stringify({
+        email,
+        otp,
+        password,
+        password_confirmation: passwordConfirmation,
+      }),
+    }),
 };
 
 // ─── Users ──────────────────────────────────────────────

@@ -212,30 +212,30 @@ export function POSTerminal() {
     const localMatch = cashierProducts.find(
       p => p.plu_code === code || p.barcode === code || p.product_id.replace('P-', '') === code
     );
+
     if (localMatch) {
       addProduct(localMatch);
       // Add to catalog for future search/display
-      setCatalog(prev => {
-        if (prev.some(p => p.product_id === localMatch.product_id)) return prev;
-        return [...prev, localMatch];
-      });
-      setSearch('');
-      barcodeRef.current?.focus();
-      return;
+      setCatalog(prev =>
+        prev.some(p => p.product_id === localMatch.product_id) ? prev : [...prev, localMatch]
+      );
+    } else {
+      try {
+        const product: CashierProduct = apiProductToCashier(await productsApi.lookup(code));
+        addProduct(product);
+        // Add to catalog for future search/display
+        setCatalog(prev =>
+          prev.some(p => p.product_id === product.product_id) ? prev : [...prev, product]
+        );
+      } catch {
+        error(`Product not found: ${code}`);
+        setPluBuffer('');
+        barcodeRef.current?.focus();
+        return;
+      }
     }
-    try {
-      const result = await productsApi.lookup(code);
-      const product: CashierProduct = apiProductToCashier(result);
-      addProduct(product);
-      // Add to catalog for future search/display
-      setCatalog(prev => {
-        if (prev.some(p => p.product_id === product.product_id)) return prev;
-        return [...prev, product];
-      });
-      setSearch('');
-    } catch {
-      error(`Product not found: ${code}`);
-    }
+
+    setSearch('');
     setPluBuffer('');
     barcodeRef.current?.focus();
   }, [addProduct, error, setSearch, setPluBuffer, setCatalog]);

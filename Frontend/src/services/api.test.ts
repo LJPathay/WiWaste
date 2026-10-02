@@ -57,6 +57,6 @@ describe('api request()', () => {
 
     await dashboard.overview();
 
-    expect(fetchMock.mock.calls[0][0]).toBe('http://localhost:8000/api/dashboard/overview');
+    expect(fetchMock.mock.calls[0][0]).toBe('http://localhost:8000/api/v1/dashboard/overview');
   });
 });

@@ -53,6 +53,11 @@ Route::prefix('v1')->middleware([SecurityHeaders::class, ForceHttps::class, Rate
     Route::get('/me',      [AuthController::class, 'me'])->middleware('auth:sanctum');
     Route::post('/refresh', [AuthController::class, 'refresh'])->middleware('auth:sanctum');
 
+    // Password Reset (no auth required)
+    Route::post('/password/forgot', [AuthController::class, 'forgotPassword']);
+    Route::post('/password/verify-otp', [AuthController::class, 'verifyOtp']);
+    Route::post('/password/reset', [AuthController::class, 'resetPassword']);
+
     // User management
     Route::apiResource('/users', UserController::class);
     Route::post('/users/{id}/quarantine',  [UserController::class, 'quarantine']);
@@ -280,6 +285,11 @@ Route::middleware([SecurityHeaders::class, ForceHttps::class, RateLimitMiddlewar
     Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
     Route::get('/me',      [AuthController::class, 'me'])->middleware('auth:sanctum');
     Route::post('/refresh', [AuthController::class, 'refresh'])->middleware('auth:sanctum');
+
+    // Password Reset (no auth required)
+    Route::post('/password/forgot', [AuthController::class, 'forgotPassword']);
+    Route::post('/password/verify-otp', [AuthController::class, 'verifyOtp']);
+    Route::post('/password/reset', [AuthController::class, 'resetPassword']);
 
     // User management
     Route::apiResource('/users', UserController::class);

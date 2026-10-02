@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Models\User;
+use App\Models\PasswordResetOtp;
 use App\Services\LoginAttemptService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends BaseApiController
@@ -154,5 +156,62 @@ class AuthController extends BaseApiController
         return $this->success([
             'access_token' => $accessToken,
         ], 'Token refreshed successfully')->withCookie($cookie);
+    }
+
+    // POST /api/v1/password/forgot
+    public function forgotPassword(ForgotPasswordRequest $request)
+    {
+        $email = $request->validated('email');
+        $user = User::where('email', $email)->firstOrFail();
+
+        // Generate and store OTP
+        $otp = PasswordResetOtp::createOtp($email);
+
+        // Send email (queue in production)
+        try {
+            Mail::to($email)->send(new \App\Mail\PasswordResetOtpMail($user->full_name, $otp));
+        } catch (\Exception $e) {
+            \Log::error('Failed to send OTP email: ' . $e->getMessage());
+            return $this->error('Failed to send reset email. Please try again.', 500);
+        }
+
+        return $this->success(null, 'Password reset code sent to your email.');
+    }
+
+    // POST /api/v1/password/verify-otp
+    public function verifyOtp(VerifyOtpRequest $request)
+    {
+        $email = $request->validated('email');
+        $otp = $request->validated('otp');
+
+        $valid = PasswordResetOtp::verifyOtp($email, $otp);
+
+        if (!$valid) {
+            return $this->error('Invalid or expired code.', 422);
+        }
+
+        return $this->success(['verified' => true], 'Code verified. You may now reset your password.');
+    }
+
+    // POST /api/v1/password/reset
+    public function resetPassword(ResetPasswordRequest $request)
+    {
+        $email = $request->validated('email');
+        $otp = $request->validated('otp');
+        $password = $request->validated('password');
+
+        $success = PasswordResetOtp::consumeOtp($email, $otp);
+
+        if (!$success) {
+            return $this->error('Invalid or expired code.', 422);
+        }
+
+        $user = User::where('email', $email)->firstOrFail();
+        $user->update(['password' => Hash::make($password)]);
+
+        // Revoke all user tokens (force re-login)
+        $user->tokens()->delete();
+
+        return $this->success(null, 'Password reset successful. Please log in with your new password.');
     }
 }

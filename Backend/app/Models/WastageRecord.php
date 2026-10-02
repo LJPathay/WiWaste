@@ -106,10 +106,12 @@ class WastageRecord extends Model
     public function getClassification(): string
     {
         $typeMap = [
-            'Expired' => 'expiry',
-            'Damaged' => 'physical',
-            'Spoiled' => 'quality',
-            'Lost' => 'shrinkage',
+            'Expired'  => 'expiry',
+            'Damaged'  => 'physical',
+            'Spoiled'  => 'quality',
+            'Lost'     => 'shrinkage',
+            'Recalled' => 'recall',
+            'Other'    => 'other',
         ];
 
         return $typeMap[$this->wastage_type] ?? 'other';

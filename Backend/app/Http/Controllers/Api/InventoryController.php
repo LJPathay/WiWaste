@@ -148,6 +148,9 @@ class InventoryController extends Controller
                     'status' => 'active',
                     'received_date' => now()->toDateString(),
                     'created_by' => $user?->User_id ?? 1,
+                    // FEFOBatch has $timestamps = false, so this NOT NULL
+                    // column has to be supplied explicitly or the insert fails.
+                    'created_at' => now(),
                 ]);
             } else {
                 $batch->expiry_date = $data['expiry_date'];
@@ -260,7 +263,9 @@ class InventoryController extends Controller
 
                 $batch->quantity -= $remainingQty;
                 if ($batch->quantity <= 0) {
-                    $batch->status = 'depleted';
+                    // `FEFO_Batch.status` is an ENUM(active, flagged, cleared).
+                    // A fully consumed batch is cleared, not "depleted".
+                    $batch->status = 'cleared';
                 }
                 $batch->save();
 
@@ -284,7 +289,7 @@ class InventoryController extends Controller
                     $takeQty = min($batch->quantity, $remainingQty);
                     $batch->quantity -= $takeQty;
                     if ($batch->quantity <= 0) {
-                        $batch->status = 'depleted';
+                        $batch->status = 'cleared';
                     }
                     $batch->save();
 

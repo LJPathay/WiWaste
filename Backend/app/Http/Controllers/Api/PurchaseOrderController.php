@@ -219,6 +219,7 @@ class PurchaseOrderController extends Controller
                     'received_date' => now()->toDateString(),
                     'supplier_batch_number' => $poItem->product?->barcode,
                     'created_by' => $user?->User_id ?? 1,
+                    'created_at' => now(),
                 ]);
 
                 $user = $request->user();

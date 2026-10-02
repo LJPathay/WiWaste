@@ -223,13 +223,23 @@ export interface ApiStockMovement {
 }
 
 // ─── Wastage ────────────────────────────────────────────
+// Flag reasons a cashier can raise map 1:1 onto WastageType when the flag is
+// confirmed (the backend writes ucfirst(reason)).
+export type WastageType =
+  | 'Expired'
+  | 'Damaged'
+  | 'Spoiled'
+  | 'Lost'
+  | 'Recalled'
+  | 'Other';
+
 export interface ApiWastage {
   id: number;
   product_id: number;
   product_name: string;
   sku: string;
   recorded_by: string;
-  wastage_type: 'Expired' | 'Damaged' | 'Spoiled' | 'Lost';
+  wastage_type: WastageType;
   quantity: number;
   estimated_loss: number;
   date_recorded: string;
@@ -294,7 +304,7 @@ export interface CreateWastagePayload {
   branch_id?: number;
   product_id: number;
   batch_id?: number;
-  wastage_type: 'Expired' | 'Damaged' | 'Spoiled' | 'Lost';
+  wastage_type: WastageType;
   quantity: number;
   estimated_loss: number;
   date_recorded: string;

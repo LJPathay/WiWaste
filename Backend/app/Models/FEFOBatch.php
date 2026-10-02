@@ -102,10 +102,12 @@ class FEFOBatch extends Model
         // One-up: Supplier → This batch
         $trace = [];
         
-        // Get the stock receiving record that created this batch
-        $receiving = StockReceiving::whereHas('supplier', function ($q) {
-            $q->where('supplier_id', $this->product->supplier_id ?? 0);
-        })->where('supplier_batch_number', $this->supplier_batch_number)->first();
+        // Get the stock receiving record that created this batch.
+        // The link lives on stock_receiving_items.batch_id — Stock_Receiving
+        // itself has no supplier_batch_number column.
+        $receiving = StockReceiving::whereHas('items', function ($q) {
+            $q->where('batch_id', $this->batch_id);
+        })->first();
 
         if ($receiving) {
             $trace[] = [

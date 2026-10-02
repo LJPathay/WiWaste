@@ -394,6 +394,7 @@ class StockReceivingController extends Controller
             'received_temperature' => $item->temperature_at_receipt,
             'supplier_batch_number' => $item->batch_id ? \App\Models\FEFOBatch::find($item->batch_id)?->supplier_batch_number : null,
             'created_by' => $user?->User_id ?? 1,
+            'created_at' => now(),
         ]);
 
         $item->update(['batch_id' => $batch->batch_id, 'status' => 'received']);

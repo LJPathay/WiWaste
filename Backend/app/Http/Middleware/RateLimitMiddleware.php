@@ -34,8 +34,10 @@ class RateLimitMiddleware
         $user = $request->user();
         $role = $user?->role ?? 'guest';
         $isApi = $request->is('api/*');
-        $isAuth = $request->is('api/login') || $request->is('api/register');
-        $isPassword = $request->is('api/password/*');
+        // Auth routes are registered twice: under /api/* and /api/v1/*. Both
+        // shapes must match or the strict limits below are silently skipped.
+        $isAuth = $request->is('api/login', 'api/v1/login', 'api/register', 'api/v1/register');
+        $isPassword = $request->is('api/password/*', 'api/v1/password/*');
         $isWrite = in_array($request->method(), ['POST', 'PUT', 'PATCH', 'DELETE']);
 
         // Determine limit key

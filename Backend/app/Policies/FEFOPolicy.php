@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\Role;
 use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
@@ -11,26 +12,26 @@ class FEFOPolicy
 
     public function viewAny(User $user): bool
     {
-        return in_array($user->role, ['Owner', 'Inventory']);
+        return in_array($user->role, [...Role::ownerTier(), 'Inventory']);
     }
 
     public function view(User $user, $batch): bool
     {
-        return in_array($user->role, ['Owner', 'Inventory']);
+        return in_array($user->role, [...Role::ownerTier(), 'Inventory']);
     }
 
     public function flag(User $user, $batch): bool
     {
-        return in_array($user->role, ['Owner', 'Inventory']);
+        return in_array($user->role, [...Role::ownerTier(), 'Inventory']);
     }
 
     public function clear(User $user, $batch): bool
     {
-        return in_array($user->role, ['Owner', 'Inventory']);
+        return in_array($user->role, [...Role::ownerTier(), 'Inventory']);
     }
 
     public function notify(User $user): bool
     {
-        return $user->role === 'Owner';
+        return Role::isOwnerTier($user->role);
     }
 }

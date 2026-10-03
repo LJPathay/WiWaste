@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Enums\Role;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 use Illuminate\Support\Facades\Gate;
 use App\Models\User;
@@ -105,7 +106,7 @@ class AuthServiceProvider extends ServiceProvider
 
         // ── Super-admin bypass ──
         Gate::before(function (User $user) {
-            if ($user->role === 'Owner') {
+            if (Role::isOwnerTier($user->role)) {
                 return true;
             }
         });

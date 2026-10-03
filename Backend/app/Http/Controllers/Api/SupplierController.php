@@ -27,7 +27,9 @@ class SupplierController extends BaseApiController
             $search = request()->get('search');
             $query->where(function ($q) use ($search) {
                 $q->where('supplier_name', 'like', "%{$search}%")
-                  ->orWhere('contact_person', 'like', "%{$search}%");
+                  ->orWhere('contact_person', 'like', "%{$search}%")
+                  ->orWhere('contact_number', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
             });
         }
 
@@ -38,6 +40,7 @@ class SupplierController extends BaseApiController
             'name'           => $s->supplier_name,
             'contact_person' => $s->contact_person,
             'contact_number' => $s->contact_number,
+            'email'          => $s->email,
             'address'        => $s->address,
             'product_count'  => $s->products_count,
             'business_id'    => $s->business_id,
@@ -66,6 +69,7 @@ class SupplierController extends BaseApiController
             'name'           => $supplier->supplier_name,
             'contact_person' => $supplier->contact_person,
             'contact_number' => $supplier->contact_number,
+            'email'          => $supplier->email,
             'address'        => $supplier->address,
             'product_count'  => 0,
             'business_id'    => $supplier->business_id,
@@ -101,6 +105,7 @@ class SupplierController extends BaseApiController
             'name'            => $s->supplier_name,
             'contact_person'  => $s->contact_person,
             'contact_number'  => $s->contact_number,
+            'email'           => $s->email,
             'address'         => $s->address,
             'product_count'   => $totalProducts,
             'low_stock_count' => $lowStockCount,
@@ -126,6 +131,7 @@ class SupplierController extends BaseApiController
             'name'           => $supplier->supplier_name,
             'contact_person' => $supplier->contact_person,
             'contact_number' => $supplier->contact_number,
+            'email'          => $supplier->email,
             'address'        => $supplier->address,
             'product_count'  => $supplier->products()->count(),
             'business_id'    => $supplier->business_id,

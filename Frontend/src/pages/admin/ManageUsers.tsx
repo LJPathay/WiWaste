@@ -1,26 +1,47 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   Users, Search, Plus, Edit2, X, Info,
-  AlertTriangle, CheckCircle2, Circle,
-  UserX, Eye, EyeOff, ChevronDown, Check, Lock
+  AlertTriangle, Eye, EyeOff, ChevronDown, Check,
+  UserX, RotateCcw,
 } from 'lucide-react';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { Tutorial } from '../../components/ui/Tutorial';
 import { useApi } from '../../hooks/useApi';
-import { users as usersApi, type ApiUser, type CreateUserPayload, type PaginatedUsersResponse } from '../../services/api';
+import { users as usersApi, type ApiUser, type CreateUserPayload, type PaginatedUsersResponse, type UserStatusCounts } from '../../services/api';
 import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
 import { Pagination } from '../../components/ui/pagination';
 import { Toast, useToast } from '../../components/ui/Toast';
 import {
-  ITEMS_PER_PAGE, ROLE_CONFIG, maskEmail, EMPTY_FORM,
-  DEFAULT_PASSWORD, generateUsername, generateEmail,
+  ITEMS_PER_PAGE, ROLE_CONFIG, STATUS_CONFIG, ASSIGNABLE_STATUSES, roleConfigFor,
+  maskEmail, DEFAULT_PASSWORD, generateUsername, generateEmail,
   getPasswordRules, isPasswordValid,
+  type RoleKey, type UserStatus,
 } from './UserConstants';
+
+/** Tab values for the status filter: 'all' means "every account not archived". */
+type StatusFilter = 'all' | UserStatus;
+
+/**
+ * Renders one account status. Every non-archived status used to be drawn with the same
+ * grey "Active" pill, so Inactive and Quarantined accounts were indistinguishable from
+ * healthy ones in both the table and the detail view.
+ */
+function StatusBadge({ status }: { status: string }) {
+  const config = STATUS_CONFIG[status as UserStatus] ?? STATUS_CONFIG.Active;
+  const StatusIcon = config.icon;
+
+  return (
+    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${config.badgeClass}`}>
+      <StatusIcon className="h-3 w-3" aria-hidden="true" />
+      {config.label}
+    </span>
+  );
+}
 
 export function ManageUsers() {
   const { toasts, dismiss, error: showError, success: showSuccess } = useToast();
-  const [statusFilter, setStatusFilter] = useState<'all' | 'Archived'>('all');
-  const [roleFilter, setRoleFilter] = useState<'all' | 'Owner' | 'Inventory' | 'Cashier'>('all');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [roleFilter, setRoleFilter] = useState<'all' | RoleKey>('all');
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [unmaskedEmailIds, setUnmaskedEmailIds] = useState<Set<number>>(new Set());
@@ -41,11 +62,28 @@ export function ManageUsers() {
     { dedupeKey: `users-${currentPage}-${search}-${roleFilter}-${statusFilter}` }
   );
 
+  // Tab totals come from the server. Deriving them from `userList.data` only ever saw
+  // the current page of five rows, so the Archived tab showed "0" while archived
+  // accounts existed on a later page.
+  const { data: statusCounts, refetch: refetchCounts } = useApi<UserStatusCounts>(
+    () => usersApi.statusCounts(search, roleFilter === 'all' ? '' : roleFilter),
+    { dedupeKey: `user-status-counts-${search}-${roleFilter}` }
+  );
+
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<ApiUser | null>(null);
   const [viewingUser, setViewingUser] = useState<ApiUser | null>(null);
   const [archiveModalUser, setArchiveModalUser] = useState<ApiUser | null>(null);
+  const [reactivateModalUser, setReactivateModalUser] = useState<ApiUser | null>(null);
+  // True once the administrator has typed their own email address, which stops the
+  // name-derived default from overwriting it.
+  const [emailEdited, setEmailEdited] = useState(false);
+  // Non-null once the edit form has picked a different status but the administrator
+  // has not yet confirmed it. While set, saving is blocked: QA requires a status
+  // change to be confirmed, and it must be reached through Edit rather than a direct
+  // control on the row.
+  const [pendingStatus, setPendingStatus] = useState<UserStatus | null>(null);
 
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
@@ -62,7 +100,15 @@ export function ManageUsers() {
   const users: ApiUser[] = userList?.data ?? [];
 
   const autoUsername = useMemo(() => generateUsername(fullName), [fullName]);
-  const autoEmail = useMemo(() => generateEmail(fullName), [fullName]);
+  const generatedEmail = useMemo(() => generateEmail(fullName), [fullName]);
+
+  // QA requires the form to capture the user's email address. It used to be derived
+  // from the name and shown read-only (`<name>@wiwaste.com`), so an administrator
+  // could never enter the address the person actually uses — which also made the
+  // account unreachable via "Forgot password", since that looks the address up in
+  // `User.email`. The generated value is still offered as the default, but the field
+  // is editable and whatever the administrator types is what gets stored.
+  const effectiveEmail = emailEdited ? form.email : generatedEmail;
 
   // Server-side filtering, so no client-side filtering needed
   const filteredUsers: ApiUser[] = users;
@@ -82,9 +128,9 @@ export function ManageUsers() {
   );
 
   const passwordRules = getPasswordRules(DEFAULT_PASSWORD);
-  const passwordValid = isPasswordValid(DEFAULT_PASSWORD);
 
   const resetForm = () => {
+    setEmailEdited(false);
     setForm({
       first_name: '',
       middle_name: '',
@@ -129,17 +175,34 @@ export function ManageUsers() {
         surname: form.surname,
         contact_number: form.contact_number,
         username: autoUsername,
-        email: autoEmail,
+        email: effectiveEmail,
         password: DEFAULT_PASSWORD,
         role: form.role,
         status: 'Active',
       };
+      if (!payload.email.trim()) {
+        setSubmitting(false);
+        setFormError('Email address is required.');
+        return;
+      }
       await usersApi.create(payload);
       resetForm();
       setIsAddOpen(false);
+
+      // The table holds 5 rows, so a newly added account would otherwise land on a
+      // later page and the administrator would get a success toast with nothing to
+      // show for it. Filtering to the new account puts it on screen. An archived
+      // account has to come back first, since the default list excludes that status.
+      setStatusFilter('all');
+      setSearch(fullName.trim());
+      setCurrentPage(1);
+
       await refetch();
+      await refetchCounts();
+      showSuccess(`Created ${fullName.trim()} with role ${payload.role}.`);
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to add user');
+      showError(err instanceof Error ? err.message : 'Failed to add user');
     } finally {
       setSubmitting(false);
     }
@@ -149,6 +212,8 @@ export function ManageUsers() {
     e.preventDefault();
     if (!editingUser) return;
     if (isDuplicateName) { setFormError('A user with this name already exists.'); return; }
+    // A status change only reaches the API after the administrator has confirmed it.
+    if (pendingStatus) { setFormError('Confirm the status change before saving.'); return; }
 
     setSubmitting(true);
     setFormError('');
@@ -158,13 +223,29 @@ export function ManageUsers() {
         middle_name: form.middle_name,
         surname: form.surname,
         contact_number: form.contact_number,
+        email: form.email,
         role: form.role,
+        status: form.status,
       };
       await usersApi.update(editingUser.id, payload);
       setIsEditOpen(false);
+      setPendingStatus(null);
+
+      // An edit can rename the account or change its status, and the active filter was
+      // chosen against the old values. Left in place, the row you just saved stops
+      // matching it and disappears from under you. Clearing the filter keeps the edited
+      // account on screen, which is the point of the screen.
+      setSearch('');
+      setStatusFilter('all');
+      setCurrentPage(1);
+
       await refetch();
+      // The archived tab totals change with every status write.
+      await refetchCounts();
+      showSuccess(`${editingUser.name} updated.`);
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to update user');
+      showError(err instanceof Error ? err.message : 'Failed to update user');
     } finally {
       setSubmitting(false);
     }
@@ -177,8 +258,28 @@ export function ManageUsers() {
       await usersApi.archive(archiveModalUser.id);
       setArchiveModalUser(null);
       await refetch();
+      await refetchCounts();
+      showSuccess(`${archiveModalUser.name} archived.`);
     } catch (err) {
       console.error('Failed to archive user:', err);
+      showError(err instanceof Error ? err.message : 'Failed to archive user');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleReactivateConfirm = async () => {
+    if (!reactivateModalUser) return;
+    setSubmitting(true);
+    try {
+      await usersApi.reactivate(reactivateModalUser.id);
+      setReactivateModalUser(null);
+      await refetch();
+      await refetchCounts();
+      showSuccess(`${reactivateModalUser.name} reactivated.`);
+    } catch (err) {
+      console.error('Failed to reactivate user:', err);
+      showError(err instanceof Error ? err.message : 'Failed to reactivate user');
     } finally {
       setSubmitting(false);
     }
@@ -194,7 +295,24 @@ export function ManageUsers() {
       role: user.role, status: user.status,
     });
     setFormError('');
+    setPendingStatus(null);
+    setEmailEdited(false);
+    setRoleDropdownOpen(false);
     setIsEditOpen(true);
+  };
+
+  /**
+   * Records an unconfirmed status change so the modal can ask before it is applied.
+   * Picking the original status again withdraws the request.
+   */
+  const requestStatusChange = (next: UserStatus) => {
+    setForm(prev => ({ ...prev, status: next }));
+    setPendingStatus(editingUser && next !== editingUser.status ? next : null);
+  };
+
+  const cancelStatusChange = () => {
+    if (editingUser) setForm(prev => ({ ...prev, status: editingUser.status }));
+    setPendingStatus(null);
   };
 
   const toggleSingleEmailMask = (id: number) => {
@@ -206,9 +324,24 @@ export function ManageUsers() {
     });
   };
 
-  const archivedCount = (users ?? []).filter(u => u.status === 'Archived').length;
-  const activeCount = (users ?? []).filter(u => u.status !== 'Archived').length;
   const isFiltered = statusFilter !== 'all' || roleFilter !== 'all' || search !== '';
+
+  // QA requires dedicated sections for Inactive and Quarantined accounts; previously
+  // both were folded into "All Users" with no way to isolate them.
+  //
+  // `request()` hands back the whole API envelope, so the payload is under `data`. The
+  // counts read `statusCounts?.by_status.X`, and because `?.` only guards
+  // `statusCounts` that threw "Cannot read properties of undefined (reading 'Active')"
+  // the moment the endpoint started returning data. Every hop is optional-chained now.
+  const counts = statusCounts?.data;
+  const byStatus = counts?.by_status;
+  const statusTabs: Array<{ id: StatusFilter; label: string; count: number; Icon?: typeof Users }> = [
+    { id: 'all', label: 'All Users', count: counts?.not_archived ?? 0 },
+    { id: 'Active', label: 'Active', count: byStatus?.Active ?? 0, Icon: STATUS_CONFIG.Active.icon },
+    { id: 'Inactive', label: 'Inactive', count: byStatus?.Inactive ?? 0, Icon: STATUS_CONFIG.Inactive.icon },
+    { id: 'Quarantined', label: 'Quarantined', count: byStatus?.Quarantined ?? 0, Icon: STATUS_CONFIG.Quarantined.icon },
+    { id: 'Archived', label: 'Archived', count: byStatus?.Archived ?? 0, Icon: STATUS_CONFIG.Archived.icon },
+  ];
 
   const columns: DataTableColumn<ApiUser>[] = [
     {
@@ -241,49 +374,30 @@ export function ManageUsers() {
     {
       key: 'role', header: 'Role', align: 'center', minWidth: '100px',
       render: (row) => {
-        const RoleIcon = ROLE_CONFIG[row.role as keyof typeof ROLE_CONFIG]?.icon ?? Users;
-        const roleConfig = ROLE_CONFIG[row.role as keyof typeof ROLE_CONFIG];
+        const roleConfig = roleConfigFor(row.role);
+        const RoleIcon = roleConfig.icon;
         return (
           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-xs">
-            <RoleIcon className={`h-3.5 w-3.5 ${roleConfig?.iconColor ?? 'text-slate-500'}`} />
-            <span>{row.role}</span>
+            <RoleIcon className={`h-3.5 w-3.5 ${roleConfig.iconColor}`} />
+            <span>{roleConfig.label}</span>
           </div>
         );
       },
     },
     {
-      key: 'status', header: 'Status', align: 'center', minWidth: '100px',
-      render: (row) => (
-        row.status === 'Archived' ? (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800/50">
-            <UserX className="h-3 w-3" /> Archived
-          </span>
-        ) : (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700/50">
-            <span className="w-1.5 h-1.5 rounded-full bg-slate-500" /> Active
-          </span>
-        )
-      ),
+      key: 'status', header: 'Status', align: 'center', minWidth: '110px',
+      render: (row) => <StatusBadge status={row.status} />,
     },
     {
-      key: 'actions', header: '', align: 'center', minWidth: '80px', pinned: true,
+      // QA asks for the Edit control to be removed from the row: a user record is
+      // edited by selecting it and using Edit in the detail view, which is also the
+      // only route to a status change. There is deliberately no per-row status
+      // control, so status cannot be changed without going through Edit.
+      key: 'actions', header: '', align: 'center', minWidth: '80px', pin: 'end',
       render: (row) => (
         <div className="flex items-center justify-center gap-1">
           {row.status !== 'Archived' && (
             <>
-              <UITooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); const u = row; setViewingUser(null); setTimeout(() => openEdit(u), 0); }}
-                    aria-label={`Edit ${row.name}`}
-                    className="h-7 w-7 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-emerald-600 hover:text-white transition-all inline-flex items-center justify-center"
-                  >
-                    <Edit2 className="h-3.5 w-3.5" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900">Edit user</TooltipContent>
-              </UITooltip>
               <UITooltip>
                 <TooltipTrigger asChild>
                   <button
@@ -298,6 +412,21 @@ export function ManageUsers() {
                 <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900">Archive user</TooltipContent>
               </UITooltip>
             </>
+          )}
+          {row.status !== 'Active' && (
+            <UITooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setReactivateModalUser(row); }}
+                  aria-label={`Reactivate ${row.name}`}
+                  className="h-7 w-7 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-emerald-600 hover:text-white transition-all inline-flex items-center justify-center"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900">Reactivate user</TooltipContent>
+            </UITooltip>
           )}
         </div>
       ),
@@ -368,14 +497,11 @@ export function ManageUsers() {
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-1" role="group" aria-label="Filter by status">
               <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 px-2 uppercase tracking-wider">Status:</span>
-              {[
-                { id: 'all', label: 'All Users', count: activeCount },
-                { id: 'Archived', label: 'Archived', count: archivedCount, icon: UserX },
-              ].map(tab => {
-                const TabIcon = tab.icon;
+              {statusTabs.map(tab => {
+                const TabIcon = tab.Icon;
                 const isSelected = statusFilter === tab.id;
                 return (
-                  <button key={tab.id} onClick={() => { setStatusFilter(tab.id as 'all' | 'Archived'); setCurrentPage(1); }}
+                  <button key={tab.id} onClick={() => { setStatusFilter(tab.id); setCurrentPage(1); }}
                     aria-pressed={isSelected}
                     className={`flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${isSelected ? 'bg-slate-100 dark:bg-slate-950 text-[#006a61] dark:text-[#7ef0cf] shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'}`}>
                     {TabIcon && <TabIcon className="h-3.5 w-3.5" />}
@@ -389,12 +515,12 @@ export function ManageUsers() {
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex items-center gap-1">
                 <label htmlFor="user-role-filter" className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Role:</label>
-                <select id="user-role-filter" value={roleFilter} onChange={e => setRoleFilter(e.target.value as 'all' | 'Owner' | 'Inventory' | 'Cashier')}
+                <select id="user-role-filter" value={roleFilter} onChange={e => setRoleFilter(e.target.value as 'all' | RoleKey)}
                   className="h-8 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-xs font-medium rounded-lg px-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#006a61]">
                   <option value="all">All Roles</option>
-                  <option value="Owner">Owner</option>
-                  <option value="Inventory">Inventory Staff</option>
-                  <option value="Cashier">Cashier</option>
+                  {(Object.keys(ROLE_CONFIG) as RoleKey[]).map(key => (
+                    <option key={key} value={key}>{ROLE_CONFIG[key].label}</option>
+                  ))}
                 </select>
               </div>
 
@@ -418,6 +544,12 @@ export function ManageUsers() {
         columns={columns}
         rowKey={(row) => row.id}
         emptyMessage="No users found"
+        // The row is the way into an account. The per-row Edit button was removed (the
+        // QA report asked for it), which left editing reachable only from a modal that
+        // nothing opened — so the row click opens the view dialog, whose footer carries
+        // Edit / Archive / Reactivate. The checkbox cell and the action buttons inside
+        // the row stop propagation, so they do not trip it.
+        onRowClick={(row) => setViewingUser(row)}
         pagination={
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3.5">
             <div className="text-xs text-slate-500 dark:text-slate-400">
@@ -437,34 +569,34 @@ export function ManageUsers() {
       {isAddOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-3 overflow-y-auto" role="dialog" aria-modal="true">
           <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-lg p-4 relative shadow-2xl my-6">
-            <button onClick={() => setIsAddOpen(false)} className="absolute top-3 right-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5">
+            <button type="button" aria-label="Close" onClick={() => setIsAddOpen(false)} className="absolute top-3 right-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5">
               <X className="h-4 w-4" />
             </button>
             <div className="flex items-center gap-2 mb-3 border-b border-slate-100 dark:border-white/5 pb-2.5">
               <div className="p-1.5 rounded-lg bg-[#006a61]/10 text-[#006a61] dark:text-[#7ef0cf]"><Plus className="h-4 w-4" /></div>
               <div>
                 <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Add New User</h2>
-                <p className="text-xs text-slate-500">Enter full name — username &amp; email are generated automatically.</p>
+                <p className="text-xs text-slate-500">Enter the name, email address and role. The username and password are generated for you.</p>
               </div>
             </div>
 
             <form onSubmit={handleAddUser} className="space-y-3">
               <div className="grid grid-cols-3 gap-2">
                 <div>
-                  <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">First Name <span className="text-rose-500">*</span></label>
-                  <input type="text" required placeholder="First" value={form.first_name}
+                  <label htmlFor="add-user-first-name" className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">First Name <span className="text-rose-500">*</span></label>
+                  <input id="add-user-first-name" type="text" required placeholder="First" value={form.first_name}
                     onChange={e => setForm(prev => ({ ...prev, first_name: e.target.value }))}
                     className={`h-8 w-full bg-slate-50 dark:bg-slate-800 border px-3 rounded-lg text-xs focus:outline-none focus:ring-1 text-slate-900 dark:text-slate-100 ${isDuplicateName ? 'border-rose-500 focus:ring-rose-500' : 'border-slate-200 dark:border-white/10 focus:ring-[#006a61]'}`} />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">Middle Name</label>
-                  <input type="text" placeholder="Middle" value={form.middle_name}
+                  <label htmlFor="add-user-middle-name" className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">Middle Name</label>
+                  <input id="add-user-middle-name" type="text" placeholder="Middle" value={form.middle_name}
                     onChange={e => setForm(prev => ({ ...prev, middle_name: e.target.value }))}
                     className="h-8 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100" />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">Last Name <span className="text-rose-500">*</span></label>
-                  <input type="text" required placeholder="Last" value={form.surname}
+                  <label htmlFor="add-user-last-name" className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">Last Name <span className="text-rose-500">*</span></label>
+                  <input id="add-user-last-name" type="text" required placeholder="Last" value={form.surname}
                     onChange={e => setForm(prev => ({ ...prev, surname: e.target.value }))}
                     className={`h-8 w-full bg-slate-50 dark:bg-slate-800 border px-3 rounded-lg text-xs focus:outline-none focus:ring-1 text-slate-900 dark:text-slate-100 ${isDuplicateName ? 'border-rose-500 focus:ring-rose-500' : 'border-slate-200 dark:border-white/10 focus:ring-[#006a61]'}`} />
                 </div>
@@ -479,21 +611,48 @@ export function ManageUsers() {
                     <span className="font-mono font-semibold text-slate-900 dark:text-slate-100">@{autoUsername}</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs">
-                    <span className="text-slate-500 dark:text-slate-400">Email:</span>
-                    <span className="font-mono font-semibold text-slate-900 dark:text-slate-100">{autoEmail}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs">
                     <span className="text-slate-500 dark:text-slate-400">Password:</span>
                     <span className="font-mono font-semibold text-slate-900 dark:text-slate-100">{DEFAULT_PASSWORD}</span>
                   </div>
+                  {/* The policy was computed but never displayed, so the form gave no
+                      indication of what the shared password has to satisfy. */}
+                  <ul className="pt-1 mt-0.5 border-t border-slate-200 dark:border-white/5 space-y-0.5">
+                    {passwordRules.map(rule => (
+                      <li key={rule.id} className={`flex items-center gap-1.5 text-[10px] ${rule.met ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'}`}>
+                        {rule.met
+                          ? <Check className="h-3 w-3 shrink-0" aria-hidden="true" />
+                          : <span className="w-3 shrink-0 text-center" aria-hidden="true">&bull;</span>}
+                        {rule.label}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               )}
 
               <div>
-                <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">Contact Number</label>
-                <input type="text" placeholder="e.g. 09171234567" value={form.contact_number}
+                <label htmlFor="add-user-contact-number" className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">Contact Number</label>
+                <input id="add-user-contact-number" type="text" placeholder="e.g. 09171234567" value={form.contact_number}
                   onChange={e => setForm(prev => ({ ...prev, contact_number: e.target.value }))}
                   className="h-8 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100" />
+              </div>
+
+              <div>
+                <label htmlFor="add-user-email" className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">
+                  Email Address <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  id="add-user-email"
+                  type="email"
+                  required
+                  placeholder="name@company.com"
+                  value={effectiveEmail}
+                  onChange={e => { setForm(prev => ({ ...prev, email: e.target.value })); setEmailEdited(true); }}
+                  className="h-8 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100"
+                />
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+                  Pre-filled from the name. Change it to the address this person actually
+                  uses — "Forgot password" sends the reset code here.
+                </p>
               </div>
 
               <div className="relative">
@@ -502,14 +661,14 @@ export function ManageUsers() {
                   <button type="button" onClick={() => setRoleDropdownOpen(prev => !prev)}
                     className="h-8 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 rounded-lg text-xs flex items-center justify-between focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100">
                     <div className="flex items-center gap-2">
-                      {React.createElement(ROLE_CONFIG[form.role].icon, { className: `h-3.5 w-3.5 ${ROLE_CONFIG[form.role].iconColor}` })}
-                      <span className="font-medium">{ROLE_CONFIG[form.role].label}</span>
+                      {React.createElement(roleConfigFor(form.role).icon, { className: `h-3.5 w-3.5 ${roleConfigFor(form.role).iconColor}` })}
+                      <span className="font-medium">{roleConfigFor(form.role).label}</span>
                     </div>
                     <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
                   </button>
                   {roleDropdownOpen && (
                     <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white dark:bg-slate-850 rounded-xl border border-slate-200 dark:border-white/10 shadow-xl overflow-hidden py-1">
-                      {(Object.keys(ROLE_CONFIG) as Array<keyof typeof ROLE_CONFIG>).map(roleKey => {
+                      {(Object.keys(ROLE_CONFIG) as RoleKey[]).map(roleKey => {
                         const item = ROLE_CONFIG[roleKey];
                         const ItemIcon = item.icon;
                         const isSelected = form.role === roleKey;
@@ -551,7 +710,7 @@ export function ManageUsers() {
       {isEditOpen && editingUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-3 overflow-y-auto" role="dialog" aria-modal="true">
           <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-lg p-4 relative shadow-2xl my-6">
-            <button onClick={() => { setIsEditOpen(false); setViewingUser(null); }} className="absolute top-3 right-3 text-slate-400 hover:text-slate-600 p-0.5">
+            <button type="button" aria-label="Close" onClick={() => { setIsEditOpen(false); setViewingUser(null); }} className="absolute top-3 right-3 text-slate-400 hover:text-slate-600 p-0.5">
               <X className="h-4 w-4" />
             </button>
             <div className="flex items-center gap-2 mb-3 border-b border-slate-100 dark:border-white/5 pb-2.5">
@@ -565,20 +724,20 @@ export function ManageUsers() {
             <form onSubmit={handleEditUser} className="space-y-3">
               <div className="grid grid-cols-3 gap-2">
                 <div>
-                  <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">First Name <span className="text-rose-500">*</span></label>
-                  <input type="text" required value={form.first_name}
+                  <label htmlFor="edit-user-first-name" className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">First Name <span className="text-rose-500">*</span></label>
+                  <input id="edit-user-first-name" type="text" required value={form.first_name}
                     onChange={e => setForm(prev => ({ ...prev, first_name: e.target.value }))}
                     className={`h-8 w-full bg-slate-50 dark:bg-slate-800 border px-3 rounded-lg text-xs focus:outline-none focus:ring-1 text-slate-900 dark:text-slate-100 ${isDuplicateName ? 'border-rose-500 focus:ring-rose-500' : 'border-slate-200 dark:border-white/10 focus:ring-[#006a61]'}`} />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">Middle Name</label>
-                  <input type="text" value={form.middle_name}
+                  <label htmlFor="edit-user-middle-name" className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">Middle Name</label>
+                  <input id="edit-user-middle-name" type="text" value={form.middle_name}
                     onChange={e => setForm(prev => ({ ...prev, middle_name: e.target.value }))}
                     className="h-8 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100" />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">Last Name <span className="text-rose-500">*</span></label>
-                  <input type="text" required value={form.surname}
+                  <label htmlFor="edit-user-last-name" className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">Last Name <span className="text-rose-500">*</span></label>
+                  <input id="edit-user-last-name" type="text" required value={form.surname}
                     onChange={e => setForm(prev => ({ ...prev, surname: e.target.value }))}
                     className={`h-8 w-full bg-slate-50 dark:bg-slate-800 border px-3 rounded-lg text-xs focus:outline-none focus:ring-1 text-slate-900 dark:text-slate-100 ${isDuplicateName ? 'border-rose-500 focus:ring-rose-500' : 'border-slate-200 dark:border-white/10 focus:ring-[#006a61]'}`} />
                 </div>
@@ -586,8 +745,17 @@ export function ManageUsers() {
               {isDuplicateName && <p className="text-rose-500 text-[10px] font-semibold mt-1">A user with this name already exists.</p>}
 
               <div>
-                <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">Contact Number</label>
-                <input type="text" value={form.contact_number}
+                <label htmlFor="edit-user-email" className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">
+                  Email Address <span className="text-rose-500">*</span>
+                </label>
+                <input id="edit-user-email" type="email" required value={form.email}
+                  onChange={e => setForm(prev => ({ ...prev, email: e.target.value }))}
+                  className="h-8 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100" />
+              </div>
+
+              <div>
+                <label htmlFor="edit-user-contact-number" className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">Contact Number</label>
+                <input id="edit-user-contact-number" type="text" value={form.contact_number}
                   onChange={e => setForm(prev => ({ ...prev, contact_number: e.target.value }))}
                   className="h-8 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100" />
               </div>
@@ -598,14 +766,14 @@ export function ManageUsers() {
                   <button type="button" onClick={() => setRoleDropdownOpen(prev => !prev)}
                     className="h-8 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 rounded-lg text-xs flex items-center justify-between focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100">
                     <div className="flex items-center gap-2">
-                      {React.createElement(ROLE_CONFIG[form.role].icon, { className: `h-3.5 w-3.5 ${ROLE_CONFIG[form.role].iconColor}` })}
-                      <span className="font-medium">{ROLE_CONFIG[form.role].label}</span>
+                      {React.createElement(roleConfigFor(form.role).icon, { className: `h-3.5 w-3.5 ${roleConfigFor(form.role).iconColor}` })}
+                      <span className="font-medium">{roleConfigFor(form.role).label}</span>
                     </div>
                     <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
                   </button>
                   {roleDropdownOpen && (
                     <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white dark:bg-slate-850 rounded-xl border border-slate-200 dark:border-white/10 shadow-xl overflow-hidden py-1">
-                      {(Object.keys(ROLE_CONFIG) as Array<keyof typeof ROLE_CONFIG>).map(roleKey => {
+                      {(Object.keys(ROLE_CONFIG) as RoleKey[]).map(roleKey => {
                         const item = ROLE_CONFIG[roleKey];
                         const ItemIcon = item.icon;
                         const isSelected = form.role === roleKey;
@@ -625,9 +793,54 @@ export function ManageUsers() {
                 </div>
               </div>
 
+              {/* Status is editable only from inside Edit, and only once the change has
+                  been explicitly confirmed. Archived is absent on purpose: it is
+                  reached through Archive, which has its own confirmation. */}
+              <div>
+                <label htmlFor="edit-user-status" className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">Account Status</label>
+                <select
+                  id="edit-user-status"
+                  value={form.status}
+                  onChange={e => requestStatusChange(e.target.value as UserStatus)}
+                  aria-describedby="edit-user-status-help"
+                  className={`h-8 w-full bg-slate-50 dark:bg-slate-800 border px-3 rounded-lg text-xs focus:outline-none focus:ring-1 text-slate-900 dark:text-slate-100 ${pendingStatus ? 'border-amber-400 focus:ring-amber-400' : 'border-slate-200 dark:border-white/10 focus:ring-[#006a61]'}`}
+                >
+                  {ASSIGNABLE_STATUSES.map(status => (
+                    <option key={status} value={status}>{STATUS_CONFIG[status].label}</option>
+                  ))}
+                  {form.status === 'Archived' && <option value="Archived">Archived</option>}
+                </select>
+                <p id="edit-user-status-help" className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+                  {STATUS_CONFIG[(form.status as UserStatus) ?? 'Active']?.description ?? ''}
+                </p>
+              </div>
+
+              {pendingStatus && (
+                <div role="alert" className="p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800/60 space-y-2">
+                  <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-200 flex items-start gap-1.5">
+                    <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-px" aria-hidden="true" />
+                    <span>
+                      Change status of <strong>{editingUser?.name}</strong> from{' '}
+                      <strong>{editingUser?.status}</strong> to <strong>{pendingStatus}</strong>?
+                      {pendingStatus !== 'Active' && <> This immediately blocks the account from signing in.</>}
+                    </span>
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button type="button" onClick={cancelStatusChange}
+                      className="h-7 px-2.5 text-[11px] font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-white/10 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">
+                      Cancel
+                    </button>
+                    <button type="button" onClick={() => setPendingStatus(null)}
+                      className="h-7 px-2.5 text-[11px] font-semibold text-white bg-amber-600 hover:bg-amber-700 rounded-lg transition-all">
+                      Confirm status change
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {formError && <p className="text-rose-600 text-xs font-semibold">{formError}</p>}
 
-              <button type="submit" disabled={submitting || isDuplicateName || !form.first_name.trim() || !form.surname.trim()}
+              <button type="submit" disabled={submitting || isDuplicateName || pendingStatus !== null || !form.first_name.trim() || !form.surname.trim()}
                 className="h-8 w-full bg-[#006a61] hover:bg-[#00574f] text-white rounded-lg text-xs font-semibold transition-all disabled:opacity-50 shadow-sm">
                 {submitting ? 'Saving Changes...' : 'Save Changes'}
               </button>
@@ -640,7 +853,7 @@ export function ManageUsers() {
       {viewingUser && !isEditOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-3 overflow-y-auto" role="dialog" aria-modal="true">
           <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-md p-4 relative shadow-2xl my-6">
-            <button onClick={() => setViewingUser(null)} className="absolute top-3 right-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5">
+            <button type="button" aria-label="Close" onClick={() => setViewingUser(null)} className="absolute top-3 right-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5">
               <X className="h-4 w-4" />
             </button>
             <div className="flex items-center gap-2.5 mb-4 border-b border-slate-100 dark:border-white/5 pb-3">
@@ -678,12 +891,12 @@ export function ManageUsers() {
                 <label className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Role</label>
                 <div className="mt-0.5">
                   {(() => {
-                    const RoleIcon = ROLE_CONFIG[viewingUser.role as keyof typeof ROLE_CONFIG]?.icon ?? Users;
-                    const roleConfig = ROLE_CONFIG[viewingUser.role as keyof typeof ROLE_CONFIG];
+                    const roleConfig = roleConfigFor(viewingUser.role);
+                    const RoleIcon = roleConfig.icon;
                     return (
                       <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-xs">
-                        <RoleIcon className={`h-3.5 w-3.5 ${roleConfig?.iconColor ?? 'text-slate-500'}`} />
-                        <span>{viewingUser.role}</span>
+                        <RoleIcon className={`h-3.5 w-3.5 ${roleConfig.iconColor}`} />
+                        <span>{roleConfig.label}</span>
                       </div>
                     );
                   })()}
@@ -692,14 +905,11 @@ export function ManageUsers() {
 
               <div>
                 <label className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Account Status</label>
-                <div className="mt-0.5">
-                  {viewingUser.status === 'Archived' ? (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800/50">
-                      <UserX className="h-3 w-3" /> Archived
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700/50">
-                      <span className="w-1.5 h-1.5 rounded-full bg-slate-500" /> Active
+                <div className="mt-0.5 flex items-center gap-2 flex-wrap">
+                  <StatusBadge status={viewingUser.status} />
+                  {viewingUser.status !== 'Active' && (
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                      {STATUS_CONFIG[viewingUser.status as UserStatus]?.description}
                     </span>
                   )}
                 </div>
@@ -716,16 +926,23 @@ export function ManageUsers() {
             </div>
 
             <div className="mt-4 pt-3 border-t border-slate-100 dark:border-white/5 flex items-center gap-2">
-              {viewingUser.status !== 'Archived' && (
-                <button onClick={() => { const u = viewingUser; setViewingUser(null); setTimeout(() => openEdit(u), 0); }}
-                  className="h-8 flex-1 px-3 rounded-lg bg-[#006a61] hover:bg-[#00574f] text-white text-xs font-semibold transition-all inline-flex items-center justify-center gap-1">
-                  <Edit2 className="h-3.5 w-3.5" /> Edit
-                </button>
-              )}
+              {/* Edit is the only route to a status change, so it stays available for
+                  every status — an archived account can still be inspected and brought
+                  back. */}
+              <button onClick={() => { const u = viewingUser; setViewingUser(null); setTimeout(() => openEdit(u), 0); }}
+                className="h-8 flex-1 px-3 rounded-lg bg-[#006a61] hover:bg-[#00574f] text-white text-xs font-semibold transition-all inline-flex items-center justify-center gap-1">
+                <Edit2 className="h-3.5 w-3.5" /> Edit
+              </button>
               {viewingUser.status !== 'Archived' && (
                 <button onClick={() => { setArchiveModalUser(viewingUser); setViewingUser(null); }}
                   className="h-8 flex-1 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold transition-all inline-flex items-center justify-center gap-1">
                   <UserX className="h-3.5 w-3.5" /> Archive
+                </button>
+              )}
+              {viewingUser.status !== 'Active' && (
+                <button onClick={() => { setReactivateModalUser(viewingUser); setViewingUser(null); }}
+                  className="h-8 flex-1 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition-all inline-flex items-center justify-center gap-1">
+                  <RotateCcw className="h-3.5 w-3.5" /> Reactivate
                 </button>
               )}
             </div>
@@ -737,7 +954,7 @@ export function ManageUsers() {
       {archiveModalUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-3" role="dialog" aria-modal="true">
           <div className="bg-white dark:bg-slate-900 rounded-xl border border-rose-200 dark:border-rose-800/40 w-full max-w-md p-4 relative shadow-2xl">
-            <button onClick={() => setArchiveModalUser(null)} className="absolute top-3 right-3 text-slate-400 hover:text-slate-600"><X className="h-4 w-4" /></button>
+            <button type="button" aria-label="Close" onClick={() => setArchiveModalUser(null)} className="absolute top-3 right-3 text-slate-400 hover:text-slate-600"><X className="h-4 w-4" /></button>
             <div className="flex items-center gap-2.5 mb-2.5">
               <div className="p-2.5 rounded-full bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400"><UserX className="h-5 w-5" /></div>
               <div>
@@ -760,6 +977,38 @@ export function ManageUsers() {
           </div>
         </div>
       )}
+
+      {/* ── REACTIVATE CONFIRM MODAL ── */}
+      {reactivateModalUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-3" role="dialog" aria-modal="true">
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-emerald-200 dark:border-emerald-800/40 w-full max-w-md p-4 relative shadow-2xl">
+            <button type="button" aria-label="Close" onClick={() => setReactivateModalUser(null)} className="absolute top-3 right-3 text-slate-400 hover:text-slate-600"><X className="h-4 w-4" /></button>
+            <div className="flex items-center gap-2.5 mb-2.5">
+              <div className="p-2.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400"><RotateCcw className="h-5 w-5" /></div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Reactivate User Account</h3>
+                <p className="text-xs text-slate-500">Restore sign-in access</p>
+              </div>
+            </div>
+            <p className="text-xs text-slate-600 dark:text-slate-300 mb-3 leading-relaxed">
+              Reactivate <strong className="text-slate-900 dark:text-slate-100">{reactivateModalUser.name}</strong> (@{reactivateModalUser.username})?
+              <br /><br />
+              The account will move from{' '}
+              <StatusBadge status={reactivateModalUser.status} /> back to{' '}
+              <StatusBadge status="Active" /> and be able to sign in again. The account itself was never deleted.
+            </p>
+            <div className="flex items-center justify-end gap-2">
+              <button onClick={() => setReactivateModalUser(null)} className="h-8 px-3 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-all">Cancel</button>
+              <button onClick={handleReactivateConfirm} disabled={submitting}
+                className="h-8 px-3 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-all shadow-sm disabled:opacity-50 flex items-center gap-1.5">
+                <RotateCcw className="h-3.5 w-3.5" />{submitting ? 'Reactivating...' : 'Reactivate User'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <Toast toasts={toasts} onDismiss={dismiss} />
     </div>
   );
 }

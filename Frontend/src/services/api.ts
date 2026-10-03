@@ -3,6 +3,7 @@ export type {
   PaginatedResponse,
   ApiUser,
   CreateUserPayload,
+  UserStatusCounts,
   ApiCategory,
   ApiSupplier,
   ApiSupplierDetail,
@@ -202,6 +203,12 @@ export const users = {
     if (excludeStatus) params.set('exclude_status', excludeStatus);
     return request<PaginatedUsersResponse>(`/users?${params.toString()}`);
   },
+  statusCounts: (search = '', role = '') => {
+    const params = new URLSearchParams();
+    if (search) params.set('search', search);
+    if (role) params.set('role', role);
+    return request<UserStatusCounts>(`/users/status-counts?${params.toString()}`);
+  },
   create: (data: CreateUserPayload) =>
     request('/users', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: number, data: Partial<CreateUserPayload>) =>
@@ -224,18 +231,21 @@ export interface PaginatedCategoriesResponse {
 }
 
 export const categories = {
-  list: (page = 1, perPage = 15, search = '') => {
+  list: (page = 1, perPage = 15, search = '', excludeStatus = '', status = '') => {
     const params = new URLSearchParams();
     params.set('page', page.toString());
     params.set('per_page', perPage.toString());
     if (search) params.set('search', search);
+    if (excludeStatus) params.set('exclude_status', excludeStatus);
+    if (status) params.set('status', status);
     return request<PaginatedCategoriesResponse>(`/categories?${params.toString()}`);
   },
   create: (name: string) =>
     request('/categories', { method: 'POST', body: JSON.stringify({ Category_name: name }) }),
   update: (id: number, name: string) =>
     request(`/categories/${id}`, { method: 'PUT', body: JSON.stringify({ Category_name: name }) }),
-  delete: (id: number) => request(`/categories/${id}`, { method: 'DELETE' }),
+  /** Archives an active category; calling it again on an archived one restores it. */
+  archive: (id: number) => request(`/categories/${id}`, { method: 'DELETE' }),
 };
 
 // ─── Suppliers ──────────────────────────────────────────

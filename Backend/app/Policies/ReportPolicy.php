@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\Role;
 use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
@@ -11,16 +12,16 @@ class ReportPolicy
 
     public function viewAny(User $user): bool
     {
-        return in_array($user->role, ['Owner', 'Inventory']);
+        return in_array($user->role, [...Role::ownerTier(), 'Inventory']);
     }
 
     public function generate(User $user): bool
     {
-        return in_array($user->role, ['Owner', 'Inventory']);
+        return in_array($user->role, [...Role::ownerTier(), 'Inventory']);
     }
 
     public function export(User $user): bool
     {
-        return in_array($user->role, ['Owner', 'Inventory']);
+        return in_array($user->role, [...Role::ownerTier(), 'Inventory']);
     }
 }

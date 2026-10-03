@@ -9,6 +9,43 @@ use App\Models\AuditLog;
 
 class UserController extends BaseApiController
 {
+    /**
+     * Narrows a user query by the `search` parameter.
+     *
+     * This used to be duplicated in index() and statusCounts(), and both copies ran
+     * `LIKE %<whole query>%` against each column separately. That means no multi-word
+     * query could ever match a name: searching "Lia Cruz" asked for a single value
+     * containing a space to be found inside first_name ("Lia") or surname ("Cruz"), so
+     * the list came back empty. It also ignored middle_name entirely.
+     *
+     * The query is split on whitespace and every term has to appear somewhere, in any
+     * one column. So "Lia Cruz", "Cruz Lia", "crz" and "cashier" all still find people,
+     * and the list and the tab counts cannot disagree about who matches.
+     */
+    private function applySearch($query)
+    {
+        $search = trim((string) request()->get('search', ''));
+
+        if ($search === '') {
+            return $query;
+        }
+
+        $terms = preg_split('/\s+/', $search) ?: [];
+
+        return $query->where(function ($q) use ($terms) {
+            foreach ($terms as $term) {
+                $like = "%{$term}%";
+                $q->where(function ($q) use ($like) {
+                    $q->where('username', 'like', $like)
+                      ->orWhere('email', 'like', $like)
+                      ->orWhere('first_name', 'like', $like)
+                      ->orWhere('middle_name', 'like', $like)
+                      ->orWhere('surname', 'like', $like);
+                });
+            }
+        });
+    }
+
     public function index()
     {
         $perPage = min((int) request()->get('per_page', 15), 100);
@@ -16,15 +53,7 @@ class UserController extends BaseApiController
 
         $query = User::query();
 
-        if (request()->has('search')) {
-            $search = request()->get('search');
-            $query->where(function ($q) use ($search) {
-                $q->where('username', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('first_name', 'like', "%{$search}%")
-                  ->orWhere('surname', 'like', "%{$search}%");
-            });
-        }
+        $this->applySearch($query);
 
         if (request()->has('role')) {
             $query->where('role', request()->get('role'));
@@ -94,6 +123,43 @@ class UserController extends BaseApiController
             'email'          => $u->email,
             'role'           => $u->role,
             'status'         => $u->status,
+        ]);
+    }
+
+    /**
+     * Totals per account status, honouring the same search/role filters as index().
+     *
+     * The Manage Users tabs need these because the list is server-side paginated: the
+     * tab badges were previously derived from whatever rows happened to be on the
+     * current page, so "Archived 0" was shown while archived accounts existed on page
+     * two. `total` is every status, and `not_archived` is the count behind the default
+     * "All Users" tab.
+     */
+    public function statusCounts()
+    {
+        $query = User::query();
+
+        $this->applySearch($query);
+
+        if (request()->has('role')) {
+            $query->where('role', request()->get('role'));
+        }
+
+        $counts = $query
+            ->selectRaw('status, COUNT(*) as aggregate')
+            ->groupBy('status')
+            ->pluck('aggregate', 'status')
+            ->all();
+
+        $byStatus = [];
+        foreach (['Active', 'Inactive', 'Quarantined', 'Archived'] as $status) {
+            $byStatus[$status] = (int) ($counts[$status] ?? 0);
+        }
+
+        return $this->success([
+            'by_status'   => $byStatus,
+            'total'       => array_sum($byStatus),
+            'not_archived' => $byStatus['Active'] + $byStatus['Inactive'] + $byStatus['Quarantined'],
         ]);
     }
 

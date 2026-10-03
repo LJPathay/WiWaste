@@ -29,7 +29,7 @@ class InventorySyncTest extends TestCase
             'username'   => 'cashier-test',
             'password'   => Hash::make('password'),
             'email'      => 'cashier@test.com',
-            'role'       => 'Business Owner',
+            'role'       => 'Owner',
             'status'     => 'Active',
             'Created_at' => now(),
         ]);

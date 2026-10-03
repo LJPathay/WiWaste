@@ -11,8 +11,15 @@ class Category extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'Category_name'
+        'Category_name',
+        'status',
     ];
+
+    /** Categories still offered when assigning a product to one. */
+    public function scopeActive($query)
+    {
+        return $query->where('status', 'Active');
+    }
 
     public function products()
     {

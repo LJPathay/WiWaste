@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\Role;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Laravel\Sanctum\HasApiTokens;
@@ -103,9 +104,19 @@ class User extends Authenticatable
         return $query->where('branch_id', $branchId);
     }
 
+    /**
+     * Owner-and-co-admin. `scopeOwners` is used to pick the account that owns
+     * system-level records, so a co-admin has to be included here too.
+     */
     public function scopeOwners($query)
     {
-        return $query->where('role', 'Owner');
+        return $query->whereIn('role', Role::ownerTier());
+    }
+
+    /** Business-wide administrative authority, on the model as well as the enum. */
+    public function isOwnerTier(): bool
+    {
+        return Role::isOwnerTier($this->role);
     }
 
     public function scopeInventory($query)

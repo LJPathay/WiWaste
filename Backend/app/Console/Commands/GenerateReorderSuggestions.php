@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Enums\Role;
 use App\Models\User;
 use App\Services\ReorderService;
 use Illuminate\Console\Command;
@@ -59,7 +60,7 @@ class GenerateReorderSuggestions extends Command
         $this->info("Generating suggestions for business #{$businessId}...");
         
         // Get a system user for the command
-        $systemUser = User::where('role', 'Owner')->first();
+        $systemUser = User::whereIn('role', Role::ownerTier())->first();
         if (!$systemUser) {
             $this->error('No system user found to generate suggestions.');
             return;

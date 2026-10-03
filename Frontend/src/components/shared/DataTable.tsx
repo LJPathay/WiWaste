@@ -16,7 +16,16 @@ export interface DataTableColumn<T> {
   align?: 'text' | 'numeric' | 'center';
   minWidth?: string;
   width?: string;
+  /** Pins the column to the leading edge while the table scrolls horizontally. */
   pinned?: boolean;
+  /**
+   * Explicit sticky edge. `pinned: true` is shorthand for `pin: 'start'`.
+   *
+   * Two columns cannot both use `pinned`, because every pinned cell was given the same
+   * `left: 0` and simply stacked on top of one another while scrolling. A trailing
+   * actions column has to declare `pin: 'end'` instead.
+   */
+  pin?: 'start' | 'end';
   truncate?: boolean;
   render?: (row: T, value: unknown) => React.ReactNode;
   numeric?: boolean;
@@ -104,7 +113,20 @@ export function DataTable<T extends Record<string, unknown>>({
     onSelectionChange(next);
   }, [selectedKeys, onSelectionChange]);
 
-  const pinnedCol = columns.find(c => c.pinned);
+  const pinOf = (col: DataTableColumn<T>): 'start' | 'end' | null =>
+    col.pin ?? (col.pinned ? 'start' : null);
+
+  const hasPinnedCol = columns.some(c => pinOf(c) !== null);
+
+  /**
+   * A sticky cell must paint an opaque background that matches whatever the row is
+   * currently showing, otherwise the columns scrolling underneath are visible through
+   * it. These classes mirror TableRow's hover and selected states exactly.
+   */
+  const pinnedCellBg =
+    "bg-white dark:bg-slate-950 " +
+    "group-hover:bg-slate-50 dark:group-hover:bg-slate-900 " +
+    "group-data-[state=selected]:bg-teal-50 dark:group-data-[state=selected]:bg-teal-950/40";
 
   if (loading) {
     return (
@@ -123,7 +145,7 @@ export function DataTable<T extends Record<string, unknown>>({
   return (
     <div className={cn("w-full bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden", className)}>
       <div className={cn(horizontalScroll && "w-full overflow-x-auto")}>
-        <Table ref={tableRef} className={cn("w-full", pinnedCol && "min-w-[800px]")}>
+        <Table ref={tableRef} className={cn("w-full", hasPinnedCol && "min-w-[800px]")}>
           {showHeader && (
             <TableHeader className="sticky top-0 z-20 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-white/10">
               <TableRow className="hover:bg-transparent">
@@ -139,23 +161,29 @@ export function DataTable<T extends Record<string, unknown>>({
                     />
                   </TableHead>
                 )}
-                {columns.map(col => (
-                  <TableHead
-                    key={col.key}
-                    className={cn(
-                      col.align === 'numeric' && "text-left",
-                      col.align === 'center' && "text-center",
-                      col.pinned && "sticky left-0 z-30 bg-slate-50 dark:bg-slate-900",
-                      col.hideOnMobile && "hidden md:table-cell",
-                    )}
-                    style={{
-                      minWidth: col.minWidth,
-                      width: col.width,
-                    }}
-                  >
-                    {col.header}
-                  </TableHead>
-                ))}
+                {columns.map(col => {
+                  const pin = pinOf(col);
+                  return (
+                    <TableHead
+                      key={col.key}
+                      className={cn(
+                        col.align === 'numeric' && "text-left",
+                        col.align === 'center' && "text-center",
+                        pin === 'start' && "sticky left-0 z-30 bg-slate-50 dark:bg-slate-900",
+                        pin === 'end' && "sticky right-0 z-30 bg-slate-50 dark:bg-slate-900",
+                        col.hideOnMobile && "hidden md:table-cell",
+                      )}
+                      style={{
+                        minWidth: col.minWidth,
+                        width: col.width,
+                        ...(pin === 'start' ? { left: selectable ? '40px' : '0' } : {}),
+                        ...(pin === 'end' ? { right: actions ? '64px' : '0' } : {}),
+                      }}
+                    >
+                      {col.header}
+                    </TableHead>
+                  );
+                })}
                 {actions && (
                   <TableHead className="w-16 text-right">
                     <span className="sr-only">Actions</span>
@@ -209,17 +237,22 @@ export function DataTable<T extends Record<string, unknown>>({
                     )}
                     {columns.map(col => {
                       const cellValue = row[col.key];
+                      const pin = pinOf(col);
                       return (
                         <TableCell
                           key={col.key}
                           className={cn(
                             (col.align === 'numeric' || col.numeric) && "text-left tabular-nums",
                             col.align === 'center' && "text-center",
-                            col.pinned && "sticky left-0 z-10 bg-white dark:bg-slate-950 group-hover:bg-slate-50/50 dark:group-hover:bg-white/5",
+                            pin === 'start' && cn("sticky left-0 z-10", pinnedCellBg),
+                            pin === 'end' && cn("sticky right-0 z-10", pinnedCellBg),
                             col.numeric && "tabular-nums",
                             col.hideOnMobile && "hidden md:table-cell",
                           )}
-                          style={col.pinned ? { left: selectable ? '40px' : '0' } : undefined}
+                          style={{
+                            ...(pin === 'start' ? { left: selectable ? '40px' : '0' } : {}),
+                            ...(pin === 'end' ? { right: actions ? '64px' : '0' } : {}),
+                          }}
                         >
                           {col.render
                             ? col.render(row, cellValue)
@@ -247,10 +280,6 @@ export function DataTable<T extends Record<string, unknown>>({
           </TableBody>
         </Table>
       </div>
-
-      {pinnedCol && (
-        <div className="pointer-events-none absolute top-0 bottom-0 left-[var(--pinned-width)] w-px bg-transparent z-10" />
-      )}
 
       {pagination && (
         <div className="border-t border-slate-200 dark:border-white/10">

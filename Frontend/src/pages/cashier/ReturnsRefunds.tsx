@@ -189,7 +189,9 @@ export function ReturnsRefunds() {
 
   const returnableColumns = useMemo(() => [
     { key: 'transaction_id', header: 'Transaction', pinned: true, truncate: true, minWidth: '120px' },
-    { key: 'product_name', header: 'Item', pinned: true, truncate: true, minWidth: '180px' },
+    // Only the first column is pinned. A second `pinned: true` here put both cells at
+    // `left: 0`, so they overlapped each other during horizontal scrolling.
+    { key: 'product_name', header: 'Item', truncate: true, minWidth: '180px' },
     { key: 'sku', header: 'SKU', minWidth: '100px' },
     { key: 'quantity', header: 'Sold Qty', numeric: true, minWidth: '80px' },
     {

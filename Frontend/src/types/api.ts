@@ -24,7 +24,7 @@ export interface ApiUser {
   contact_number?: string;
   username: string;
   email: string;
-  role: 'Owner' | 'Inventory' | 'Cashier' | 'Pharmacist';
+  role: 'Owner' | 'Admin' | 'Inventory' | 'Cashier' | 'Pharmacist';
   status: 'Active' | 'Inactive' | 'Quarantined' | 'Archived';
   created_at?: string;
   business_id?: number;
@@ -39,10 +39,25 @@ export interface CreateUserPayload {
   username: string;
   password: string;
   email: string;
-  role: 'Owner' | 'Inventory' | 'Cashier' | 'Pharmacist';
+  role: 'Owner' | 'Admin' | 'Inventory' | 'Cashier' | 'Pharmacist';
   status: 'Active' | 'Inactive' | 'Quarantined' | 'Archived';
   business_id?: number;
   branch_id?: number;
+}
+
+/**
+ * `GET /users/status-counts`.
+ *
+ * Shaped like the other response types in this file: `request()` resolves with the
+ * whole API envelope, so the payload sits under `data` — the same reason
+ * `PaginatedUsersResponse` has its own `data` and `meta` members.
+ */
+export interface UserStatusCounts {
+  data: {
+    by_status: Record<'Active' | 'Inactive' | 'Quarantined' | 'Archived', number>;
+    total: number;
+    not_archived: number;
+  };
 }
 
 // ─── Categories ─────────────────────────────────────────
@@ -50,6 +65,7 @@ export interface ApiCategory {
   id: number;
   name: string;
   product_count: number;
+  status: 'Active' | 'Archived';
 }
 
 // ─── Suppliers ──────────────────────────────────────────
@@ -58,6 +74,7 @@ export interface ApiSupplier {
   name: string;
   contact_person: string | null;
   contact_number: string;
+  email: string | null;
   address: string | null;
   product_count: number;
   business_id?: number;
@@ -113,6 +130,7 @@ export interface CreateSupplierPayload {
   supplier_name: string;
   contact_person?: string;
   contact_number: string;
+  email?: string;
   address?: string;
   business_id?: number;
   fda_lto_number?: string;

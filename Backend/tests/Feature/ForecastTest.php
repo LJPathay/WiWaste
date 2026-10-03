@@ -30,7 +30,7 @@ class ForecastTest extends TestCase
             'username'   => 'forecast-owner',
             'password'   => Hash::make('password'),
             'email'      => 'owner@test.com',
-            'role'       => 'Business Owner',
+            'role'       => 'Owner',
             'status'     => 'Active',
             'Created_at' => now(),
         ]);

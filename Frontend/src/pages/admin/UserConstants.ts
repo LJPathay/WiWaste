@@ -1,4 +1,4 @@
-import { Shield, Package, Briefcase } from 'lucide-react';
+import { Shield, ShieldCheck, Package, Briefcase, UserCheck, UserX, Archive } from 'lucide-react';
 
 export const ITEMS_PER_PAGE = 5;
 
@@ -9,6 +9,13 @@ export const ROLE_CONFIG = {
     iconColor: 'text-emerald-600 dark:text-emerald-400',
     badgeClass: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50',
     description: 'Full system control & user management',
+  },
+  'Admin': {
+    label: 'Admin',
+    icon: ShieldCheck,
+    iconColor: 'text-sky-600 dark:text-sky-400',
+    badgeClass: 'bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300 border border-sky-200 dark:border-sky-800/50',
+    description: 'Co-administrator — same authority as the Owner',
   },
   'Inventory': {
     label: 'Inventory Staff',
@@ -26,6 +33,68 @@ export const ROLE_CONFIG = {
   },
 } as const;
 
+export type RoleKey = keyof typeof ROLE_CONFIG;
+
+/**
+ * Presentation for an arbitrary stored role value.
+ *
+ * The `role` column also accepts 'Pharmacist', which is storable but is not one of the
+ * roles this screen offers. Reading `ROLE_CONFIG[user.role]` directly therefore threw
+ * `Cannot read properties of undefined` on such an account — the same failure mode
+ * that emptied `role` when the Admin value was truncated by the database. Anything
+ * unrecognised falls back to a neutral badge that still names the real value.
+ */
+export function roleConfigFor(role: string): { label: string; icon: typeof Shield; iconColor: string; badgeClass: string } {
+  const known = ROLE_CONFIG[role as RoleKey];
+  if (known) return known;
+
+  return {
+    label: role || 'Unassigned',
+    icon: Shield,
+    iconColor: 'text-slate-500 dark:text-slate-400',
+    badgeClass: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700/50',
+  };
+}
+
+/**
+ * Account statuses, with the badge used to render each one.
+ *
+ * QA requires Active, Inactive and Quarantined to be visibly distinct. The table used
+ * to render every non-archived account as "Active", so an Inactive or Quarantined user
+ * read as Active in the list and in the detail view.
+ */
+export const STATUS_CONFIG = {
+  'Active': {
+    label: 'Active',
+    icon: UserCheck,
+    badgeClass: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50',
+    description: 'Can sign in and use the system',
+  },
+  'Inactive': {
+    label: 'Inactive',
+    icon: UserX,
+    badgeClass: 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800/50',
+    description: 'Sign-in is blocked; the account is retained',
+  },
+  'Quarantined': {
+    label: 'Quarantined',
+    icon: ShieldCheck,
+    badgeClass: 'bg-violet-50 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300 border border-violet-200 dark:border-violet-800/50',
+    description: 'Held for review; sign-in is blocked',
+  },
+  'Archived': {
+    label: 'Archived',
+    icon: Archive,
+    badgeClass: 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800/50',
+    description: 'Retired from the active list; sign-in is blocked',
+  },
+} as const;
+
+export type UserStatus = keyof typeof STATUS_CONFIG;
+
+/** Statuses an administrator may assign directly. Archived is only reachable by archiving. */
+export const ASSIGNABLE_STATUSES = ['Active', 'Inactive', 'Quarantined'] as const;
+
 export const maskEmail = (email: string) => {
   if (!email?.includes('@')) return email ?? '';
   const parts = email.split('@');
@@ -42,7 +111,7 @@ export const maskEmail = (email: string) => {
 export interface UserForm {
   full_name: string;
   contact_number: string;
-  role: 'Owner' | 'Inventory' | 'Cashier';
+  role: RoleKey;
 }
 
 export const EMPTY_FORM: UserForm = {

@@ -27,7 +27,7 @@ class OptimizationTest extends TestCase
             'username'   => 'opt-owner',
             'password'   => bcrypt('password'),
             'email'      => 'opt@test.com',
-            'role'       => 'Business Owner',
+            'role'       => 'Owner',
             'status'     => 'Active',
             'Created_at' => now(),
         ]);

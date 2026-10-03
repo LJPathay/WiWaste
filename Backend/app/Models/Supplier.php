@@ -14,6 +14,7 @@ class Supplier extends Model
         'supplier_name',
         'contact_person',
         'contact_number',
+        'email',
         'address',
         'business_id',
         'fda_lto_number',

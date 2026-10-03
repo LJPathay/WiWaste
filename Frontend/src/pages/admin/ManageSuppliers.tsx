@@ -20,10 +20,34 @@ const EMPTY_FORM = {
   supplier_name: '',
   contact_person: '',
   contact_number: '',
+  email: '',
   address: '',
 };
 
 const ITEMS_PER_PAGE = 5;
+
+/**
+ * QA requires an 11-digit, numeric-only contact number.
+ *
+ * `maxLength` stops more than 11 characters being typed and the input mode nudges
+ * mobile keyboards to digits, but neither stops letters or symbols being pasted in,
+ * so the value is also checked before the form is allowed to submit.
+ */
+const CONTACT_NUMBER_LENGTH = 11;
+const CONTACT_NUMBER_PATTERN = /^\d{11}$/;
+
+function contactNumberError(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return 'Phone number is required.';
+  if (!/^\d+$/.test(trimmed)) return 'Phone number must contain digits only.';
+  if (trimmed.length !== CONTACT_NUMBER_LENGTH) return `Phone number must be exactly ${CONTACT_NUMBER_LENGTH} digits.`;
+  return null;
+}
+
+/** Strips anything that is not a digit and caps the length as the user types. */
+function sanitizeContactNumber(value: string): string {
+  return value.replace(/\D/g, '').slice(0, CONTACT_NUMBER_LENGTH);
+}
 
 const columns: DataTableColumn<ApiSupplier & Record<string, unknown>>[] = [
   {
@@ -56,6 +80,17 @@ const columns: DataTableColumn<ApiSupplier & Record<string, unknown>>[] = [
     render: (row) => (
       <span className="text-slate-600 dark:text-slate-400 font-mono">
         {row.contact_number}
+      </span>
+    ),
+  },
+  {
+    key: 'email',
+    header: 'Email',
+    truncate: true,
+    minWidth: '160px',
+    render: (row) => (
+      <span className="text-slate-600 dark:text-slate-400">
+        {row.email ?? '—'}
       </span>
     ),
   },
@@ -191,6 +226,11 @@ export function ManageSuppliers() {
     suppliers.some(s => s?.id !== editingSupplier.id && s?.contact_number && typeof s.contact_number === 'string' && s.contact_number.trim() === editForm.contact_number.trim())
   );
 
+  // An empty field is left to the native `required` attribute, so the message only
+  // appears once something has actually been typed.
+  const addPhoneError = addForm.contact_number ? contactNumberError(addForm.contact_number) : null;
+  const editPhoneError = editForm.contact_number ? contactNumberError(editForm.contact_number) : null;
+
   // Server-side filtering, so no client-side filtering needed
   const filtered = suppliers;
   const paginatedSuppliers = filtered;
@@ -239,8 +279,14 @@ export function ManageSuppliers() {
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!addForm.supplier_name.trim() || !addForm.contact_number.trim()) {
-      error('Please fill in all required fields.');
+    if (!addForm.supplier_name.trim() || !addForm.contact_person.trim() || !addForm.contact_number.trim()
+      || !addForm.email.trim() || !addForm.address.trim()) {
+      error('Supplier name, contact person, phone number, email address and address are all required.');
+      return;
+    }
+
+    if (addPhoneError) {
+      error(addPhoneError);
       return;
     }
 
@@ -273,6 +319,7 @@ export function ManageSuppliers() {
       supplier_name: s.name,
       contact_person: s.contact_person ?? '',
       contact_number: s.contact_number,
+      email: s.email ?? '',
       address: s.address ?? '',
     });
   };
@@ -280,8 +327,14 @@ export function ManageSuppliers() {
   const handleEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingSupplier) return;
-    if (!editForm.supplier_name.trim() || !editForm.contact_number.trim()) {
-      error('Please fill in all required fields.');
+    if (!editForm.supplier_name.trim() || !editForm.contact_person.trim() || !editForm.contact_number.trim()
+      || !editForm.email.trim() || !editForm.address.trim()) {
+      error('Supplier name, contact person, phone number, email address and address are all required.');
+      return;
+    }
+
+    if (editPhoneError) {
+      error(editPhoneError);
       return;
     }
 
@@ -511,27 +564,36 @@ pagination={
 
       {/* Add Modal */}
       {isAddOpen && (
-        <Modal title="Add New Supplier" onClose={() => { if (!addLoading) setIsAddOpen(false); }} maxWidth="lg">
-          <form onSubmit={handleAdd} className="space-y-3 p-4">
+        <Modal title="Add New Supplier" onClose={() => { if (!addLoading) setIsAddOpen(false); }} size="lg">
+          <form onSubmit={handleAdd} className="space-y-3">
             <FormField label="Supplier Name">
               <input type="text" required placeholder="e.g. FreshPack Co." value={addForm.supplier_name}
                 onChange={e => setAddForm(f => ({ ...f, supplier_name: e.target.value }))} className={inputCls} />
               {isDuplicateAddName && <p className="text-red-500 text-[9px] mt-0.5">Supplier name already exists.</p>}
             </FormField>
             <FormField label="Contact Person">
-              <input type="text" placeholder="e.g. Ana Reyes" value={addForm.contact_person}
+              <input type="text" required placeholder="e.g. Ana Reyes" value={addForm.contact_person}
                 onChange={e => setAddForm(f => ({ ...f, contact_person: e.target.value }))} className={inputCls} />
             </FormField>
             <FormField label="Phone Number">
-              <input type="tel" required placeholder="09XXXXXXXXX" value={addForm.contact_number}
-                onChange={e => setAddForm(f => ({ ...f, contact_number: e.target.value }))} className={inputCls} />
+              <input type="tel" inputMode="numeric" pattern="\d{11}" required maxLength={CONTACT_NUMBER_LENGTH}
+                placeholder="09XXXXXXXXX" value={addForm.contact_number}
+                aria-describedby="add-phone-hint"
+                onChange={e => setAddForm(f => ({ ...f, contact_number: sanitizeContactNumber(e.target.value) }))}
+                className={inputCls} />
+              <p id="add-phone-hint" className="text-slate-500 text-[9px] mt-0.5">Exactly 11 digits, numbers only.</p>
+              {addPhoneError && <p className="text-red-500 text-[9px] mt-0.5">{addPhoneError}</p>}
               {isDuplicateAddPhone && <p className="text-red-500 text-[9px] mt-0.5">Phone number already exists.</p>}
             </FormField>
+            <FormField label="Email">
+              <input type="email" required placeholder="supplier@example.com" value={addForm.email}
+                onChange={e => setAddForm(f => ({ ...f, email: e.target.value }))} className={inputCls} />
+            </FormField>
             <FormField label="Address">
-              <input type="text" placeholder="Metro Manila, PH" value={addForm.address}
+              <input type="text" required placeholder="Metro Manila, PH" value={addForm.address}
                 onChange={e => setAddForm(f => ({ ...f, address: e.target.value }))} className={inputCls} />
             </FormField>
-            <button type="submit" disabled={addLoading || isDuplicateAddName || isDuplicateAddPhone}
+            <button type="submit" disabled={addLoading || isDuplicateAddName || isDuplicateAddPhone || Boolean(addPhoneError)}
               className="w-full inline-flex items-center justify-center gap-2 h-8 bg-[#006a61] hover:bg-[#00574f] text-white rounded-lg text-xs font-semibold transition-colors disabled:opacity-60">
               {addLoading ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Adding…</> : 'Add Supplier'}
             </button>
@@ -541,27 +603,36 @@ pagination={
 
       {/* Edit Modal */}
       {editingSupplier && (
-        <Modal title="Edit Supplier" onClose={() => { if (!editLoading) setEditingSupplier(null); }} maxWidth="lg">
-          <form onSubmit={handleEdit} className="space-y-3 p-4">
+        <Modal title="Edit Supplier" onClose={() => { if (!editLoading) setEditingSupplier(null); }} size="lg">
+          <form onSubmit={handleEdit} className="space-y-3">
             <FormField label="Supplier Name">
               <input type="text" required placeholder="e.g. FreshPack Co." value={editForm.supplier_name}
                 onChange={e => setEditForm(f => ({ ...f, supplier_name: e.target.value }))} className={inputCls} />
               {isDuplicateEditName && <p className="text-red-500 text-[9px] mt-0.5">Supplier name already exists.</p>}
             </FormField>
             <FormField label="Contact Person">
-              <input type="text" placeholder="e.g. Ana Reyes" value={editForm.contact_person}
+              <input type="text" required placeholder="e.g. Ana Reyes" value={editForm.contact_person}
                 onChange={e => setEditForm(f => ({ ...f, contact_person: e.target.value }))} className={inputCls} />
             </FormField>
             <FormField label="Phone Number">
-              <input type="tel" required placeholder="09XXXXXXXXX" value={editForm.contact_number}
-                onChange={e => setEditForm(f => ({ ...f, contact_number: e.target.value }))} className={inputCls} />
+              <input type="tel" inputMode="numeric" pattern="\d{11}" required maxLength={CONTACT_NUMBER_LENGTH}
+                placeholder="09XXXXXXXXX" value={editForm.contact_number}
+                aria-describedby="edit-phone-hint"
+                onChange={e => setEditForm(f => ({ ...f, contact_number: sanitizeContactNumber(e.target.value) }))}
+                className={inputCls} />
+              <p id="edit-phone-hint" className="text-slate-500 text-[9px] mt-0.5">Exactly 11 digits, numbers only.</p>
+              {editPhoneError && <p className="text-red-500 text-[9px] mt-0.5">{editPhoneError}</p>}
               {isDuplicateEditPhone && <p className="text-red-500 text-[9px] mt-0.5">Phone number already exists.</p>}
             </FormField>
+            <FormField label="Email">
+              <input type="email" required placeholder="supplier@example.com" value={editForm.email}
+                onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} className={inputCls} />
+            </FormField>
             <FormField label="Address">
-              <input type="text" placeholder="Metro Manila, PH" value={editForm.address}
+              <input type="text" required placeholder="Metro Manila, PH" value={editForm.address}
                 onChange={e => setEditForm(f => ({ ...f, address: e.target.value }))} className={inputCls} />
             </FormField>
-            <button type="submit" disabled={editLoading || isDuplicateEditName || isDuplicateEditPhone}
+            <button type="submit" disabled={editLoading || isDuplicateEditName || isDuplicateEditPhone || Boolean(editPhoneError)}
               className="w-full inline-flex items-center justify-center gap-2 h-8 bg-[#006a61] hover:bg-[#00574f] text-white rounded-lg text-xs font-semibold transition-colors disabled:opacity-60">
               {editLoading ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Saving…</> : 'Save Changes'}
             </button>

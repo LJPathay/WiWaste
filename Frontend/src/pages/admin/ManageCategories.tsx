@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Search, Plus, Edit2, Archive, Info, Loader2,
+  Search, Plus, Edit2, Archive, Info, Loader2, RotateCcw,
   Check, Grid, Sparkles,
   CupSoda, Coffee, Utensils, Apple, Beef, Cookie,
   Pill, HeartPulse, Home, Recycle,
@@ -89,16 +89,24 @@ export function ManageCategories() {
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<'name-asc' | 'name-desc' | 'products-desc' | 'products-asc' | 'id-desc'>('name-asc');
   const [currentPage, setCurrentPage] = useState(1);
+  /** 'all' lists only categories still in use; 'Archived' shows the retired ones. */
+  const [statusFilter, setStatusFilter] = useState<'all' | 'Archived'>('all');
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
-  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
-  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+  const [isBulkArchiving, setIsBulkArchiving] = useState(false);
+  const [showBulkArchiveConfirm, setShowBulkArchiveConfirm] = useState(false);
   const [showEmptyNotification, setShowEmptyNotification] = useState(false);
   const [notificationCountdown, setNotificationCountdown] = useState(20);
   const [showTutorial, setShowTutorial] = useState(false);
 
   const { data: categoryList, loading, error: fetchError, refetch: refetchCategories } = useApi<PaginatedCategoriesResponse>(
-    () => categoriesApi.list(currentPage, ITEMS_PER_PAGE, search),
-    { dedupeKey: `categories-${currentPage}-${search}` }
+    () => categoriesApi.list(
+      currentPage,
+      ITEMS_PER_PAGE,
+      search,
+      statusFilter === 'all' ? 'Archived' : '',
+      statusFilter === 'Archived' ? 'Archived' : '',
+    ),
+    { dedupeKey: `categories-${currentPage}-${search}-${statusFilter}` }
   );
 
   const tutorialSteps = [
@@ -155,8 +163,9 @@ export function ManageCategories() {
   
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
-  const [deletingId, setDeletingId] = useState<number | null>(null);
-  const [deleteName, setDeleteName] = useState('');
+  const [archivingId, setArchivingId] = useState<number | null>(null);
+  const [archivingName, setArchivingName] = useState('');
+  const [archivingStatus, setArchivingStatus] = useState<'Active' | 'Archived'>('Active');
 
   const categories = categoryList?.data ?? [];
 
@@ -215,19 +224,19 @@ export function ManageCategories() {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
   };
 
-  const handleBulkDelete = async () => {
+  const handleBulkArchive = async () => {
     if (selectedIds.length === 0) return;
-    setIsBulkDeleting(true);
+    setIsBulkArchiving(true);
     try {
-      await Promise.all(selectedIds.map(id => categoriesApi.delete(id)));
+      await Promise.all(selectedIds.map(id => categoriesApi.archive(id)));
       setSelectedIds([]);
-      setShowBulkDeleteConfirm(false);
+      setShowBulkArchiveConfirm(false);
       await refetchCategories();
-      success(`Successfully deleted ${selectedIds.length} categories.`);
+      success(`Successfully archived ${selectedIds.length} categories. They remain available under the Archived tab.`);
     } catch (err) {
-      error(err instanceof Error ? err.message : 'Failed to delete selected categories.');
+      error(err instanceof Error ? err.message : 'Failed to archive selected categories.');
     } finally {
-      setIsBulkDeleting(false);
+      setIsBulkArchiving(false);
     }
   };
 
@@ -299,6 +308,13 @@ export function ManageCategories() {
       setNames(['']);
       setSelectedTypes(['']);
       setIsAddOpen(false);
+
+      // The table holds 5 rows, so a newly added category would otherwise land on a
+      // later page and the administrator would get a success toast with nothing to
+      // show for it. Filtering to what was just created puts it on screen.
+      setStatusFilter('all');
+      setCurrentPage(1);
+      setSearch(validNames.length === 1 ? validNames[0] : '');
       await refetchCategories();
       
       if (validNames.length === 1) {
@@ -339,15 +355,17 @@ export function ManageCategories() {
     }
   };
 
-  const handleDelete = async (id: number) => {
+  const handleArchiveToggle = async (id: number) => {
     try {
-      await categoriesApi.delete(id);
+      await categoriesApi.archive(id);
       await refetchCategories();
-      success('Category deleted successfully.');
+      success(statusFilter === 'Archived'
+        ? 'Category restored and available for use again.'
+        : 'Category archived. Its products and records are unchanged.');
     } catch (err) {
-      error(err instanceof Error ? err.message : 'Failed to delete category');
+      error(err instanceof Error ? err.message : 'Failed to archive category');
     }
-    setDeletingId(null);
+    setArchivingId(null);
   };
 
   const openEdit = (cat: ApiCategory) => {
@@ -382,6 +400,21 @@ export function ManageCategories() {
       numeric: true,
       minWidth: '100px',
       render: (row) => <span className="text-xs">{row.product_count ?? 0} SKUs</span>,
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      align: 'center',
+      minWidth: '100px',
+      render: (row) => row.status === 'Archived' ? (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800/50">
+          <Archive className="h-3 w-3" aria-hidden="true" /> Archived
+        </span>
+      ) : (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50">
+          <Check className="h-3 w-3" aria-hidden="true" /> Active
+        </span>
+      ),
     },
   ];
 
@@ -451,9 +484,25 @@ export function ManageCategories() {
 
       <div className="bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden">
         <div className="p-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-200 dark:border-white/10">
-          <div className="flex items-center gap-2">
-            <span className="px-2.5 py-1 bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-lg">
-              All Categories ({categories.length})
+          <div className="flex items-center gap-1" role="group" aria-label="Filter by status">
+            <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 px-2 uppercase tracking-wider">Status:</span>
+            {[
+              { id: 'all' as const, label: 'Active', icon: Check },
+              { id: 'Archived' as const, label: 'Archived', icon: Archive },
+            ].map(tab => {
+              const TabIcon = tab.icon;
+              const isSelected = statusFilter === tab.id;
+              return (
+                <button key={tab.id} onClick={() => { setStatusFilter(tab.id); setCurrentPage(1); }}
+                  aria-pressed={isSelected}
+                  className={`flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${isSelected ? 'bg-slate-100 dark:bg-slate-950 text-[#006a61] dark:text-[#7ef0cf] shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'}`}>
+                  <TabIcon className="h-3.5 w-3.5" />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+            <span className="px-2.5 py-1 bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-lg ml-1">
+              {totalItems} shown
             </span>
           </div>
 
@@ -501,11 +550,11 @@ export function ManageCategories() {
               </button>
               <button
                 type="button"
-                onClick={() => setShowBulkDeleteConfirm(true)}
+                onClick={() => setShowBulkArchiveConfirm(true)}
                 className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-rose-600 text-white font-semibold hover:bg-rose-700 transition-all shadow-sm text-xs"
               >
                 <Archive className="h-3.5 w-3.5" />
-                Delete Selected ({selectedIds.length})
+                Archive Selected ({selectedIds.length})
               </button>
             </div>
           </div>
@@ -528,10 +577,12 @@ export function ManageCategories() {
                 onClick={() => openEdit(row)}
               />
               <ActionButton
-                icon={<Archive className="h-3.5 w-3.5" />}
-                label="Delete"
-                variant="danger"
-                onClick={() => { setDeletingId(row.id); setDeleteName(row.name); }}
+                icon={row.status === 'Archived'
+                  ? <RotateCcw className="h-3.5 w-3.5" />
+                  : <Archive className="h-3.5 w-3.5" />}
+                label={row.status === 'Archived' ? 'Restore' : 'Archive'}
+                variant={row.status === 'Archived' ? 'default' : 'danger'}
+                onClick={() => { setArchivingId(row.id); setArchivingName(row.name); setArchivingStatus(row.status ?? 'Active'); }}
               />
             </>
           )}
@@ -568,7 +619,7 @@ export function ManageCategories() {
       )}
 
       {isAddOpen && (
-        <Modal title="Add New Category" onClose={() => setIsAddOpen(false)} maxWidth="lg" contentClassName="p-4">
+        <Modal title="Add New Category" onClose={() => setIsAddOpen(false)} size="lg">
           <form onSubmit={handleAdd} className="space-y-3">
             <div className="space-y-2.5 max-h-[60vh] overflow-y-auto pr-1">
               {names.map((rowName, idx) => {
@@ -684,7 +735,7 @@ export function ManageCategories() {
       )}
 
       {isEditOpen && editingCategory && (
-        <Modal title="Edit Category" onClose={() => setIsEditOpen(false)} maxWidth="lg" contentClassName="p-4">
+        <Modal title="Edit Category" onClose={() => setIsEditOpen(false)} size="lg">
           <form onSubmit={handleEdit} className="space-y-3">
             <FormField label="Category Name" labelClassName="text-sm font-bold">
               <div className="relative flex items-center">
@@ -713,23 +764,25 @@ export function ManageCategories() {
         </Modal>
       )}
 
-      {deletingId && (
+      {archivingId && (
         <ConfirmDialog
-          message={`Are you sure you want to delete "${deleteName}"? This operation cannot be undone.`}
-          confirmLabel="Delete"
-          danger
-          onConfirm={() => handleDelete(deletingId)}
-          onCancel={() => setDeletingId(null)}
+          message={archivingStatus === 'Archived'
+            ? `Restore "${archivingName}"? It will become available for assigning to products again.`
+            : `Archive "${archivingName}"? The category is retained and can be restored from the Archived tab. Products, sales and wastage records that reference it are not affected.`}
+          confirmLabel={archivingStatus === 'Archived' ? 'Restore' : 'Archive'}
+          danger={archivingStatus !== 'Archived'}
+          onConfirm={() => handleArchiveToggle(archivingId)}
+          onCancel={() => setArchivingId(null)}
         />
       )}
 
-      {showBulkDeleteConfirm && (
+      {showBulkArchiveConfirm && (
         <ConfirmDialog
-          message={`Are you sure you want to delete ${selectedIds.length} selected categories? This operation cannot be undone.`}
-          confirmLabel={isBulkDeleting ? "Deleting..." : `Delete ${selectedIds.length} Categories`}
+          message={`Are you sure you want to archive ${selectedIds.length} selected categories? They are retained and can be restored from the Archived tab.`}
+          confirmLabel={isBulkArchiving ? "Archiving..." : `Archive ${selectedIds.length} Categories`}
           danger
-          onConfirm={handleBulkDelete}
-          onCancel={() => setShowBulkDeleteConfirm(false)}
+          onConfirm={handleBulkArchive}
+          onCancel={() => setShowBulkArchiveConfirm(false)}
         />
       )}
 
@@ -740,8 +793,7 @@ export function ManageCategories() {
             setTilePickerRowIndex(null);
             setTileSearch('');
           }}
-          maxWidth="lg"
-          contentClassName="p-4"
+          size="lg"
         >
           <div className="space-y-3">
             <div className="flex items-center gap-2">

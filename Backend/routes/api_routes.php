@@ -62,7 +62,12 @@ Route::post('/password/reset', [AuthController::class, 'resetPassword'])->withou
 // Health check is polled by uptime monitors
 Route::get('/health', fn () => response()->json(['status' => 'ok', 'service' => 'laravel', 'version' => '1.0.0']))->withoutMiddleware('auth:sanctum');
 
-// User management
+// User management.
+// `GET /users/status-counts` must be declared *before* the apiResource, exactly like
+// `/suppliers/compliance` below: apiResource registers `GET /users/{user}` first, so
+// with the order reversed that parameter matched the literal segment and
+// `show('status-counts')` turned the tab counts into a 404.
+Route::get('/users/status-counts',      [UserController::class, 'statusCounts']);
 Route::apiResource('/users', UserController::class);
 Route::post('/users/{id}/quarantine',  [UserController::class, 'quarantine']);
 Route::post('/users/{id}/reactivate',  [UserController::class, 'reactivate']);

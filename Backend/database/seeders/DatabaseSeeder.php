@@ -207,12 +207,12 @@ class DatabaseSeeder extends Seeder
     private function seedSuppliers(): void
     {
         $data = [
-            ['supplier_name' => 'PharmaDist Corp',       'contact_person' => 'Maria Santos',     'contact_number' => '09171234567', 'address' => 'Quezon City, Metro Manila'],
-            ['supplier_name' => 'Nestlé Philippines',     'contact_person' => 'John Reyes',       'contact_number' => '09182223344', 'address' => 'Makati City, Metro Manila'],
-            ['supplier_name' => 'P&G Philippines',        'contact_person' => 'Anna Lim',         'contact_number' => '09173334455', 'address' => 'Pasig City, Metro Manila'],
-            ['supplier_name' => 'Coca-Cola Beverages PH', 'contact_person' => 'Pedro Santos',     'contact_number' => '09194445566', 'address' => 'Mandaluyong City, Metro Manila'],
-            ['supplier_name' => 'Del Monte Philippines',  'contact_person' => 'Sofia Garcia',     'contact_number' => '09195556677', 'address' => 'Cebu City, Cebu'],
-            ['supplier_name' => 'San Miguel Corporation', 'contact_person' => 'Miguel Tan',       'contact_number' => '09196667788', 'address' => 'Pasig City, Metro Manila'],
+            ['supplier_name' => 'PharmaDist Corp',       'contact_person' => 'Maria Santos',     'contact_number' => '09171234567', 'email' => 'orders@pharmadist.example',   'address' => 'Quezon City, Metro Manila'],
+            ['supplier_name' => 'Nestlé Philippines',     'contact_person' => 'John Reyes',       'contact_number' => '09182223344', 'email' => 'supply@nestle-ph.example',   'address' => 'Makati City, Metro Manila'],
+            ['supplier_name' => 'P&G Philippines',        'contact_person' => 'Anna Lim',         'contact_number' => '09173334455', 'email' => 'sales@pg-ph.example',        'address' => 'Pasig City, Metro Manila'],
+            ['supplier_name' => 'Coca-Cola Beverages PH', 'contact_person' => 'Pedro Santos',     'contact_number' => '09194445566', 'email' => 'orders@coca-cola-ph.example','address' => 'Mandaluyong City, Metro Manila'],
+            ['supplier_name' => 'Del Monte Philippines',  'contact_person' => 'Sofia Garcia',     'contact_number' => '09195556677', 'email' => 'bulk@delmonte-ph.example',  'address' => 'Cebu City, Cebu'],
+            ['supplier_name' => 'San Miguel Corporation', 'contact_person' => 'Miguel Tan',       'contact_number' => '09196667788', 'email' => 'dealer@sanmiguel-ph.example','address' => 'Pasig City, Metro Manila'],
         ];
 
         foreach ($data as $s) {
@@ -221,6 +221,7 @@ class DatabaseSeeder extends Seeder
                 [
                     'contact_person' => $s['contact_person'],
                     'contact_number' => $s['contact_number'],
+                    'email'          => $s['email'],
                     'address'        => $s['address'],
                 ]
             );

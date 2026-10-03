@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\Role;
 use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
@@ -21,7 +22,7 @@ class CashierPolicy
 
     public function saleViewOwn(User $user, $sale): bool
     {
-        return $user->role === 'Owner' || ($user->role === 'Cashier' && $sale->user_id === $user->User_id);
+        return Role::isOwnerTier($user->role) || ($user->role === 'Cashier' && $sale->user_id === $user->User_id);
     }
 
     public function receiptPrint(User $user): bool

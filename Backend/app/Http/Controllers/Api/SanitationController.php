@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Concerns\ScopesTenant;
 use App\Http\Controllers\Controller;
 use App\Models\SanitationChecklist;
 use App\Models\AuditLog;
@@ -9,17 +10,7 @@ use Illuminate\Http\Request;
 
 class SanitationController extends Controller
 {
-    protected function scopeForBusinessAndBranch($query, Request $request)
-    {
-        $user = $request->user();
-        if ($user && $user->business_id) {
-            $query->where('business_id', $user->business_id);
-        }
-        if ($user && $user->branch_id) {
-            $query->where('branch_id', $user->branch_id);
-        }
-        return $query;
-    }
+    use ScopesTenant;
 
     public function index(Request $request)
     {

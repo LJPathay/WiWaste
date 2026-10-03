@@ -646,6 +646,19 @@ export interface ApiStockReceiving {
   supplier?: ApiSupplier;
   receiver?: ApiUser;
   verifier?: ApiUser;
+  items?: ApiStockReceivingItem[];
+}
+
+export interface ApiStockReceivingItem {
+  receiving_item_id: number;
+  receiving_id: number;
+  product_id: number;
+  expected_quantity: number | null;
+  received_quantity: number | null;
+  rejected_quantity: number | null;
+  unit_cost: number | null;
+  status: string | null;
+  product?: ApiProduct;
 }
 
 export interface CreateStockReceivingPayload {

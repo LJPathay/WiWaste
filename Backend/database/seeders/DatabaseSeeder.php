@@ -18,9 +18,14 @@ use App\Models\InventoryRecommendation;
 use App\Models\Setting;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
+use App\Models\StockReceiving;
+use App\Models\StockReceivingItem;
 use App\Models\AuditLog;
+use App\Models\Business;
+use App\Models\Branch;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class DatabaseSeeder extends Seeder
 {
@@ -28,6 +33,8 @@ class DatabaseSeeder extends Seeder
     private array $supplierMap = [];
     private array $productMap = [];
     private array $userMap = [];
+    private ?int $businessId = null;
+    private ?int $branchId = null;
 
     public function run(): void
     {
@@ -54,6 +61,7 @@ class DatabaseSeeder extends Seeder
 
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
+        $this->seedTenancy();
         $this->seedUsers();
         $this->seedCategories();
         $this->seedSuppliers();
@@ -64,11 +72,92 @@ class DatabaseSeeder extends Seeder
         $this->seedStockMovements();
         $this->seedReturns();
         $this->seedPurchaseOrders();
+        $this->seedStockReceiving();
         $this->seedSettings();
         $this->seedAuditLogs();
         $this->seedForecastResults();
         $this->seedProfitLossAnalysis();
         $this->seedInventoryRecommendations();
+        $this->applyTenancyScope();
+    }
+
+    /**
+     * Creates the tenant the whole dataset belongs to.
+     *
+     * Every operational table carries a nullable `business_id` / `branch_id`, and the
+     * seeder used to leave them all null. Controllers scope their queries on the
+     * caller's business the moment it is set, so a null business made an entire
+     * tenant-scoped module unreachable — the privacy/compliance endpoints, which have
+     * a non-nullable `business_id` FK, refused to create anything at all.
+     */
+    private function seedTenancy(): void
+    {
+        $business = Business::updateOrCreate(
+            ['name' => 'IPharmamart Main'],
+            [
+                'business_type' => 'pharmacy',
+                'capabilities'  => [
+                    'food_safety'             => true,
+                    'pharmacy_rx'             => true,
+                    'controlled_substances'   => true,
+                    'prescription_handling'   => true,
+                ],
+                'dpo_name'  => 'Lia Cruz',
+                'dpo_email' => 'dpo@ipharmamart.com',
+                'dpo_phone' => '+63 917 000 0000',
+            ]
+        );
+
+        $branch = Branch::updateOrCreate(
+            ['business_id' => $business->id, 'name' => 'Main Branch'],
+            [
+                'address' => '123 Katipunan Ave, Quezon City',
+                'status'  => 'active',
+            ]
+        );
+
+        Branch::updateOrCreate(
+            ['business_id' => $business->id, 'name' => 'BGC Branch'],
+            [
+                'address' => '5th Ave, Taguig',
+                'status'  => 'active',
+            ]
+        );
+
+        $this->businessId = $business->id;
+        $this->branchId = $branch->id;
+    }
+
+    /**
+     * Stamps the tenant onto everything the seeder just wrote.
+     *
+     * Done as a backfill rather than threading the ids through each create() so the
+     * seed stays internally consistent no matter which steps run.
+     */
+    private function applyTenancyScope(): void
+    {
+        $tables = [
+            'Product'           => null,
+            'Inventory'         => $this->branchId,
+            'Sales_Transaction' => $this->branchId,
+            'Wastage_Record'    => $this->branchId,
+            'Stock_Movement'    => $this->branchId,
+            'Purchase_Order'    => $this->branchId,
+            'Stock_Receiving'   => $this->branchId,
+            'Audit_Log'         => $this->branchId,
+        ];
+
+        foreach ($tables as $table => $branch) {
+            if (! Schema::hasTable($table) || ! Schema::hasColumn($table, 'business_id')) {
+                continue;
+            }
+
+            DB::table($table)->whereNull('business_id')->update(['business_id' => $this->businessId]);
+
+            if ($branch !== null && Schema::hasColumn($table, 'branch_id')) {
+                DB::table($table)->whereNull('branch_id')->update(['branch_id' => $branch]);
+            }
+        }
     }
 
     private function seedUsers(): void
@@ -89,9 +178,19 @@ class DatabaseSeeder extends Seeder
                     'email'       => $u['email'],
                     'role'        => $u['role'],
                     'status'      => $u['status'],
+                    'business_id' => $this->businessId,
+                    'branch_id'   => $this->branchId,
                     'Created_at'  => now(),
                 ]
             );
+
+            // `firstOrCreate` returns a pre-existing row untouched, and an earlier
+            // seed may have created these accounts without a tenant.
+            $user->forceFill([
+                'business_id' => $this->businessId,
+                'branch_id'   => $this->branchId,
+            ])->save();
+
             $this->userMap[$u['username']] = $user->User_id;
         }
     }
@@ -488,6 +587,66 @@ class DatabaseSeeder extends Seeder
             'subtotal'    => 275.00,
             'received_qty'=> 50,
         ]);
+    }
+
+    /**
+     * One awaiting-receipt delivery and one already received.
+     *
+     * `stock_receiving` drives the whole `/inventory/stock-receiving` screen, and the
+     * seeder created nothing there. The screen therefore rendered an empty inbox whose
+     * Receive / Reject / Discard controls had nothing to act on — the only way to
+     * exercise that module was to hand-craft a delivery over the API.
+     */
+    private function seedStockReceiving(): void
+    {
+        $pending = StockReceiving::create([
+            'business_id'  => $this->businessId,
+            'branch_id'    => $this->branchId,
+            'supplier_id'  => $this->supplierMap['PharmaDist Corp'],
+            'received_by'  => $this->userMap['admin'],
+            'status'       => 'pending',
+            'notes'        => 'Awaiting delivery — PO-20260722-000002',
+            'received_at'  => null,
+        ]);
+
+        foreach (['Biogesic Paracetamol 500mg' => 50, 'Neozep Forte 10s' => 24] as $name => $qty) {
+            if (! isset($this->productMap[$name])) {
+                continue;
+            }
+            StockReceivingItem::create([
+                'receiving_id'      => $pending->receiving_id,
+                'product_id'        => $this->productMap[$name],
+                'expected_quantity' => $qty,
+                'unit_cost'         => 5.50,
+                'status'            => 'pending',
+            ]);
+        }
+
+        $done = StockReceiving::create([
+            'business_id'                 => $this->businessId,
+            'branch_id'                   => $this->branchId,
+            'supplier_id'                 => $this->supplierMap['Coca-Cola Beverages PH'],
+            'received_by'                 => $this->userMap['inventory'],
+            'status'                      => 'received',
+            'notes'                       => 'Received in full',
+            'received_at'                 => now()->subDays(2),
+            'condition_check_passed'      => true,
+            'sanitation_check_passed'     => true,
+        ]);
+
+        foreach (['Coca-Cola 1.5L' => 12] as $name => $qty) {
+            if (! isset($this->productMap[$name])) {
+                continue;
+            }
+            StockReceivingItem::create([
+                'receiving_id'      => $done->receiving_id,
+                'product_id'        => $this->productMap[$name],
+                'expected_quantity' => $qty,
+                'received_quantity' => $qty,
+                'unit_cost'         => 88.00,
+                'status'            => 'received',
+            ]);
+        }
     }
 
     private function seedSettings(): void

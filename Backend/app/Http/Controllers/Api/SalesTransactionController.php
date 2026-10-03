@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Concerns\ScopesTenant;
 use App\Http\Controllers\Controller;
 use App\Models\SalesTransaction;
 use App\Models\SalesItem;
@@ -16,22 +17,12 @@ use Illuminate\Support\Facades\DB;
 
 class SalesTransactionController extends Controller
 {
+    use ScopesTenant;
+
     // Philippine VAT rate
     const VAT_RATE = 0.12;
     // Senior/PWD discount rate (RA 9994/10754)
     const SENIOR_PWD_DISCOUNT_RATE = 0.20;
-
-    protected function scopeForBusinessAndBranch($query, Request $request)
-    {
-        $user = $request->user();
-        if ($user && $user->business_id) {
-            $query->where('business_id', $user->business_id);
-        }
-        if ($user && $user->branch_id) {
-            $query->where('branch_id', $user->branch_id);
-        }
-        return $query;
-    }
 
     /**
      * Get FEFO batches for a product ordered by earliest expiry first

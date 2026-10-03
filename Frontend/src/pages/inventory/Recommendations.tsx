@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { recommendations as recommendationApi, type ApiRecommendation } from "../../services/api";
 import { Info, Search, CheckCircle, TrendingDown, Clock, ChevronRight, X, Check } from 'lucide-react';
 import { Toast, useToast, ConfirmDialog, Modal } from '../../components/ui/Toast';
@@ -27,17 +27,6 @@ const WORKFLOW_STEPS = [
   { label: 'POS Updates', active: false },
   { label: 'Promo Activated', active: false },
 ];
-
-const loadRecommendations = async () => {
-    try {
-      const data = await recommendationApi.list();
-      setRecommendations(data.data);
-    } catch (error) {
-      console.error("Failed to load recommendations:", error);
-      // Keep empty array if API fails
-      setRecommendations([]);
-    }
-  };
 
 const PAGE_SIZE = 5;
 
@@ -124,7 +113,20 @@ export function Recommendations() {
   const [processing, setProcessing] = useState(false);
   const [page, setPage] = useState(1);
 
-useEffect(() => {
+// Declared here rather than at module scope: it closes over `setRecommendations`,
+  // which only exists inside the component.
+  const loadRecommendations = async () => {
+    try {
+      const data = await recommendationApi.list();
+      setRecommendations(data.data);
+    } catch (error) {
+      console.error("Failed to load recommendations:", error);
+      // Keep empty array if API fails
+      setRecommendations([]);
+    }
+  };
+
+  useEffect(() => {
     loadRecommendations();
   }, []);
   const filtered = useMemo(() => {
@@ -194,7 +196,7 @@ useEffect(() => {
       )}
 
       {rejectingId !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" role="dialog" aria-modal="true">
           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
               <h3 className="text-sm font-bold text-gray-900">Reject Recommendation</h3>

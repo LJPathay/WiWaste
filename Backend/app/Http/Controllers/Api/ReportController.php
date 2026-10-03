@@ -242,9 +242,11 @@ class ReportController extends Controller
             ->where('Sales_Transaction.status', 'Completed')
             ->when($from, fn ($q) => $q->whereDate('Sales_Transaction.transaction_date', '>=', $from))
             ->when($to, fn ($q) => $q->whereDate('Sales_Transaction.transaction_date', '<=', $to))
+            // `discount_amount` exists on both Sales_Item and Sales_Transaction, so an
+            // unqualified reference made MySQL reject the query as ambiguous.
             ->selectRaw('
-                SUM(discount_amount) as total_item_discount,
-                SUM(CASE WHEN is_senior_pwd_exempt = 1 THEN discount_amount ELSE 0 END) as senior_pwd_item_discount,
+                SUM(Sales_Item.discount_amount) as total_item_discount,
+                SUM(CASE WHEN Sales_Item.is_senior_pwd_exempt = 1 THEN Sales_Item.discount_amount ELSE 0 END) as senior_pwd_item_discount,
                 COUNT(*) as discounted_items_count
             ')
             ->first();

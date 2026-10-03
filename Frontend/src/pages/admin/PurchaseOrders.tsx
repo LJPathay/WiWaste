@@ -292,7 +292,7 @@ export function PurchaseOrders() {
       </div>
 
       {showCreate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowCreate(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" role="dialog" aria-modal="true" onClick={() => setShowCreate(false)}>
           <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto m-4" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-white/10">
               <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">New Purchase Order</h2>
@@ -347,7 +347,7 @@ export function PurchaseOrders() {
       )}
 
       {showDetail.open && showDetail.order && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowDetail({ open: false, order: null })}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" role="dialog" aria-modal="true" onClick={() => setShowDetail({ open: false, order: null })}>
           <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto m-4" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-white/10">
               <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">{showDetail.order.po_number}</h2>
@@ -382,7 +382,7 @@ export function PurchaseOrders() {
       )}
 
       {showReceive.open && showReceive.order && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowReceive({ open: false, order: null })}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" role="dialog" aria-modal="true" onClick={() => setShowReceive({ open: false, order: null })}>
           <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-lg m-4" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-white/10">
               <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Receive Stock — {showReceive.order.po_number}</h2>

@@ -31,8 +31,13 @@ class RateLimitMiddleware
             return $next($request);
         }
 
-        $user = $request->user();
-        $role = $user?->role ?? 'guest';
+        $user = $this->resolveUser($request);
+        // The DB stores canonical roles as 'Owner'/'Inventory'/'Cashier' while the
+        // limit table is keyed lowercase. Without normalising, every authenticated
+        // request fell through to the guest bucket and got 30 reads/hour.
+        $role = $user?->role
+            ? $this->normalizeRole((string) $user->role)
+            : 'guest';
         $isApi = $request->is('api/*');
         // Auth routes are registered twice: under /api/* and /api/v1/*. Both
         // shapes must match or the strict limits below are silently skipped.
@@ -88,12 +93,48 @@ class RateLimitMiddleware
         return $response;
     }
 
+    /**
+     * Maps stored role values onto the ROLE_LIMITS keys.
+     */
+    protected function normalizeRole(string $role): string
+    {
+        return match (strtolower(trim($role))) {
+            'owner', 'business owner', 'admin', 'administrator' => 'owner',
+            'inventory', 'stock', 'pharmacist' => 'inventory',
+            'cashier', 'sales', 'pos' => 'cashier',
+            default => 'guest',
+        };
+    }
+
     protected function resolveRequestSignature(Request $request): string
     {
-        if ($user = $request->user()) {
+        if ($user = $this->resolveUser($request)) {
             return 'user:' . $user->User_id;
         }
         return 'ip:' . $request->ip();
+    }
+
+    /**
+     * This middleware is registered on the route group, so it runs *before* the
+     * route-level `auth:sanctum` guard. That left $request->user() null on every
+     * authenticated call, which put all real users in the guest bucket (30 reads/hour)
+     * and rate-limited legitimate traffic. Resolve the token ourselves when needed.
+     */
+    protected function resolveUser(Request $request)
+    {
+        if ($user = $request->user()) {
+            return $user;
+        }
+
+        if ($request->bearerToken()) {
+            try {
+                return Auth::guard('sanctum')->user();
+            } catch (\Throwable) {
+                return null;
+            }
+        }
+
+        return null;
     }
 
     protected function rateLimitResponse(string $key, int $decayMinutes): Response

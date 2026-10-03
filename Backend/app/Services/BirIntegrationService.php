@@ -260,7 +260,8 @@ class BirIntegrationService
                         'vatable_amount' => $item->vatable_amount,
                         'discount_amount' => $item->discount_amount,
                         'is_senior_pwd_exempt' => $item->is_senior_pwd_exempt,
-                    ])->toArray(),
+                    ];
+                })->toArray(),
                 'totals' => [
                     'total_amount' => $transaction->total_amount,
                     'vat_amount' => $transaction->vat_amount,

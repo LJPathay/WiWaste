@@ -4,7 +4,12 @@ export const CHART_DEFAULTS = {
   animationDuration: 600,
   animationEasing: 'easeOutQuart',
   animationBegin: 0,
-  isAnimationActive: true,
+  // recharts' Animate.runJSAnimation dereferences a chart context that is null when
+  // the chart remounts before its first animation frame (StrictMode double-mount, or a
+  // re-render triggered by async dashboard data). That throws
+  // "Cannot read properties of null (reading 'isStepper')" and takes the whole page
+  // down via the ErrorBoundary. Charts render statically instead.
+  isAnimationActive: false,
   layout: 'horizontal' as const,
 } as const;
 
@@ -30,7 +35,7 @@ export function useChartAnimation(reduced?: boolean): { isAnimationActive: boole
   const prefersReduced = useReducedMotion();
   const shouldReduce = reduced ?? prefersReduced;
   return {
-    isAnimationActive: !shouldReduce,
+    isAnimationActive: false,
     animationDuration: shouldReduce ? 0 : CHART_DEFAULTS.animationDuration,
     animationEasing: CHART_DEFAULTS.animationEasing,
   };

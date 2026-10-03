@@ -348,7 +348,7 @@ export function RecallManagement() {
               />
             </FormField>
             <FormField label="Severity" required>
-              <select value={createForm.severity} onChange={(e) => setCreateForm({ ...createForm, severity: e.target.value })} className={selectCls}>
+              <select value={createForm.severity} onChange={(e) => setCreateForm({ ...createForm, severity: e.target.value })} className={inputCls}>
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
                 <option value="high">High</option>

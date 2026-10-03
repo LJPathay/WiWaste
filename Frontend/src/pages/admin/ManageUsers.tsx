@@ -27,7 +27,17 @@ export function ManageUsers() {
   const [isAllEmailsUnmasked, setIsAllEmailsUnmasked] = useState(false);
 
   const { data: userList, loading, error: apiError, refetch } = useApi<PaginatedUsersResponse>(
-    () => usersApi.list(currentPage, ITEMS_PER_PAGE, search, roleFilter === 'all' ? '' : roleFilter, statusFilter === 'all' ? '' : statusFilter),
+    () => usersApi.list(
+      currentPage,
+      ITEMS_PER_PAGE,
+      search,
+      roleFilter === 'all' ? '' : roleFilter,
+      statusFilter === 'all' ? '' : statusFilter,
+      // The default tab is "everything that is still in use", which is every status
+      // except Archived. Passing no status at all returned archived accounts too, so
+      // the tab's count badge disagreed with the rows underneath it.
+      statusFilter === 'all' ? 'Archived' : '',
+    ),
     { dedupeKey: `users-${currentPage}-${search}-${roleFilter}-${statusFilter}` }
   );
 
@@ -71,8 +81,8 @@ export function ManageUsers() {
     )
   );
 
-  const passwordRules = getPasswordRules(form.password);
-  const passwordValid = isPasswordValid(form.password);
+  const passwordRules = getPasswordRules(DEFAULT_PASSWORD);
+  const passwordValid = isPasswordValid(DEFAULT_PASSWORD);
 
   const resetForm = () => {
     setForm({
@@ -101,7 +111,14 @@ export function ManageUsers() {
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isDuplicateName) { setFormError('A user with this name already exists.'); return; }
-    if (!passwordValid) { setFormError('Password does not meet policy requirements.'); return; }
+    // The form does not ask for a password: it issues the shared default below, so
+    // that is what has to satisfy the policy. Validating `form.password` instead —
+    // which is never rendered and therefore always empty — made every submission
+    // fail with "Password does not meet policy requirements.".
+    if (!isPasswordValid(DEFAULT_PASSWORD)) {
+      setFormError('The default password does not meet policy requirements.');
+      return;
+    }
 
     setSubmitting(true);
     setFormError('');
@@ -259,6 +276,7 @@ export function ManageUsers() {
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); const u = row; setViewingUser(null); setTimeout(() => openEdit(u), 0); }}
+                    aria-label={`Edit ${row.name}`}
                     className="h-7 w-7 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-emerald-600 hover:text-white transition-all inline-flex items-center justify-center"
                   >
                     <Edit2 className="h-3.5 w-3.5" />
@@ -271,6 +289,7 @@ export function ManageUsers() {
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); setArchiveModalUser(row); }}
+                    aria-label={`Archive ${row.name}`}
                     className="h-7 w-7 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-rose-600 hover:text-white transition-all inline-flex items-center justify-center"
                   >
                     <UserX className="h-3.5 w-3.5" />
@@ -341,28 +360,13 @@ export function ManageUsers() {
         </button>
       </div>
 
-      <DataTable
-        data={paginatedUsers}
-        columns={columns}
-        rowKey={(row) => row.id}
-        emptyMessage="No users found"
-        footer={
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3.5 border-t border-slate-200 dark:border-white/10">
-            <div className="text-xs text-slate-500 dark:text-slate-400">
-              {filteredUsers.length === 0 ? (
-                <span>No users match your filters</span>
-              ) : (
-                <span>Showing <strong className="font-semibold text-slate-700 dark:text-slate-200">{startIndex}</strong> to <strong className="font-semibold text-slate-700 dark:text-slate-200">{endIndex}</strong> of <strong className="font-semibold text-slate-700 dark:text-slate-200">{totalItems}</strong> Users</span>
-              )}
-            </div>
-            <Pagination page={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} totalItems={totalItems} perPage={ITEMS_PER_PAGE} label="Users" />
-          </div>
-        }
-        className="border-0"
-      >
+      {/* Filter toolbar. This sits outside <DataTable> because DataTable has no
+          children slot — passing it children (and a `footer` prop, which does not
+          exist either) rendered neither this toolbar nor the pagination. */}
+      <div className="bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm">
         <div className="p-3.5 border-b border-slate-200 dark:border-white/10 space-y-2.5">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-1">
+            <div className="flex flex-wrap items-center gap-1" role="group" aria-label="Filter by status">
               <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 px-2 uppercase tracking-wider">Status:</span>
               {[
                 { id: 'all', label: 'All Users', count: activeCount },
@@ -372,7 +376,8 @@ export function ManageUsers() {
                 const isSelected = statusFilter === tab.id;
                 return (
                   <button key={tab.id} onClick={() => { setStatusFilter(tab.id as 'all' | 'Archived'); setCurrentPage(1); }}
-                    className={`flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${isSelected ? 'bg-white dark:bg-slate-950 text-[#006a61] dark:text-[#7ef0cf] shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'}`}>
+                    aria-pressed={isSelected}
+                    className={`flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${isSelected ? 'bg-slate-100 dark:bg-slate-950 text-[#006a61] dark:text-[#7ef0cf] shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'}`}>
                     {TabIcon && <TabIcon className="h-3.5 w-3.5" />}
                     <span>{tab.label}</span>
                     {tab.count > 0 && <span className="px-1.5 py-0.2 rounded-full text-[9px] bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300">{tab.count}</span>}
@@ -383,8 +388,8 @@ export function ManageUsers() {
 
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex items-center gap-1">
-                <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Role:</span>
-                <select value={roleFilter} onChange={e => setRoleFilter(e.target.value as 'all' | 'Owner' | 'Inventory' | 'Cashier')}
+                <label htmlFor="user-role-filter" className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Role:</label>
+                <select id="user-role-filter" value={roleFilter} onChange={e => setRoleFilter(e.target.value as 'all' | 'Owner' | 'Inventory' | 'Cashier')}
                   className="h-8 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-xs font-medium rounded-lg px-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#006a61]">
                   <option value="all">All Roles</option>
                   <option value="Owner">Owner</option>
@@ -406,11 +411,31 @@ export function ManageUsers() {
             </div>
           </div>
         </div>
-      </DataTable>
+      </div>
+
+      <DataTable
+        data={paginatedUsers}
+        columns={columns}
+        rowKey={(row) => row.id}
+        emptyMessage="No users found"
+        pagination={
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3.5">
+            <div className="text-xs text-slate-500 dark:text-slate-400">
+              {filteredUsers.length === 0 ? (
+                <span>No users match your filters</span>
+              ) : (
+                <span>Showing <strong className="font-semibold text-slate-700 dark:text-slate-200">{startIndex}</strong> to <strong className="font-semibold text-slate-700 dark:text-slate-200">{endIndex}</strong> of <strong className="font-semibold text-slate-700 dark:text-slate-200">{totalItems}</strong> Users</span>
+              )}
+            </div>
+            <Pagination page={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} totalItems={totalItems} perPage={ITEMS_PER_PAGE} label="Users" />
+          </div>
+        }
+        className="border-0"
+      />
 
       {/* ── ADD USER MODAL ── */}
       {isAddOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-3 overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-3 overflow-y-auto" role="dialog" aria-modal="true">
           <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-lg p-4 relative shadow-2xl my-6">
             <button onClick={() => setIsAddOpen(false)} className="absolute top-3 right-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5">
               <X className="h-4 w-4" />
@@ -524,7 +549,7 @@ export function ManageUsers() {
 
       {/* ── EDIT USER MODAL ── */}
       {isEditOpen && editingUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-3 overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-3 overflow-y-auto" role="dialog" aria-modal="true">
           <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-lg p-4 relative shadow-2xl my-6">
             <button onClick={() => { setIsEditOpen(false); setViewingUser(null); }} className="absolute top-3 right-3 text-slate-400 hover:text-slate-600 p-0.5">
               <X className="h-4 w-4" />
@@ -613,7 +638,7 @@ export function ManageUsers() {
 
       {/* ── VIEW USER MODAL ── */}
       {viewingUser && !isEditOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-3 overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-3 overflow-y-auto" role="dialog" aria-modal="true">
           <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-md p-4 relative shadow-2xl my-6">
             <button onClick={() => setViewingUser(null)} className="absolute top-3 right-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5">
               <X className="h-4 w-4" />
@@ -710,7 +735,7 @@ export function ManageUsers() {
 
       {/* ── ARCHIVE CONFIRM MODAL ── */}
       {archiveModalUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-3" role="dialog" aria-modal="true">
           <div className="bg-white dark:bg-slate-900 rounded-xl border border-rose-200 dark:border-rose-800/40 w-full max-w-md p-4 relative shadow-2xl">
             <button onClick={() => setArchiveModalUser(null)} className="absolute top-3 right-3 text-slate-400 hover:text-slate-600"><X className="h-4 w-4" /></button>
             <div className="flex items-center gap-2.5 mb-2.5">

@@ -24,6 +24,9 @@ ngrok.exe
 *.njsproj
 *.sln
 *.sw?
+*playwright-report
+*test-results
+e2e/.auth-cache
 
 # Backup/debug files
 *.backup

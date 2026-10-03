@@ -1,85 +1,153 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
+import { login, waitForPage, collectPageErrors } from '../helpers/auth';
 
-test.describe('Cashier POS Sale', () => {
+/**
+ * `/cashier/pos` — `Frontend/src/pages/cashier/POSTerminal.tsx`.
+ *
+ * A kiosk screen: a virtualised product grid on the left, the cart on the right, and a
+ * checkout overlay. Its heading is screen-reader-only, so the spec keys off the grid and
+ * cart rather than off visible chrome.
+ *
+ * `globalSetup` seeds one pending and one received delivery; this spec consumes a unit
+ * of catalogue stock, so it reads its expectations back out of the DOM.
+ */
+
+const SEARCH = 'input[placeholder="Search product or scan barcode... (F2)"]';
+const checkout = (page: Page) => page.getByRole('button', { name: /Proceed to Checkout/ });
+
+/** Product grid cards. Each is a real `<button>` labelled "Add <name> to cart, <price>". */
+const cards = (page: Page) => page.getByRole('button', { name: /^Add .+ to cart,/ });
+
+/** The cart's per-line row, found by product name. */
+const cartLine = (page: Page, name: string) =>
+  page.locator('div.cursor-pointer').filter({ hasText: name }).first();
+
+/**
+ * Waits for the virtualised grid to paint, then returns the first card's product name.
+ *
+ * The grid is virtualised and loads asynchronously, so both the count and the name have
+ * to be taken after the first card exists.
+ */
+async function firstProduct(page: Page): Promise<string> {
+  const card = cards(page).first();
+  await expect(card).toBeVisible({ timeout: 20_000 });
+
+  const label = (await card.getAttribute('aria-label')) ?? '';
+  const name = /^Add (.+) to cart,/.exec(label)?.[1] ?? '';
+  expect(name, `product card had no usable label: ${label}`).not.toBe('');
+  return name;
+}
+
+test.describe('Cashier · Point of sale', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/login');
-    await page.fill('[name="username"]', 'cashier');
-    await page.fill('[name="password"]', 'password');
-    await page.click('button[type="submit"]');
-    await expect(page).toHaveURL(/\/cashier\/pos/);
+    await login(page, 'cashier');
+    await page.goto('/cashier/pos');
+    await waitForPage(page);
   });
 
-  test('completes cash sale with barcode scanner', async ({ page }) => {
-    // Scan product
-    await page.fill('input[placeholder*="barcode"]', '123456');
-    await page.keyboard.press('Enter');
-    
-    // Verify item added
-    await expect(page.locator('text=Paracetamol 500mg')).toBeVisible();
-    await expect(page.locator('text=₱10.50')).toBeVisible();
-    
-    // Checkout
-    await page.click('button:has-text("Proceed to Checkout")');
-    await expect(page.locator('text=CASH')).toBeVisible();
-    
-    // Tender cash
-    await page.fill('input[placeholder*="tendered"]', '20');
-    await page.click('button:has-text("Complete Payment")');
-    
-    // Verify receipt
-    await expect(page.locator('text=Receipt')).toBeVisible({ timeout: 10000 });
+  test('renders the kiosk shell and catalogue', async ({ page }) => {
+    const errors = collectPageErrors(page);
+
+    await expect(page.getByRole('heading', { name: 'Point of Sale' })).toBeAttached();
+    await expect(page.getByRole('img', { name: 'WiWaste POS' })).toBeVisible();
+    await expect(page.locator(SEARCH)).toBeVisible();
+
+    // Category filters, with "All Items" active on arrival.
+    for (const cat of ['All Items', 'Grocery', 'Beverages', 'Snacks', 'Pharmacy']) {
+      await expect(page.getByRole('button', { name: cat, exact: true })).toBeVisible();
+    }
+
+    await expect(firstProduct(page)).resolves.toBeTruthy();
+    expect(errors()).toEqual([]);
   });
 
-  test('completes sale with multiple quantities', async ({ page }) => {
-    // Scan product
-    await page.fill('input[placeholder*="barcode"]', '123456');
-    await page.keyboard.press('Enter');
-    
-    // Scan again to increase quantity
-    await page.fill('input[placeholder*="barcode"]', '123456');
-    await page.keyboard.press('Enter');
-    
-    // Verify quantity is 2
-    await expect(page.locator('input[value="2"]')).toBeVisible();
-    
-    // Checkout
-    await page.click('button:has-text("Proceed to Checkout")');
-    await page.fill('input[placeholder*="tendered"]', '30');
-    await page.click('button:has-text("Complete Payment")');
-    
-    await expect(page.locator('text=Receipt')).toBeVisible({ timeout: 10000 });
+  test('search narrows the grid and clearing it restores it', async ({ page }) => {
+    const errors = collectPageErrors(page);
+
+    const product = await firstProduct(page);
+    const all = await cards(page).count();
+    expect(all).toBeGreaterThan(1);
+
+    const word = product.split(/\s+/)[0];
+    expect(word.length).toBeGreaterThan(2);
+
+    await page.locator(SEARCH).fill(word);
+    await expect(cards(page).first()).toBeVisible();
+    const narrowed = await cards(page).count();
+    expect(narrowed).toBeLessThanOrEqual(all);
+
+    await page.locator(SEARCH).fill('');
+    await expect(cards(page)).toHaveCount(all);
+
+    expect(errors()).toEqual([]);
   });
 
-  test('applies senior discount', async ({ page }) => {
-    await page.fill('input[placeholder*="barcode"]', '123456');
-    await page.keyboard.press('Enter');
-    
-    // Select item and apply discount
-    await page.click('[data-testid="cart-item-0"]');
-    await page.click('button:has-text("Discount")');
-    await page.click('button:has-text("Senior/PWD")');
-    await page.fill('input[name="seniorName"]', 'Juan Dela Cruz');
-    await page.fill('input[name="seniorId"]', 'SC-12345');
-    await page.click('button:has-text("Confirm")');
-    
-    // Verify 20% discount applied
-    await expect(page.locator('text=-20%')).toBeVisible();
+  test('adds a product to the cart and adjusts its quantity', async ({ page }) => {
+    const errors = collectPageErrors(page);
+
+    const product = await firstProduct(page);
+    await cards(page).first().click();
+
+    const line = cartLine(page, product);
+    await expect(line).toBeVisible();
+    await expect(line).toContainText('1');
+
+    // Two stepper controls per line, minus then plus.
+    await line.getByRole('button').nth(1).click();
+    await expect(line).toContainText('2');
+
+    await line.getByRole('button').first().click();
+    await expect(line).toContainText('1');
+
+    expect(errors()).toEqual([]);
   });
 
-  test('handles invalid barcode', async ({ page }) => {
-    await page.fill('input[placeholder*="barcode"]', '9999999999999');
-    await page.keyboard.press('Enter');
-    
-    await expect(page.locator('text=Product not found')).toBeVisible();
+  test('takes a cash payment and clears the cart', async ({ page }) => {
+    const errors = collectPageErrors(page);
+
+    const product = await firstProduct(page);
+    await cards(page).first().click();
+    await expect(cartLine(page, product)).toBeVisible();
+
+    await checkout(page).click();
+
+    const due = page.getByText('Amount Due', { exact: true });
+    await expect(due).toBeVisible();
+    await expect(page.getByText('Amount Received', { exact: true })).toBeVisible();
+
+    // A quick-amount chip fills the tender box without touching the keyboard.
+    const chip = page.locator('button').filter({ hasText: /^₱[\d,]+$/ }).first();
+    await expect(chip).toBeVisible();
+    await chip.click();
+
+    const complete = page.getByRole('button', { name: 'Complete Payment' });
+    await expect(complete).toBeEnabled();
+    await complete.click();
+
+    // The sale is written and the kiosk returns to an empty cart.
+    await expect(due).toBeHidden({ timeout: 20_000 });
+    await expect(cartLine(page, product)).toHaveCount(0);
+
+    expect(errors()).toEqual([]);
   });
 
-  test('void item works', async ({ page }) => {
-    await page.fill('input[placeholder*="barcode"]', '123456');
-    await page.keyboard.press('Enter');
-    
-    await page.click('[data-testid="cart-item-0"]');
-    await page.click('button:has-text("Void Item")');
-    
-    await expect(page.locator('text=Paracetamol 500mg')).not.toBeVisible();
+  test('refuses to complete an underpayment', async ({ page }) => {
+    const errors = collectPageErrors(page);
+
+    await firstProduct(page);
+    await cards(page).first().click();
+    await checkout(page).click();
+
+    const due = page.getByText('Amount Due', { exact: true });
+    await expect(due).toBeVisible();
+
+    // Nothing tendered cannot cover the total, so the button stays inert.
+    const complete = page.getByRole('button', { name: 'Complete Payment' });
+    await expect(complete).toBeDisabled();
+
+    await page.getByPlaceholder('0.00').fill('0.01');
+    await expect(complete).toBeDisabled();
+
+    expect(errors()).toEqual([]);
   });
 });

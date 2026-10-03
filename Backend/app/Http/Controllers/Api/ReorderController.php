@@ -21,10 +21,12 @@ class ReorderController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        
+
+        // Accounts are not guaranteed to be attached to a business/branch, so the
+        // service treats both as "no scope filter" instead of erroring out.
         $suggestions = $this->reorderService->generateSuggestions(
-            $user->business_id,
-            $user->branch_id,
+            $user?->business_id,
+            $user?->branch_id,
             $request->only(['safety_stock_multiplier'])
         );
 
@@ -76,8 +78,8 @@ class ReorderController extends Controller
         ]);
 
         $suggestions = $this->reorderService->generateSuggestions(
-            $user->business_id,
-            $user->branch_id
+            $user?->business_id,
+            $user?->branch_id
         );
 
         // Filter by criteria

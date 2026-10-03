@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Calendar, ChevronDown, X } from 'lucide-react';
+import { Calendar, ChevronDown, ChevronLeft, ChevronRight, X } from 'lucide-react';
 
 export interface DateRangePickerProps {
   from: string;

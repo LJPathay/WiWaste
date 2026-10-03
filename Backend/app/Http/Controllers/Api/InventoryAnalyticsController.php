@@ -186,7 +186,9 @@ class InventoryAnalyticsController extends Controller
                 LEFT JOIN Sales_Transaction st ON si.transaction_id = st.transaction_id AND st.status = 'Completed'
                 WHERE p.status = 'Active'
                   AND i.current_stock > 0
-                GROUP BY p.product_id
+                -- Every selected non-aggregate column must appear in GROUP BY:
+                -- MySQL runs with ONLY_FULL_GROUP_BY enabled and rejects the query otherwise.
+                GROUP BY p.product_id, p.product_name, p.cost_price, c.Category_name, i.current_stock
                 HAVING COALESCE(SUM(si.quantity), 0) = 0
             ");
 

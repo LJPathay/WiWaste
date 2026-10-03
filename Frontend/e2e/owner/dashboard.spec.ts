@@ -1,99 +1,81 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
+import { login, waitForPage, MAIN, collectPageErrors } from '../helpers/auth';
 
-test.describe('Owner Dashboard', () => {
+/**
+ * `/dashboard` — `Frontend/src/pages/dashboard/Overview.tsx`.
+ *
+ * The owner dashboard is read-only: KPI cards, a sales trend, the leakage breakdown,
+ * and inventory health. The only stateful controls are the sales-period select (which
+ * re-queries `/owner/analytics`) and the leakage chart's value/quantity/percentage
+ * legend.
+ */
+
+const period = (page: Page) => page.getByLabel('Sales trend period');
+
+test.describe('Owner · Dashboard', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/login');
-    await page.fill('[name="username"]', 'owner');
-    await page.fill('[name="password"]', 'password');
-    await page.click('button[type="submit"]');
-    await expect(page).toHaveURL(/\/owner\/users/);
+    await login(page, 'owner');
+    await page.goto('/dashboard');
+    await waitForPage(page);
   });
 
-  test('displays sales vs wastage summary', async ({ page }) => {
-    await page.goto('/dashboard/sales-wastage');
-    
-    // Check KPI cards
-    await expect(page.locator('text=Units Sold')).toBeVisible();
-    await expect(page.locator('text=Units Wasted')).toBeVisible();
-    await expect(page.locator('text=Wastage Rate')).toBeVisible();
-    await expect(page.locator('text=Near-Expiry Batches')).toBeVisible();
+  test('renders every section with live analytics', async ({ page }) => {
+    const errors = collectPageErrors(page);
+
+    await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Leakage & Risks' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Leakage by Category' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Inventory Health' })).toBeVisible();
+
+    // The dashboard is charts, not a table, so it must not render a data grid.
+    await expect(page.locator(`${MAIN} thead`)).toHaveCount(0);
+
+    expect(errors()).toEqual([]);
   });
 
-  test('shows category breakdown chart', async ({ page }) => {
-    await page.goto('/dashboard/sales-wastage');
-    
-    await expect(page.locator('text=Units Sold vs Wasted by Category')).toBeVisible();
-    // Check for chart canvas
-    await expect(page.locator('canvas')).toBeVisible();
-  });
+  test('the sales period select re-queries with the chosen range', async ({ page }) => {
+    const errors = collectPageErrors(page);
 
-  test('shows waste by reason pie chart', async ({ page }) => {
-    await page.goto('/dashboard/sales-wastage');
-    
-    await expect(page.locator('text=Waste by Reason')).toBeVisible();
-    await expect(page.locator('canvas')).toBeVisible();
-  });
+    await expect(period(page)).toHaveValue('30');
+    await expect(period(page).locator('option')).toHaveText([
+      'Last 7 days',
+      'Last 30 days',
+      '3 months',
+    ]);
 
-  test('shows daily trend line chart', async ({ page }) => {
-    await page.goto('/dashboard/sales-wastage');
-    
-    await expect(page.locator('text=Daily Trend: Units Sold vs Wasted')).toBeVisible();
-    await expect(page.locator('canvas')).toBeVisible();
-  });
+    for (const value of ['7', '90']) {
+      // `ownerDashboard.analytics()` lives at `/dashboard/owner-analytics` and appends
+      // `?period=<n>`, so the range is observable on the wire.
+      const request = page.waitForResponse(
+        (r) =>
+          r.url().includes('/dashboard/owner-analytics') &&
+          r.url().includes(`period=${value}`) &&
+          r.request().resourceType() !== 'document',
+      );
 
-  test('shows top wasted products table', async ({ page }) => {
-    await page.goto('/dashboard/sales-wastage');
-    
-    await expect(page.locator('text=Top 10 Wasted Products')).toBeVisible();
-    await expect(page.locator('text=Product')).toBeVisible();
-    await expect(page.locator('text=Units Wasted')).toBeVisible();
-  });
+      await period(page).selectOption(value);
+      await expect(request).resolves.toBeDefined();
 
-  test('shows slow movers table', async ({ page }) => {
-    await page.goto('/dashboard/sales-wastage');
-    
-    await expect(page.locator('text=Slow Movers')).toBeVisible();
-    await expect(page.locator('text=Product')).toBeVisible();
-    await expect(page.locator('text=Units Sold')).toBeVisible();
-  });
-
-  test('date range picker works', async ({ page }) => {
-    await page.goto('/dashboard/sales-wastage');
-    
-    // Click date picker
-    await page.click('button:has-text("Select date range")');
-    
-    // Select date range
-    await page.click('text=Last 30 days');
-    
-    // Charts should update
-    await expect(page.locator('canvas')).toBeVisible();
-  });
-
-  test('export CSV works', async ({ page }) => {
-    await page.goto('/dashboard/sales-wastage');
-    
-    // Click export
-    const downloadPromise = page.waitForEvent('download');
-    await page.click('button:has-text("Export CSV")');
-    const download = await downloadPromise;
-    
-    expect(download.suggestedFilename()).toMatch(/sales-wastage-report.*\.csv/);
-  });
-
-  test('shows near-expiry count', async ({ page }) => {
-    await page.goto('/dashboard/sales-wastage');
-    
-    await expect(page.locator('text=Near-Expiry Batches')).toBeVisible();
-  });
-
-  test('shows waste by reason breakdown', async ({ page }) => {
-    await page.goto('/dashboard/sales-wastage');
-    
-    // Check for reason categories
-    const reasons = ['Expired', 'Damaged', 'Recalled', 'Spoiled', 'Other'];
-    for (const reason of reasons) {
-      await expect(page.locator(`text=${reason}`)).toBeVisible();
+      // The control keeps the selection the user made, and the page stays intact.
+      await expect(period(page)).toHaveValue(value);
+      await expect(page.getByRole('heading', { name: 'Leakage & Risks' })).toBeVisible();
     }
+
+    expect(errors()).toEqual([]);
+  });
+
+  test('the leakage chart legend switches measurement', async ({ page }) => {
+    const errors = collectPageErrors(page);
+
+    for (const mode of ['value', 'quantity', 'percentage']) {
+      const toggle = page.getByRole('button', { name: mode, exact: true });
+      await expect(toggle).toBeVisible();
+      await toggle.click();
+      // The chart itself never unmounts, so the section staying put is the signal
+      // that the toggle was handled rather than falling through.
+      await expect(page.getByRole('heading', { name: 'Leakage by Category' })).toBeVisible();
+    }
+
+    expect(errors()).toEqual([]);
   });
 });

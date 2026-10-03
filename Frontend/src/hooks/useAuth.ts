@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { auth, type ApiUser } from '../services/api';
+import { clearStoredSession } from '../utils/mockAuthAndFeatures';
 
 export type UserRole = 'owner' | 'inventory' | 'cashier';
 
@@ -147,7 +148,17 @@ export function useAuth() {
 
   const logout = useCallback(async () => {
     try { await auth.logout(); } catch { /* ignore */ }
+
+    // Clear every credential this app writes, not just `wiwaste_user`. Leaving
+    // `wiwaste_token` behind meant the next full page load still had a bearer token, so
+    // `verifyToken()`'s `/me` call succeeded and silently signed the user back in —
+    // signing out appeared to work, then any protected route was reachable again.
+    // `wiwaste-session` matters for the same reason: `getStoredSession()` feeds role
+    // checks in the layouts.
     localStorage.removeItem('wiwaste_user');
+    localStorage.removeItem('wiwaste_token');
+    clearStoredSession();
+
     setUser(null);
   }, []);
 

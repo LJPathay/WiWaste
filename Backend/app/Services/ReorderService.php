@@ -8,6 +8,7 @@ use App\Models\Supplier;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
 use App\Models\FEFOBatch;
+use App\Models\ForecastResult;
 use App\Services\Ml\ForecastService;
 use App\Services\Ml\OptimizationService;
 use App\Services\Ml\MlServiceUnavailableException;
@@ -29,14 +30,28 @@ class ReorderService
     /**
      * Generate reorder suggestions for a business/branch
      * Returns a collection of suggested PO drafts grouped by supplier
+     *
+     * `$businessId` is nullable because a user account is not guaranteed to have a
+     * business assigned (single-tenant setups and freshly seeded accounts have none).
+     * When it is null the whole catalogue is considered instead of failing the request.
+     *
+     * ML work is opt-in via `$options['refresh_forecasts']` / `$options['run_optimization']`.
+     * Regenerating forecasts costs one HTTP round-trip per product (~2s each), which
+     * cannot fit inside a web request — doing it on every GET pushed the endpoint past
+     * PHP's 30s execution limit and it 500'd. Forecasts are refreshed out of band by
+     * the `forecast:generate` command, so the read path only consumes stored results.
      */
-    public function generateSuggestions(int $businessId, ?int $branchId = null, array $options = []): array
+    public function generateSuggestions(?int $businessId, ?int $branchId = null, array $options = []): array
     {
-        // Generate ML forecasts first
-        $this->generateMLForecasts();
+        if ($options['refresh_forecasts'] ?? false) {
+            $this->generateMLForecasts();
+        } else {
+            $this->lastForecastCount = ForecastResult::distinct('product_id')->count('product_id');
+        }
 
-        // Then run optimization for optimal replenishment plan
-        $this->runOptimization($options);
+        if ($options['run_optimization'] ?? false) {
+            $this->runOptimization($options);
+        }
 
         // Get products needing reorder (fallback to rule-based if ML unavailable)
         $products = $this->getProductsNeedingReorder($businessId, $branchId);
@@ -150,18 +165,23 @@ class ReorderService
     /**
      * Get products that need reordering (stock <= reorder_level)
      */
-    protected function getProductsNeedingReorder(int $businessId, ?int $branchId): Collection
+    protected function getProductsNeedingReorder(?int $businessId, ?int $branchId): Collection
     {
         $query = Product::with(['inventory', 'supplier'])
-            ->where('business_id', $businessId)
             ->where('status', 'Active')
-            ->whereHas('inventory', function ($q) use ($branchId) {
-                $q->where('business_id', $branchId ? $branchId : null);
-                if ($branchId) {
+            ->whereHas('inventory', function ($q) use ($businessId, $branchId) {
+                if ($businessId !== null) {
+                    $q->where('business_id', $businessId);
+                }
+                if ($branchId !== null) {
                     $q->where('branch_id', $branchId);
                 }
                 $q->whereRaw('current_stock <= reorder_level');
             });
+
+        if ($businessId !== null) {
+            $query->where('business_id', $businessId);
+        }
 
         return $query->get();
     }
@@ -169,9 +189,11 @@ class ReorderService
     /**
      * Calculate reorder suggestion for a single product
      */
-    protected function calculateSuggestion(Product $product, int $businessId, ?int $branchId, array $options): ?array
+    protected function calculateSuggestion(Product $product, ?int $businessId, ?int $branchId, array $options): ?array
     {
-        $inventory = $product->inventory->firstWhere('branch_id', $branchId);
+        $inventory = $branchId !== null
+            ? $product->inventory->firstWhere('branch_id', $branchId)
+            : $product->inventory->first();
         if (!$inventory || $inventory->current_stock > $inventory->reorder_level) {
             return null;
         }

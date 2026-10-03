@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { RotateCcw, Search, AlertCircle, Info, X, AlertTriangle, Clock, ShieldCheck, FileText } from 'lucide-react';
 import { FormField, inputCls, Toast, useToast, ConfirmDialog, Modal } from '../../components/ui/Toast';
 import { formatCurrency } from '../../utils/cashierData';
@@ -134,7 +134,7 @@ export function ReturnsRefunds() {
     if (!query.trim()) return salesData;
     const q = query.toLowerCase();
     return salesData.filter(s =>
-      s.transaction_id.toString().includes(q) ||
+      s.id.toString().includes(q) ||
       s.items.some(item =>
         item.product_name.toLowerCase().includes(q) ||
         item.sku.toLowerCase().includes(q)
@@ -163,6 +163,9 @@ export function ReturnsRefunds() {
       await returnsApi.create({
         sale_item_id: selectedItem.sale_item_id,
         quantity_returned: qty,
+        // `refund_amount` is required by `ReturnTransactionController::store()` and was
+        // never sent, so every submission came back 422 and no return could be recorded.
+        refund_amount: Number((qty * selectedItem.unit_price).toFixed(2)),
         reason,
         return_reason_code: returnReasonCode,
         evidence_notes: evidenceNotes || undefined,
@@ -272,11 +275,11 @@ export function ReturnsRefunds() {
               <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                 {filteredSales.flatMap(sale =>
                   sale.items.map((item, idx) => (
-                    <tr key={`${sale.transaction_id}-${idx}`} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer"
+                    <tr key={`${sale.id}-${idx}`} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer"
                       onClick={() => {
                         setSelectedItem({
                           sale_item_id: item.id,
-                          transaction_id: sale.transaction_id,
+                          transaction_id: sale.id,
                           product_name: item.product_name,
                           sku: item.sku,
                           quantity: item.quantity,
@@ -285,7 +288,7 @@ export function ReturnsRefunds() {
                         });
                       }}
                     >
-                      <td className="px-3 py-2 text-sm font-mono text-slate-900 dark:text-white">{sale.transaction_id}</td>
+                      <td className="px-3 py-2 text-sm font-mono text-slate-900 dark:text-white">{sale.id}</td>
                       <td className="px-3 py-2 text-sm font-medium text-slate-900 dark:text-white">{item.product_name}</td>
                       <td className="px-3 py-2 text-sm text-slate-500 font-mono">{item.sku}</td>
                       <td className="px-3 py-2 text-sm text-right text-slate-900 dark:text-white">{item.quantity}</td>
@@ -299,7 +302,7 @@ export function ReturnsRefunds() {
                           onClick={() => {
                             setSelectedItem({
                               sale_item_id: item.id,
-                              transaction_id: sale.transaction_id,
+                              transaction_id: sale.id,
                               product_name: item.product_name,
                               sku: item.sku,
                               quantity: item.quantity,

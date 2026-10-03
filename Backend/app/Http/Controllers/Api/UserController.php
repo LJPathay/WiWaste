@@ -30,6 +30,12 @@ class UserController extends BaseApiController
             $query->where('role', request()->get('role'));
         }
 
+        // `status` matches exactly, which cannot express the default tab of the user
+        // screen: "every account that is not archived" (Active and Quarantined alike).
+        if ($exclude = request()->get('exclude_status')) {
+            $query->where('status', '!=', $exclude);
+        }
+
         if (request()->has('status')) {
             $query->where('status', request()->get('status'));
         }

@@ -30,6 +30,7 @@ import {
   type CartLine,
   type HotkeyAction,
   type ProductSlotKey,
+  PRODUCT_SLOT_KEYS,
   DEFAULT_HOTKEYS,
   HOTKEY_LABELS,
   HOTKEY_PRESETS,
@@ -364,6 +365,36 @@ export function POSTerminal() {
     return () => clearInterval(timer);
   }, []);
 
+  /**
+   * Initial catalogue load.
+   *
+   * The grid used to render whatever `loadCachedCatalog()` returned, and nothing ever
+   * called `saveCachedCatalog()` — so a cold browser opened the till to an empty grid
+   * with "No products match your search", and `catalogError` was declared but never
+   * raised. Seeded the till from the API, then kept the cache in step.
+   */
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const res = await productsApi.list({ per_page: 100 });
+        if (cancelled) return;
+
+        const products = res.data.map(apiProductToCashier);
+        setCatalog(products);
+        saveCachedCatalog(products);
+        setCatalogError(false);
+      } catch {
+        if (cancelled) return;
+        // A stale cache still serves the grid, so only a truly empty till is an error.
+        setCatalogError((loadCachedCatalog() ?? []).length === 0);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, []);
+
   // Auto-focus the scan input when the POS loads so a USB scanner works immediately
   useEffect(() => {
     barcodeRef.current?.focus();
@@ -606,6 +637,11 @@ export function POSTerminal() {
     <div className="relative h-screen w-full z-50 flex flex-col bg-[#F8FAFC] dark:bg-slate-900 text-[#475569] dark:text-slate-300 font-sans overflow-hidden">
       <Toast toasts={toasts} onDismiss={dismiss} />
 
+      {/* The kiosk header carries the wordmark only, so this page had no heading at
+          all — the one screen without a `h1`, which left it unlabelled for screen
+          readers and for anything that keys off a page title. */}
+      <h1 className="sr-only">Point of Sale</h1>
+
       {/* GLOBAL HEADER */}
       <header className="h-14 bg-white dark:bg-slate-800 border-b border-[#E5E7EB] dark:border-slate-700 flex items-center justify-between px-6 shrink-0 shadow-sm z-20 relative">
         <div className="flex items-center gap-6">
@@ -740,7 +776,8 @@ export function POSTerminal() {
                     const isDragging = draggedProduct?.product_id === product.product_id;
                     const isDragOver = dragOverId === product.product_id;
                     return (
-                      <div
+                      <button
+                        type="button"
                         key={product.product_id}
                         draggable
                         onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; setDraggedProduct(product); }}
@@ -768,6 +805,10 @@ export function POSTerminal() {
                           setDragOverId(null);
                         }}
                         onClick={() => addProduct(product)}
+                        // The card *is* the control: naming it makes the grid reachable
+                        // by keyboard and screen reader. It was a click-only <div>, so
+                        // nothing on this screen could be tabbed to or announced.
+                        aria-label={`Add ${product.product_name} to cart, ${formatCurrency(product.selling_price)}`}
                         style={{
                           position: 'absolute',
                           top: 0,
@@ -776,7 +817,7 @@ export function POSTerminal() {
                           height: `${virtualRow.size}px`,
                           transform: `translateY(${virtualRow.start}px)`,
                         }}
-                        className={`flex flex-col bg-white dark:bg-slate-800 rounded-lg border p-2 shadow-sm hover:shadow-md hover:border-[#0F766E] cursor-pointer transition-all active:scale-[0.97] min-h-[70px] relative ${
+                        className={`flex flex-col text-left font-sans bg-white dark:bg-slate-800 rounded-lg border p-2 shadow-sm hover:shadow-md hover:border-[#0F766E] cursor-pointer transition-all active:scale-[0.97] min-h-[70px] relative ${
                           isDragging ? 'opacity-40 scale-95' : ''
                         } ${
                           isDragOver ? 'border-[#0F766E] ring-2 ring-[#0F766E]/30 scale-[1.02]' : 'border-[#E5E7EB] dark:border-slate-700'
@@ -789,12 +830,14 @@ export function POSTerminal() {
                           <p className="text-[11px] font-bold text-slate-800 dark:text-slate-100 leading-tight line-clamp-2 mb-1">{product.product_name}</p>
                           <div className="flex items-center justify-between mt-auto">
                             <p className="text-xs font-black text-slate-900 dark:text-slate-100">{formatCurrency(product.selling_price)}</p>
-                            <button className="flex items-center justify-center w-5 h-5 rounded bg-[#16A34A] text-white hover:bg-[#15803d]">
+                            {/* Decorative only — a <button> nested in a <button> is
+                                invalid, and this one had no handler at all. */}
+                            <span aria-hidden="true" className="flex items-center justify-center w-5 h-5 rounded bg-[#16A34A] text-white">
                               <Plus className="w-3 h-3" />
-                            </button>
+                            </span>
                           </div>
                         </div>
-                      </div>
+                      </button>
                     );
                   })}
                   {orderedProducts.length === 0 && (

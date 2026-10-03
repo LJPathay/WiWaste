@@ -1,51 +1,233 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Locator, type Page } from '@playwright/test';
+import { login, waitForPage, MAIN, collectPageErrors } from '../helpers/auth';
 
-test.describe('Owner User Management', () => {
+/**
+ * CRUD over `/owner/users` (`Frontend/src/pages/admin/ManageUsers.tsx`).
+ *
+ * Selectors are read off that file rather than guessed:
+ *  - the row controls are icon-only, so they are addressed by the `aria-label` on
+ *    each button (`Edit <name>` / `Archive <name>`),
+ *  - the add form's inputs have placeholders but no `id`,
+ *  - the role picker is a custom dropdown — a button showing the current role plus a
+ *    popover — not a `<select>`,
+ *  - `generateUsername()` strips everything outside `[a-z\s]`, so a digit in a chosen
+ *    name would silently vanish from the derived username.
+ *
+ * `globalSetup` seeds once per run, so tests share a database. Anything that mutates
+ * a seeded row would leak into the next test, so each mutation here targets a user
+ * the test creates itself.
+ */
+
+/** Letters only, so the derived username keeps every character that was typed. */
+let seq = 0;
+function name(prefix: string): string {
+  seq += 1;
+  const ordinal = [...seq.toString(26)].map((d) => String.fromCharCode(97 + Number(d, 26))).join('');
+  const salt = Date.now().toString(36).replace(/[^a-z]/g, '').slice(0, 3).padEnd(3, 'x');
+  return `${prefix}${ordinal}${salt}`.slice(0, 12);
+}
+
+const SEARCH = 'input[placeholder="Search name, username, email..."]';
+const ROWS = `${MAIN} tbody tr`;
+
+/**
+ * Opens the add dialog and fills it in.
+ *
+ * The username is read back out of the form's "Auto-generated credentials" preview
+ * rather than recomputed, so this spec never has to mirror `generateUsername()`.
+ */
+async function fillAddDialog(
+  page: Page,
+  parts: { first: string; last: string; role?: string; contact?: string },
+): Promise<{ dialog: Locator; username: string }> {
+  await page.getByRole('button', { name: 'Add User', exact: true }).click();
+
+  const dialog = page.locator('[role="dialog"]').filter({ hasText: 'Add New User' });
+  await expect(dialog).toBeVisible();
+
+  await dialog.locator('input[placeholder="First"]').fill(parts.first);
+  await dialog.locator('input[placeholder="Last"]').fill(parts.last);
+  if (parts.contact) {
+    await dialog.locator('input[placeholder="e.g. 09171234567"]').fill(parts.contact);
+  }
+  if (parts.role) {
+    // The role control defaults to "Inventory Staff"; open it and choose otherwise.
+    await dialog.getByRole('button').filter({ hasText: 'Inventory Staff' }).first().click();
+    await dialog.getByRole('button').filter({ hasText: parts.role }).last().click();
+  }
+
+  await expect(dialog.getByText('Auto-generated credentials:')).toBeVisible();
+  // The preview is a flex row, so `textContent` concatenates the label and value
+  // spans with no separator ("…Username:@abcEmail:…"). Stop at the next label.
+  const preview = (await dialog.textContent()) ?? '';
+  const username = preview.match(/Username:\s*@(.+?)Email:/)?.[1];
+  expect(username, `the add form did not preview a username: ${preview}`).toBeTruthy();
+
+  return { dialog, username: `@${username}` };
+}
+
+/** Creates a user and waits for its row to appear. */
+async function createUser(
+  page: Page,
+  parts: { first: string; last: string; role?: string },
+): Promise<string> {
+  const { dialog, username } = await fillAddDialog(page, parts);
+  await dialog.locator('button[type="submit"]').click();
+  await expect(dialog).toBeHidden({ timeout: 20_000 });
+  await expect(page.locator(ROWS).filter({ hasText: username })).toBeVisible({ timeout: 20_000 });
+  return username;
+}
+
+test.describe('Owner · User management', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/login');
-    await page.fill('[name="username"]', 'owner');
-    await page.fill('[name="password"]', 'password');
-    await page.click('button[type="submit"]');
-    await expect(page).toHaveURL(/\/owner\/users/);
+    await login(page, 'owner');
+    await page.goto('/owner/users');
+    await waitForPage(page);
   });
 
-  test('creates new user with separate name fields', async ({ page }) => {
-    await page.click('button:has-text("Add User")');
-    
-    await page.fill('input[placeholder="First"]', 'Juan');
-    await page.fill('input[placeholder="Middle"]', 'Dela');
-    await page.fill('input[placeholder="Last"]', 'Cruz');
-    await page.fill('input[placeholder="e.g. 09171234567"]', '09171234567');
-    await page.selectOption('select:has-text("Assign Role")', 'Inventory');
-    await page.click('button:has-text("Add User")');
-    
-    await expect(page.locator('text=Juan Dela Cruz')).toBeVisible();
+  test('lists the seeded accounts', async ({ page }) => {
+    await expect(page.getByRole('heading', { name: 'Manage Users' })).toBeVisible();
+
+    for (const username of ['@admin', '@inventory', '@cashier']) {
+      await expect(page.getByText(username, { exact: true })).toBeVisible();
+    }
+
+    await expect(page.getByText(/\d+ Users$/)).toBeVisible();
   });
 
-  test('edits existing user', async ({ page }) => {
-    // Find and edit a user
-    await page.click('button:has-text("Edit"):first');
-    
-    await page.fill('input[placeholder="First"]', 'Updated');
-    await page.click('button:has-text("Save Changes")');
-    
-    await expect(page.locator('text=Updated')).toBeVisible();
+  test('creates a user and previews its generated credentials', async ({ page }) => {
+    const errors = collectPageErrors(page);
+    const first = name('E2e');
+    const last = name('Create');
+
+    const { dialog, username } = await fillAddDialog(page, {
+      first,
+      last,
+      contact: '09171234567',
+      role: 'Cashier',
+    });
+
+    // Username, email and password are all derived and previewed before submitting.
+    await expect(dialog.getByText(`${username.slice(1)}@wiwaste.com`)).toBeVisible();
+    await expect(dialog.getByText('WiWaste123!')).toBeVisible();
+
+    await dialog.locator('button[type="submit"]').click();
+    await expect(dialog).toBeHidden({ timeout: 20_000 });
+
+    const row = page.locator(ROWS).filter({ hasText: username });
+    await expect(row).toBeVisible({ timeout: 20_000 });
+    await expect(row.getByText('Cashier')).toBeVisible();
+
+    // Leave the seed as it was found.
+    await row.getByRole('button', { name: `Archive ${first} ${last}` }).click();
+    await page
+      .locator('[role="dialog"]').filter({ hasText: 'Archive User Account' })
+      .getByRole('button', { name: 'Archive User' }).click();
+    await expect(row).toHaveCount(0, { timeout: 20_000 });
+
+    expect(errors()).toEqual([]);
   });
 
-  test('archives user', async ({ page }) => {
-    await page.click('button:has-text("Archive"):first');
-    await page.click('button:has-text("Archive")');
-    
-    await expect(page.locator('text=Archived')).toBeVisible();
+  test('blocks a duplicate name client-side', async ({ page }) => {
+    // "Lia Cruz" is the seeded owner, and no test here renames them.
+    const { dialog } = await fillAddDialog(page, { first: 'Lia', last: 'Cruz' });
+
+    await expect(dialog.getByText('A user with this name already exists.')).toBeVisible();
+    await expect(dialog.locator('button[type="submit"]')).toBeDisabled();
   });
 
-  test('filters users by role', async ({ page }) => {
-    await page.selectOption('select:has-text("Role")', 'Inventory');
-    await expect(page.locator('text=Inventory')).toBeVisible();
+  test('edits a user it created', async ({ page }) => {
+    const errors = collectPageErrors(page);
+    const first = name('E2e');
+    const last = name('Edit');
+    const renamed = name('Edited');
+
+    const username = await createUser(page, { first, last });
+
+    await page.locator(ROWS).filter({ hasText: username })
+      .getByRole('button', { name: /^Edit / }).click();
+
+    const dialog = page.locator('[role="dialog"]').filter({ hasText: 'Edit User' });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByText(username)).toBeVisible();
+
+    // These inputs carry neither placeholder nor id, so they are addressed by
+    // position: first, middle, last, then contact number.
+    await dialog.locator('input[type="text"]').nth(0).fill(renamed);
+
+    await dialog.locator('button[type="submit"]').click();
+    await expect(dialog).toBeHidden({ timeout: 20_000 });
+
+    await expect(page.locator(ROWS).filter({ hasText: renamed })).toBeVisible({ timeout: 20_000 });
+    expect(errors()).toEqual([]);
   });
 
-  test('searches users', async ({ page }) => {
-    await page.fill('input[placeholder*="Search"]', 'inventory');
-    await expect(page.locator('text=Inventory')).toBeVisible();
+  test('archives a user, then finds it under the Archived tab', async ({ page }) => {
+    const errors = collectPageErrors(page);
+    const first = name('E2e');
+    const last = name('Archive');
+
+    const username = await createUser(page, { first, last });
+
+    const row = page.locator(ROWS).filter({ hasText: username });
+    await row.getByRole('button', { name: `Archive ${first} ${last}` }).click();
+
+    const confirm = page.locator('[role="dialog"]').filter({ hasText: 'Archive User Account' });
+    await expect(confirm).toBeVisible();
+    await expect(confirm.getByText(username)).toBeVisible();
+    await confirm.getByRole('button', { name: 'Archive User' }).click();
+    await expect(confirm).toBeHidden({ timeout: 20_000 });
+
+    // Archived accounts drop out of the default "All Users" view…
+    await expect(row).toHaveCount(0, { timeout: 20_000 });
+
+    // …and are reachable through the Archived tab.
+    await page.getByRole('button', { name: /^Archived/ }).click();
+    const archived = page.locator(ROWS).filter({ hasText: username });
+    await expect(archived).toBeVisible({ timeout: 20_000 });
+    await expect(archived.getByText('Archived')).toBeVisible();
+
+    expect(errors()).toEqual([]);
+  });
+
+  test('filters by role', async ({ page }) => {
+    const errors = collectPageErrors(page);
+
+    await page.locator('#user-role-filter').selectOption('Cashier');
+    const rows = page.locator(ROWS);
+    await expect(rows).toHaveCount(1);
+    await expect(page.getByText('@cashier', { exact: true })).toBeVisible();
+
+    await page.locator('#user-role-filter').selectOption('Owner');
+    await expect(rows).toHaveCount(1);
+    await expect(page.getByText('@admin', { exact: true })).toBeVisible();
+
+    expect(errors()).toEqual([]);
+  });
+
+  test('searches and resets', async ({ page }) => {
+    const errors = collectPageErrors(page);
+    const rows = page.locator(ROWS);
+
+    // Username match.
+    await page.locator(SEARCH).fill('cashier');
+    await expect(rows).toHaveCount(1);
+    await expect(page.getByText('@cashier', { exact: true })).toBeVisible();
+
+    // Surname match — the seeded inventory account's surname is never renamed.
+    await page.locator(SEARCH).fill('Stockwell');
+    await expect(rows).toHaveCount(1);
+    await expect(page.getByText('@inventory', { exact: true })).toBeVisible();
+
+    // No match. DataTable renders its empty state in place of the rows, so the
+    // summary line is the thing to assert.
+    await page.locator(SEARCH).fill('zzzznosuchperson');
+    await expect(page.getByText('No users match your filters')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Reset Filters' }).click();
+    await expect(page.getByText('No users match your filters')).toBeHidden();
+    await expect(rows.first()).toBeVisible();
+
+    expect(errors()).toEqual([]);
   });
 });

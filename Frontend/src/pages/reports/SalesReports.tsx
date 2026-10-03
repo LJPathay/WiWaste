@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   Search, Filter, Calendar, Download, BarChart2, DollarSign, Percent,
   CreditCard, Wallet, Banknote, User, AlertTriangle, ChevronDown, ChevronUp

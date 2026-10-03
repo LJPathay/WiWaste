@@ -9,7 +9,7 @@ import { ownerDashboard } from '../services/api';
 import type { ApiDashboard, ApiOwnerAnalytics } from '../services/api';
 import type { DashboardData } from '../utils/mockAuthAndFeatures';
 
-export function useDashboardData() {
+export function useDashboardData(period = '30') {
   const [data, setData] = useState<DashboardData | null>(null);
   const [overview, setOverview] = useState<ApiDashboard | null>(null);
   const [ownerAnalytics, setOwnerAnalytics] = useState<ApiOwnerAnalytics | null>(null);
@@ -29,7 +29,7 @@ export function useDashboardData() {
             return initializeDashboard(email, 'password', role);
           })(),
           ownerDashboard.overview().then(r => { console.debug('[Dashboard] overview:', r); return r; }).catch(e => { console.error('[Dashboard] overview failed:', e); return null; }),
-          ownerDashboard.analytics({ period: '30' }).then(r => { console.debug('[Dashboard] analytics:', r); return r; }).catch(e => { console.error('[Dashboard] analytics failed:', e); return null; }),
+          ownerDashboard.analytics({ period }).then(r => { console.debug('[Dashboard] analytics:', r); return r; }).catch(e => { console.error('[Dashboard] analytics failed:', e); return null; }),
         ]);
         if (mounted) {
           setData(d);
@@ -59,7 +59,7 @@ export function useDashboardData() {
 
     load();
     return () => { mounted = false; };
-  }, []);
+  }, [period]);
 
   return { data, overview, ownerAnalytics, loading };
 }

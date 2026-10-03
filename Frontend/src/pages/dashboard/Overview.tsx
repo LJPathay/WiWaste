@@ -1,19 +1,19 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  CartesianGrid,
-  ResponsiveContainer,
-  XAxis,
-  YAxis,
-} from 'recharts';
+import { ResponsiveContainer } from 'recharts';
 import {
   LazyAreaChart,
   LazyArea,
+  LazyBarChart,
+  LazyBar,
   LazyPieChart,
   LazyPie,
   LazyCell,
   LazyTooltip,
   LazyLegend,
+  LazyCartesianGrid,
+  LazyXAxis,
+  LazyYAxis,
 } from '../../components/charts/LazyCharts';
 import {
   ArrowUpRight,
@@ -42,12 +42,15 @@ const currencyFormatter = new Intl.NumberFormat('en-PH', {
 const LEAKAGE_COLORS = ['#006a61', '#f97316', '#f59e0b', '#eab308', '#22c55e'];
 
 export function DashboardOverview() {
-  const { data, overview, ownerAnalytics, loading } = useDashboardData();
   const [clickedKpi, setClickedKpi] = useState<number | null>(null);
   const kpiTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const highlightedKpi = useKpiHighlight(5000);
   const [salesPeriod, setSalesPeriod] = useState('30');
   const [leakageViewMode, setLeakageViewMode] = useState<'value' | 'quantity' | 'percentage'>('value');
+
+  // The period select used to be decorative: the hook hard-coded `period: '30'` and
+  // only ever ran once, so changing the range re-rendered nothing.
+  const { data, overview, ownerAnalytics, loading } = useDashboardData(salesPeriod);
 
   // Debug: log what we got
   console.debug('[DashboardOverview] loading:', loading, 'overview:', overview, 'data:', data, 'ownerAnalytics:', ownerAnalytics);
@@ -395,6 +398,7 @@ export function DashboardOverview() {
               <select
                 value={salesPeriod}
                 onChange={(e) => setSalesPeriod(e.target.value)}
+                aria-label="Sales trend period"
                 className="px-2 py-1 text-[10px] rounded-md border border-[#E5E7EB] dark:border-white/10 bg-[#F8FAFC] dark:bg-slate-800 text-[#0F172A] dark:text-slate-100"
               >
                 <option value="7">Last 7 days</option>
@@ -406,9 +410,9 @@ export function DashboardOverview() {
               <ResponsiveContainer width="100%" height="100%">
                 <LazyAreaChart data={salesTrendData}>
                   <ChartGradients />
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_COLORS.grid} />
-                  <XAxis dataKey="date" tick={{ fontSize: 11, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} />
-                  <YAxis tick={{ fontSize: 11, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} tickFormatter={(v) => `₱${(v / 1000).toFixed(0)}k`} />
+                  <LazyCartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_COLORS.grid} />
+                  <LazyXAxis dataKey="date" tick={{ fontSize: 11, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} />
+                  <LazyYAxis tick={{ fontSize: 11, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} tickFormatter={(v) => `₱${(v / 1000).toFixed(0)}k`} />
                   <LazyTooltip formatter={(value) => currencyFormatter.format(Number(value))} contentStyle={ChartTooltipStyle()} />
                   <LazyArea
                     type="monotone"
@@ -447,9 +451,9 @@ export function DashboardOverview() {
               <ResponsiveContainer width="100%" height="100%">
                 <LazyAreaChart data={wastageTrendData}>
                   <ChartGradients />
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_COLORS.grid} />
-                  <XAxis dataKey="date" tick={{ fontSize: 10, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} />
-                  <YAxis tick={{ fontSize: 10, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} tickFormatter={(v) => `₱${(v / 1000).toFixed(0)}k`} />
+                  <LazyCartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_COLORS.grid} />
+                  <LazyXAxis dataKey="date" tick={{ fontSize: 10, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} />
+                  <LazyYAxis tick={{ fontSize: 10, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} tickFormatter={(v) => `₱${(v / 1000).toFixed(0)}k`} />
                   <LazyTooltip formatter={(value) => currencyFormatter.format(Number(value))} contentStyle={ChartTooltipStyle()} />
                   <LazyArea
                     type="monotone"
@@ -523,16 +527,16 @@ export function DashboardOverview() {
             {paymentBreakdown.length > 0 ? (
             <div className="h-40">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={paymentBreakdown} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F1F5F9" />
-                  <XAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} stroke="#E5E7EB" tickFormatter={(v) => `₱${(v / 1000).toFixed(0)}k`} />
-                  <YAxis dataKey="method" type="category" tick={{ fontSize: 11, fill: '#94a3b8' }} stroke="#E5E7EB" width={70} />
-                    <Tooltip
+                <LazyBarChart data={paymentBreakdown} layout="vertical">
+                  <LazyCartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F1F5F9" />
+                  <LazyXAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} stroke="#E5E7EB" tickFormatter={(v) => `₱${(v / 1000).toFixed(0)}k`} />
+                  <LazyYAxis dataKey="method" type="category" tick={{ fontSize: 11, fill: '#94a3b8' }} stroke="#E5E7EB" width={70} />
+                    <LazyTooltip
                       formatter={(value) => currencyFormatter.format(Number(value))}
                       contentStyle={CHART_TOOLTIP_STYLE}
                     />
-                    <Bar dataKey="revenue" radius={[0, 10, 10, 0]} fill="#0F766E" />
-                  </BarChart>
+                    <LazyBar dataKey="revenue" radius={[0, 10, 10, 0]} fill="#0F766E" />
+                  </LazyBarChart>
                 </ResponsiveContainer>
               </div>
             ) : (

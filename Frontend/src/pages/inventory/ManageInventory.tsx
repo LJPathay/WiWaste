@@ -532,7 +532,7 @@ export function ManageInventory() {
       )}
 
       {adjustItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" role="dialog" aria-modal="true">
           <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-white/10">
               <div>
@@ -609,7 +609,7 @@ export function ManageInventory() {
       )}
 
       {historyItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" role="dialog" aria-modal="true">
           <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-white/10">
               <div>

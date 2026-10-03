@@ -2,23 +2,18 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Concerns\ScopesTenant;
 use App\Http\Requests\Api\CreateSupplierRequest;
 use App\Http\Requests\Api\UpdateSupplierRequest;
 use App\Models\Supplier;
 use App\Models\Inventory;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 class SupplierController extends BaseApiController
 {
-    protected function scopeForBusiness($query, Request $request)
-    {
-        $user = $request->user();
-        if ($user && $user->business_id) {
-            $query->where('business_id', $user->business_id);
-        }
-        return $query;
-    }
+    use ScopesTenant;
 
     public function index()
     {

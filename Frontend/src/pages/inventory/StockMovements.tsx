@@ -260,7 +260,7 @@ export function StockMovements() {
         )}
       </div>
 
-      <Toast toasts={toasts} dismiss={dismiss} />
+      <Toast toasts={toasts} onDismiss={dismiss} />
     </div>
   );
 }

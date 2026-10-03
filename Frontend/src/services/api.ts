@@ -117,11 +117,17 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   console.debug('[API] Response:', path, 'Status:', res.status);
   if (!res.ok) {
     if (res.status === 401) {
-      localStorage.removeItem('wiwaste_token');
-      localStorage.removeItem('wiwaste_user');
-      localStorage.removeItem('wiwaste-session');
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
+      // Only tear down the session if this 401 belongs to the token we actually sent.
+      // Otherwise a slow in-flight /me that started before login resolves *after* the
+      // fresh token was stored and would wipe the brand-new session (see the race in
+      // useAuth: the mount-time verifyToken can resolve after login()).
+      if (token && getToken() === token) {
+        localStorage.removeItem('wiwaste_token');
+        localStorage.removeItem('wiwaste_user');
+        localStorage.removeItem('wiwaste-session');
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
       }
       throw new Error('Session expired. Please log in again.');
     }
@@ -186,13 +192,14 @@ export interface PaginatedUsersResponse {
 }
 
 export const users = {
-  list: (page = 1, perPage = 15, search = '', role = '', status = '') => {
+  list: (page = 1, perPage = 15, search = '', role = '', status = '', excludeStatus = '') => {
     const params = new URLSearchParams();
     params.set('page', page.toString());
     params.set('per_page', perPage.toString());
     if (search) params.set('search', search);
     if (role) params.set('role', role);
     if (status) params.set('status', status);
+    if (excludeStatus) params.set('exclude_status', excludeStatus);
     return request<PaginatedUsersResponse>(`/users?${params.toString()}`);
   },
   create: (data: CreateUserPayload) =>
@@ -375,7 +382,9 @@ export const stockReceiving = {
   },
   create: (data: CreateStockReceivingPayload) =>
     request('/stock-receiving', { method: 'POST', body: JSON.stringify(data) }),
-  receive: (id: number, items: { product_id: number; quantity: number; unit_cost: number; batch_number?: string; expiration_date?: string }[]) =>
+  // Matches `StockReceivingController::receive()`, which keys each line by
+  // `receiving_item_id` and requires a `received_quantity` of at least 1.
+  receive: (id: number, items: { receiving_item_id: number; received_quantity: number; rejected_quantity?: number; notes?: string }[]) =>
     request(`/stock-receiving/${id}/receive`, { method: 'POST', body: JSON.stringify({ items }) }),
   reject: (id: number, reason: string) =>
     request(`/stock-receiving/${id}/reject`, { method: 'POST', body: JSON.stringify({ reason }) }),

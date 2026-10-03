@@ -192,9 +192,10 @@ class DashboardController extends Controller
                 ->groupBy('payment_method')
                 ->get();
 
-            // Average forecast confidence
+            // Average forecast confidence. Forecast_Result has no created_at column
+            // (it is timestamped by generated_date), so filter on the real column.
             $avgConfidence = DB::table('Forecast_Result')
-                ->where('created_at', '>=', now()->subDays(30))
+                ->where('generated_date', '>=', now()->subDays(30))
                 ->avg('confidence');
 
             return [

@@ -36,7 +36,6 @@ export function useApi<T>(
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const fetcherRef = useRef(fetcher);
-  const dedupeKeyRef = useRef(dedupeKey ?? fetcher.toString());
   const mountedRef = useRef(true);
 
   // Update refs when fetcher changes
@@ -44,11 +43,12 @@ export function useApi<T>(
     fetcherRef.current = fetcher;
   }, [fetcher]);
 
-  useEffect(() => {
-    dedupeKeyRef.current = dedupeKey ?? fetcher.toString();
-  }, [dedupeKey, fetcher]);
+  // Fall back to the fetcher's own source when the caller supplies no key. Captured
+  // once, because the fetcher is usually a fresh arrow on every render and using its
+  // identity as the key would defeat caching entirely.
+  const fallbackKey = useRef(fetcher.toString()).current;
 
-  const cacheKey = dedupeKeyRef.current;
+  const cacheKey = dedupeKey ?? fallbackKey;
 
   const getCachedData = useCallback((): T | null => {
     const cached = cache.get(cacheKey);
@@ -66,7 +66,7 @@ export function useApi<T>(
   }, [cacheKey, cacheTtl]);
 
   const fetch = useCallback(async (isBackground = false) => {
-    const key = dedupeKeyRef.current;
+    const key = cacheKey;
 
     // Check cache first
     const cached = getCachedData();
@@ -74,10 +74,10 @@ export function useApi<T>(
       setData(cached);
       setLoading(false);
       setError(null);
-      // If stale-while-revalidate is enabled, fetch in background
+      // If stale-while-revalidate is enabled, fetch in background.
+      // Fire and forget — `fetch` is initialised by the time this runs.
       if (staleWhileRevalidate) {
-        // Don't await - fire and forget for background refresh
-        backgroundFetch();
+        void fetch(true);
       }
       return;
     }
@@ -106,8 +106,7 @@ export function useApi<T>(
 
     const promise = (async () => {
       try {
-        const fetcher = fetcherRef.current;
-        const result = await fetcher();
+        const result = await fetcherRef.current();
         if (mountedRef.current) {
           setData(result);
           setError(null);
@@ -138,18 +137,20 @@ export function useApi<T>(
         setLoading(false);
       }
     }
-  }, [staleWhileRevalidate]);
-
-  const backgroundFetch = useCallback(() => {
-    fetch(true);
-  }, [fetch]);
+  }, [cacheKey, cacheTtl, staleWhileRevalidate, getCachedData, setCachedData]);
 
   const invalidate = useCallback(() => {
     cache.delete(cacheKey);
     pendingRequests.delete(cacheKey);
-    fetch();
-  }, [cacheKey]);
+    void fetch();
+  }, [cacheKey, fetch]);
 
+  // Re-run whenever the cache key changes.
+  //
+  // This effect used to have an empty dependency list, so a page that folded its
+  // search box, filter or page number into `dedupeKey` would re-render on every
+  // keystroke but never re-request: the list silently kept showing the first result
+  // set, and search/filter/pagination appeared to do nothing.
   useEffect(() => {
     mountedRef.current = true;
     const cached = getCachedData();
@@ -158,13 +159,13 @@ export function useApi<T>(
       setLoading(false);
       // Background refresh if stale-while-revalidate
       if (staleWhileRevalidate) {
-        backgroundFetch();
+        void fetch(true);
       }
     } else {
-      fetch();
+      void fetch();
     }
     return () => { mountedRef.current = false; };
-  }, []);
+  }, [cacheKey, staleWhileRevalidate, getCachedData, setCachedData, fetch]);
 
   return { data, loading, error, refetch: fetch, invalidate };
 }

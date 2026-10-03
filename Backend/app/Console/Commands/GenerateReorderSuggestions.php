@@ -65,10 +65,11 @@ class GenerateReorderSuggestions extends Command
             return;
         }
 
-        // We need to create a mock request or use the service directly
-        // For simplicity, we'll use the service directly
+        // This is a batch job, not a web request, so it can afford the full ML pass.
         $suggestions = $this->reorderService->generateSuggestions($businessId, null, [
             'safety_stock_multiplier' => $safetyMultiplier,
+            'refresh_forecasts' => true,
+            'run_optimization' => true,
         ]);
 
         $this->displayResults($suggestions);

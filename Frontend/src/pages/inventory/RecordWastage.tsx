@@ -3,7 +3,7 @@ import { AlertTriangle, Trash2, Search, Loader2, Info, TrendingDown, BarChart2, 
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { Toast, useToast, ConfirmDialog } from '../../components/ui/Toast';
 import { useApi } from '../../hooks/useApi';
-import { products as productsApi, wastage as wastageApi, type ApiWastage } from '../../services/api';
+import { products as productsApi, wastage as wastageApi, type ApiWastage, type PaginatedResponse } from '../../services/api';
 import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
 
 const currencyFormatter = new Intl.NumberFormat('en-PH', {
@@ -23,7 +23,11 @@ function getReasonBadge(reason: string): string {
 export function RecordWastage() {
   const { toasts, dismiss, success, error } = useToast();
   const { data: apiProducts } = useApi(productsApi.list);
-  const { data: wastageRecords, refetch } = useApi<ApiWastage[]>(wastageApi.list);
+  // `wastageApi.list` returns the paginated envelope `{ data, meta }`. It used to be
+  // typed and consumed as a bare array, so the page threw
+  // "(wastageRecords ?? []).map is not a function" the moment it rendered.
+  const { data: wastagePage, refetch } = useApi<PaginatedResponse<ApiWastage>>(wastageApi.list);
+  const wastageRecords = wastagePage?.data;
 
   const [search, setSearch] = useState('');
   
@@ -137,9 +141,17 @@ export function RecordWastage() {
   monthAgo.setMonth(monthAgo.getMonth() - 1);
   const monthAgoStr = monthAgo.toISOString().slice(0, 10);
 
-  const todayLoss = wastageRecords?.filter(r => r.date_recorded >= todayStr).reduce((s, r) => s + r.estimated_loss, 0) ?? 0;
-  const weeklyLoss = wastageRecords?.filter(r => r.date_recorded >= weekAgoStr).reduce((s, r) => s + r.estimated_loss, 0) ?? 0;
-  const monthlyLoss = wastageRecords?.filter(r => r.date_recorded >= monthAgoStr).reduce((s, r) => s + r.estimated_loss, 0) ?? 0;
+  // `estimated_loss` arrives as a decimal *string* (the column is cast-free), so `+`
+  // concatenated the running total into "0325.00180.00" and the cards rendered NaN as
+  // soon as a second record fell inside the window.
+  const totalLossSince = (from: string) =>
+    (wastageRecords ?? [])
+      .filter((r) => r.date_recorded >= from)
+      .reduce((sum, r) => sum + (Number(r.estimated_loss) || 0), 0);
+
+  const todayLoss = totalLossSince(todayStr);
+  const weeklyLoss = totalLossSince(weekAgoStr);
+  const monthlyLoss = totalLossSince(monthAgoStr);
 
   const filteredRecords = records.filter(r =>
     r.name.toLowerCase().includes(search.toLowerCase()) ||

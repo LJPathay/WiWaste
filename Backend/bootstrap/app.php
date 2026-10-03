@@ -16,6 +16,14 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->api(prepend: [
             \App\Http\Middleware\CompressResponse::class,
         ]);
+
+        // There is no named `login` web route (auth lives entirely under /api),
+        // so unauthenticated API hits must be rejected as JSON rather than
+        // redirected — otherwise every guarded endpoint 500s with
+        // "Route [login] not defined." instead of returning 401.
+        $middleware->redirectGuestsTo(fn (Request $request) => $request->is('api/*')
+            ? null
+            : '/login');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

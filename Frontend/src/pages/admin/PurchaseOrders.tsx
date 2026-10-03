@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Plus, Search, Eye, X, CheckCircle, Package, Loader2 } from 'lucide-react';
 import { Toast, useToast, ConfirmDialog } from '../../components/ui/Toast';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
-import { purchaseOrders as poApi, suppliers as supplierApi, products as productApi, type PaginatedResponse, type ApiProduct, type ApiSupplier } from '../../services/api';
+import { purchaseOrders as poApi, suppliers as supplierApi, products as productApi, type PaginatedResponse, type ApiProduct, type ApiPurchaseOrder, type ApiSupplier } from '../../services/api';
 import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
 import { ActionButton } from '../../components/shared/DataTableActions';
 import { Pagination } from '../../components/ui/pagination';
@@ -17,31 +17,13 @@ const statusColor: Record<string, string> = {
   Cancelled: 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400',
 };
 
-interface PurchaseOrderItem {
-  id: number;
-  product: string;
-  quantity: number;
-  unit_price: number;
-  subtotal: number;
-  received_qty: number;
-}
-
-interface PurchaseOrder {
-  id: number;
-  po_number: string;
-  supplier: string;
-  user: string;
-  total_amount: number;
-  status: string;
-  created_at: string;
-  notes?: string;
-  items?: PurchaseOrderItem[];
-}
-
-interface PurchaseOrdersResponse {
-  data?: PurchaseOrder[];
-  last_page?: number;
-}
+/**
+ * Orders and their lines come off `GET /purchase-orders`, declared as
+ * `PaginatedResponse<ApiPurchaseOrder>`. This file kept a parallel `PurchaseOrder` /
+ * `PurchaseOrderItem` / `PurchaseOrdersResponse` trio that had drifted -- `user` and `notes`
+ * are nullable on the wire, `items` is always present, and the envelope type contradicted the
+ * API's own return type. Everything now uses the single wire description.
+ */
 
 interface SupplierOption {
   id?: number;
@@ -65,7 +47,7 @@ interface PurchaseOrderLineItem {
 
 export function PurchaseOrders() {
   const { toasts, dismiss, success, error } = useToast();
-  const [orders, setOrders] = useState<PurchaseOrder[]>([]);
+  const [orders, setOrders] = useState<ApiPurchaseOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -73,9 +55,9 @@ export function PurchaseOrders() {
   const [totalPages, setTotalPages] = useState(1);
 
   const [showCreate, setShowCreate] = useState(false);
-  const [showReceive, setShowReceive] = useState<{ open: boolean; order: PurchaseOrder | null }>({ open: false, order: null });
-  const [showDetail, setShowDetail] = useState<{ open: boolean; order: PurchaseOrder | null }>({ open: false, order: null });
-  const [confirmCancel, setConfirmCancel] = useState<{ open: boolean; order: PurchaseOrder | null }>({ open: false, order: null });
+  const [showReceive, setShowReceive] = useState<{ open: boolean; order: ApiPurchaseOrder | null }>({ open: false, order: null });
+  const [showDetail, setShowDetail] = useState<{ open: boolean; order: ApiPurchaseOrder | null }>({ open: false, order: null });
+  const [confirmCancel, setConfirmCancel] = useState<{ open: boolean; order: ApiPurchaseOrder | null }>({ open: false, order: null });
 
   const [suppliers, setSuppliers] = useState<SupplierOption[]>([]);
   const [products, setProducts] = useState<ProductOption[]>([]);
@@ -84,9 +66,10 @@ export function PurchaseOrders() {
 
   const fetchOrders = useCallback(() => {
     setLoading(true);
-    poApi.list({ search, status: statusFilter || undefined, page }).then((res: PurchaseOrdersResponse) => {
-      const data = res.data ?? res;
-      setOrders(Array.isArray(data) ? data : []);
+    poApi.list({ search, status: statusFilter || undefined, page }).then((res) => {
+      // `poApi.list` is declared as `PaginatedResponse<ApiPurchaseOrder>`, so `data` is
+      // always an array; the `?? res` fallback only accommodated the old local envelope type.
+      setOrders(Array.isArray(res.data) ? res.data : []);
       setTotalPages(res.last_page ?? 1);
     }).catch(() => {
       setOrders([]);
@@ -160,7 +143,7 @@ export function PurchaseOrders() {
     } catch { error('Failed to cancel purchase order.'); }
   }
 
-  const columns: DataTableColumn<PurchaseOrder>[] = [
+  const columns: DataTableColumn<ApiPurchaseOrder>[] = [
     {
       key: 'po_number',
       header: 'PO Number',
@@ -251,8 +234,8 @@ export function PurchaseOrders() {
 
         <DataTable
           columns={columns}
-          data={orders as unknown as Record<string, unknown>[]}
-          rowKey={(row) => row.id as unknown as number}
+          data={orders}
+          rowKey={(row) => row.id}
           loading={loading}
           emptyMessage="No purchase orders found."
           className="border-0"
@@ -261,21 +244,21 @@ export function PurchaseOrders() {
               <ActionButton
                 icon={<Eye className="h-3.5 w-3.5" />}
                 label="View"
-                onClick={() => setShowDetail({ open: true, order: row as unknown as PurchaseOrder })}
+                onClick={() => setShowDetail({ open: true, order: row })}
               />
               {(row.status === 'Draft' || row.status === 'Ordered') && (
                 <ActionButton
                   icon={<X className="h-3.5 w-3.5" />}
                   label="Cancel"
                   variant="danger"
-                  onClick={() => setConfirmCancel({ open: true, order: row as unknown as PurchaseOrder })}
+                  onClick={() => setConfirmCancel({ open: true, order: row })}
                 />
               )}
               {(row.status === 'Ordered' || row.status === 'Partially Received') && (
                 <ActionButton
                   icon={<Package className="h-3.5 w-3.5" />}
                   label="Receive Stock"
-                  onClick={() => setShowReceive({ open: true, order: row as unknown as PurchaseOrder })}
+                  onClick={() => setShowReceive({ open: true, order: row })}
                 />
               )}
             </>

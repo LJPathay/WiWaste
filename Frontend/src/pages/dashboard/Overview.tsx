@@ -31,7 +31,7 @@ import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../comp
 import { useDashboardData } from '../../hooks/useDashboardData';
 import { useKpiHighlight } from '../../hooks/useKpiHighlight';
 import { ChartGradients, ChartTooltipStyle } from '../../components/charts/ChartGradients';
-import { CHART_DEFAULTS, CHART_COLORS, CHART_TOOLTIP_STYLE, useChartAnimation, useReducedMotion } from '../../components/charts/ChartConfig';
+import { CHART_DEFAULTS, CHART_COLORS, CHART_TOOLTIP_STYLE, useChartAnimation } from '../../components/charts/ChartConfig';
 
 const currencyFormatter = new Intl.NumberFormat('en-PH', {
   style: 'currency',
@@ -42,9 +42,8 @@ const currencyFormatter = new Intl.NumberFormat('en-PH', {
 const LEAKAGE_COLORS = ['#006a61', '#f97316', '#f59e0b', '#eab308', '#22c55e'];
 
 export function DashboardOverview() {
-  const [clickedKpi, setClickedKpi] = useState<number | null>(null);
-  const kpiTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const highlightedKpi = useKpiHighlight(5000);
+  const [clickedKpi] = useState<number | null>(null);
+    const highlightedKpi = useKpiHighlight(5000);
   const [salesPeriod, setSalesPeriod] = useState('30');
   const [leakageViewMode, setLeakageViewMode] = useState<'value' | 'quantity' | 'percentage'>('value');
 
@@ -57,8 +56,6 @@ export function DashboardOverview() {
 
   const activeKpi = clickedKpi ?? highlightedKpi;
   const { isAnimationActive, animationDuration, animationEasing } = useChartAnimation();
-  const reducedMotion = useReducedMotion();
-
   const kpiSectionRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     if (highlightedKpi !== null && kpiSectionRef.current) {
@@ -297,7 +294,7 @@ export function DashboardOverview() {
                     label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                     labelLine={false}
                   >
-                    {leakageChartData.map((entry, index) => (
+                    {leakageChartData.map((_entry, index) => (
                       <LazyCell key={`cell-${index}`} fill={LEAKAGE_COLORS[index % LEAKAGE_COLORS.length]} />
                     ))}
                   </LazyPie>

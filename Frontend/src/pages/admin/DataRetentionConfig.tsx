@@ -1,14 +1,17 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
-  Search, Filter, Calendar, Database, Clock, Shield, Trash2, Save, RotateCcw,
-  AlertTriangle, CheckCircle, X, Edit, Eye, Download, Settings, History, HardDrive, Plus
+  Database,
+  Trash2,
+  RotateCcw,
+  AlertTriangle,
+  Edit,
+  Eye,
+  History,
+  HardDrive,
+  Plus,
 } from 'lucide-react';
-import { Toast, useToast, ConfirmDialog, Modal, FormField, inputCls } from '../../components/ui/Toast';
-import { formatCurrency } from '../../utils/cashierData';
+import { Toast, useToast, Modal, FormField } from '../../components/ui/Toast';
 import { privacy as privacyApi, type ApiRetentionPolicy, type ApiRetentionSummary } from '../../services/api';
-import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
-import { Pagination } from '../../components/ui/pagination';
-import { useApi } from '../../hooks/useApi';
 
 const ENTITY_TYPES = [
   { value: 'audit_logs', label: 'Audit Logs', icon: <History className="w-4 h-4" />, description: 'System audit trail records' },
@@ -22,23 +25,12 @@ const ENTITY_TYPES = [
 
 const DEFAULT_RETENTION_DAYS = 2555; // 7 years
 
-function formatDate(value: string | null) {
-  if (!value) return 'Never';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Invalid';
-  return date.toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' });
-}
 
-function formatNumber(num: number) {
-  return new Intl.NumberFormat('en-PH').format(num);
-}
 
 export function DataRetentionConfig() {
   const { toasts, dismiss, success, error: showError } = useToast();
   const [loading, setLoading] = useState(false);
-  const [page, setPage] = useState(1);
-  const pageSize = 10;
-  const [policies, setPolicies] = useState<ApiRetentionPolicy[]>([]);
+      const [policies, setPolicies] = useState<ApiRetentionPolicy[]>([]);
   const [summary, setSummary] = useState<ApiRetentionSummary | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -48,25 +40,6 @@ export function DataRetentionConfig() {
     description: '',
     enabled: true,
   });
-
-  const fetcher = useCallback(
-    () => privacyApi.retentionPolicies(),
-    []
-  );
-
-  const { data: policiesData, refetch: refetchPolicies } = useApi(fetcher);
-
-  const policiesList = useMemo<ApiRetentionPolicy[]>(() =>
-    (policiesData?.data ?? []).map((p) => ({
-      entity_type: p.entity_type,
-      retention_days: p.retention_days,
-      description: p.description,
-      enabled: p.enabled,
-      last_purged: p.last_purged,
-      records_purged: p.records_purged,
-    })),
-    [policiesData]
-  );
 
   const loadPolicies = useCallback(async () => {
     setLoading(true);
@@ -84,13 +57,6 @@ export function DataRetentionConfig() {
   useEffect(() => {
     loadPolicies();
   }, [loadPolicies]);
-
-  const entityInfo = useMemo(() => {
-    return ENTITY_TYPES.reduce((acc, e) => {
-      acc[e.value] = e;
-      return acc;
-    }, {} as Record<string, typeof ENTITY_TYPES[0]>);
-  }, []);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -129,29 +95,6 @@ export function DataRetentionConfig() {
     }
   };
 
-  const handleTestPurge = async (entityType: string) => {
-    const entity = ENTITY_TYPES.find(e => e.value === entityType);
-    if (!entity) return;
-
-    try {
-      await privacyApi.testPurge(entityType);
-      success('Dry run completed. Check logs for details.');
-    } catch (err) {
-      showError(err instanceof Error ? err.message : 'Test purge failed');
-    }
-  };
-
-  const startEdit = (policy: ApiRetentionPolicy) => {
-    setEditingId(policy.entity_type);
-    setForm({
-      entity_type: policy.entity_type,
-      retention_days: policy.retention_days,
-      description: policy.description,
-      enabled: policy.enabled,
-    });
-    setShowCreateModal(true);
-  };
-
   const startCreate = () => {
     setEditingId(null);
     setForm({
@@ -161,13 +104,6 @@ export function DataRetentionConfig() {
       enabled: true,
     });
     setShowCreateModal(true);
-  };
-
-  const formatDate = (value: string | null) => {
-    if (!value) return 'Never';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return 'Invalid';
-    return date.toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' });
   };
 
   function formatNumber(num: number) {
@@ -250,8 +186,6 @@ export function DataRetentionConfig() {
                   {policies.map((p) => {
                     const entity = ENTITY_TYPES.find(e => e.value === p.entity_type);
                     const entityLabel = entity?.label ?? p.entity_type;
-                    const entityIcon = entity?.icon ?? <Database className="w-4 h-4" />;
-                    
                     return (
                       <tr key={p.entity_type} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
                         <td className="px-3 py-3">
@@ -333,7 +267,7 @@ export function DataRetentionConfig() {
               onChange={(e) => setForm({ ...form, entity_type: e.target.value })}
               className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-colors"
               required
-              disabled={editingId}
+              disabled={!!editingId}
             >
               {ENTITY_TYPES.map(e => (
                 <option key={e.value} value={e.value}>

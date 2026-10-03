@@ -13,6 +13,14 @@ import {
 export interface DataTableColumn<T> {
   key: string;
   header: string;
+  /**
+   * `'numeric'` maps to `text-left tabular-nums` and `'center'` to `text-center`. There is
+   * deliberately no `'right'`: three columns (GenerateReports' Download, StockReceiving's
+   * Outstanding and Actions) declared `align: 'right'`, which matched neither branch and
+   * therefore applied no class at all. Those cells right-align their own content with
+   * `justify-end`, so the attribute was removed rather than wired up -- adding `text-right`
+   * here would have been a rendering change, not a type fix.
+   */
   align?: 'text' | 'numeric' | 'center';
   minWidth?: string;
   width?: string;
@@ -35,7 +43,12 @@ export interface DataTableColumn<T> {
 export interface DataTableProps<T> {
   columns: DataTableColumn<T>[];
   data: T[];
-  rowKey: (row: T) => string | number;
+  /**
+   * `index` is declared because the implementation calls `data.map(rowKey)`, so the index
+   * has always been passed at runtime -- it simply was not in the type. Report previews
+   * need it as a fallback key for rows that have no `id`.
+   */
+  rowKey: (row: T, index: number) => string | number;
   selectable?: boolean;
   selectedKeys?: Set<string | number>;
   onSelectionChange?: (keys: Set<string | number>) => void;
@@ -69,7 +82,13 @@ function TruncatedCell({ children, className }: { children: React.ReactNode; cla
   );
 }
 
-export function DataTable<T extends Record<string, unknown>>({
+// `T` is intentionally left unconstrained. The constraint used to be
+// `Record<string, unknown>`, but an `interface` has no implicit index signature, so none of
+// the API row shapes (`ApiProduct`, `ApiUser`, ...) satisfied it -- every page's table
+// failed to compile with "Type 'ApiProduct' does not satisfy the constraint". The only
+// thing that needed the index signature was the dynamic column-key lookup below, which is
+// now narrowed at that one site instead.
+export function DataTable<T>({
   columns,
   data,
   rowKey,
@@ -205,8 +224,10 @@ export function DataTable<T extends Record<string, unknown>>({
                 </TableCell>
               </TableRow>
             ) : (
-              data.map(row => {
-                const key = rowKey(row);
+              data.map((row, index) => {
+                // `rowKey` receives the index as its second argument, matching `data.map(rowKey)`
+                // on the `allKeys` line above.
+                const key = rowKey(row, index);
                 const isHovered = hoveredRow === key;
                 const isSelected = selectedKeys.has(key);
 
@@ -236,7 +257,10 @@ export function DataTable<T extends Record<string, unknown>>({
                       </TableCell>
                     )}
                     {columns.map(col => {
-                      const cellValue = row[col.key];
+                      // The row type has no index signature, so the dynamic column key needs a
+                      // cast. `DataTableColumn.render` takes the value as `unknown`, so nothing
+                      // downstream is trusting this to be a particular type.
+                      const cellValue = (row as Record<string, unknown>)[col.key];
                       const pin = pinOf(col);
                       return (
                         <TableCell

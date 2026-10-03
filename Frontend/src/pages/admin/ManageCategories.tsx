@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Search, Plus, Edit2, Archive, Info, Loader2, RotateCcw,
   Check, Grid, Sparkles,
@@ -204,25 +204,8 @@ export function ManageCategories() {
 
   const totalPages = categoryList?.meta?.last_page ?? 1;
   const totalItems = categoryList?.meta?.total ?? 0;
-  const startIndex = categoryList?.meta ? ((categoryList.meta.current_page - 1) * categoryList.meta.per_page) + 1 : 0;
-  const endIndex = categoryList?.meta ? Math.min(categoryList.meta.current_page * categoryList.meta.per_page, categoryList.meta.total) : 0;
 
   const paginatedCategories = filteredCategories;
-  const isAllSelected = paginatedCategories.length > 0 && paginatedCategories.every(c => selectedIds.includes(c.id));
-
-  const toggleSelectAll = () => {
-    if (isAllSelected) {
-      const pageIds = new Set(paginatedCategories.map(c => c.id));
-      setSelectedIds(prev => prev.filter(id => !pageIds.has(id)));
-    } else {
-      const pageIds = paginatedCategories.map(c => c.id);
-      setSelectedIds(prev => Array.from(new Set([...prev, ...pageIds])));
-    }
-  };
-
-  const toggleSelectRow = (id: number) => {
-    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
-  };
 
   const handleBulkArchive = async () => {
     if (selectedIds.length === 0) return;

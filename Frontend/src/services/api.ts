@@ -1,4 +1,85 @@
 // Central API service — all backend calls go through here
+
+// The shapes this module's calls resolve to. The `export type` block below re-exports
+// the same names for consumers of `services/api`, but a re-export does not bring a name
+// into scope, so they have to be imported as well. Without this every type annotation
+// below was an unresolved name (TS2304) and quietly degraded to `any`.
+import type {
+  ApiAlertSummary,
+  ApiAuditLog,
+  ApiBreachStatistics,
+  ApiCategory,
+  ApiDashboard,
+  ApiDashboardSummary,
+  ApiDataBreachIncident,
+  ApiDataSubjectRequest,
+  ApiDeadStockResponse,
+  ApiDiscountSummary,
+  ApiExpiringResponse,
+  ApiFefoBatchDetail,
+  ApiFefoList,
+  ApiFlagsSummary,
+  ApiForecastOverview,
+  ApiForecastProduct,
+  ApiInventory,
+  ApiInventoryMovements,
+  ApiLossRiskItemsResponse,
+  ApiLossRiskSummary,
+  ApiLossRiskSummaryResponse,
+  ApiOptimizationPlan,
+  ApiOverstockResponse,
+  ApiOwnerAnalytics,
+  ApiPrivacyComplianceReport,
+  ApiProduct,
+  ApiProfitLossCategory,
+  ApiProfitLossOverview,
+  ApiProfitLossTrend,
+  ApiPurchaseOrder,
+  ApiRecall,
+  ApiRecallSummary,
+  ApiReceiptResponse,
+  ApiRecommendation,
+  ApiRecommendationDetail,
+  ApiReorderSuggestion,
+  ApiReorderSuggestionsResponse,
+  ApiReport,
+  ApiRetentionSummary,
+  ApiReturn,
+  ApiSalesTransaction,
+  ApiSalesVatSummary,
+  ApiSalesWastageOverview,
+  ApiSalesWastageTimeSeries,
+  ApiSanitationChecklist,
+  ApiSanitationSummary,
+  ApiSeniorPwdTransaction,
+  ApiStockCount,
+  ApiStockMovement,
+  ApiStockReceiving,
+  ApiSupplier,
+  ApiSupplierAlertResponse,
+  ApiSupplierComplianceResponse,
+  ApiSupplierDetail,
+  ApiTraceResponse,
+  ApiTurnoverResponse,
+  ApiUser,
+  ApiWastage,
+  ApiWastageFlag,
+  CreateProductPayload,
+  CreatePurchaseOrderPayload,
+  CreateReturnPayload,
+  CreateSalePayload,
+  CreateStockCountPayload,
+  CreateStockReceivingPayload,
+  CreateSupplierPayload,
+  CreateUserPayload,
+  CreateWastagePayload,
+  PaginatedResponse,
+  PaginatedResponseWithMeta,
+  RetentionPoliciesResponse,
+  RiskTier,
+  UserStatusCounts,
+} from '../types/api';
+
 export type {
   PaginatedResponse,
   ApiUser,
@@ -89,6 +170,7 @@ export type {
   ApiReorderSuggestionItem,
   ApiReorderSuggestion,
   ApiReorderSummary,
+  ApiReorderSuggestionsResponse,
   ApiDataSubjectRequest,
   ApiDataBreachIncident,
   ApiBreachStatistics,
@@ -151,7 +233,7 @@ export const auth = {
       body: JSON.stringify({ username, password }),
     }),
   logout: () => request('/logout', { method: 'POST' }),
-  me: () => request<ApiUser>('/me'),
+  me: () => request<{ data: ApiUser }>('/me'),
   refresh: () => request('/refresh', { method: 'POST' }),
 
   /** Step 1 — request a 6-digit reset code for an account. */
@@ -660,7 +742,7 @@ export const recall = {
     if (params?.severity) qs.set('severity', params.severity);
     if (params?.page) qs.set('page', String(params.page));
     const q = qs.toString();
-    return request<ApiRecall[]>(`/recalls${q ? '?' + q : ''}`);
+    return request<PaginatedResponse<ApiRecall>>(`/recalls${q ? '?' + q : ''}`);
   },
   show: (id: number) => request<ApiRecall>(`/recalls/${id}`),
   create: (data: { product_id: number; batch_id?: number; supplier_id?: number; reason: string; severity: string; affected_batches: Array<{ batch_id: number; quantity: number }>; target_resolution_date?: string }) =>
@@ -685,7 +767,7 @@ export const sanitation = {
     if (params?.date) qs.set('date', params.date);
     if (params?.page) qs.set('page', String(params.page));
     const q = qs.toString();
-    return request<ApiSanitationChecklist[]>(`/sanitation${q ? '?' + q : ''}`);
+    return request<PaginatedResponse<ApiSanitationChecklist>>(`/sanitation${q ? '?' + q : ''}`);
   },
   show: (id: number) => request<ApiSanitationChecklist>(`/sanitation/${id}`),
   create: (data: { checklist_date: string; frequency: string; area: string; checks: Array<{ item: string; passed: boolean; notes?: string; photo_url?: string }>; notes?: string }) =>
@@ -707,7 +789,7 @@ export const reorder = {
     const qs = new URLSearchParams();
     if (params?.safety_stock_multiplier) qs.set('safety_stock_multiplier', String(params.safety_stock_multiplier));
     const q = qs.toString();
-    return request<ApiReorderSuggestion[]>(`/reorder/suggestions${q ? '?' + q : ''}`);
+    return request<ApiReorderSuggestionsResponse>(`/reorder/suggestions${q ? '?' + q : ''}`);
   },
   approve: (data: { suggestions: ApiReorderSuggestion[] }) =>
     request('/reorder/approve', { method: 'POST', body: JSON.stringify(data) }),
@@ -723,7 +805,7 @@ export const privacy = {
     if (params?.status) qs.set('status', params.status);
     if (params?.page) qs.set('page', String(params.page));
     const q = qs.toString();
-    return request<ApiDataSubjectRequest[]>(`/privacy/requests${q ? '?' + q : ''}`);
+    return request<PaginatedResponseWithMeta<ApiDataSubjectRequest>>(`/privacy/requests${q ? '?' + q : ''}`);
   },
   createRequest: (data: { request_type: string; subject_identifier: string; notes?: string }) =>
     request('/privacy/requests', { method: 'POST', body: JSON.stringify(data) }),
@@ -744,7 +826,7 @@ export const privacy = {
     if (params?.risk) qs.set('risk', params.risk);
     if (params?.page) qs.set('page', String(params.page));
     const q = qs.toString();
-    return request<ApiDataBreachIncident[]>(`/privacy/breaches${q ? '?' + q : ''}`);
+    return request<PaginatedResponseWithMeta<ApiDataBreachIncident>>(`/privacy/breaches${q ? '?' + q : ''}`);
   },
   breachStatistics: () => request<ApiBreachStatistics>('/privacy/breaches/statistics'),
   escalateBreach: (id: number) => request(`/privacy/breaches/${id}/escalate`, { method: 'POST' }),
@@ -754,7 +836,7 @@ containBreach: (id: number, data: { actions: string[] }) =>
     request(`/privacy/breaches/${id}/contain`, { method: 'POST', body: JSON.stringify(data) }),
   resolveBreach: (id: number, data: { resolution_notes: string }) =>
     request(`/privacy/breaches/${id}/resolve`, { method: 'POST', body: JSON.stringify(data) }),
-  retentionPolicies: () => request<ApiRetentionPolicy[]>(`/privacy/retention-policies`),
+  retentionPolicies: () => request<RetentionPoliciesResponse>(`/privacy/retention-policies`),
   createRetentionPolicy: (data: { entity_type: string; retention_days: number; description?: string; enabled?: boolean }) =>
     request('/privacy/retention-policies', { method: 'POST', body: JSON.stringify(data) }),
   updateRetentionPolicy: (entityType: string, data: Partial<{ retention_days: number; description: string; enabled: boolean }>) =>

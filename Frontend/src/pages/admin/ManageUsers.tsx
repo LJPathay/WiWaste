@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Users, Search, Plus, Edit2, X, Info,
   AlertTriangle, Eye, EyeOff, ChevronDown, Check,
   UserX, RotateCcw,
 } from 'lucide-react';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
-import { Tutorial } from '../../components/ui/Tutorial';
 import { useApi } from '../../hooks/useApi';
 import { users as usersApi, type ApiUser, type CreateUserPayload, type PaginatedUsersResponse, type UserStatusCounts } from '../../services/api';
 import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
@@ -45,7 +44,7 @@ export function ManageUsers() {
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [unmaskedEmailIds, setUnmaskedEmailIds] = useState<Set<number>>(new Set());
-  const [isAllEmailsUnmasked, setIsAllEmailsUnmasked] = useState(false);
+  const [isAllEmailsUnmasked] = useState(false);
 
   const { data: userList, loading, error: apiError, refetch } = useApi<PaginatedUsersResponse>(
     () => usersApi.list(
@@ -145,14 +144,6 @@ export function ManageUsers() {
     setFormError('');
     setRoleDropdownOpen(false);
   };
-
-  function splitName(full: string): { first_name: string; middle_name: string; surname: string } {
-    if (!full?.trim()) return { first_name: '', middle_name: '', surname: '' };
-    const parts = full.trim().split(/\s+/);
-    if (parts.length === 1) return { first_name: parts[0], middle_name: '', surname: '' };
-    if (parts.length === 2) return { first_name: parts[0], middle_name: '', surname: parts[1] };
-    return { first_name: parts[0], middle_name: parts.slice(1, -1).join(' '), surname: parts[parts.length - 1] };
-  }
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -450,7 +441,11 @@ export function ManageUsers() {
   );
 
   if (apiError) {
-    const errorCode = apiError.message.match(/\((\d+)\)/)?.[1] || 'Unknown';
+// `useApi` stores `err.message` already unwrapped, so `apiError` is the message string
+    // itself. Reaching through `.message` again yielded `undefined`, and calling `.match`
+    // on that threw a TypeError -- so the "Failed to load users" panel crashed the page
+    // instead of rendering whenever the request failed.
+    const errorCode = apiError.match(/\((\d+)\)/)?.[1] || 'Unknown';
     return (
       <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800/40 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">

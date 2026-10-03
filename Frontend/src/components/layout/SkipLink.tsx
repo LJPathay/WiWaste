@@ -1,4 +1,3 @@
-import React from 'react';
 
 interface SkipLinkProps {
   targets: Array<{ id: string; label: string }>;

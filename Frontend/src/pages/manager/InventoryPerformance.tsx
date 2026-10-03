@@ -1,27 +1,23 @@
 import { useState, useEffect } from 'react';
 import { Award, Download, Info, Loader2 } from 'lucide-react';
-import { Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ComposedChart, Line, ReferenceLine } from 'recharts';
+import { Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ComposedChart } from 'recharts';
 import { Toast, useToast } from '../../components/ui/Toast';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { DataTable } from '../../components/shared/DataTable';
 import type { DataTableColumn } from '../../components/shared/DataTable';
 import { inventoryAnalytics } from '../../services/api';
-import type { ApiTurnoverResponse } from '../../services/api';
+import type { ApiTurnoverProduct, ApiTurnoverResponse } from '../../services/api';
 import { ChartGradients, ChartTooltipStyle } from '../../components/charts/ChartGradients';
-import { CHART_DEFAULTS, CHART_COLORS, useChartAnimation, useReducedMotion } from '../../components/charts/ChartConfig';
+import { CHART_DEFAULTS, CHART_COLORS, useChartAnimation } from '../../components/charts/ChartConfig';
 
-const currencyFormatter = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 });
 
-interface TurnoverRow {
-  product_id: string;
-  product_name: string;
-  category: string;
-  total_sold: number;
-  turnover_rate: number;
-  status: string;
-}
-
-const columns: DataTableColumn<TurnoverRow>[] = [
+/**
+ * Rows come from `inventoryAnalytics.turnover()` as `ApiTurnoverProduct[]`. This file kept
+ * a parallel `TurnoverRow` whose `product_id` was typed `string` while the wire sends a
+ * `number`, so the rows were never assignable to the table's column type. The wire type is
+ * now used directly.
+ */
+const columns: DataTableColumn<ApiTurnoverProduct>[] = [
   { key: 'product_name', header: 'Month', pinned: true, minWidth: '100px', truncate: true },
   { key: 'turnover_rate', header: 'Turnover Rate', numeric: true, minWidth: '100px', align: 'numeric' },
   { key: 'total_sold', header: 'Dead Stock Items', numeric: true, minWidth: '100px', align: 'numeric' },
@@ -35,8 +31,6 @@ export function InventoryPerformance() {
   const [loading, setLoading] = useState(true);
 
   const { isAnimationActive, animationDuration, animationEasing } = useChartAnimation();
-  const reducedMotion = useReducedMotion();
-
   useEffect(() => {
     inventoryAnalytics.turnover()
       .then(setTurnoverData)

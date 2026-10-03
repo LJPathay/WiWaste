@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { RotateCcw, Search, AlertCircle, Info, X, AlertTriangle, Clock, ShieldCheck, FileText } from 'lucide-react';
-import { FormField, inputCls, Toast, useToast, ConfirmDialog, Modal } from '../../components/ui/Toast';
+import { RotateCcw, Search, Info, X, Check } from 'lucide-react';
+import { inputCls, Toast, useToast } from '../../components/ui/Toast';
 import { formatCurrency } from '../../utils/cashierData';
 import { returns as returnsApi, sales as salesApi, type ApiReturn, type ApiSalesTransaction } from '../../services/api';
-import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
+import { type DataTableColumn } from '../../components/shared/DataTable';
 import { ActionButton } from '../../components/shared/DataTableActions';
-import { Pagination } from '../../components/ui/pagination';
 
 interface ReturnableItem {
   sale_item_id: number;
@@ -17,18 +16,17 @@ interface ReturnableItem {
   subtotal: number;
 }
 
-interface ReturnHistoryRow extends Record<string, unknown> {
-  id: number;
-  product_name: string;
-  sku: string;
-  quantity_returned: number;
-  refund_amount: number;
-  reason: string;
-  return_reason_code: string;
-  returned_by: string;
-  return_date: string;
-  approval_status: string;
-  is_within_7_days: boolean;
+/**
+ * The return-history table used to declare its own `ReturnHistoryRow` with four fields
+ * (`sku`, `return_reason_code`, `approval_status`, `is_within_7_days`) that the wire type
+ * did not have, so those columns always rendered blank. `ReturnTransactionController`
+ * actually returns all of them, so the row type is now `ApiReturn` itself and there is a
+ * single description of the payload.
+ */
+function cellValue(row: ApiReturn, key: string): unknown {
+  // `ApiReturn` is an `interface`, so it has no index signature. `DataTable` narrows the
+  // same dynamic lookup at its one call site; this is the equivalent for the local table.
+  return (row as unknown as Record<string, unknown>)[key];
 }
 
 function formatDate(value: string) {
@@ -48,7 +46,15 @@ const REASON_CODES = [
   { value: 'other', label: 'Other', requiresEvidence: false, within7DaysOnly: true },
 ] as const;
 
-const returnHistoryColumns: DataTableColumn<ReturnHistoryRow>[] = [
+/**
+ * `CreateReturnPayload.return_reason_code` is a literal union, but the state was declared
+ * as a bare `string`, so the submitted payload did not typecheck. The union is derived from
+ * `REASON_CODES` -- the very list the `<select>` renders its options from -- so the two
+ * cannot drift.
+ */
+type ReturnReasonCode = (typeof REASON_CODES)[number]['value'];
+
+const returnHistoryColumns: DataTableColumn<ApiReturn>[] = [
   { key: 'product_name', header: 'Product', pinned: true, truncate: true, minWidth: '150px' },
   { key: 'sku', header: 'SKU', truncate: true, minWidth: '100px' },
   { key: 'quantity_returned', header: 'Qty', numeric: true, minWidth: '80px' },
@@ -62,7 +68,10 @@ const returnHistoryColumns: DataTableColumn<ReturnHistoryRow>[] = [
   { key: 'return_reason_code', header: 'Reason Code', truncate: true, minWidth: '120px',
     render: (_row, value) => {
       const code = REASON_CODES.find(c => c.value === value);
-      return code ? code.label : value;
+      // `DataTableColumn.render` receives the cell value as `unknown`, so the fallback
+      // branch has to narrow it -- returning it raw made the render signature `unknown`,
+      // which is not assignable to `ReactNode`.
+      return code ? code.label : String(value);
     }
   },
   { key: 'returned_by', header: 'Returned By', truncate: true, minWidth: '100px' },
@@ -74,7 +83,8 @@ const returnHistoryColumns: DataTableColumn<ReturnHistoryRow>[] = [
         pending: { label: 'Pending', cls: 'bg-amber-50 text-amber-700 border border-amber-100' },
         rejected: { label: 'Rejected', cls: 'bg-red-50 text-red-700 border border-red-100' },
       };
-      const b = badges[value] ?? { label: value, cls: '' };
+      // The cell value arrives as `unknown` and cannot index a `Record` directly.
+      const b = badges[String(value)] ?? { label: String(value), cls: '' };
       return <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${b.cls}`}>{b.label}</span>;
     }
   },
@@ -98,11 +108,9 @@ export function ReturnsRefunds() {
   const [selectedItem, setSelectedItem] = useState<ReturnableItem | null>(null);
   const [quantity, setQuantity] = useState('1');
   const [reason, setReason] = useState('');
-  const [returnReasonCode, setReturnReasonCode] = useState('change_mind');
+  const [returnReasonCode, setReturnReasonCode] = useState<ReturnReasonCode>('change_mind');
   const [evidenceNotes, setEvidenceNotes] = useState('');
   const [evidencePhotos, setEvidencePhotos] = useState<string[]>([]);
-  const [overrideAmount, setOverrideAmount] = useState('');
-
   const loadSales = useCallback(async () => {
     setLoading(true);
     setSalesError(null);
@@ -186,23 +194,6 @@ export function ReturnsRefunds() {
       setSubmitting(false);
     }
   };
-
-  const returnableColumns = useMemo(() => [
-    { key: 'transaction_id', header: 'Transaction', pinned: true, truncate: true, minWidth: '120px' },
-    // Only the first column is pinned. A second `pinned: true` here put both cells at
-    // `left: 0`, so they overlapped each other during horizontal scrolling.
-    { key: 'product_name', header: 'Item', truncate: true, minWidth: '180px' },
-    { key: 'sku', header: 'SKU', minWidth: '100px' },
-    { key: 'quantity', header: 'Sold Qty', numeric: true, minWidth: '80px' },
-    {
-      key: 'unit_price',
-      header: 'Unit Price',
-      numeric: true,
-      minWidth: '100px',
-      render: (_row, value) => formatCurrency(Number(value)),
-    },
-    { key: 'subtotal', header: 'Line Total', numeric: true, minWidth: '100px', render: (_row, value) => formatCurrency(Number(value)) },
-  ] as const, []);
 
   return (
     <div className="space-y-6">
@@ -298,9 +289,9 @@ export function ReturnsRefunds() {
                       <td className="px-3 py-2 text-sm text-right font-medium text-slate-900 dark:text-white">{formatCurrency(item.subtotal)}</td>
                       <td className="px-3 py-2 text-right">
                         <ActionButton
+                          icon={<Check className="h-3.5 w-3.5" />}
                           label="Select"
-                          variant="primary"
-                          size="sm"
+                          variant="default"
                           onClick={() => {
                             setSelectedItem({
                               sale_item_id: item.id,
@@ -362,7 +353,12 @@ export function ReturnsRefunds() {
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Reason Code <span className="text-red-500">*</span></label>
                 <select
                   value={returnReasonCode}
-                  onChange={(e) => setReturnReasonCode(e.target.value)}
+                  onChange={(e) => {
+                    // Resolved through `REASON_CODES` rather than cast, so the select can
+                    // only ever put a valid code into the state.
+                    const next = REASON_CODES.find(c => c.value === e.target.value);
+                    if (next) setReturnReasonCode(next.value);
+                  }}
                   className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-colors"
                 >
                   {REASON_CODES.map(code => (
@@ -456,11 +452,11 @@ export function ReturnsRefunds() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                    {returnsHistory.slice(0, 20).map((row, idx) => (
+                    {returnsHistory.slice(0, 20).map((row, _idx) => (
                       <tr key={row.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
                         {returnHistoryColumns.map(col => (
                           <td key={`${row.id}-${col.key}`} className="px-3 py-2 text-sm">
-                            {col.render ? col.render(row, (row as Record<string, unknown>)[col.key]) : (row as Record<string, unknown>)[col.key]?.toString() ?? ''}
+                            {col.render ? col.render(row, cellValue(row, col.key)) : cellValue(row, col.key)?.toString() ?? ''}
                           </td>
                         ))}
                       </tr>

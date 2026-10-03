@@ -115,12 +115,14 @@ function TooltipTrigger({
                 handleToggle(e);
                 child.props.onClick?.(e);
             },
+            // The shared handlers take no arguments -- they only toggle state -- so the
+            // mouse event is forwarded to the child's own handler alone.
             onMouseEnter: (e) => {
-                sharedProps.onMouseEnter(e);
+                sharedProps.onMouseEnter();
                 child.props.onMouseEnter?.(e);
             },
             onMouseLeave: (e) => {
-                sharedProps.onMouseLeave(e);
+                sharedProps.onMouseLeave();
                 child.props.onMouseLeave?.(e);
             },
         });

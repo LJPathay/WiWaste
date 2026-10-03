@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Users, Phone, MapPin, Package, Loader2, Info, AlertCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Users, Phone, MapPin, Loader2, Info, AlertCircle } from 'lucide-react';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { suppliers as suppliersApi, type ApiSupplier, type ApiSupplierDetail } from '../../services/api';
 

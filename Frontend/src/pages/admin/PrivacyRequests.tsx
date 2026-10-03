@@ -1,12 +1,19 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import {
-  Search, Filter, Calendar, Download, User, ShieldCheck, AlertCircle,
-  Eye, Edit, Trash2, Clock, FileText, Shield, Key, Unlock, Mail, AlertTriangle
+  Search,
+  Download,
+  User,
+  ShieldCheck,
+  Eye,
+  Edit,
+  Trash2,
+  Clock,
+  FileText,
+  Shield,
+  AlertTriangle,
 } from 'lucide-react';
 import { Toast, useToast, ConfirmDialog, Modal, FormField, inputCls } from '../../components/ui/Toast';
-import { formatCurrency } from '../../utils/cashierData';
-import { privacy as privacyApi, type ApiDataSubjectRequest, type ApiPrivacyComplianceReport } from '../../services/api';
-import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
+import { privacy as privacyApi } from '../../services/api';
 import { Pagination } from '../../components/ui/pagination';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useApi } from '../../hooks/useApi';
@@ -33,6 +40,13 @@ function formatDate(value: string) {
   return date.toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' });
 }
 
+/**
+ * Declared as a named union because `getAvailableActions` returns string literals that
+ * would otherwise widen to `string[]`, leaving `action` unassignable to the state it is
+ * stored in.
+ */
+type RequestAction = 'approve' | 'reject' | 'delete';
+
 export function PrivacyRequests() {
   const { toasts, dismiss, success, error: showError } = useToast();
   const [typeFilter, setTypeFilter] = useState('all');
@@ -41,8 +55,7 @@ export function PrivacyRequests() {
   const debouncedSearch = useDebounce(search, 300);
   const [page, setPage] = useState(1);
   const pageSize = 10;
-  const [loading, setLoading] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<{ id: number; action: 'approve' | 'reject' | 'delete' } | null>(null);
+    const [confirmAction, setConfirmAction] = useState<{ id: number; action: RequestAction } | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [form, setForm] = useState({
     request_type: 'access',
@@ -57,18 +70,12 @@ export function PrivacyRequests() {
 
   const { data: requestsData, refetch: refetchRequests } = useApi(fetcher);
 
-  const requests = useMemo<ApiDataSubjectRequest[]>(() =>
-    (requestsData?.data ?? []).map((r) => ({
-      id: r.id,
-      request_type: r.request_type,
-      subject_identifier: r.subject_identifier,
-      status: r.status,
-      requested_at: r.requested_at,
-      completed_at: r.completed_at,
-      notes: r.notes,
-    })),
-    [requestsData]
-  );
+  // `privacyApi.requests` is declared as `PaginatedResponseWithMeta<ApiDataSubjectRequest>`, so
+  // the rows already are `ApiDataSubjectRequest[]`. This used to `map` them into a fresh
+  // object literal copying every field except `business_id`, which the interface requires --
+  // so the annotated `useMemo<ApiDataSubjectRequest[]>` never typechecked. The copy bought
+  // nothing, so the rows are passed through.
+  const requests = useMemo(() => requestsData?.data ?? [], [requestsData]);
 
   const filtered = useMemo(() => {
     const q = debouncedSearch.toLowerCase();
@@ -79,7 +86,7 @@ export function PrivacyRequests() {
     );
   }, [requests, debouncedSearch]);
 
-  const handleAction = async (id: number, action: 'approve' | 'reject' | 'delete') => {
+  const handleAction = async (id: number, action: RequestAction) => {
     try {
       if (action === 'approve') {
         await privacyApi.approveRequest(id);
@@ -113,7 +120,7 @@ export function PrivacyRequests() {
 
   const getTypeInfo = (type: string) => REQUEST_TYPES.find(t => t.value === type) || { label: type, icon: <FileText className="w-3 h-3" /> };
 
-  const getAvailableActions = (status: string) => {
+  const getAvailableActions = (status: string): RequestAction[] => {
     switch (status) {
       case 'pending': return ['approve', 'reject'];
       case 'in_progress': return ['approve', 'reject'];
@@ -236,7 +243,7 @@ export function PrivacyRequests() {
             </div>
             {filtered.length > pageSize && (
               <Pagination
-                currentPage={page}
+                page={page}
                 totalPages={Math.ceil(filtered.length / pageSize)}
                 onPageChange={setPage}
               />

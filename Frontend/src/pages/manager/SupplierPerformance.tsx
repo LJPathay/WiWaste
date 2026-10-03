@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Info } from 'lucide-react';
 import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, LineChart, Line, LabelList } from 'recharts';
 import { Toast, useToast, ConfirmDialog } from '../../components/ui/Toast';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
 import { ChartGradients, ChartTooltipStyle } from '../../components/charts/ChartGradients';
-import { CHART_DEFAULTS, CHART_COLORS, useChartAnimation, useReducedMotion } from '../../components/charts/ChartConfig';
+import { CHART_DEFAULTS, CHART_COLORS, useChartAnimation } from '../../components/charts/ChartConfig';
 
 interface PerformanceMock {
   id: string;
@@ -57,8 +57,6 @@ export function SupplierPerformance() {
   const [confirm, setConfirm] = useState<{ open: boolean; supplierId: string; name: string } | null>(null);
 
   const { isAnimationActive, animationDuration, animationEasing } = useChartAnimation();
-  const reducedMotion = useReducedMotion();
-
   const chartData = suppliers.map((s) => ({
     name: s.name.split(' ')[0],
     'On-Time %': s.delivery,

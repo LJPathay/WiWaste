@@ -7,15 +7,19 @@ function mockFetch(overrides: { ok: boolean; status?: number; body?: unknown }):
     status: overrides.status ?? 200,
     json: async () => overrides.body ?? {},
   } as Response);
-  global.fetch = fetchMock as unknown as typeof fetch;
+  // `global` is a Node-only global and is not declared under this project's `types`
+  // (`vite/client` only). `globalThis` is the standard equivalent and is available here.
+  globalThis.fetch = fetchMock as unknown as typeof fetch;
   return fetchMock;
 }
 
 describe('api request()', () => {
-  const originalFetch = global.fetch;
+  const originalFetch = globalThis.fetch;
 
   afterEach(() => {
-    global.fetch = originalFetch;
+    // `global` is a Node-only global and is not declared under this project's `types`
+  // (`vite/client` only). `globalThis` is the standard equivalent and is available here.
+  globalThis.fetch = originalFetch;
     localStorage.clear();
   });
 

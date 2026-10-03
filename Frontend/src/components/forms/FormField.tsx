@@ -116,8 +116,6 @@ export const FormSelect = forwardRef<HTMLSelectElement, FormSelectProps>(
     },
     ref
   ) => {
-    const selectId = id || label.toLowerCase().replace(/\s+/g, '-');
-
     return (
       <div className="space-y-1.5">
         <label

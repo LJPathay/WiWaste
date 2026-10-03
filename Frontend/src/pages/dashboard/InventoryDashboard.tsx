@@ -18,30 +18,15 @@ import {
   Clock,
   Info,
   Package,
-  TrendingDown,
-  TrendingUp,
 } from 'lucide-react';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { inventoryAnalytics, type ApiDashboardSummary } from '../../services/api';
 import { ChartGradients, ChartTooltipStyle } from '../../components/charts/ChartGradients';
-import { CHART_DEFAULTS, CHART_COLORS, useChartAnimation, useReducedMotion } from '../../components/charts/ChartConfig';
+import { CHART_DEFAULTS, CHART_COLORS, useChartAnimation } from '../../components/charts/ChartConfig';
 
 const TODAY = new Date();
 
-function formatDate(d: string) {
-  return new Date(d).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
-}
 
-const movementTypeBadgeMap: Record<string, string> = {
-  'Stock In':   'bg-green-50 text-green-700 border border-green-100 dark:bg-green-950/30 dark:text-green-400',
-  'Stock Out':  'bg-red-50 text-red-700 border border-red-100 dark:bg-red-950/30 dark:text-red-400',
-  'Sale':       'bg-blue-50 text-blue-700 border border-blue-100 dark:bg-blue-950/30 dark:text-blue-400',
-  'Wastage':    'bg-orange-50 text-orange-700 border border-orange-100 dark:bg-orange-950/30 dark:text-orange-400',
-  'Return':     'bg-purple-50 text-purple-700 border border-purple-100 dark:bg-purple-950/30 dark:text-purple-400',
-  'Adjustment': 'bg-gray-50 text-gray-700 border border-gray-100 dark:bg-gray-950/30 dark:text-gray-400',
-  'Damaged':    'bg-red-50 text-red-700 border border-red-100 dark:bg-red-950/30 dark:text-red-400',
-  'Expired':    'bg-slate-50 text-slate-700 border border-slate-100 dark:bg-slate-950/30 dark:text-slate-400',
-};
 
 // Mock chart data — replace with real API when backend provides stock_movement_chart
 const mockMovementChart = [
@@ -67,13 +52,6 @@ const mockTopWasted = [
   { product_name: 'Yogurt Drink', total_loss: 950, quantity: 19 },
 ];
 
-const mockRecentMovements = [
-  { movement_id: 1, product_name: 'Paracetamol', type: 'Stock In', quantity: 50, recorded_by: 'Admin', date: '2026-09-10' },
-  { movement_id: 2, product_name: 'Fresh Milk', type: 'Sale', quantity: -3, recorded_by: 'Cashier', date: '2026-09-10' },
-  { movement_id: 3, product_name: 'Bread Loaf', type: 'Wastage', quantity: -2, recorded_by: 'Staff', date: '2026-09-10' },
-  { movement_id: 4, product_name: 'Ibuprofen', type: 'Stock Out', quantity: -10, recorded_by: 'Admin', date: '2026-09-09' },
-  { movement_id: 5, product_name: 'Yogurt Drink', type: 'Return', quantity: 1, recorded_by: 'Cashier', date: '2026-09-09' },
-];
 
 export function InventoryDashboard() {
   const [stats, setStats] = useState<ApiDashboardSummary | null>(null);
@@ -83,8 +61,6 @@ export function InventoryDashboard() {
   const [wastageView, setWastageView] = useState<'value' | 'quantity'>('value');
 
   const { isAnimationActive, animationDuration, animationEasing } = useChartAnimation();
-  const reducedMotion = useReducedMotion();
-
   useEffect(() => {
     let cancelled = false;
     inventoryAnalytics.dashboardSummary()

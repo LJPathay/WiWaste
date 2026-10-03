@@ -1,15 +1,9 @@
-import { useState, useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useMemo } from 'react';
 import {
-  Download,
-  Calendar,
   TrendingUp,
   TrendingDown,
   AlertTriangle,
   Package,
-  RotateCcw,
-  ChevronLeft,
-  ChevronRight,
   BarChart2,
   PieChart,
   FileSpreadsheet,
@@ -29,7 +23,7 @@ import {
   Pie,
 } from 'recharts';
 import { useQuery } from '@tanstack/react-query';
-import { salesWastage, type ApiSalesWastageOverview, type ApiSalesWastageTimeSeries } from '../../services/api';
+import { salesWastage } from '../../services/api';
 import { PageLoader } from '../../components/ui/PageLoader';
 import { DateRangePicker } from '../../components/ui/DateRangePicker';
 
@@ -64,7 +58,7 @@ export function SalesWastageDashboard() {
   });
   const [to, setTo] = useState(() => new Date().toISOString().split('T')[0]);
 
-  const { data: overview, isLoading: overviewLoading, refetch: refetchOverview } = useQuery({
+  const { data: overview, isLoading: overviewLoading } = useQuery({
     queryKey: ['salesWastageOverview', from, to],
     queryFn: () => salesWastage.overview({ from, to }),
     staleTime: 5 * 60 * 1000,

@@ -1,8 +1,23 @@
 import { useEffect, useState } from 'react';
+import type { ComponentProps } from 'react';
+import type { Bar } from 'recharts';
+
+/**
+ * recharts names this type `AnimationTiming` but does not re-export it from the package
+ * root -- only `LegendType` is pulled out of `util/types`. Deriving it from the public
+ * `Bar` export avoids a deep import into `recharts/types/util/types`, which an `exports`
+ * map added in a future release would break.
+ */
+type AnimationTiming = NonNullable<ComponentProps<typeof Bar>['animationEasing']>;
 
 export const CHART_DEFAULTS = {
   animationDuration: 600,
-  animationEasing: 'easeOutQuart',
+  // recharts types `animationEasing` as `AnimationTiming`, whose only members are
+  // 'ease' | 'ease-in' | 'ease-out' | 'ease-in-out' | 'linear'. The previous value,
+  // 'easeOutQuart', is a d3 easing name that recharts does not model, so every one of the
+  // 21 charts passing it failed to compile. 'ease-out' is the member with the same shape.
+  // It only takes effect once `isAnimationActive` is turned back on below.
+  animationEasing: 'ease-out' as const,
   animationBegin: 0,
   // recharts' Animate.runJSAnimation dereferences a chart context that is null when
   // the chart remounts before its first animation frame (StrictMode double-mount, or a
@@ -31,7 +46,16 @@ export function useReducedMotion(): boolean {
   return reduced;
 }
 
-export function useChartAnimation(reduced?: boolean): { isAnimationActive: boolean; animationDuration: number; animationEasing: string } {
+/**
+ * The easing value is returned as recharts' `AnimationTiming` rather than `string`. Widening
+ * it to `string` is what made all 21 `animationEasing={animationEasing}` call sites fail
+ * with "Type 'string' is not assignable to type 'AnimationTiming | undefined'".
+ */
+export function useChartAnimation(reduced?: boolean): {
+  isAnimationActive: boolean;
+  animationDuration: number;
+  animationEasing: AnimationTiming;
+} {
   const prefersReduced = useReducedMotion();
   const shouldReduce = reduced ?? prefersReduced;
   return {

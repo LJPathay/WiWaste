@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 import { lossRisk, type ApiLossRiskItem, type ApiLossRiskSummary, type RiskTier } from '../../services/api';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { ChartGradients, ChartTooltipStyle } from '../../components/charts/ChartGradients';
-import { CHART_DEFAULTS, CHART_COLORS, useChartAnimation, useReducedMotion } from '../../components/charts/ChartConfig';
+import { CHART_DEFAULTS, CHART_COLORS, useChartAnimation } from '../../components/charts/ChartConfig';
 
 const currencyFormatter = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 });
 
@@ -51,8 +51,6 @@ export function LeakageDetectionPage() {
   const [error, setError] = useState<string | null>(null);
 
   const { isAnimationActive, animationDuration, animationEasing } = useChartAnimation();
-  const reducedMotion = useReducedMotion();
-
   const loadResults = useCallback(() => {
     setLoading(true);
     setError(null);

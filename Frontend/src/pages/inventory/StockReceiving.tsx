@@ -5,7 +5,6 @@ import {
   CheckCircle,
   XCircle,
   Calendar,
-  Info,
   Trash2,
 } from 'lucide-react';
 import { Toast, useToast, ConfirmDialog } from '../../components/ui/Toast';
@@ -14,11 +13,6 @@ import { ActionButton } from '../../components/shared/DataTableActions';
 import { stockReceiving as receivingApi } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
 
-const currencyFormatter = new Intl.NumberFormat('en-PH', {
-  style: 'currency',
-  currency: 'PHP',
-  maximumFractionDigits: 2,
-});
 
 /**
  * Statuses come from `StockReceivingController`'s validation:
@@ -83,7 +77,9 @@ export function StockReceiving() {
     () =>
       (receivingData?.data ?? []).map((o) => ({
         id: o.id,
-        supplier: o.supplier_name ?? o.supplier?.supplier_name ?? '—',
+        // `stock_receiving` has no `supplier_name` column; the name comes from the eager-loaded
+      // relation. The `o.supplier_name ??` prefix was therefore always `undefined`.
+      supplier: o.supplier?.supplier_name ?? '-',
         received_at: o.received_at ?? null,
         status: o.status,
         pendingItems: (o.items ?? [])
@@ -171,7 +167,6 @@ export function StockReceiving() {
     {
       key: 'outstanding',
       header: 'Outstanding',
-      align: 'right',
       render: (row) => {
         const units = row.pendingItems.reduce((sum, i) => sum + i.expected_quantity, 0);
         return (
@@ -200,7 +195,6 @@ export function StockReceiving() {
       // left `handleConfirmAction` unreachable and pending deliveries impossible to close.
       key: 'actions',
       header: 'Actions',
-      align: 'right',
       render: (row) => {
         const settled = row.status !== 'pending' && row.status !== 'partial';
         const ref = `RCV-${row.id}`;

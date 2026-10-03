@@ -1,13 +1,14 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import {
-  Search, Filter, Calendar, Download, BarChart2, DollarSign, Percent,
-  CreditCard, Wallet, Banknote, User, AlertTriangle, ChevronDown, ChevronUp
+  Calendar,
+  DollarSign,
+  Percent,
+  CreditCard,
+  User,
 } from 'lucide-react';
-import { FormField, inputCls, Toast, useToast } from '../../components/ui/Toast';
+import { inputCls, Toast, useToast } from '../../components/ui/Toast';
 import { formatCurrency } from '../../utils/cashierData';
 import { reports as reportsApi, type ApiSalesVatSummary, type ApiDiscountSummary, type ApiSeniorPwdTransaction } from '../../services/api';
-import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
-import { Pagination } from '../../components/ui/pagination';
 
 function formatDate(value: string) {
   const date = new Date(value);
@@ -15,19 +16,15 @@ function formatDate(value: string) {
   return date.toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' });
 }
 
-function formatNumber(num: number) {
-  return new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num);
-}
 
-const PAYMENT_METHODS = ['Cash', 'E-wallet', 'Credit Card', 'Debit Card'] as const;
 
 export function SalesReports() {
-  const { toasts, dismiss, success, error: showError } = useToast();
+  const { toasts, dismiss } = useToast();
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [activeTab, setActiveTab] = useState<'vat' | 'discount' | 'senior_pwd'>('vat');
   const [loading, setLoading] = useState(false);
-  const [page, setPage] = useState(1);
+  const [page] = useState(1);
   const pageSize = 15;
 
   const [vatData, setVatData] = useState<ApiSalesVatSummary | null>(null);

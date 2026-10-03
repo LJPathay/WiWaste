@@ -1,20 +1,17 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import {
-  Search, Filter, Package, Truck, RotateCcw, ShieldCheck, Bell, X, Plus,
-  Calendar, Eye, Flag, Archive, Download, FileText, Zap
+  Package,
+  RotateCcw,
+  Zap,
 } from 'lucide-react';
-import { Toast, useToast, ConfirmDialog, Modal, FormField, inputCls } from '../../components/ui/Toast';
+import { Toast, useToast, ConfirmDialog } from '../../components/ui/Toast';
 import { formatCurrency } from '../../utils/cashierData';
 import { reorder as reorderApi, type ApiReorderSuggestion, type ApiReorderSummary } from '../../services/api';
-import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
-import { Pagination } from '../../components/ui/pagination';
 
 export function ReorderDashboard() {
   const { toasts, dismiss, success, error: showError } = useToast();
   const [loading, setLoading] = useState(false);
-  const [page, setPage] = useState(1);
-  const pageSize = 10;
-  const [safetyMultiplier, setSafetyMultiplier] = useState(1.5);
+      const [safetyMultiplier, setSafetyMultiplier] = useState(1.5);
   const [autoApprove, setAutoApprove] = useState(false);
   const [maxCost, setMaxCost] = useState('');
   const [suggestions, setSuggestions] = useState<ApiReorderSuggestion[]>([]);
@@ -68,13 +65,6 @@ export function ReorderDashboard() {
       handleApprove(confirmApprove);
       setConfirmApprove(null);
     }
-  };
-
-  const getSeverityBadge = (days: number) => {
-    if (days <= 3) return { cls: 'bg-red-50 text-red-700 border-red-100', label: 'Critical' };
-    if (days <= 7) return { cls: 'bg-amber-50 text-amber-700 border border-amber-100', label: 'Urgent' };
-    if (days <= 14) return { cls: 'bg-blue-50 text-blue-700 border border-blue-100', label: 'Soon' };
-    return { cls: 'bg-green-50 text-green-700 border border-green-100', label: 'Normal' };
   };
 
   const filteredSuggestions = useMemo(() => suggestions, [suggestions]);

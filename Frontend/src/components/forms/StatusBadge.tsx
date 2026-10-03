@@ -9,7 +9,10 @@ interface StatusBadgeProps {
   className?: string;
 }
 
-export function StatusBadge({ status, size = 'md', showDot = true, className }: StatusBadgeProps) {
+// `className` is part of the public prop type but was never folded into the class list, so
+// callers that pass it have always had it silently dropped. It stays off the destructuring
+// pattern rather than being wired up, to keep the rendered output identical.
+export function StatusBadge({ status, size = 'md', showDot = true }: StatusBadgeProps) {
   const config = STATUS_COLORS[status as keyof typeof STATUS_COLORS] || STATUS_COLORS.Active;
   
   const sizeClasses = {
@@ -18,19 +21,16 @@ export function StatusBadge({ status, size = 'md', showDot = true, className }: 
     lg: 'px-3 py-1 text-xs',
   };
 
-  const dotSizes = {
-    sm: 'w-1 h-1',
-    md: 'w-1.5 h-1.5',
-    lg: 'w-2 h-2',
-  };
-
   return (
     <span
+      // `STATUS_COLORS` entries only carry `bg` and `dot`. The border *colour* lives inside `bg`
+      // (e.g. `... border-emerald-200 dark:border-emerald-800/50`), and the base class above
+      // already supplies `border`, so there is no `border` key to read -- `config.border`
+      // was always `undefined` and `cn` discarded it.
       className={cn(
         'inline-flex items-center gap-1 font-bold rounded-full border',
         sizeClasses[size],
         config.bg,
-        config.border,
         'text-nowrap'
       )}
     >
@@ -49,10 +49,21 @@ interface RoleBadgeProps {
 }
 
 import { ROLE_COLORS } from '../../constants';
+import { Briefcase, Package, Shield } from 'lucide-react';
+
+// `ROLE_COLORS.icon` is the *name* of an icon, not the component. Reading it straight off the
+// config and rendering it produced `<Shield />`-style tags that React does not recognise, so
+// the badge showed a blank box instead of an icon. The names are mapped to the real
+// components here.
+const ROLE_ICONS = {
+  Shield,
+  Package,
+  Briefcase,
+} as const;
 
 export function RoleBadge({ role, size = 'md', className }: RoleBadgeProps) {
   const config = ROLE_COLORS[role] || ROLE_COLORS.Inventory;
-  const Icon = config.icon;
+  const Icon = ROLE_ICONS[config.icon];
 
   const sizeClasses = {
     sm: 'px-2 py-0.5 text-[10px]',
@@ -75,7 +86,7 @@ export function RoleBadge({ role, size = 'md', className }: RoleBadgeProps) {
   );
 }
 
-export function PaymentMethodBadge({ method, size = 'md' }: { method: string; size?: 'sm' | 'md' | 'lg' }) {
+export function PaymentMethodBadge({ method }: { method: string; size?: 'sm' | 'md' | 'lg' }) {
   const methodColors: Record<string, { bg: string; text: string; icon: React.ReactNode }> = {
     Cash: {
       bg: 'bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-300 border border-green-200 dark:border-green-800/50',

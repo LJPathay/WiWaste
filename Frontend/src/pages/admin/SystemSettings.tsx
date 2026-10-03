@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Save, Download, Trash2, Upload, Loader2, Info, TrendingUp, Activity, Sparkles, Check } from 'lucide-react';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
-import { Toast, useToast, FormField, inputCls } from '../../components/ui/Toast';
+import { Toast, useToast, FormField } from '../../components/ui/Toast';
 import { settings as settingsApi } from '../../services/api';
 
 /* ── Toggle Switch ── */

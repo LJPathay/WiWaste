@@ -275,7 +275,6 @@ export function GenerateReports() {
     {
       key: 'status',
       header: 'Download',
-      align: 'right',
       render: (row) => {
         const isDownloading = downloadingIds.has(row.id);
         return (

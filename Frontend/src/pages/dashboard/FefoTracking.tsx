@@ -15,7 +15,7 @@ import { AlertTriangle, ArrowLeft, Clock3, Info, Package, PackageSearch, RotateC
 import { Link } from 'react-router-dom';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { ChartGradients, ChartTooltipStyle } from '../../components/charts/ChartGradients';
-import { CHART_DEFAULTS, CHART_COLORS, useChartAnimation, useReducedMotion } from '../../components/charts/ChartConfig';
+import { CHART_DEFAULTS, CHART_COLORS, useChartAnimation } from '../../components/charts/ChartConfig';
 
 const currencyFormatter = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 });
 
@@ -38,8 +38,6 @@ export function FefoTrackingPage() {
   const [batchFEFO] = useState(MOCK_BATCHES);
 
   const { isAnimationActive, animationDuration, animationEasing } = useChartAnimation();
-  const reducedMotion = useReducedMotion();
-
   const fefoChart = batchFEFO.map((item) => ({
     name: item.batchId,
     daysToExpiry: item.daysToExpiry,

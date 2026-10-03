@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Calendar, ChevronDown, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { Calendar, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export interface DateRangePickerProps {
   from: string;
@@ -130,8 +130,7 @@ export function DateRangePicker({ from, to, onChange, className = '' }: DateRang
             {Array.from({ length: daysInMonth(currentMonth) }).map((_, i) => {
               const day = i + 1;
               const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
-              const formatted = formatDate(date);
-              const selected = isDateSelected(date);
+                            const selected = isDateSelected(date);
               const isStart = isStartDate(date);
               const isEnd = isEndDate(date);
               const isToday = date.toDateString() === today.toDateString();

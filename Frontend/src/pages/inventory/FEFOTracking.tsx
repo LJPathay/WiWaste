@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { Info, Search, TrendingDown, DollarSign, ShieldCheck, PackageX, Flag, Bell, Trash2, Eye } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Info, Search, TrendingDown, DollarSign, ShieldCheck, PackageX, Flag, Bell, Eye } from 'lucide-react';
 import { Toast, useToast, ConfirmDialog } from '../../components/ui/Toast';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
@@ -47,12 +47,6 @@ function getStatusLabel(days: number): { label: string; cls: string } {
   return { label: 'Healthy', cls: 'bg-green-50 text-green-700' };
 }
 
-function getActionLabel(days: number): string {
-  if (days <= 5 && days >= 0) return 'Flag for Clearance';
-  if (days <= 14 && days >= 0) return 'Notify Cashier';
-  if (days < 0) return 'Dispose';
-  return 'Monitor';
-}
 
 export function FEFOTracking() {
   const { toasts, dismiss, success } = useToast();
@@ -255,8 +249,8 @@ export function FEFOTracking() {
 
         <DataTable
           columns={columns}
-          data={filtered as unknown as Record<string, unknown>[]}
-          rowKey={(row) => row.batch_id as number}
+          data={filtered}
+          rowKey={(row) => row.batch_id}
           emptyMessage="No batches found"
           emptyState={
             <div className="flex flex-col items-center gap-2">

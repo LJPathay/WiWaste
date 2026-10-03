@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { cn } from '../ui/utils';
-import { MoreHorizontal, Edit2, Trash2, Eye, UserX, RotateCcw, Lock, Archive } from 'lucide-react';
+import { Edit2, Trash2, Eye, RotateCcw, Lock, Archive } from 'lucide-react';
 
 export interface ActionMenuItem {
   label: string;
@@ -80,7 +80,6 @@ export function ActionMenu({ items, trigger, align = 'right' }: ActionMenuProps)
                   ? 'text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-500/20'
                   : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5'
               )}
-              disabled={item.disabled}
               role="menuitem"
             >
               {item.icon && <span className="h-4 w-4 shrink-0">{item.icon}</span>}

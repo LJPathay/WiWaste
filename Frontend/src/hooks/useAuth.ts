@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { auth, type ApiUser } from '../services/api';
+import { auth } from '../services/api';
 import { clearStoredSession } from '../utils/mockAuthAndFeatures';
 
 export type UserRole = 'owner' | 'inventory' | 'cashier';
@@ -41,7 +41,6 @@ export interface AuthUser {
   apiRole: string;
 }
 
-const STORAGE_KEY_USER = 'wiwaste_user';
 
 function getStoredUser(): AuthUser | null {
   try {
@@ -67,8 +66,8 @@ export function useAuth() {
       console.debug('[Auth] verifyToken: checking token...', localStorage.getItem('wiwaste_token')?.substring(0, 20) + '...');
       const apiUser = await auth.me();
       console.debug('[Auth] verifyToken /me response:', apiUser);
-      // Handle different possible response structures
-      const userData = apiUser?.data || apiUser;
+      // `/me` also answers through `success()`, so the user object sits under `data`.
+      const userData = apiUser?.data;
       if (!userData?.role) {
         console.warn('[Auth] verifyToken: no role in response:', apiUser);
         throw new Error('Invalid /me response: no role');
@@ -117,9 +116,11 @@ export function useAuth() {
   const login = useCallback(async (username: string, password: string) => {
     const result = await auth.login(username, password);
     console.debug('[Auth] Login raw response:', JSON.stringify(result, null, 2));
-    // Backend now returns { access_token, user } in data
-    // Handle different possible response structures
-    const accessToken = result?.data?.access_token || result?.access_token || result?.token;
+    // The controller answers through `success()`, which nests the payload under
+    // `data`: `{ success, message, data: { access_token, user }, meta }`. The previous
+    // `result?.access_token || result?.token` chain probed top-level fields that this
+    // endpoint never emits.
+    const accessToken = result?.data?.access_token;
     if (!accessToken) {
       console.error('[Auth] No access_token in response:', result);
       throw new Error('Invalid login response');
@@ -127,7 +128,7 @@ export function useAuth() {
     localStorage.setItem('wiwaste_token', accessToken);
     console.debug('[Auth] Token stored:', accessToken.substring(0, 20) + '...');
     
-    const userData = result?.data?.user || result?.user;
+    const userData = result?.data?.user;
     if (!userData) {
       console.error('[Auth] No user in response:', result);
       throw new Error('Invalid login response: no user data');

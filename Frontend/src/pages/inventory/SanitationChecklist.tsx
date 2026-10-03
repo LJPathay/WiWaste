@@ -1,10 +1,17 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import {
-  Search, Filter, Calendar, ClipboardCheck, Plus, X, Check, AlertCircle,
-  Download, Eye, RotateCcw, Trash2, Edit, Camera, ShieldCheck, Clock
+  Search,
+  ClipboardCheck,
+  Plus,
+  X,
+  Check,
+  AlertCircle,
+  Trash2,
+  Edit,
+  ShieldCheck,
+  Clock,
 } from 'lucide-react';
 import { Toast, useToast, ConfirmDialog, Modal, FormField, inputCls } from '../../components/ui/Toast';
-import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
 import { Pagination } from '../../components/ui/pagination';
 import { sanitation as sanitationApi } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
@@ -200,23 +207,6 @@ export function SanitationChecklist() {
     }
   };
 
-  const startEdit = (checklist: SanitationChecklistRow) => {
-    setEditingId(checklist.checklist_id);
-    setForm({
-      checklist_date: checklist.checklist_date,
-      frequency: checklist.frequency,
-      area: checklist.area,
-      checks: checklist.checks.map(c => ({
-        item: c.item,
-        passed: c.passed,
-        notes: c.notes ?? '',
-        photo_url: c.photo_url ?? '',
-      })),
-      notes: '',
-    });
-    setShowCreateModal(true);
-  };
-
   const startCreate = () => {
     setEditingId(null);
     setForm({
@@ -385,7 +375,10 @@ export function SanitationChecklist() {
                           <div className="flex items-center justify-end gap-1">
                             <button
                               onClick={() => handleVerify(c.checklist_id)}
-                              disabled={c.overall_status === 'verified' || c.verified_at}
+                              // `verified_at` is a timestamp string, so `|| c.verified_at` produced
+                              // `string | true | null` rather than the boolean `disabled`
+                              // requires. Coerced explicitly; the truthiness test is unchanged.
+                              disabled={c.overall_status === 'verified' || !!c.verified_at}
                               className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg border transition-colors
                                 {c.verified_at ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'}"
                             >
@@ -415,7 +408,7 @@ export function SanitationChecklist() {
             </div>
             {filtered.length > pageSize && (
               <Pagination
-                currentPage={page}
+                page={page}
                 totalPages={Math.ceil(filtered.length / pageSize)}
                 onPageChange={setPage}
               />

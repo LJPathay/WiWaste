@@ -446,14 +446,34 @@ export interface ApiReceiptResponse {
 }
 
 // ─── Returns ────────────────────────────────────────────
+/**
+ * `GET /returns` and `GET /returns/{id}`.
+ *
+ * Both actions share one payload built by `ReturnTransactionController`, so the two
+ * endpoints are described by a single type. The nullable members are genuinely nullable:
+ * `product_name` and `sku` come off `salesItem?->product?->...` and `approved_by` off
+ * `approver?->...`, any of which may be unlinked.
+ */
 export interface ApiReturn {
   id: number;
-  product_name: string;
+  product_name: string | null;
+  sku: string | null;
   returned_by: string;
   quantity_returned: number;
   reason: string | null;
+  return_reason_code: string | null;
   refund_amount: number;
   return_date: string;
+  approval_status: string;
+  approved_by: string | null;
+  approved_at: string | null;
+  is_within_7_days: boolean;
+  business_id: number;
+  branch_id: number | null;
+  /** Present only on `GET /returns/{id}`. */
+  evidence_notes?: string | null;
+  evidence_photos?: string[] | null;
+  rejection_reason?: string | null;
 }
 
 export interface CreateReturnPayload {
@@ -649,7 +669,6 @@ export interface ApiStockReceiving {
   business_id: number;
   branch_id: number;
   supplier_id: number;
-  supplier_name: string;
   received_by: number;
   verified_by: number | null;
   received_at: string;
@@ -661,7 +680,14 @@ export interface ApiStockReceiving {
   status: 'pending' | 'received' | 'verified' | 'rejected' | 'partial';
   created_at: string;
   updated_at: string;
-  supplier?: ApiSupplier;
+  /**
+   * `StockReceivingController::index` eager-loads the relation and returns it unrenamed,
+   * unlike `SupplierController::index`, which maps the column `supplier_name` to `name`.
+   * So this relation carries the raw column names and is deliberately *not* typed as
+   * `ApiSupplier`. There is also no flat `supplier_name` on `stock_receiving` -- the table
+   * has just `supplier_id` -- so this type used to describe a column that does not exist.
+   */
+  supplier?: { supplier_id: number; supplier_name: string } | null;
   receiver?: ApiUser;
   verifier?: ApiUser;
   items?: ApiStockReceivingItem[];
@@ -1033,9 +1059,7 @@ export interface ApiRecall {
   recall_id: number;
   recall_number: string;
   product_id: number;
-  product_name?: string;
   batch_id?: number;
-  batch_number?: string;
   supplier_id?: number;
   reason: string;
   severity: ExpirySeverity;
@@ -1049,6 +1073,15 @@ export interface ApiRecall {
   approved_by?: number;
   approved_at?: string;
   resolution_notes?: string;
+  /**
+   * `RecallController::index` eager-loads these relations, so each row carries them
+   * alongside its own columns. There is no `product_name` or `batch_number` column on the
+   * `recalls` table -- `product_id` and `batch_id` are plain foreign keys -- so those names
+   * come from the relations. This type previously listed them as flat optional columns,
+   * which do not exist on the wire.
+   */
+  product?: { product_name?: string | null } | null;
+  batch?: { batch_number?: string | null } | null;
 }
 
 export interface ApiRecallSummary {
@@ -1132,6 +1165,27 @@ export interface ApiReorderSummary {
   estimated_total_cost: number;
 }
 
+export interface ApiReorderMlInsights {
+  forecast_generated: number;
+  optimization_fitness: number | null;
+  optimization_generations: number | null;
+  optimization_confidence: number | null;
+}
+
+/**
+ * `GET /reorder/suggestions`.
+ *
+ * `ReorderService::generateSuggestions()` does not paginate -- it returns one entry per
+ * supplier, each holding that supplier's `items`, alongside aggregate counters. It is not
+ * a bare `ApiReorderSuggestion[]`, so `ReorderDashboard` reading `res.suggestions` and
+ * `res.summary` off the response was correct and the old declaration was not.
+ */
+export interface ApiReorderSuggestionsResponse {
+  suggestions: ApiReorderSuggestion[];
+  summary: ApiReorderSummary;
+  ml_insights: ApiReorderMlInsights;
+}
+
 // ─── Privacy ────────────────────────────────────────────
 export interface ApiDataSubjectRequest {
   id: number;
@@ -1194,6 +1248,33 @@ export interface ApiRetentionPolicy {
   enabled: boolean;
   last_purged: string | null;
   records_purged: number;
+}
+
+/**
+ * `GET /privacy/retention-policies` returns the policy list and the aggregate summary in one
+ * payload, so callers get both without a second round trip.
+ */
+export interface RetentionPoliciesResponse {
+  data: ApiRetentionPolicy[];
+  summary: ApiRetentionSummary;
+}
+
+/**
+ * The privacy endpoints paginate by hand and nest the counters under `meta`:
+ *
+ *     { "data": [...], "meta": { "current_page", "per_page", "total", "last_page" } }
+ *
+ * `PaginatedResponse<T>` describes the flat shape Laravel's `paginate()` helper produces,
+ * with `current_page` and friends as siblings of `data`, so it does not apply here.
+ */
+export interface PaginatedResponseWithMeta<T> {
+  data: T[];
+  meta: {
+    current_page: number;
+    per_page: number;
+    total: number;
+    last_page: number;
+  };
 }
 
 export interface ApiRetentionSummary {

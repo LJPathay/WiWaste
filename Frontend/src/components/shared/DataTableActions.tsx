@@ -6,6 +6,12 @@ interface ActionButtonProps {
   icon: React.ReactNode;
   label: string;
   onClick: (e: React.MouseEvent) => void;
+  /**
+   * `'danger'` is the only value that changes anything -- everything else falls through to
+   * the neutral branch in `ActionButton`. `ReturnsRefunds` passed `variant="primary"`,
+   * which is not in this union and rendered identically to the default; it is now spelled
+   * out rather than adding a third variant that would behave the same.
+   */
   variant?: 'default' | 'danger';
   disabled?: boolean;
 }
@@ -29,7 +35,12 @@ export function ActionButton({ icon, label, onClick, variant = 'default', disabl
           {icon}
         </button>
       </TooltipTrigger>
-      <TooltipContent side="top" className="text-xs">
+      {/* `TooltipContent` has no `side` prop -- it always places the bubble above the
+          trigger and flips below only when there is no room (see tooltip.tsx). `side` was
+          spreading into `...props` and landing on the portalled <div> as an invalid
+          `side="top"` attribute, so it is removed rather than implemented: honouring it
+          would move the tooltip. */}
+      <TooltipContent className="text-xs">
         {label}
       </TooltipContent>
     </Tooltip>

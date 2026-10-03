@@ -36,7 +36,6 @@ import {
   HOTKEY_PRESETS,
   CATEGORIES,
   apiProductToCashier,
-  resolveCatalogSource,
   loadCachedCatalog,
   saveCachedCatalog,
 } from './POSConstants';
@@ -585,7 +584,12 @@ export function POSTerminal() {
 
     const completedReceipt: SalesTransaction = {
       transaction_id: currentTxnId,
-      user_id: session?.id ?? 'cashier-001',
+      // `AuthUser.id` is `number | string` (the API returns a numeric id, the mock session a
+      // slug like `cashier-001`), while `SalesTransaction.user_id` is declared `string`. The
+      // raw value went in unconverted, so a real session stored a number under a `string`
+      // field. `String()` makes the declared type true; nothing reads `user_id` off a
+      // completed receipt, so this is not observable.
+      user_id: String(session?.id ?? 'cashier-001'),
       cashier_name: session?.name ?? 'Carlo Reyes',
       total_amount: grandTotal,
       transaction_date: new Date().toLocaleString(),
@@ -1430,7 +1434,7 @@ export function POSTerminal() {
 
               {/* Cart Items */}
               <div className="flex-1 overflow-y-auto space-y-3 mb-6 max-h-[42vh] min-h-[160px] pr-2">
-                {cart.map((line, idx) => (
+                {cart.map((line, _idx) => (
                   <div key={line.product.product_id} className="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-200 shadow-sm">
                     <div className="w-16 h-16 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0">
                       {line.product.image_url ? (
@@ -1442,7 +1446,11 @@ export function POSTerminal() {
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-slate-800 truncate">{line.product.product_name}</p>
                       <p className="text-xs text-slate-500">{line.product.barcode}</p>
-                      {line.discountPct > 0 && (
+                      {/* `discountPct` is optional on the cart line. The other discount badge
+                          at line ~934 guards with the same truthiness test, which narrows it
+                          to `number` for the arithmetic; `> 0` on its own left the operand
+                          possibly undefined. Same three outcomes either way. */}
+                      {line.discountPct && line.discountPct > 0 && (
                         <span className="text-[10px] font-bold text-[#0F766E] bg-[#0F766E]/10 px-1.5 py-0.5 rounded">-{line.discountPct * 100}%</span>
                       )}
                     </div>

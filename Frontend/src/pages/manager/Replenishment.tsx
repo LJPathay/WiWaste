@@ -1,6 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertCircle, AlertTriangle, ArrowRight, CheckCircle2, Cpu, Info, Loader2, RefreshCw, Search, ShoppingCart, Target, Wallet } from 'lucide-react';
+import { AlertTriangle, ArrowRight, CheckCircle2, Cpu, Info, Loader2, RefreshCw, Search, ShoppingCart, Target, Wallet } from 'lucide-react';
 import { Toast, useToast } from '../../components/ui/Toast';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { optimization, type ApiOptimizationPlan } from '../../services/api';
@@ -277,8 +277,8 @@ export function Replenishment() {
           </div>
           <DataTable
             columns={columns}
-            data={filtered as Record<string, unknown>[]}
-            rowKey={(row) => row.product_id as string | number}
+            data={filtered}
+            rowKey={(row) => row.product_id}
             emptyMessage={plan.plan.length === 0
               ? 'No SKUs to reorder under this budget. Try a larger budget or a longer horizon.'
               : 'No items match your search.'}

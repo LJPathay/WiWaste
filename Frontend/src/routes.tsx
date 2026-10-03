@@ -6,7 +6,6 @@ import { AuthLayout } from "./components/layout/AuthLayout";
 import { DashboardLayout } from "./components/layout/DashboardLayout";
 import { CashierLayout } from "./components/layout/CashierLayout";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
-import { DashboardRedirect } from "./components/auth/DashboardRedirect";
 import { PageLoader } from "./components/ui/PageLoader";
 import PrivacyBanner from "./components/ui/PrivacyBanner";
 import PrivacyPolicy from "./pages/PrivacyPolicy";

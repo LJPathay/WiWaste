@@ -64,8 +64,7 @@ export function useKeyboardNavigation({
 export function useTableKeyboardNavigation({
   rowCount,
   onRowSelect,
-  onRowAction,
-  enabled = true,
+  enabled,
 }: {
   rowCount: number;
   onRowSelect?: (index: number) => void;

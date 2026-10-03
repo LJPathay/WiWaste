@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { AlertTriangle, Trash2, Search, Loader2, Info, TrendingDown, BarChart2, PackageX, ChevronDown } from 'lucide-react';
+import { AlertTriangle, Trash2, Search, Loader2, Info, TrendingDown, BarChart2, ChevronDown } from 'lucide-react';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { Toast, useToast, ConfirmDialog } from '../../components/ui/Toast';
 import { useApi } from '../../hooks/useApi';
@@ -160,7 +160,11 @@ export function RecordWastage() {
 
   const totalCost = filteredRecords.reduce((sum, r) => sum + r.cost, 0);
 
-  const columns: DataTableColumn[] = [
+  // `DataTableColumn<T>` is generic, so the type argument is mandatory -- writing
+  // `DataTableColumn[]` without one leaves `T` as `unknown`, which made every `render: (row)`
+  // below an implicit `any`. The row shape is derived from `records` rather than restated,
+  // so the column definitions cannot drift from the mapper above.
+  const columns: DataTableColumn<(typeof records)[number]>[] = [
     {
       key: 'name',
       header: 'Item',

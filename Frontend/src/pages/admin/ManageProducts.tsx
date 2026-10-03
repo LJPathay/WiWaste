@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Info, Loader2, Package, AlertCircle, Printer, Eye, Download, RotateCw, X } from 'lucide-react';
+import { Search, Plus, Info, Loader2, Package, AlertCircle, Printer, Download } from 'lucide-react';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { Tutorial } from '../../components/ui/Tutorial';
-import { Modal, FormField, inputCls, useToast, Toast, ConfirmDialog } from '../../components/ui/Toast';
+import { Modal, FormField, useToast, Toast, ConfirmDialog } from '../../components/ui/Toast';
 import { useOptimisticList } from '../../hooks/useOptimisticList';
 import {
   products as productsApi,
@@ -186,8 +186,7 @@ export function ManageProducts() {
 
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / ITEMS_PER_PAGE));
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, filteredProducts.length);
-  const paginatedProducts = filteredProducts.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+    const paginatedProducts = filteredProducts.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
   const toggleSelectAll = (keys: Set<string | number>) => {
     setSelectedIds(Array.from(keys) as number[]);
@@ -584,8 +583,8 @@ export function ManageProducts() {
 
         <DataTable
           columns={columns}
-          data={paginatedProducts as Record<string, unknown>[]}
-          rowKey={(row) => row.id as number}
+          data={paginatedProducts}
+          rowKey={(row) => row.id}
           selectable
           selectedKeys={selectedKeys}
           onSelectionChange={toggleSelectAll}

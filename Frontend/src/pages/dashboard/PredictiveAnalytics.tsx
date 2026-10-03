@@ -9,7 +9,6 @@ import {
   Tooltip,
   XAxis,
   YAxis,
-  ComposedChart,
 } from 'recharts';
 import { AlertTriangle, ArrowLeft, Brain, Info, RefreshCw, Zap, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -18,7 +17,7 @@ import { forecast as forecastApi, type ApiForecastOverview } from '../../service
 import { retailExamples } from '../../utils/mockAuthAndFeatures';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { ChartGradients, ChartTooltipStyle } from '../../components/charts/ChartGradients';
-import { CHART_DEFAULTS, CHART_COLORS, useChartAnimation, useReducedMotion } from '../../components/charts/ChartConfig';
+import { CHART_DEFAULTS, CHART_COLORS, useChartAnimation } from '../../components/charts/ChartConfig';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -55,8 +54,6 @@ export function PredictiveAnalyticsPage() {
   const [generating, setGenerating] = useState(false);
 
   const { isAnimationActive, animationDuration, animationEasing } = useChartAnimation();
-  const reducedMotion = useReducedMotion();
-
   const loadOverview = useCallback(() => {
     setLoading(true);
     setError(null);

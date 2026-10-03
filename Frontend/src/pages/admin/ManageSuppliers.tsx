@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Plus, Edit2, Archive, Loader2, Info, Briefcase, AlertCircle } from 'lucide-react';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { Tutorial } from '../../components/ui/Tutorial';
@@ -34,7 +34,6 @@ const ITEMS_PER_PAGE = 5;
  * so the value is also checked before the form is allowed to submit.
  */
 const CONTACT_NUMBER_LENGTH = 11;
-const CONTACT_NUMBER_PATTERN = /^\d{11}$/;
 
 function contactNumberError(value: string): string | null {
   const trimmed = value.trim();
@@ -237,25 +236,6 @@ export function ManageSuppliers() {
 
   const totalPages = supplierList?.meta?.last_page ?? 1;
   const totalItems = supplierList?.meta?.total ?? 0;
-  const startIndex = supplierList?.meta ? ((supplierList.meta.current_page - 1) * supplierList.meta.per_page) + 1 : 0;
-  const endIndex = supplierList?.meta ? Math.min(supplierList.meta.current_page * supplierList.meta.per_page, supplierList.meta.total) : 0;
-
-  const isAllSelected = paginatedSuppliers.length > 0 && paginatedSuppliers.every(s => selectedIds.includes(s.id));
-
-  const toggleSelectAll = () => {
-    if (isAllSelected) {
-      const pageIds = new Set(paginatedSuppliers.map(s => s.id));
-      setSelectedIds(prev => prev.filter(id => !pageIds.has(id)));
-    } else {
-      const pageIds = paginatedSuppliers.map(s => s.id);
-      setSelectedIds(prev => Array.from(new Set([...prev, ...pageIds])));
-    }
-  };
-
-  const toggleSelectRow = (id: number) => {
-    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
-  };
-
   const handleBulkDelete = async () => {
     if (selectedIds.length === 0) return;
     setIsBulkDeleting(true);

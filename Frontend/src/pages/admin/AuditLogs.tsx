@@ -3,24 +3,17 @@ import { Search, Download, Info } from 'lucide-react';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
 import { Pagination } from '../../components/ui/pagination';
-import { auditLogs as auditLogsApi } from '../../services/api';
+import { auditLogs as auditLogsApi, type ApiAuditLog } from '../../services/api';
 
-interface AuditLogEntry {
-  id: number;
-  timestamp: string;
-  action: string;
-  user: string;
-  role: string;
-  entity_type: string;
-  entity_id: string | number;
-}
+/**
+ * Rows come straight off `GET /audit-logs`, which is declared as
+ * `PaginatedResponse<ApiAuditLog>`. This file used to declare its own `AuditLogEntry`
+ * alongside an `AuditLogResponse` envelope, and neither matched: `entity_id` is nullable on
+ * the wire but was typed `string | number` locally, and the `.then((res: AuditLogResponse) =>)`
+ * annotation contradicted the API's own return type.
+ */
 
-interface AuditLogResponse {
-  data?: AuditLogEntry[];
-  last_page?: number;
-}
-
-const columns: DataTableColumn<AuditLogEntry>[] = [
+const columns: DataTableColumn<ApiAuditLog>[] = [
   {
     key: 'timestamp',
     header: 'Timestamp',
@@ -59,7 +52,7 @@ const columns: DataTableColumn<AuditLogEntry>[] = [
 ];
 
 export function AuditLogs() {
-  const [logs, setLogs] = useState<AuditLogEntry[]>([]);
+  const [logs, setLogs] = useState<ApiAuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [actionFilter, setActionFilter] = useState('');
@@ -74,9 +67,11 @@ export function AuditLogs() {
       action: actionFilter || undefined,
       entity_type: entityTypeFilter || undefined,
       page,
-    }).then((res: AuditLogResponse) => {
-      const data = res.data ?? res;
-      setLogs(Array.isArray(data) ? data : []);
+    }).then((res) => {
+      // `auditLogsApi.list` is declared as `PaginatedResponse<ApiAuditLog>`, so `data` is
+      // always an array and `last_page` always present. The `?? res` fallback existed only
+      // to tolerate the unenveloped shape the old local `AuditLogResponse` implied.
+      setLogs(Array.isArray(res.data) ? res.data : []);
       setTotalPages(res.last_page ?? 1);
     }).catch(() => setLogs([]))
     .finally(() => setLoading(false));

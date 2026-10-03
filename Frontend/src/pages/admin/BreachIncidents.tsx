@@ -1,13 +1,17 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import {
-  Search, Filter, Calendar, AlertTriangle, ShieldCheck, Eye, Edit, Trash2, Clock,
-  Download, AlertCircle, Bell, WifiOff, Shield, X, RotateCcw, CheckCircle, Flag,
-  Trash, ShieldAlert, BellRing, User, Database, Lock, Unlock
+  Search,
+  AlertTriangle,
+  ShieldCheck,
+  Bell,
+  Shield,
+  X,
+  CheckCircle,
+  ShieldAlert,
+  User,
 } from 'lucide-react';
-import { Toast, useToast, ConfirmDialog, Modal, FormField, inputCls } from '../../components/ui/Toast';
-import { formatCurrency } from '../../utils/cashierData';
-import { privacy as privacyApi, type ApiDataBreachIncident, type ApiBreachStatistics } from '../../services/api';
-import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
+import { Toast, useToast, ConfirmDialog, inputCls } from '../../components/ui/Toast';
+import { privacy as privacyApi, type ApiDataBreachIncident } from '../../services/api';
 import { Pagination } from '../../components/ui/pagination';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useApi } from '../../hooks/useApi';
@@ -26,17 +30,21 @@ const RISK_BADGES: Record<string, { label: string; cls: string; icon: React.Reac
   critical: { label: 'Critical', cls: 'bg-red-50 text-red-700 border border-red-100', icon: <ShieldAlert className="w-3 h-3" /> },
 };
 
-function formatDate(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' });
-}
 
 function formatShortDate(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' });
 }
+
+/** The workflow transitions a breach can be put through, in the order the UI offers them. */
+type BreachAction =
+  | 'escalate'
+  | 'notify_npc'
+  | 'notify_subjects'
+  | 'contain'
+  | 'resolve'
+  | 'delete';
 
 export function BreachIncidents() {
   const { toasts, dismiss, success, error: showError } = useToast();
@@ -46,11 +54,9 @@ export function BreachIncidents() {
   const debouncedSearch = useDebounce(search, 300);
   const [page, setPage] = useState(1);
   const pageSize = 10;
-  const [loading, setLoading] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<{ id: number; action: 'escalate' | 'notify_npc' | 'notify_subjects' | 'contain' | 'resolve' | 'delete' } | null>(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [form, setForm] = useState({
+    const [confirmAction, setConfirmAction] = useState<{ id: number; action: BreachAction } | null>(null);
+  const [, setShowCreateModal] = useState(false);
+    const [, setForm] = useState({
     description: '',
     personal_data_affected: '',
     risk_assessment: 'medium',
@@ -103,12 +109,15 @@ export function BreachIncidents() {
       } else if (action === 'contain') {
         const actions = prompt('Enter containment actions (one per line):');
         if (!actions) return;
-        await privacyApi.containBreach(id, actions.split('\n').filter(Boolean));
+        await privacyApi.containBreach(id, { actions: actions.split('\n').filter(Boolean) });
         success('Breach contained.');
       } else if (action === 'resolve') {
         const notes = prompt('Enter resolution notes:');
         if (!notes) return;
-        await privacyApi.resolveBreach(id, { notes });
+        // The controller validates and stores `resolution_notes`. Sending it as `notes`
+        // matched nothing, so the note the user typed was accepted by the page and then
+        // silently dropped by the server.
+        await privacyApi.resolveBreach(id, { resolution_notes: notes });
         success('Breach resolved.');
       } else if (action === 'delete') {
         // Not implemented in API yet
@@ -121,7 +130,9 @@ export function BreachIncidents() {
     }
   };
 
-  const getAvailableActions = (status: string, risk: string) => {
+  // The return type is annotated because the array literals below would otherwise widen to
+  // `string[]`, and the resulting `action` would not be assignable to `BreachAction`.
+  const getAvailableActions = (status: string, _risk: string): BreachAction[] => {
     switch (status) {
       case 'open': return ['escalate'];
       case 'investigating': return ['notify_npc', 'notify_subjects', 'contain'];
@@ -235,8 +246,6 @@ export function BreachIncidents() {
                   {filtered.slice((page - 1) * pageSize, page * pageSize).map((b) => {
                     const status = STATUS_BADGES[b.status] ?? { label: b.status, cls: '', icon: null };
                     const risk = RISK_BADGES[b.risk_assessment] ?? { label: b.risk_assessment, cls: '', icon: null };
-                    const actions = getAvailableActions(b.status, b.risk_assessment);
-                    
                     return (
                       <tr key={b.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
                         <td className="px-3 py-3 text-sm text-slate-500 dark:text-slate-400">{formatShortDate(b.detected_at)}</td>
@@ -309,7 +318,7 @@ export function BreachIncidents() {
             </div>
             {filtered.length > pageSize && (
               <Pagination
-                currentPage={page}
+                page={page}
                 totalPages={Math.ceil(filtered.length / pageSize)}
                 onPageChange={setPage}
               />
@@ -323,7 +332,9 @@ export function BreachIncidents() {
         isOpen={!!confirmAction}
         onClose={() => setConfirmAction(null)}
         onConfirm={() => { if (confirmAction) handleAction(confirmAction.id, confirmAction.action); setConfirmAction(null); }}
-        title={confirmAction?.action?.charAt(0).toUpperCase() + confirmAction?.action?.slice(1).replace('_', ' ')}
+        title={confirmAction
+          ? `${confirmAction.action.charAt(0).toUpperCase()}${confirmAction.action.slice(1).replace('_', ' ')}`
+          : undefined}
         message={confirmAction?.action === 'escalate' ? 'Escalate this breach to DPO?' :
                  confirmAction?.action === 'notify_npc' ? 'Notify National Privacy Commission?' :
                  confirmAction?.action === 'notify_subjects' ? 'Notify affected data subjects?' :

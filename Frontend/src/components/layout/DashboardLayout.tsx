@@ -86,35 +86,11 @@ const sidebarGroupsByRole: Record<UserRole, SidebarGroup[]> = {
       ],
     },
   ],
-  manager: [
-    {
-      group: 'OVERVIEW',
-      items: [
-        { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-      ],
-    },
-    {
-      group: 'INVENTORY MANAGEMENT',
-      items: [
-        { to: '/owner/performance', label: 'Inventory Performance', icon: TrendingUp },
-        { to: '/owner/overstock', label: 'Overstock Risks', icon: AlertTriangle },
-        { to: '/owner/replenishment', label: 'Replenishment', icon: CheckCircle },
-      ],
-    },
-    {
-      group: 'SUPPLY CHAIN',
-      items: [
-        { to: '/owner/supplier-performance', label: 'Supplier Performance', icon: Users },
-        { to: '/owner/purchase-orders', label: 'Purchase Orders', icon: Package },
-      ],
-    },
-    {
-      group: 'REPORTS',
-      items: [
-        { to: '/owner/executive-reports', label: 'Executive Reports', icon: FileText },
-      ],
-    },
-  ],
+  // There is deliberately no `manager` entry. `UserRole` here is `useAuth`'s, which covers
+  // only the three roles the API can actually return -- `mapRole()` has no branch that
+  // yields 'manager' and the users table has no such role -- so `sidebarGroupsByRole` is
+  // indexed at line ~303 by a value that can never be 'manager'. The block that used to
+  // sit here was unreachable configuration.
   inventory: [
     {
       group: 'Overview',

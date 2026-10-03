@@ -942,9 +942,9 @@ export function ManageInventory() {
 
       <DataTable
         columns={columns}
-        data={paginatedItems as unknown as Record<string, unknown>[]}
-        rowKey={(row) => (row as unknown as InventoryItem).id}
-        onRowClick={(row) => { setSelectedItem(row as unknown as InventoryItem); setActiveTab('details'); }}
+        data={paginatedItems}
+        rowKey={(row) => row.id}
+        onRowClick={(row) => { setSelectedItem(row); setActiveTab('details'); }}
         emptyState={emptyState}
         className="border border-[#E5E7EB] dark:border-white/10"
         pagination={

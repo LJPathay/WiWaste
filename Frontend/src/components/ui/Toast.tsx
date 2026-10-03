@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import { CheckCircle2, XCircle, X } from 'lucide-react';
+import { cn } from './utils';
 
 export type ToastType = 'success' | 'error';
 
@@ -98,9 +99,32 @@ interface ModalProps {
   onClose: () => void;
   children: React.ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl';
+  /**
+   * Several call sites already pass `isOpen` and wrap the modal in a guard of their own,
+   * while others rely on the component always rendering. Both are supported: default `true`
+   * keeps the unconditional call sites working, and `false` makes the modal render nothing.
+   * Before this prop existed the value was ignored, so a page that passed `isOpen` without
+   * also guarding would have shown its dialog permanently.
+   */
+  isOpen?: boolean;
+  /** Extra classes for the dialog panel. */
+  className?: string;
+  /** Extra classes for the body wrapper that already carries the `p-6` padding. */
+  contentClassName?: string;
+  /** Extra classes for the heading. */
+  titleClassName?: string;
 }
 
-export function Modal({ title, onClose, children, size = 'md' }: ModalProps) {
+export function Modal({
+  title,
+  onClose,
+  children,
+  size = 'md',
+  isOpen = true,
+  className,
+  contentClassName,
+  titleClassName,
+}: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const previousActiveElement = useRef<HTMLElement | null>(null);
   useFocusTrap(modalRef, true);
@@ -119,6 +143,9 @@ export function Modal({ title, onClose, children, size = 'md' }: ModalProps) {
     };
   }, []);
 
+  // After the hooks, so hook order stays stable across renders.
+  if (!isOpen) return null;
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
@@ -131,16 +158,22 @@ export function Modal({ title, onClose, children, size = 'md' }: ModalProps) {
       <div
         ref={modalRef}
         tabIndex={-1}
-        className={`bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 w-full ${sizeClasses[size]} shadow-xl relative focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2`}
+        className={cn(
+          'bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 w-full shadow-xl relative focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2',
+          sizeClasses[size],
+          className,
+        )}
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-white/10">
-          <h2 id="modal-title" className="text-sm font-bold text-slate-900 dark:text-slate-100">{title}</h2>
+          <h2 id="modal-title" className={cn('text-sm font-bold text-slate-900 dark:text-slate-100', titleClassName)}>
+            {title}
+          </h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2" aria-label="Close">
             <X className="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
-        <div className="p-6">{children}</div>
+        <div className={cn('p-6', contentClassName)}>{children}</div>
       </div>
     </div>
   );
@@ -149,19 +182,34 @@ export function Modal({ title, onClose, children, size = 'md' }: ModalProps) {
 interface ConfirmProps {
   message: string;
   onConfirm: () => void;
-  onCancel: () => void;
+  /** Dismiss handler. `onClose` is accepted as an alias -- most call sites use that name. */
+  onCancel?: () => void;
+  onClose?: () => void;
+  /** Optional heading, rendered above the message when given. */
+  title?: string;
+  isOpen?: boolean;
   confirmLabel?: string;
   danger?: boolean;
 }
 
-export function ConfirmDialog({ message, onConfirm, onCancel, confirmLabel = 'Confirm', danger = false }: ConfirmProps) {
+export function ConfirmDialog({
+  message,
+  onConfirm,
+  onCancel,
+  onClose,
+  title,
+  isOpen = true,
+  confirmLabel = 'Confirm',
+  danger = false,
+}: ConfirmProps) {
+  const dismiss = onCancel ?? onClose;
   const dialogRef = useRef<HTMLDivElement>(null);
   const previousActiveElement = useRef<HTMLElement | null>(null);
   useFocusTrap(dialogRef, true);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') onCancel();
-  }, [onCancel]);
+    if (e.key === 'Escape') dismiss?.();
+  }, [dismiss]);
 
   useEffect(() => {
     previousActiveElement.current = document.activeElement as HTMLElement;
@@ -171,14 +219,17 @@ export function ConfirmDialog({ message, onConfirm, onCancel, confirmLabel = 'Co
     };
   }, []);
 
+  // After the hooks, so hook order stays stable across renders.
+  if (!isOpen) return null;
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
       role="dialog"
       aria-modal="true"
-      aria-labelledby="confirm-message"
+      aria-labelledby={title ? 'confirm-title' : 'confirm-message'}
       onKeyDown={handleKeyDown}
-      onClick={onCancel}
+      onClick={dismiss}
     >
       <div
         ref={dialogRef}
@@ -186,10 +237,15 @@ export function ConfirmDialog({ message, onConfirm, onCancel, confirmLabel = 'Co
         className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-sm shadow-xl p-6 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
         onClick={e => e.stopPropagation()}
       >
+        {title && (
+          <h2 id="confirm-title" className="mb-2 text-sm font-bold text-slate-900 dark:text-slate-100">
+            {title}
+          </h2>
+        )}
         <p id="confirm-message" className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">{message}</p>
         <div className="mt-5 flex gap-3 justify-end">
           <button
-            onClick={onCancel}
+            onClick={dismiss}
             className="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
           >
             Cancel
@@ -215,20 +271,36 @@ interface FieldProps {
   error?: string;
   hint?: string;
   htmlFor?: string;
+  /** Marks the control as required: renders the asterisk and sets `aria-required`. */
+  required?: boolean;
+  /** Extra classes for the label element. */
+  labelClassName?: string;
 }
 
-export function FormField({ label, children, error, hint, htmlFor }: FieldProps) {
+export function FormField({ label, children, error, hint, htmlFor, required, labelClassName }: FieldProps) {
   const errorId = error ? `${htmlFor}-error` : undefined;
   const hintId = hint ? `${htmlFor}-hint` : undefined;
   const describedBy = [errorId, hintId].filter(Boolean).join(' ') || undefined;
 
   return (
     <div>
-      <label htmlFor={htmlFor} className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">{label}</label>
-      {React.isValidElement(children) ? React.cloneElement(children as React.ReactElement, {
-        'aria-describedby': describedBy,
-        'aria-invalid': error ? 'true' : 'false',
-      }) : children}
+      <label
+        htmlFor={htmlFor}
+        className={cn('block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5', labelClassName)}
+      >
+        {label}
+        {required && <span className="text-rose-500" aria-hidden="true"> *</span>}
+      </label>
+      {/* `ReactElement` defaults its props to `unknown`, which makes `cloneElement`
+          reject every prop passed in. The children are form controls, so the attribute
+          bag is open-ended and `Record<string, unknown>` is the honest shape here. */}
+      {React.isValidElement(children)
+        ? React.cloneElement(children as React.ReactElement<Record<string, unknown>>, {
+            'aria-describedby': describedBy,
+            'aria-invalid': error ? 'true' : 'false',
+            ...(required ? { 'aria-required': 'true' } : {}),
+          })
+        : children}
       {error && (
         <p id={errorId} className="mt-1.5 text-xs text-red-600 dark:text-red-400" role="alert" aria-live="polite">
           {error}

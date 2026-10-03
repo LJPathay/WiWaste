@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
-interface UseApiOptions<T> {
+// Not generic: none of these options mention the fetched payload, so `UseApiOptions<T>`
+// declared a type parameter that could not be used and `noUnusedLocals` rightly objected.
+interface UseApiOptions {
   /** Cache TTL in milliseconds (default: 30 seconds) */
   cacheTtl?: number;
   /** Whether to enable stale-while-revalidate */
@@ -24,7 +26,7 @@ const cache = new Map<string, { data: unknown; timestamp: number; ttl: number }>
 
 export function useApi<T>(
   fetcher: () => Promise<T>,
-  options: UseApiOptions<T> = {}
+  options: UseApiOptions = {}
 ): UseApiResult<T> {
   const {
     cacheTtl = 30_000, // 30 seconds default

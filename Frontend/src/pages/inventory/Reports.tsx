@@ -94,6 +94,26 @@ const REPORT_ENDPOINT_MAP: Record<string, (params?: { from?: string; to?: string
   performance:      ()  => reportsApi.supplierPerformance(),
 };
 
+/**
+ * Reports are open-ended bags -- `ApiReport` is `{ [key: string]: unknown }` and every entry
+ * of `REPORT_ENDPOINT_MAP` returns its own columns -- so the preview derives its columns
+ * from the first row, the same way `handleExportCSV` derives its headers.
+ *
+ * This call site previously passed no `columns` prop at all. `columns` is required and
+ * `DataTable` calls `columns.some(...)` during render, so expanding a generated report threw
+ * "Cannot read properties of undefined (reading 'some')". The `compact` prop alongside it is
+ * not part of `DataTableProps` and was ignored.
+ */
+function reportPreviewColumns(rows: ApiReport[]): DataTableColumn<ApiReport>[] {
+  const first = rows[0];
+  if (!first) return [];
+  return Object.keys(first).map(key => ({
+    key,
+    header: key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+    truncate: true,
+  }));
+}
+
 export function Reports() {
   const [dateFrom, setDateFrom] = useState<Record<string, string>>({});
   const [dateTo, setDateTo] = useState<Record<string, string>>({});
@@ -250,9 +270,9 @@ export function Reports() {
               {isExpanded && data?.length > 0 && (
                 <div className="border-t border-[#E5E7EB] dark:border-white/10 px-4 py-2 max-h-72 overflow-auto">
                   <DataTable
-                    data={data as (ApiReport & Record<string, unknown>)[]}
+                    data={data}
+                    columns={reportPreviewColumns(data)}
                     rowKey={(row, i) => String(row.id ?? i)}
-                    compact
                   />
                 </div>
               )}

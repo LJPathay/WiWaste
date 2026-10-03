@@ -1,15 +1,17 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import {
-  Search, Filter, AlertTriangle, RotateCcw, ShieldCheck, Bell, X, Plus,
-  Package, Truck, Calendar, Eye, Flag, Archive, Download, FileText
+  Search,
+  AlertTriangle,
+  ShieldCheck,
+  X,
+  Plus,
+  Package,
 } from 'lucide-react';
 import { Toast, useToast, ConfirmDialog, Modal, FormField, inputCls } from '../../components/ui/Toast';
-import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
 import { Pagination } from '../../components/ui/pagination';
 import { recall as recallApi } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
 import { useDebounce } from '../../hooks/useDebounce';
-import type { ApiRecall, ApiRecallSummary } from '../../services/api';
 
 interface RecallRow {
   id: number;
@@ -307,7 +309,7 @@ export function RecallManagement() {
             </div>
             {filtered.length > pageSize && (
               <Pagination
-                currentPage={page}
+                page={page}
                 totalPages={Math.ceil(filtered.length / pageSize)}
                 onPageChange={setPage}
               />

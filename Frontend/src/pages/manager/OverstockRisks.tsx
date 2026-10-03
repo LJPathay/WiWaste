@@ -5,7 +5,7 @@ import { Toast, useToast, ConfirmDialog } from '../../components/ui/Toast';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
 import { ChartGradients, ChartTooltipStyle } from '../../components/charts/ChartGradients';
-import { CHART_DEFAULTS, CHART_COLORS, useChartAnimation, useReducedMotion } from '../../components/charts/ChartConfig';
+import { CHART_DEFAULTS, CHART_COLORS, useChartAnimation } from '../../components/charts/ChartConfig';
 
 const OVERSTOCK_TREND_DATA = [
   { month: 'Jan', exposure: 125000 },
@@ -124,8 +124,6 @@ export function OverstockRisks() {
   const [confirm, setConfirm] = useState<{ open: boolean; item: OverstockItem | null }>({ open: false, item: null });
 
   const { isAnimationActive, animationDuration, animationEasing } = useChartAnimation();
-  const reducedMotion = useReducedMotion();
-
   const totalExposure = useMemo(() => items.reduce((sum, i) => sum + i.excessQty * i.unitCost, 0), [items]);
   const appliedCount = items.filter((i) => i.applied).length;
 

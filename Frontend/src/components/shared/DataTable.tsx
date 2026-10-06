@@ -13,6 +13,9 @@ import {
 export interface DataTableColumn<T> {
   key: string;
   header: string;
+  sortable?: boolean;
+  sortDirection?: 'asc' | 'desc' | null;
+  onSort?: () => void;
   /**
    * `'numeric'` maps to `text-left tabular-nums` and `'center'` to `text-center`. There is
    * deliberately no `'right'`: three columns (GenerateReports' Download, StockReceiving's
@@ -169,7 +172,7 @@ export function DataTable<T>({
             <TableHeader className="sticky top-0 z-20 bg-bg dark:bg-slate-900 border-b border-border dark:border-white/10">
               <TableRow className="hover:bg-transparent">
                 {selectable && (
-                  <TableHead className="w-10 text-center">
+                  <TableHead className="w-10 text-center" scope="col">
                     <input
                       type="checkbox"
                       checked={allSelected}
@@ -185,12 +188,19 @@ export function DataTable<T>({
                   return (
                     <TableHead
                       key={col.key}
+                      scope="col"
+                      aria-sort={col.sortable ? (col.sortDirection === 'asc' ? 'ascending' : col.sortDirection === 'desc' ? 'descending' : 'none') : undefined}
+                      tabIndex={col.sortable ? 0 : undefined}
+                      role={col.sortable ? 'button' : undefined}
+                      onKeyDown={col.sortable && col.onSort ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); col.onSort!(); } } : undefined}
+                      onClick={col.sortable && col.onSort ? col.onSort : undefined}
                       className={cn(
                         col.align === 'numeric' && "text-left",
                         col.align === 'center' && "text-center",
                         pin === 'start' && "sticky left-0 z-30 bg-bg dark:bg-slate-900",
                         pin === 'end' && "sticky right-0 z-30 bg-bg dark:bg-slate-900",
                         col.hideOnMobile && "hidden md:table-cell",
+                        col.sortable && "cursor-pointer select-none hover:bg-bg dark:hover:bg-slate-800",
                       )}
                       style={{
                         minWidth: col.minWidth,
@@ -204,7 +214,7 @@ export function DataTable<T>({
                   );
                 })}
                 {actions && (
-                  <TableHead className="w-16 text-right">
+                  <TableHead className="w-16 text-right" scope="col">
                     <span className="sr-only">Actions</span>
                   </TableHead>
                 )}
@@ -307,6 +317,9 @@ export function DataTable<T>({
 
       {pagination && (
         <div className="border-t border-border dark:border-white/10">
+          <div aria-live="polite" className="sr-only">
+            {`Showing ${data.length} row${data.length !== 1 ? 's' : ''}`}
+          </div>
           {pagination}
         </div>
       )}

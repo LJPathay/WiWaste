@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   getStoredSession,
@@ -7,8 +6,6 @@ import {
   getPredictiveAnalytics,
 } from '../utils/mockAuthAndFeatures';
 import { ownerDashboard } from '../services/api';
-import type { ApiDashboard, ApiOwnerAnalytics } from '../services/api';
-import type { DashboardData } from '../utils/mockAuthAndFeatures';
 
 export function useDashboardData(period = '30') {
   const { data: result, isLoading } = useQuery({

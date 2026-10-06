@@ -542,9 +542,20 @@ return response()->json($resource)
 - [x] `php artisan queue:work` processes jobs without exception — job hardened with tries/backoff/timeout
 
 ### Phase 16
-- [ ] All models use enum casts for status fields
-- [ ] All service constructors use readonly properties
-- [ ] `php artisan test` passes
+- [ ] All models use enum casts for status fields — **deferred**, see note below
+- [x] All service constructors use readonly properties — services, controllers, mails and events are all promoted `readonly`
+- [x] `php artisan test` passes — 119 tests green
+
+> **Why model casts are deferred.** Status is read as a plain string in roughly thirty
+> places (`$user->status === 'Inactive'`, `in_array($po->status, [...])`,
+> `$newStatus = $oldStatus === 'Archived' ? ...`). A backed-enum cast makes those
+> attributes return `UserStatus`/`ProductStatus`, and `=== 'Active'` against an enum is
+> *always* false — the failures are silent, not fatal. Doing this properly means
+> converting every comparison, assignment and audit-log payload to enum cases (and
+> verifying each MySQL ENUM's members), which is its own change with its own test pass.
+> The enums introduced here (`Role`, `UserStatus`, `ProductStatus`) already guard the
+> **write** path — `Rule::enum()` is now the single source of truth for what may be
+> stored, so no invalid status can reach the column.
 
 ### Phase 17
 - [ ] Pest tests cover: product create, sale create, auth, API resource shape

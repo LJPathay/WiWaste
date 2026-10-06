@@ -37,7 +37,7 @@ class RecallController extends Controller
         $perPage = min((int) $request->input('per_page', 20), 100);
         return response()->json(
             $query->orderByDesc('created_at')->paginate($perPage)
-                ->through(fn ($r) => (new RecallResource($r))->toArray($request))
+                ->through(fn ($r) => (new RecallResource($r))->resolve($request))
         );
     }
 
@@ -81,7 +81,7 @@ class RecallController extends Controller
 
         return response()->json([
             'message' => 'Recall created.',
-            'recall' => (new RecallResource($recall))->toArray($request),
+            'recall' => (new RecallResource($recall))->resolve($request),
         ], 201);
     }
 
@@ -91,7 +91,7 @@ class RecallController extends Controller
         $query = $this->scopeForBusinessAndBranch($query, request());
         $recall = $query->findOrFail($id);
 
-        return new RecallResource($recall);
+        return response()->json((new RecallResource($recall))->resolve(request()));
     }
 
     public function update(UpdateRecallRequest $request, $id)
@@ -126,7 +126,7 @@ class RecallController extends Controller
 
         return response()->json([
             'message' => 'Recall updated.',
-            'recall' => (new RecallResource($recall))->toArray($request),
+            'recall' => (new RecallResource($recall))->resolve($request),
         ]);
     }
 
@@ -159,7 +159,7 @@ class RecallController extends Controller
 
         return response()->json([
             'message' => 'Recall activated.',
-            'recall' => (new RecallResource($recall))->toArray($request),
+            'recall' => (new RecallResource($recall))->resolve($request),
         ]);
     }
 
@@ -192,7 +192,7 @@ class RecallController extends Controller
 
         return response()->json([
             'message' => "Quarantined {$quarantinedCount} affected batches.",
-            'recall' => (new RecallResource($recall))->toArray($request),
+            'recall' => (new RecallResource($recall))->resolve($request),
         ]);
     }
 
@@ -221,7 +221,7 @@ class RecallController extends Controller
 
         return response()->json([
             'message' => 'Notifications sent for recall.',
-            'recall' => (new RecallResource($recall))->toArray($request),
+            'recall' => (new RecallResource($recall))->resolve($request),
         ]);
     }
 
@@ -252,7 +252,7 @@ class RecallController extends Controller
 
         return response()->json([
             'message' => 'Recall resolved.',
-            'recall' => (new RecallResource($recall))->toArray($request),
+            'recall' => (new RecallResource($recall))->resolve($request),
         ]);
     }
 

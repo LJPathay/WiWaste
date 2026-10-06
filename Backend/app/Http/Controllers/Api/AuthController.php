@@ -79,7 +79,7 @@ class AuthController extends BaseApiController
         // Create refresh token (long-lived: 7 days)
         $refreshToken = $user->createToken('wiwaste-refresh', ['refresh'], now()->addDays(7))->plainTextToken;
 
-        $userData = (new UserResource($user))->toArray($request);
+        $userData = (new UserResource($user))->resolve($request);
 
         // Set refresh token as HttpOnly cookie (secure, same-site)
         $cookie = cookie('refresh_token', $refreshToken, 10080, '/', null, true, true, false, 'lax'); // 7 days = 10080 minutes
@@ -103,7 +103,7 @@ class AuthController extends BaseApiController
     public function me(Request $request)
     {
         $user = $request->user();
-        return $this->success((new UserResource($user))->toArray($request));
+        return $this->success((new UserResource($user))->resolve($request));
     }
 
     public function refresh(Request $request)

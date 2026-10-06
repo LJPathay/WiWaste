@@ -44,7 +44,7 @@ class ReturnTransactionController extends Controller
 
         $perPage = min((int) $request->input('per_page', 20), 100);
         return response()->json(
-            $query->orderByDesc('return_date')->paginate($perPage)->through(fn ($r) => (new ReturnTransactionResource($r))->toArray($request))
+            $query->orderByDesc('return_date')->paginate($perPage)->through(fn ($r) => (new ReturnTransactionResource($r))->resolve($request))
         );
     }
 
@@ -236,6 +236,6 @@ class ReturnTransactionController extends Controller
         $query = $this->scopeForBusinessAndBranch($query, request());
         $return = $query->findOrFail($id);
 
-        return (new ReturnTransactionResource($return))->toArray(request());
+        return (new ReturnTransactionResource($return))->resolve(request());
     }
 }

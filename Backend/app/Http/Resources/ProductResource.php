@@ -18,6 +18,8 @@ class ProductResource extends JsonResource
             'id'                     => $this->product_id,
             'name'                   => $this->product_name,
             'sku'                    => $this->barcode,
+            // POS terminals key off the PLU, which is just the numeric product id.
+            'plu_code'               => (string) $this->product_id,
             'category_id'            => $this->category_id,
             'category'               => $this->category?->Category_name,
             'supplier_id'            => $this->supplier_id,

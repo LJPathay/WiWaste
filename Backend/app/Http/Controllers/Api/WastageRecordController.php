@@ -25,7 +25,7 @@ class WastageRecordController extends Controller
 
         $perPage = min((int) $request->input('per_page', 20), 100);
         return response()->json(
-            $query->orderByDesc('date_recorded')->paginate($perPage)->through(fn ($w) => (new WastageRecordResource($w))->toArray($request))
+            $query->orderByDesc('date_recorded')->paginate($perPage)->through(fn ($w) => (new WastageRecordResource($w))->resolve($request))
         );
     }
 
@@ -46,7 +46,7 @@ class WastageRecordController extends Controller
         $data['user_id'] = $userId;
 
         return DB::transaction(function () use ($data, $userId, $user, $request) {
-            // Deduct from inventory — refuse to go below zero
+            // Deduct from inventory â€” refuse to go below zero
             $query = Inventory::with('product')->where('product_id', $data['product_id']);
             $query = $this->scopeForBusinessAndBranch($query, $request);
             $inventory = $query->first();

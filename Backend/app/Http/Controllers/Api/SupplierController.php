@@ -36,7 +36,7 @@ class SupplierController extends BaseApiController
 
         $paginated = $query->paginate(min((int) request()->get('per_page', 15), 100), ['*'], 'page', (int) request()->get('page', 1));
 
-        return $this->paginated($paginated->through(fn ($s) => (new SupplierResource($s))->toArray(request())));
+        return $this->paginated($paginated->through(fn ($s) => (new SupplierResource($s))->resolve(request())));
     }
 
     public function store(\App\Http\Requests\Api\CreateSupplierRequest $request)

@@ -20,12 +20,12 @@ use Illuminate\Support\Facades\DB;
  *
  * The admin pages (Data Subject Requests, Breach Incident Log, Data Retention
  * Configuration) all live under `Frontend/src/pages/admin` and call `privacy.*`
- * in `services/api.ts`, but none of those paths were ever routed — every request
+ * in `services/api.ts`, but none of those paths were ever routed â€” every request
  * 404'd and each page rendered with empty tables. This controller provides them.
  */
 class PrivacyComplianceController extends Controller
 {
-    /** Data subject requests (access / rectification / erasure / …). */
+    /** Data subject requests (access / rectification / erasure / â€¦). */
     public function requests(Request $request)
     {
         $query = DataSubjectRequest::query();
@@ -337,7 +337,7 @@ class PrivacyComplianceController extends Controller
         ]);
     }
 
-    // ── helpers ────────────────────────────────────────────────────────────
+    // â”€â”€ helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     private function findRequest(Request $request, int $id): DataSubjectRequest
     {
@@ -391,11 +391,11 @@ class PrivacyComplianceController extends Controller
 
     private function requestPayload(DataSubjectRequest $row): array
     {
-        return (new DataSubjectRequestResource($row))->toArray(request());
+        return (new DataSubjectRequestResource($row))->resolve(request());
     }
 
     private function breachPayload(DataBreachIncident $b): array
     {
-        return (new DataBreachIncidentResource($b))->toArray(request());
+        return (new DataBreachIncidentResource($b))->resolve(request());
     }
 }

@@ -35,7 +35,7 @@ class StockReceivingController extends Controller
         $perPage = min((int) $request->input('per_page', 20), 100);
         return response()->json(
             $query->orderByDesc('received_at')->paginate($perPage)
-                ->through(fn ($r) => (new StockReceivingResource($r))->toArray($request))
+                ->through(fn ($r) => (new StockReceivingResource($r))->resolve($request))
         );
     }
 
@@ -54,7 +54,7 @@ class StockReceivingController extends Controller
 
         return response()->json([
             'message' => 'Stock receiving record created.',
-            'receiving' => (new StockReceivingResource($receiving))->toArray($request),
+            'receiving' => (new StockReceivingResource($receiving))->resolve($request),
         ], 201);
     }
 
@@ -87,7 +87,7 @@ class StockReceivingController extends Controller
 
         return response()->json([
             'message' => 'Stock received successfully.',
-            'receiving' => (new StockReceivingResource($receiving))->toArray($request),
+            'receiving' => (new StockReceivingResource($receiving))->resolve($request),
             'temperature_warnings' => $warnings,
         ]);
     }
@@ -98,7 +98,7 @@ class StockReceivingController extends Controller
         $query = $this->scopeForBusinessAndBranch($query, request());
         $receiving = $query->findOrFail($id);
 
-        return new StockReceivingResource($receiving);
+        return response()->json((new StockReceivingResource($receiving))->resolve(request()));
     }
 
     public function update(UpdateStockReceivingRequest $request, $id)
@@ -117,7 +117,7 @@ class StockReceivingController extends Controller
 
         return response()->json([
             'message' => 'Stock receiving record updated.',
-            'receiving' => (new StockReceivingResource($receiving))->toArray($request),
+            'receiving' => (new StockReceivingResource($receiving))->resolve($request),
         ]);
     }
 
@@ -145,7 +145,7 @@ class StockReceivingController extends Controller
 
         return response()->json([
             'message' => 'Stock receiving record verified.',
-            'receiving' => (new StockReceivingResource($receiving))->toArray($request),
+            'receiving' => (new StockReceivingResource($receiving))->resolve($request),
             'temperature_warnings' => $warnings,
         ]);
     }
@@ -224,10 +224,10 @@ class StockReceivingController extends Controller
 
             if ($product->required_temp_min !== null && $temp < $product->required_temp_min) {
                 $itemData['condition_check_passed'] = false;
-                $warning = "Item {$item->receiving_item_id} ({$product->product_name}): Temperature {$temp}°C is below required minimum {$product->required_temp_min}°C";
+                $warning = "Item {$item->receiving_item_id} ({$product->product_name}): Temperature {$temp}Â°C is below required minimum {$product->required_temp_min}Â°C";
             } elseif ($product->required_temp_max !== null && $temp > $product->required_temp_max) {
                 $itemData['condition_check_passed'] = false;
-                $warning = "Item {$item->receiving_item_id} ({$product->product_name}): Temperature {$temp}°C exceeds required maximum {$product->required_temp_max}°C";
+                $warning = "Item {$item->receiving_item_id} ({$product->product_name}): Temperature {$temp}Â°C exceeds required maximum {$product->required_temp_max}Â°C";
             }
         }
 

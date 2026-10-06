@@ -37,7 +37,7 @@ class VendorReturnController extends Controller
         $perPage = min((int) $request->input('per_page', 20), 100);
         return response()->json(
             $query->orderByDesc('created_at')->paginate($perPage)
-                ->through(fn ($vr) => (new VendorReturnResource($vr))->toArray($request))
+                ->through(fn ($vr) => (new VendorReturnResource($vr))->resolve($request))
         );
     }
 
@@ -98,7 +98,7 @@ class VendorReturnController extends Controller
 
             return response()->json([
                 'message' => 'Vendor return request created.',
-                'vendor_return' => (new VendorReturnResource($vendorReturn))->toArray($request),
+                'vendor_return' => (new VendorReturnResource($vendorReturn))->resolve($request),
             ], 201);
         });
     }
@@ -109,7 +109,7 @@ class VendorReturnController extends Controller
         $query = $this->scopeForBusinessAndBranch($query, request());
         $vendorReturn = $query->findOrFail($id);
 
-        return new VendorReturnResource($vendorReturn);
+        return response()->json((new VendorReturnResource($vendorReturn))->resolve(request()));
     }
 
     public function update(UpdateVendorReturnRequest $request, $id)
@@ -162,7 +162,7 @@ class VendorReturnController extends Controller
 
         return response()->json([
             'message' => 'Vendor return updated.',
-            'vendor_return' => (new VendorReturnResource($vendorReturn))->toArray($request),
+            'vendor_return' => (new VendorReturnResource($vendorReturn))->resolve($request),
         ]);
     }
 
@@ -193,7 +193,7 @@ class VendorReturnController extends Controller
 
         return response()->json([
             'message' => 'Vendor return approved.',
-            'vendor_return' => (new VendorReturnResource($vendorReturn->fresh()->load(['supplier', 'creator', 'approver', 'items.product'])))->toArray($request),
+            'vendor_return' => (new VendorReturnResource($vendorReturn->fresh()->load(['supplier', 'creator', 'approver', 'items.product'])))->resolve($request),
         ]);
     }
 
@@ -226,7 +226,7 @@ class VendorReturnController extends Controller
 
         return response()->json([
             'message' => 'Vendor return rejected.',
-            'vendor_return' => (new VendorReturnResource($vendorReturn->fresh()->load(['supplier', 'creator', 'approver', 'items.product'])))->toArray($request),
+            'vendor_return' => (new VendorReturnResource($vendorReturn->fresh()->load(['supplier', 'creator', 'approver', 'items.product'])))->resolve($request),
         ]);
     }
 
@@ -257,7 +257,7 @@ class VendorReturnController extends Controller
 
         return response()->json([
             'message' => 'Vendor return marked as shipped.',
-            'vendor_return' => (new VendorReturnResource($vendorReturn->fresh()))->toArray($request),
+            'vendor_return' => (new VendorReturnResource($vendorReturn->fresh()))->resolve($request),
         ]);
     }
 
@@ -315,7 +315,7 @@ class VendorReturnController extends Controller
         // For now, we log the credit in audit log
         AuditLog::create([
             'user_id'       => $request->user()?->User_id ?? 1,
-            'action'        => "Received vendor return {$vendorReturn->return_number} with credit ₱{$totalCredit}",
+            'action'        => "Received vendor return {$vendorReturn->return_number} with credit â‚±{$totalCredit}",
             'entity_type'   => 'Vendor_Return',
             'entity_id'     => $vendorReturn->vendor_return_id,
             'new_values'    => json_encode([
@@ -330,7 +330,7 @@ class VendorReturnController extends Controller
 
         return response()->json([
             'message' => 'Vendor return received with credit note.',
-            'vendor_return' => (new VendorReturnResource($vendorReturn->fresh()->load('items.product', 'items.batch')))->toArray($request),
+            'vendor_return' => (new VendorReturnResource($vendorReturn->fresh()->load('items.product', 'items.batch')))->resolve($request),
             'credit_note' => [
                 'total_credit' => $totalCredit,
                 'items' => $receivedItems,
@@ -365,7 +365,7 @@ class VendorReturnController extends Controller
 
         return response()->json([
             'message' => 'Vendor return credited.',
-            'vendor_return' => (new VendorReturnResource($vendorReturn->fresh()))->toArray($request),
+            'vendor_return' => (new VendorReturnResource($vendorReturn->fresh()))->resolve($request),
         ]);
     }
 

@@ -12,7 +12,7 @@ class CategoryController extends BaseApiController
 {
     private function present(Category $c): array
     {
-        return (new CategoryResource($c))->toArray(request());
+        return (new CategoryResource($c))->resolve(request());
     }
 
     public function index()
@@ -33,7 +33,7 @@ class CategoryController extends BaseApiController
         // a tab can ask for one status or exclude one.
         //
         // An archived category is deliberately not offered by default. Its only two
-        // consumers — `useCategories()` and the product form's category picker — exist
+        // consumers â€” `useCategories()` and the product form's category picker â€” exist
         // to choose a category to file something *under*, and a retired category is not
         // a valid choice. Manage Categories asks for each status explicitly, so it still
         // sees the full set.
@@ -76,7 +76,7 @@ class CategoryController extends BaseApiController
 
     /**
      * Archives a category instead of removing it, and restores it when called again on
-     * an already-archived row — the same toggle ProductController::destroy() uses.
+     * an already-archived row â€” the same toggle ProductController::destroy() uses.
      *
      * The row is retained so historical products, sales and wastage records keep
      * resolving their category instead of pointing at a missing id.

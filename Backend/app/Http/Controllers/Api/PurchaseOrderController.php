@@ -37,7 +37,7 @@ class PurchaseOrderController extends Controller
         $perPage = min((int) $request->input('per_page', 20), 100);
         $orders = $query->orderBy('created_at', 'desc')->paginate($perPage);
 
-        return response()->json($orders->through(fn ($po) => (new PurchaseOrderResource($po))->toArray($request)));
+        return response()->json($orders->through(fn ($po) => (new PurchaseOrderResource($po))->resolve($request)));
     }
 
     public function store(StorePurchaseOrderRequest $request)
@@ -214,6 +214,6 @@ class PurchaseOrderController extends Controller
         $query = $this->scopeForBusinessAndBranch($query, request());
         $po = $query->findOrFail($id);
 
-        return (new PurchaseOrderResource($po))->toArray(request());
+        return (new PurchaseOrderResource($po))->resolve(request());
     }
 }

@@ -120,7 +120,7 @@ class SalesTransactionController extends Controller
 
         $perPage = min((int) $request->input('per_page', 20), 100);
         return response()->json(
-            $query->orderByDesc('transaction_date')->paginate($perPage)->through(fn ($t) => (new SaleResource($t))->toArray($request))
+            $query->orderByDesc('transaction_date')->paginate($perPage)->through(fn ($t) => (new SaleResource($t))->resolve($request))
         );
     }
 
@@ -388,7 +388,7 @@ class SalesTransactionController extends Controller
             return response()->json(['message' => 'Transaction not found.'], 404);
         }
 
-        return new SaleResource($transaction);
+        return response()->json((new SaleResource($transaction))->resolve($request));
     }
 
     public function receipt(Request $request, int $id)

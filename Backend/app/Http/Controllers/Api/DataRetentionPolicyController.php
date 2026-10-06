@@ -59,7 +59,7 @@ class DataRetentionPolicyController extends Controller
         $policies = $query->orderBy('entity_type')->get();
 
         return response()->json([
-            'data' => $policies->map(fn (DataRetentionPolicy $p) => (new DataRetentionPolicyResource($p))->toArray($request))->all(),
+            'data' => $policies->map(fn (DataRetentionPolicy $p) => (new DataRetentionPolicyResource($p))->resolve($request))->all(),
             'summary' => $this->retentionSummary($request)->getData(true),
         ]);
     }
@@ -124,7 +124,7 @@ class DataRetentionPolicyController extends Controller
 
             return response()->json([
                 'message' => 'Retention policy updated.',
-                'policy' => (new DataRetentionPolicyResource($existing->fresh()))->toArray($request),
+                'policy' => (new DataRetentionPolicyResource($existing->fresh()))->resolve($request),
             ]);
         }
 
@@ -143,13 +143,13 @@ class DataRetentionPolicyController extends Controller
 
         return response()->json([
             'message' => 'Retention policy created.',
-            'policy' => (new DataRetentionPolicyResource($policy))->toArray($request),
+            'policy' => (new DataRetentionPolicyResource($policy))->resolve($request),
         ], 201);
     }
 
     public function show($id)
     {
-        return (new DataRetentionPolicyResource($this->findPolicy(request(), $id)))->toArray(request());
+        return (new DataRetentionPolicyResource($this->findPolicy(request(), $id)))->resolve(request());
     }
 
     /** Policies are addressed by `entity_type` in the UI, not by numeric id. */
@@ -172,7 +172,7 @@ class DataRetentionPolicyController extends Controller
 
         return response()->json([
             'message' => 'Retention policy updated.',
-            'policy' => (new DataRetentionPolicyResource($policy->fresh()))->toArray($request),
+            'policy' => (new DataRetentionPolicyResource($policy->fresh()))->resolve($request),
         ]);
     }
 
@@ -283,7 +283,7 @@ class DataRetentionPolicyController extends Controller
         );
     }
 
-    // ── helpers ────────────────────────────────────────────────────────────
+    // â”€â”€ helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     private function findPolicy(Request $request, string|int $id): DataRetentionPolicy
     {
@@ -359,6 +359,6 @@ class DataRetentionPolicyController extends Controller
     /** The shape `ApiRetentionPolicy` declares on the frontend. */
     private function payload(DataRetentionPolicy $p): array
     {
-        return (new DataRetentionPolicyResource($p))->toArray(request());
+        return (new DataRetentionPolicyResource($p))->resolve(request());
     }
 }

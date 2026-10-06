@@ -72,7 +72,7 @@ class UserController extends BaseApiController
 
         $paginated = $query->paginate(min((int) request()->get('per_page', 15), 100), ['*'], 'page', (int) request()->get('page', 1));
 
-        return $this->paginated($paginated->through(fn ($u) => (new UserResource($u))->toArray(request())));
+        return $this->paginated($paginated->through(fn ($u) => (new UserResource($u))->resolve(request())));
     }
 
     public function store(\App\Http\Requests\Api\CreateUserRequest $request)
@@ -83,13 +83,13 @@ class UserController extends BaseApiController
 
         $user = User::create($data);
 
-        return $this->created((new UserResource($user))->toArray($request));
+        return $this->created((new UserResource($user))->resolve($request));
     }
 
     public function show($id)
     {
         $u = User::findOrFail($id);
-        return $this->success((new UserResource($u))->toArray(request()));
+        return $this->success((new UserResource($u))->resolve(request()));
     }
 
     /**

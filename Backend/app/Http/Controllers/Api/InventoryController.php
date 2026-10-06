@@ -38,7 +38,7 @@ class InventoryController extends Controller
 
         $perPage = min((int) $request->input('per_page', 20), 100);
         return response()->json(
-            $query->paginate($perPage)->through(fn ($i) => (new InventoryResource($i))->toArray($request))
+            $query->paginate($perPage)->through(fn ($i) => (new InventoryResource($i))->resolve($request))
         );
     }
 

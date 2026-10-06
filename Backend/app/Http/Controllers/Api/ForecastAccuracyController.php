@@ -40,13 +40,15 @@ class ForecastAccuracyController extends Controller
     {
         $highMapeProducts = [];
 
-        $products = \App\Models\Inventory::all();
-        foreach ($products as $product) {
-            $mape = ForecastAccuracy::rollingMape($product->product_id, 7);
+        // Eager-load the product so the loop below never issues one query per
+        // inventory row just to resolve a product name.
+        $inventories = \App\Models\Inventory::with('product')->get();
+        foreach ($inventories as $inventory) {
+            $mape = ForecastAccuracy::rollingMape($inventory->product_id, 7);
             if ($mape && $mape > 30) {
                 $highMapeProducts[] = [
-                    'product_id' => $product->product_id,
-                    'product_name' => $product->product_name,
+                    'product_id' => $inventory->product_id,
+                    'product_name' => $inventory->product?->product_name ?? $inventory->product_name,
                     'mape_7day' => $mape,
                 ];
             }

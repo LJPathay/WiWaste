@@ -40,7 +40,14 @@ class ProductController extends Controller
         }
 
         $perPage = min((int) $request->input('per_page', 20), 100);
-        return ProductResource::collection($query->paginate($perPage));
+
+        // `->through()` keeps Laravel's flat paginator envelope (data/current_page/
+        // total as siblings). `ProductResource::collection()` would switch the shape
+        // to {data, links, meta}, which the frontend's PaginatedResponse type does
+        // not describe.
+        return response()->json(
+            $query->paginate($perPage)->through(fn ($p) => (new ProductResource($p))->resolve($request))
+        );
     }
 
     public function store(CreateProductRequest $request)
@@ -91,9 +98,7 @@ class ProductController extends Controller
 
         $product->load(['category', 'supplier', 'inventory']);
 
-        return (new ProductResource($product))
-            ->response()
-            ->setStatusCode(201);
+        return response()->json((new ProductResource($product))->resolve($request), 201);
     }
 
     public function show($id)
@@ -102,7 +107,7 @@ class ProductController extends Controller
         $query = $this->scopeForBusinessAndBranch($query, request());
         $p = $query->findOrFail($id);
 
-        return new ProductResource($p);
+        return response()->json((new ProductResource($p))->resolve(request()));
     }
 
     public function update(UpdateProductRequest $request, $id)
@@ -173,7 +178,7 @@ class ProductController extends Controller
             return response()->json(['message' => 'Product not found.'], 404);
         }
 
-        return new ProductResource($product);
+        return response()->json((new ProductResource($product))->resolve(request()));
     }
 
     public function label(Request $request, $id)

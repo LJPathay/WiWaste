@@ -32,6 +32,6 @@ class AuditLogController extends Controller
         $perPage = min((int) $request->input('per_page', 50), 200);
         $logs = $query->orderBy('created_at', 'desc')->paginate($perPage);
 
-        return response()->json($logs->through(fn ($log) => (new AuditLogResource($log))->toArray($request)));
+        return response()->json($logs->through(fn ($log) => (new AuditLogResource($log))->resolve($request)));
     }
 }

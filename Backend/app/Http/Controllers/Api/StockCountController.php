@@ -34,7 +34,7 @@ class StockCountController extends Controller
 
         $perPage = min((int) $request->input('per_page', 20), 100);
         return response()->json(
-            $query->orderByDesc('created_at')->paginate($perPage)->through(fn ($c) => (new StockCountResource($c))->toArray($request))
+            $query->orderByDesc('created_at')->paginate($perPage)->through(fn ($c) => (new StockCountResource($c))->resolve($request))
         );
     }
 

@@ -40,7 +40,7 @@ class SanitationController extends Controller
         $perPage = min((int) $request->input('per_page', 20), 100);
         return response()->json(
             $query->orderByDesc('checklist_date')->paginate($perPage)
-                ->through(fn ($c) => (new SanitationChecklistResource($c))->toArray($request))
+                ->through(fn ($c) => (new SanitationChecklistResource($c))->resolve($request))
         );
     }
 
@@ -81,7 +81,7 @@ class SanitationController extends Controller
 
         return response()->json([
             'message' => 'Sanitation checklist created.',
-            'checklist' => (new SanitationChecklistResource($checklist))->toArray($request),
+            'checklist' => (new SanitationChecklistResource($checklist))->resolve($request),
         ], 201);
     }
 
@@ -91,7 +91,7 @@ class SanitationController extends Controller
         $query = $this->scopeForBusinessAndBranch($query, request());
         $checklist = $query->findOrFail($id);
 
-        return new SanitationChecklistResource($checklist);
+        return response()->json((new SanitationChecklistResource($checklist))->resolve(request()));
     }
 
     public function update(UpdateSanitationChecklistRequest $request, $id)
@@ -128,7 +128,7 @@ class SanitationController extends Controller
 
         return response()->json([
             'message' => 'Sanitation checklist updated.',
-            'checklist' => (new SanitationChecklistResource($checklist))->toArray($request),
+            'checklist' => (new SanitationChecklistResource($checklist))->resolve($request),
         ]);
     }
 
@@ -165,7 +165,7 @@ class SanitationController extends Controller
 
         return response()->json([
             'message' => 'Sanitation checklist verified.',
-            'checklist' => (new SanitationChecklistResource($checklist))->toArray($request),
+            'checklist' => (new SanitationChecklistResource($checklist))->resolve($request),
         ]);
     }
 

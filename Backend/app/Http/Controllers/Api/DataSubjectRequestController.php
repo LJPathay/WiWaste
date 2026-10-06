@@ -24,7 +24,7 @@ class DataSubjectRequestController extends Controller
         if ($existing) {
             return response()->json([
                 'message' => 'A similar request is already pending or in progress.',
-                'request' => (new DataSubjectRequestResource($existing))->toArray($request)
+                'request' => (new DataSubjectRequestResource($existing))->resolve($request)
             ], 409);
         }
 
@@ -37,13 +37,13 @@ class DataSubjectRequestController extends Controller
 
         return response()->json([
             'message' => 'Data subject request submitted successfully.',
-            'request' => (new DataSubjectRequestResource($requestObj))->toArray($request)
+            'request' => (new DataSubjectRequestResource($requestObj))->resolve($request)
         ], 201);
     }
 
     public function show(DataSubjectRequest $request)
     {
-        return new DataSubjectRequestResource($request);
+        return response()->json((new DataSubjectRequestResource($request))->resolve(request()));
     }
 
     public function update(UpdateDataSubjectRequestRequest $request, DataSubjectRequest $dataSubjectRequest)
@@ -56,7 +56,7 @@ class DataSubjectRequestController extends Controller
 
         return response()->json([
             'message' => 'Data subject request updated successfully.',
-            'request' => (new DataSubjectRequestResource($dataSubjectRequest))->toArray($request)
+            'request' => (new DataSubjectRequestResource($dataSubjectRequest))->resolve($request)
         ]);
     }
 
@@ -79,7 +79,7 @@ class DataSubjectRequestController extends Controller
         $perPage = min((int) $request->input('per_page', 20), 100);
         return response()->json(
             $query->orderByDesc('requested_at')->paginate($perPage)
-                ->through(fn ($r) => (new DataSubjectRequestResource($r))->toArray($request))
+                ->through(fn ($r) => (new DataSubjectRequestResource($r))->resolve($request))
         );
     }
 }

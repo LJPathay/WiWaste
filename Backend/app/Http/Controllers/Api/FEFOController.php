@@ -25,7 +25,7 @@ class FEFOController extends Controller
         $query = $this->scopeForBusinessAndBranch($query, $request);
         $batches = $query->orderBy('expiry_date')
             ->paginate($perPage)
-            ->through(fn ($b) => (new FEFOBatchResource($b))->toArray($request));
+            ->through(fn ($b) => (new FEFOBatchResource($b))->resolve($request));
 
         $queryTotal = FEFOBatch::query();
         $queryTotal = $this->scopeForBusinessAndBranch($queryTotal, $request);
@@ -77,7 +77,7 @@ class FEFOController extends Controller
                 'batch_id'    => $m->batch_id,
             ]);
 
-        $data = (new FEFOBatchResource($batch))->toArray(request());
+        $data = (new FEFOBatchResource($batch))->resolve(request());
         $data['movements'] = $movements;
 
         return $data;

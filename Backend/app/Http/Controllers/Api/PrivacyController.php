@@ -36,7 +36,7 @@ class PrivacyController extends Controller
         return response()->json([
             'message' => 'Data erasure completed successfully.',
             'erased_summary' => $erasedCounts,
-            'request' => (new DataSubjectRequestResource($request))->toArray(request())
+            'request' => (new DataSubjectRequestResource($request))->resolve(request())
         ], 200);
     }
 
@@ -82,7 +82,7 @@ class PrivacyController extends Controller
 
         return response()->json([
             'message' => 'Processing restriction applied. Data marked as restricted.',
-            'request' => (new DataSubjectRequestResource($dataSubjectRequest))->toArray(request()),
+            'request' => (new DataSubjectRequestResource($dataSubjectRequest))->resolve(request()),
         ]);
     }
 
@@ -96,7 +96,7 @@ class PrivacyController extends Controller
 
         return response()->json([
             'message' => 'Objection recorded. Processing will be reviewed.',
-            'request' => (new DataSubjectRequestResource($dataSubjectRequest))->toArray(request()),
+            'request' => (new DataSubjectRequestResource($dataSubjectRequest))->resolve(request()),
         ]);
     }
 

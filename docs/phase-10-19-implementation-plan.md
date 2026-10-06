@@ -24,11 +24,50 @@ This plan addresses the gap analysis from the three skills. The focus is on clos
 
 ---
 
-## 3. Phase 10: API Resources + Eloquent Eager Loading
+## 3. Phase 0: Security Vulnerability Remediation
+
+> Dependency audit from GitHub alerts (2026-10-06)
+
+**Priority**: Fix all high/moderate npm and Composer vulnerabilities before merging Phase 10 into production.
+
+### High Severity
+
+| Alert | Package | Fix |
+|-------|---------|-----|
+| #28/#31/#33/#30 | undici (npm) | `cd Frontend && npm audit fix` or `npm update undici` |
+| #40/#41 | league/commonmark (Composer) | `cd Backend && composer update league/commonmark` |
+| #37 | undici (npm) | `npm audit fix` |
+| #27 | laravel/framework (Composer) | `composer update laravel/framework` |
+
+### Moderate Severity
+
+| Alert | Package | Fix |
+|-------|---------|-----|
+| #33/#36 | undici (npm) | `npm audit fix` |
+| #41 | league/commonmark | `composer update league/commonmark` |
+| #39 | serialize-javascript (npm) | `npm audit fix` |
+
+### Low Severity
+
+| Alert | Package | Fix |
+|-------|---------|-----|
+| #32/#36/#38/#30 | undici, flysystem, laravel | `npm audit fix && composer audit` |
+
+**Commands**:
+```bash
+cd Frontend && npm audit fix
+cd Backend && composer update --with-all-dependencies
+```
+
+**Test**: Run `npm audit` and `composer audit` to verify no critical/high alerts remain.
+
+---
+
+## 4. Phase 10: API Resources + Eloquent Eager Loading
 
 **Goal**: Eliminate N+1 queries in API responses and prevent over-fetching of Eloquent models.
 
-### 3.1 API Resources
+### 4.1 API Resources
 
 Create resource classes for all API-returning endpoints:
 
@@ -67,7 +106,7 @@ final class ProductResource extends JsonResource
 }
 ```
 
-### 3.2 Eager Loading Audit
+### 4.2 Eager Loading Audit
 
 In all controllers returning products/sales/users:
 
@@ -77,7 +116,7 @@ Product::with(['category', 'supplier', 'latestBatch'])->get();
 
 Never return `Product::all()` directly from API controllers without `::with()` on relationships.
 
-### 3.3 Test
+### 4.3 Test
 
 - [ ] `php artisan test --coverage` passes
 - [ ] No N+1 queries in Telescope for `/api/v1/products` endpoint
@@ -89,11 +128,11 @@ Never return `Product::all()` directly from API controllers without `::with()` o
 
 ---
 
-## 4. Phase 11: FormRequest Validation + Rate Limiting
+## 5. Phase 11: FormRequest Validation + Rate Limiting
 
 **Goal**: Move validation rules out of controllers and protect API routes from abuse.
 
-### 4.1 FormRequest Classes
+### 5.1 FormRequest Classes
 
 Create for each create/update endpoint:
 
@@ -109,7 +148,7 @@ Each request should:
 - Define `authorize()` returning true (or check permissions)
 - Use `Rule::enum()` for status fields
 
-### 4.2 Controller Cleanup
+### 5.2 Controller Cleanup
 
 Replace inline validation:
 
@@ -123,7 +162,7 @@ if (!$request->name || !$request->category_id) {
 $validated = $request->validated();
 ```
 
-### 4.3 Rate Limiting
+### 5.3 Rate Limiting
 
 In `routes/api.php`:
 
@@ -143,11 +182,11 @@ Route::middleware('throttle:5,1')->group(function () {
 
 ---
 
-## 5. Phase 12: SWR/React Query Migration
+## 6. Phase 12: SWR/React Query Migration
 
 **Goal**: Replace manual `useEffect` data fetching with a caching, deduplicating client library.
 
-### 5.1 Choose Library
+### 6.1 Choose Library
 
 Use **SWR** (recommended for this stack) or **TanStack Query**:
 
@@ -155,7 +194,7 @@ Use **SWR** (recommended for this stack) or **TanStack Query**:
 cd Frontend && npm install swr
 ```
 
-### 5.2 Migrate `useDashboardData.ts`
+### 6.2 Migrate `useDashboardData.ts`
 
 ```tsx
 import useSWR from 'swr';
@@ -172,7 +211,7 @@ export function useDashboardData(period: string) {
 }
 ```
 
-### 5.3 Apply Everywhere
+### 6.3 Apply Everywhere
 
 - `hooks/useProducts.ts`
 - `hooks/useUsers.ts`
@@ -186,11 +225,11 @@ export function useDashboardData(period: string) {
 
 ---
 
-## 6. Phase 13: Code Splitting (Dynamic Imports)
+## 7. Phase 13: Code Splitting (Dynamic Imports)
 
 **Goal**: Reduce initial bundle size by lazy-loading heavy components.
 
-### 6.1 Charts
+### 7.1 Charts
 
 In `pages/dashboard/Overview.tsx`:
 
@@ -201,7 +240,7 @@ const LazyAreaChart = React.lazy(() => import('../../components/charts/LazyChart
 
 Wrap in `<Suspense fallback={<ChartSkeleton />}>`.
 
-### 6.2 POS Terminal
+### 7.2 POS Terminal
 
 In `routes.tsx`:
 
@@ -209,7 +248,7 @@ In `routes.tsx`:
 const POSTerminal = lazy(() => import('./pages/cashier/POSTerminal').then(m => ({ default: m.POSTerminal })));
 ```
 
-### 6.3 Admin Pages
+### 7.3 Admin Pages
 
 Lazy-load `ManageUsers`, `ManageProducts`, `ManageSuppliers`, etc. — these are owner-only pages.
 
@@ -217,11 +256,11 @@ Lazy-load `ManageUsers`, `ManageProducts`, `ManageSuppliers`, etc. — these are
 
 ---
 
-## 7. Phase 14: Suspense Boundaries + Parallel Fetching
+## 8. Phase 14: Suspense Boundaries + Parallel Fetching
 
 **Goal**: Eliminate waterfall fetches and enable streaming.
 
-### 7.1 Dashboard Layout
+### 8.1 Dashboard Layout
 
 ```tsx
 <Suspense fallback={<DashboardSkeleton />}>
@@ -229,7 +268,7 @@ Lazy-load `ManageUsers`, `ManageProducts`, `ManageSuppliers`, etc. — these are
 </Suspense>
 ```
 
-### 7.2 Parallel Fetches
+### 8.2 Parallel Fetches
 
 In `useDashboardData.ts`, if multiple API calls are needed:
 
@@ -245,11 +284,11 @@ const [overview, analytics, audit] = await Promise.all([
 
 ---
 
-## 8. Phase 15: Queue Job Hardening
+## 9. Phase 15: Queue Job Hardening
 
 **Goal**: Long-running tasks survive failures and are observable.
 
-### 8.1 Job Configuration
+### 9.1 Job Configuration
 
 ```php
 final class GenerateReport implements ShouldQueue
@@ -260,7 +299,7 @@ final class GenerateReport implements ShouldQueue
 }
 ```
 
-### 8.2 Horizon
+### 9.2 Horizon
 
 ```bash
 composer require laravel/horizon
@@ -269,7 +308,7 @@ php artisan horizon:install
 
 Configure `config/horizon.php` with supervisors for `default` and `reports` queues.
 
-### 8.3 Failed Jobs
+### 9.3 Failed Jobs
 
 Ensure `php artisan queue:failed-table` and review failed jobs weekly.
 
@@ -277,11 +316,11 @@ Ensure `php artisan queue:failed-table` and review failed jobs weekly.
 
 ---
 
-## 9. Phase 16: PHP 8.2+ Modernization
+## 10. Phase 16: PHP 8.2+ Modernization
 
 **Goal**: Use modern PHP features for safer, more expressive code.
 
-### 9.1 Readonly Properties
+### 10.1 Readonly Properties
 
 In DTOs, FormRequests, and service constructors:
 
@@ -296,7 +335,7 @@ final class CreateSalePayload
 }
 ```
 
-### 9.2 Backed Enums
+### 10.2 Backed Enums
 
 ```php
 enum SaleStatus: string
@@ -314,7 +353,7 @@ Use in models:
 protected $casts = ['status' => SaleStatus::class];
 ```
 
-### 9.3 Typed Properties
+### 10.3 Typed Properties
 
 All model `$casts` should use enum classes or `immutable_datetime`.
 
@@ -322,11 +361,11 @@ All model `$casts` should use enum classes or `immutable_datetime`.
 
 ---
 
-## 10. Phase 17: Testing + Style
+## 11. Phase 17: Testing + Style
 
 **Goal**: Catch regressions and enforce PSR-12.
 
-### 10.1 Pest
+### 11.1 Pest
 
 ```bash
 composer require pestphp/pest --dev-with-all-dependencies
@@ -339,11 +378,11 @@ Create tests for:
 - Auth/role guards
 - API resource shape
 
-### 10.2 Factories
+### 11.2 Factories
 
 Ensure model factories exist for `Product`, `Sale`, `User`, `Supplier`, `Category`.
 
-### 10.3 Pint
+### 11.3 Pint
 
 ```bash
 composer require laravel/pint --dev
@@ -356,11 +395,11 @@ Add to CI: `./vendor/bin/pint --test`
 
 ---
 
-## 11. Phase 18: Re-render Audit (Vercel React)
+## 12. Phase 18: Re-render Audit (Vercel React)
 
 **Goal**: Prevent unnecessary re-renders in heavy components.
 
-### 11.1 Memoization
+### 12.1 Memoization
 
 In `ManageUsers.tsx`, `ManageProducts.tsx`, `POSTerminal.tsx`:
 
@@ -369,7 +408,7 @@ const filteredUsers = useMemo(() => users.filter(...), [users, search]);
 const handleEdit = useCallback((user) => openEdit(user), []);
 ```
 
-### 11.2 Derived State
+### 12.2 Derived State
 
 Replace `useEffect` + `useState` for derived booleans with direct derivation:
 
@@ -382,7 +421,7 @@ useEffect(() => setIsEmpty(products.length === 0), [products]);
 const isEmpty = products.length === 0;
 ```
 
-### 11.3 useTransition
+### 12.3 useTransition
 
 For expensive list filtering:
 
@@ -396,11 +435,11 @@ const filtered = useMemo(() => filter(users, deferredSearch), [users, deferredSe
 
 ---
 
-## 12. Phase 19: Cache Strategy
+## 13. Phase 19: Cache Strategy
 
 **Goal**: Reduce database load and improve response times.
 
-### 12.1 Config Cache
+### 13.1 Config Cache
 
 ```bash
 php artisan config:cache
@@ -410,7 +449,7 @@ php artisan view:cache
 
 Add to deploy script.
 
-### 12.2 Data Cache
+### 13.2 Data Cache
 
 For static reference data (categories, payment methods):
 
@@ -424,7 +463,7 @@ Invalidate on change:
 Cache::forget('categories');
 ```
 
-### 12.3 HTTP Cache
+### 13.3 HTTP Cache
 
 Add `Cache-Control` headers to product list endpoints:
 
@@ -437,7 +476,7 @@ return response()->json($resource)
 
 ---
 
-## 13. Implementation Order
+## 14. Implementation Order
 
 | Phase | Scope | Effort | Dependency |
 |-------|-------|--------|------------|
@@ -456,7 +495,7 @@ return response()->json($resource)
 
 ---
 
-## 14. Test Criteria per Phase
+## 15. Test Criteria per Phase
 
 ### Phase 10
 - [ ] `/api/v1/products` returns only expected fields
@@ -509,7 +548,7 @@ return response()->json($resource)
 
 ---
 
-## 15. Files Likely Affected
+## 16. Files Likely Affected
 
 | File | Phase | Change |
 |------|-------|--------|
@@ -529,7 +568,7 @@ return response()->json($resource)
 
 ---
 
-## 16. Definition of Done
+## 17. Definition of Done
 
 - [ ] All 10 phases merged to `dev`
 - [ ] `php artisan test --coverage` > 85%
@@ -544,7 +583,7 @@ return response()->json($resource)
 
 ---
 
-## 17. Notes
+## 18. Notes
 
 - **Backup**: Create `Frontend.backup` and `Backend.backup` branches before starting Phase 10.
 - **Ordering**: Phase 10 and 11 are independent — can be done in parallel by two developers.

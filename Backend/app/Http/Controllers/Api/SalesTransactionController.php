@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Requests\Api\StoreSaleTransactionRequest;
 use App\Http\Controllers\Concerns\ScopesTenant;
 use App\Http\Controllers\Controller;
 use App\Models\SalesTransaction;
@@ -160,28 +161,9 @@ class SalesTransactionController extends Controller
         );
     }
 
-    public function store(Request $request)
+    public function store(StoreSaleTransactionRequest $request)
     {
-        $data = $request->validate([
-            'payment_method'             => 'required|in:Cash,E-wallet,Credit Card,Debit Card',
-            'payment_reference'          => 'nullable|string|max:100',
-            'amount_tendered'            => 'nullable|numeric|min:0',
-            'change_due'                 => 'nullable|numeric|min:0',
-            'senior_pwd_name'            => 'nullable|string|max:100',
-            'senior_pwd_id'              => 'nullable|string|max:50',
-            'senior_pwd_type'            => 'nullable|in:senior,pwd,none',
-            'customer_name'              => 'nullable|string|max:255',
-            'customer_phone'             => 'nullable|string|max:20',
-            'customer_email'             => 'nullable|string|max:255',
-            'items'                      => 'required|array|min:1',
-            'items.*.product_id'         => 'required|integer|exists:Product,product_id',
-            'items.*.quantity'           => 'required|integer|min:1',
-            'items.*.unit_price'         => 'required|numeric|min:0',
-            'items.*.discount_pct'       => 'nullable|numeric|min:0|max:1',
-            'items.*.discount_amount'    => 'nullable|numeric|min:0',
-            'items.*.override_reason'    => 'nullable|string|max:255',
-        ]);
-
+        $data = $request->validated();
         $user = $request->user();
         $userId = $user?->User_id ?? 1;
 
@@ -443,45 +425,7 @@ class SalesTransactionController extends Controller
             return response()->json(['message' => 'Transaction not found.'], 404);
         }
 
-        return response()->json([
-            'id'                => $transaction->transaction_id,
-            'cashier'           => $transaction->user?->Full_name ?? 'Cashier',
-            'total_amount'      => $transaction->total_amount,
-            'vat_amount'        => $transaction->vat_amount,
-            'vatable_amount'    => $transaction->vatable_amount,
-            'non_vatable_amount' => $transaction->non_vatable_amount,
-            'senior_pwd_discount_amount' => $transaction->senior_pwd_discount_amount,
-            'senior_pwd_vat_exempt_amount' => $transaction->senior_pwd_vat_exempt_amount,
-            'discount_amount'   => $transaction->discount_amount,
-            'discount_breakdown' => $transaction->discount_breakdown,
-            'transaction_date'  => $transaction->transaction_date,
-            'payment_method'    => $transaction->payment_method,
-            'payment_reference' => $transaction->payment_reference,
-            'payment_status'    => $transaction->payment_status,
-            'amount_tendered'   => $transaction->amount_tendered,
-            'change_due'        => $transaction->change_due,
-            'status'            => $transaction->status,
-            'business_id'       => $transaction->business_id,
-            'branch_id'         => $transaction->branch_id,
-            'customer_name'     => $transaction->customer_name,
-            'customer_phone'    => $transaction->customer_phone,
-            'customer_email'    => $transaction->customer_email,
-            'senior_pwd_id'     => $transaction->senior_pwd_id,
-            'senior_pwd_type'   => $transaction->senior_pwd_type,
-            'items'             => $transaction->salesItems->map(fn ($item) => [
-                'id'                 => $item->sales_item_id,
-                'product_name'       => $item->product?->product_name,
-                'sku'                => $item->product?->barcode,
-                'quantity'           => $item->quantity,
-                'unit_price'         => $item->unit_price,
-                'subtotal'           => $item->subtotal,
-                'vat_amount'         => $item->vat_amount,
-                'vatable_amount'     => $item->vatable_amount,
-                'discount_amount'    => $item->discount_amount,
-                'discount_pct'       => $item->discount_pct,
-                'is_senior_pwd_exempt' => $item->is_senior_pwd_exempt,
-            ]),
-        ]);
+        return new SaleResource($transaction);
     }
 
     public function receipt(Request $request, int $id)

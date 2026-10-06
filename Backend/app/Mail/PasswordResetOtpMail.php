@@ -13,8 +13,8 @@ class PasswordResetOtpMail extends Mailable
     use Queueable, SerializesModels;
 
     public function __construct(
-        public string $name,
-        public string $otp,
+        public readonly string $name,
+        public readonly string $otp,
     ) {}
 
     public function envelope(): Envelope

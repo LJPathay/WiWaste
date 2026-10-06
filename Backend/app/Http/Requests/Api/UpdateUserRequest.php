@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Api;
 
 use App\Enums\Role;
+use App\Enums\UserStatus;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -39,7 +40,7 @@ class UpdateUserRequest extends FormRequest
             'contact_number' => ['nullable', 'string', 'max:20', 'regex:/^[0-9+\-\s()]{7,20}$/'],
             'email'          => 'sometimes|required|email|max:100|unique:User,email,' . $this->route('user') . ',User_id',
             'role'           => ['sometimes', 'required', Rule::enum(Role::class)],
-            'status'         => ['sometimes', 'required', Rule::in(['Active', 'Inactive', 'Quarantined', 'Archived'])],
+            'status'         => ['sometimes', 'required', Rule::enum(UserStatus::class)],
         ];
     }
 

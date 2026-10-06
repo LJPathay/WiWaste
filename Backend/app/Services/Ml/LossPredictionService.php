@@ -15,7 +15,7 @@ class LossPredictionService
 
     public const CACHE_TTL = 3600;
 
-    public function __construct(private MlServiceClient $ml)
+    public function __construct(private readonly MlServiceClient $ml)
     {
     }
 

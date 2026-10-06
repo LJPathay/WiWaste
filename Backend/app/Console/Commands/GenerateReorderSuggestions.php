@@ -20,12 +20,9 @@ class GenerateReorderSuggestions extends Command
 
     protected $description = 'Generate reorder suggestions and optionally create draft POs';
 
-    protected ReorderService $reorderService;
-
-    public function __construct(ReorderService $reorderService)
+    public function __construct(private readonly ReorderService $reorderService)
     {
         parent::__construct();
-        $this->reorderService = $reorderService;
     }
 
     public function handle(): int

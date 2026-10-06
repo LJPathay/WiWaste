@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Api;
 
 use App\Enums\Role;
+use App\Enums\UserStatus;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -41,7 +42,7 @@ class CreateUserRequest extends FormRequest
             'password'       => 'required|string|min:8|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).+$/',
             'email'          => 'required|email|max:100|unique:User,email',
             'role'           => ['required', Rule::enum(Role::class)],
-            'status'         => ['required', Rule::in(['Active', 'Inactive', 'Quarantined'])],
+            'status'         => ['required', Rule::enum(UserStatus::class)->except([UserStatus::Archived])],
         ];
     }
 

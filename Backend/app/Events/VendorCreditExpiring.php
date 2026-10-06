@@ -9,16 +9,11 @@ class VendorCreditExpiring
 {
     use Dispatchable, SerializesModels;
 
-    public $vendorName;
-    public $creditAmount;
-    public $deadline;
-    public $daysRemaining;
-
-    public function __construct(string $vendorName, float $creditAmount, string $deadline, int $daysRemaining)
-    {
-        $this->vendorName = $vendorName;
-        $this->creditAmount = $creditAmount;
-        $this->deadline = $deadline;
-        $this->daysRemaining = $daysRemaining;
+    public function __construct(
+        public readonly string $vendorName,
+        public readonly float $creditAmount,
+        public readonly string $deadline,
+        public readonly int $daysRemaining,
+    ) {
     }
 }

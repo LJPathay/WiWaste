@@ -13,11 +13,8 @@ use Illuminate\Support\Facades\DB;
 
 class ReorderController extends Controller
 {
-    protected ReorderService $reorderService;
-
-    public function __construct(ReorderService $reorderService)
+    public function __construct(private readonly ReorderService $reorderService)
     {
-        $this->reorderService = $reorderService;
     }
 
     public function index(Request $request)

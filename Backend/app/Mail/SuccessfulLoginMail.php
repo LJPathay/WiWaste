@@ -13,9 +13,9 @@ class SuccessfulLoginMail extends Mailable
     use Queueable, SerializesModels;
 
     public function __construct(
-        public string $email,
-        public ?string $ip,
-        public ?string $userAgent,
+        public readonly string $email,
+        public readonly ?string $ip,
+        public readonly ?string $userAgent,
     ) {}
 
     public function envelope(): Envelope

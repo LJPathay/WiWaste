@@ -12,7 +12,7 @@ class OptimizationService
 {
     use QueriesSalesVelocity;
 
-    public function __construct(private MlServiceClient $ml)
+    public function __construct(private readonly MlServiceClient $ml)
     {
     }
 

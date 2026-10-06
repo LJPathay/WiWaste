@@ -17,11 +17,8 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends BaseApiController
 {
-    protected LoginAttemptService $loginAttemptService;
-
-    public function __construct(LoginAttemptService $loginAttemptService)
+    public function __construct(private readonly LoginAttemptService $loginAttemptService)
     {
-        $this->loginAttemptService = $loginAttemptService;
     }
 
     public function login(LoginRequest $request)

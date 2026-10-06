@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Api;
 
+use App\Enums\ProductStatus;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateProductRequest extends FormRequest
 {
@@ -24,7 +26,7 @@ class UpdateProductRequest extends FormRequest
             'selling_price'           => 'sometimes|numeric|min:0',
             'reorder_level'           => 'sometimes|integer|min:0',
             'expiration_date'         => 'nullable|date',
-            'status'                  => 'sometimes|in:Active,Discontinued',
+            'status'                  => ['sometimes', Rule::enum(ProductStatus::class)],
             'product_classification'  => 'nullable|in:food,drug,cosmetic,device,general',
             'required_temp_min'       => 'nullable|numeric',
             'required_temp_max'       => 'nullable|numeric',

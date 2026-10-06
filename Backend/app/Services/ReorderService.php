@@ -23,8 +23,8 @@ class ReorderService
     protected ?float $lastOptimizationConfidence = null;
 
     public function __construct(
-        private ForecastService $forecastService,
-        private OptimizationService $optimizationService
+        private readonly ForecastService $forecastService,
+        private readonly OptimizationService $optimizationService
     ) {}
 
     /**

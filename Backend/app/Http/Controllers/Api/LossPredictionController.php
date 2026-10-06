@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 
 class LossPredictionController extends Controller
 {
-    public function __construct(private LossPredictionService $lossPrediction)
+    public function __construct(private readonly LossPredictionService $lossPrediction)
     {
     }
 

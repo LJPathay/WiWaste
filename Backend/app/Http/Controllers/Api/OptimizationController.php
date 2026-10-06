@@ -11,7 +11,7 @@ use Illuminate\Http\Request;
 
 class OptimizationController extends Controller
 {
-    public function __construct(private OptimizationService $optimization)
+    public function __construct(private readonly OptimizationService $optimization)
     {
     }
 

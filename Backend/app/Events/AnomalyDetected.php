@@ -9,16 +9,11 @@ class AnomalyDetected
 {
     use Dispatchable, SerializesModels;
 
-    public $type;
-    public $description;
-    public $severity;
-    public $data;
-
-    public function __construct(string $type, string $description, string $severity = 'warning', array $data = [])
-    {
-        $this->type = $type;
-        $this->description = $description;
-        $this->severity = $severity;
-        $this->data = $data;
+    public function __construct(
+        public readonly string $type,
+        public readonly string $description,
+        public readonly string $severity = 'warning',
+        public readonly array $data = [],
+    ) {
     }
 }

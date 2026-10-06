@@ -12,7 +12,7 @@ class ForecastService
 {
     public const OVERVIEW_CACHE_KEY = 'forecast.overview.30';
 
-    public function __construct(private MlServiceClient $ml)
+    public function __construct(private readonly MlServiceClient $ml)
     {
     }
 

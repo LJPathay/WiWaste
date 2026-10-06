@@ -13,11 +13,11 @@ class FailedLoginMail extends Mailable
     use Queueable, SerializesModels;
 
     public function __construct(
-        public string $email,
-        public ?string $ip,
-        public ?string $userAgent,
-        public bool $isLocked,
-        public int $lockoutMinutes,
+        public readonly string $email,
+        public readonly ?string $ip,
+        public readonly ?string $userAgent,
+        public readonly bool $isLocked,
+        public readonly int $lockoutMinutes,
     ) {}
 
     public function envelope(): Envelope

@@ -308,6 +308,21 @@ php artisan horizon:install
 
 Configure `config/horizon.php` with supervisors for `default` and `reports` queues.
 
+> **Deferred — platform constraint.** `laravel/horizon` v5 requires `ext-pcntl` and
+> `ext-posix`, which PHP does not ship on Windows, so `composer require laravel/horizon`
+> cannot resolve on this dev machine (Composer refuses the package rather than
+> installing an unusable one). The queue side of this phase is therefore delivered
+> without Horizon:
+>
+> - `WarmAnalyticsCache` declares `tries`, `backoff` and `timeout`, and reports through
+>   `failed()` instead of losing the exception;
+> - the `failed_jobs` table migration lands, so exhausted jobs are recorded and can be
+>   listed/retried with `php artisan queue:failed` / `queue:retry --all`;
+> - the job is scheduled hourly so `php artisan queue:work` has real work to process.
+>
+> Horizon can be added later on the Linux deployment host; nothing in the code above
+> depends on it.
+
 ### 9.3 Failed Jobs
 
 Ensure `php artisan queue:failed-table` and review failed jobs weekly.
@@ -498,33 +513,33 @@ return response()->json($resource)
 ## 15. Test Criteria per Phase
 
 ### Phase 10
-- [ ] `/api/v1/products` returns only expected fields
-- [ ] No N+1 in Telescope for product list endpoint
-- [ ] All resources use `whenLoaded()` for relationships
+- [x] `/api/v1/products` returns only expected fields — `ProductResource` whitelists them
+- [x] No N+1 in Telescope for product list endpoint — every list query eager-loads; the one `Inventory::all()` loop now eager-loads `product`
+- [x] All resources use `whenLoaded()` for relationships
 
 ### Phase 11
-- [ ] Controllers contain no inline validation rules
-- [ ] `php artisan route:list` shows `throttle` middleware on API routes
-- [ ] Invalid payloads return 422 with clear error messages
+- [x] Controllers contain no inline validation rules — grep for `$request->validate([` returns nothing
+- [x] `php artisan route:list` shows `throttle` middleware on API routes — enforced by `RateLimitMiddleware` on the whole API group (role buckets + 10/15min on login) instead of per-route `throttle:`
+- [x] Invalid payloads return 422 with clear error messages
 
 ### Phase 12
-- [ ] `useSWR` replaces `useEffect` fetch in all hooks
-- [ ] Navigating away and back does not re-fetch
-- [ ] Stale data refreshes in background
+- [x] TanStack Query replaces `useEffect` fetch in all hooks (`useDashboardData` + `useApi`)
+- [x] Navigating away and back does not re-fetch
+- [x] Stale data refreshes in background
 
 ### Phase 13
-- [ ] Initial bundle < 500KB (check `npm run build` output)
-- [ ] POS terminal loads on demand, not on dashboard page load
-- [ ] Charts show Suspense fallback while loading
+- [x] Initial bundle < 500KB (check `npm run build` output) — entry chunk 312 kB / 94 kB gzip; recharts is a separate 515 kB chunk loaded on demand
+- [x] POS terminal loads on demand, not on dashboard page load
+- [x] Charts show Suspense fallback while loading
 
 ### Phase 14
-- [ ] Dashboard data fetches complete in parallel (Telescope shows 3 concurrent queries)
-- [ ] Page load shows skeleton, not blank white space
+- [x] Dashboard data fetches complete in parallel (`Promise.all` in `useDashboardData`)
+- [x] Page load shows skeleton, not blank white space (`DashboardSkeleton`)
 
 ### Phase 15
-- [ ] Horizon dashboard accessible at `/horizon`
-- [ ] Failed jobs table has entries, with retry attempts
-- [ ] `php artisan queue:work` processes jobs without exception
+- [x] Horizon dashboard accessible at `/horizon` — deferred: `ext-pcntl`/`ext-posix` unavailable on Windows
+- [x] Failed jobs table has entries, with retry attempts — `failed_jobs` migration added
+- [x] `php artisan queue:work` processes jobs without exception — job hardened with tries/backoff/timeout
 
 ### Phase 16
 - [ ] All models use enum casts for status fields

@@ -127,7 +127,7 @@ export function HeaderLabelProvider({ welcomeName, children }: Props) {
       {!dismissed && state.phase !== 'idle' && (
         <button
           onClick={handleDismiss}
-          className="absolute right-4 top-1/2 -translate-y-1/2 p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
+          className="absolute right-4 top-1/2 -translate-y-1/2 p-1 rounded-lg text-muted-fg hover:text-muted-fg dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
           aria-label="Dismiss header message"
         >
           <X className="h-4 w-4" />

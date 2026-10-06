@@ -124,7 +124,7 @@ export function Tutorial({ steps, isOpen, onClose }: TutorialProps) {
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-white transition-colors p-1"
+            className="text-muted-fg hover:text-white transition-colors p-1"
           >
             <X className="h-4 w-4" />
           </button>
@@ -176,7 +176,7 @@ export function Tutorial({ steps, isOpen, onClose }: TutorialProps) {
         </div>
 
         {/* Keyboard Hint */}
-        <p className="text-[10px] text-slate-500 mt-3 text-center">
+        <p className="text-[10px] text-muted-fg mt-3 text-center">
           💡 Tip: Press <kbd className="px-1.5 py-0.5 rounded bg-slate-700 text-slate-300 font-mono text-[9px]">Esc</kbd> to exit
         </p>
       </div>

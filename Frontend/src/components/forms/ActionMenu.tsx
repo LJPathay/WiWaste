@@ -43,7 +43,7 @@ export function ActionMenu({ items, trigger, align = 'right' }: ActionMenuProps)
         ref={buttonRef}
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="inline-flex items-center justify-center p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
+        className="inline-flex items-center justify-center p-1.5 rounded-lg text-muted-fg hover:text-muted-fg dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
         aria-haspopup="true"
         aria-expanded={isOpen}
         aria-label="Actions"
@@ -58,7 +58,7 @@ export function ActionMenu({ items, trigger, align = 'right' }: ActionMenuProps)
       {isOpen && (
         <div
           className={cn(
-            'absolute z-50 mt-1 min-w-[160px] rounded-lg bg-white dark:bg-slate-850 shadow-lg border border-slate-200 dark:border-white/10 py-1 overflow-hidden',
+            'absolute z-50 mt-1 min-w-[160px] rounded-lg bg-white dark:bg-slate-850 shadow-lg border border-border dark:border-white/10 py-1 overflow-hidden',
             align === 'right' ? 'right-0' : 'left-0'
           )}
           role="menu"
@@ -78,7 +78,7 @@ export function ActionMenu({ items, trigger, align = 'right' }: ActionMenuProps)
                   ? 'text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/20'
                   : item.variant === 'primary'
                   ? 'text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-500/20'
-                  : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5'
+                  : 'text-slate-700 dark:text-slate-300 hover:bg-bg dark:hover:bg-white/5'
               )}
               role="menuitem"
             >

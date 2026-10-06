@@ -36,8 +36,8 @@ function ToastItem({ toast, onDismiss }: { toast: ToastMessage; onDismiss: (id: 
       role="alert"
       className={`pointer-events-auto flex items-center gap-3 rounded-xl px-4 py-3 shadow-lg border text-sm font-medium min-w-[280px] max-w-sm animate-in slide-in-from-bottom-2 ${
         toast.type === 'success'
-          ? 'bg-white dark:bg-slate-900 border-emerald-200 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300'
-          : 'bg-white dark:bg-slate-900 border-rose-200 dark:border-rose-500/30 text-rose-700 dark:text-rose-400'
+          ? 'bg-bg-elevated border-emerald-200 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300'
+          : 'bg-bg-elevated border-rose-200 dark:border-rose-500/30 text-rose-700 dark:text-rose-400'
       }`}
     >
       {toast.type === 'success' ? (
@@ -48,7 +48,7 @@ function ToastItem({ toast, onDismiss }: { toast: ToastMessage; onDismiss: (id: 
       <span className="flex-1">{toast.message}</span>
       <button
         onClick={() => onDismiss(toast.id)}
-        className="shrink-0 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+        className="shrink-0 text-muted-fg hover:text-muted-fg dark:hover:text-slate-200"
         aria-label="Dismiss notification"
       >
         <X className="h-4 w-4" aria-hidden="true" />
@@ -159,17 +159,17 @@ export function Modal({
         ref={modalRef}
         tabIndex={-1}
         className={cn(
-          'bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 w-full shadow-xl relative focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2',
+          'bg-bg-elevated rounded-xl border border-border dark:border-white/10 w-full shadow-xl relative focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2',
           sizeClasses[size],
           className,
         )}
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-white/10">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border dark:border-white/10">
           <h2 id="modal-title" className={cn('text-sm font-bold text-slate-900 dark:text-slate-100', titleClassName)}>
             {title}
           </h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2" aria-label="Close">
+          <button onClick={onClose} className="text-muted-fg hover:text-muted-fg dark:hover:text-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2" aria-label="Close">
             <X className="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
@@ -234,7 +234,7 @@ export function ConfirmDialog({
       <div
         ref={dialogRef}
         tabIndex={-1}
-        className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-sm shadow-xl p-6 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
+        className="bg-bg-elevated rounded-xl border border-border dark:border-white/10 w-full max-w-sm shadow-xl p-6 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
         onClick={e => e.stopPropagation()}
       >
         {title && (
@@ -246,7 +246,7 @@ export function ConfirmDialog({
         <div className="mt-5 flex gap-3 justify-end">
           <button
             onClick={dismiss}
-            className="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
+            className="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-slate-800 text-muted-fg dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
           >
             Cancel
           </button>
@@ -286,7 +286,7 @@ export function FormField({ label, children, error, hint, htmlFor, required, lab
     <div>
       <label
         htmlFor={htmlFor}
-        className={cn('block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5', labelClassName)}
+        className={cn('block text-xs font-bold text-muted-fg dark:text-muted-fg uppercase tracking-wider mb-1.5', labelClassName)}
       >
         {label}
         {required && <span className="text-rose-500" aria-hidden="true"> *</span>}
@@ -307,7 +307,7 @@ export function FormField({ label, children, error, hint, htmlFor, required, lab
         </p>
       )}
       {hint && !error && (
-        <p id={hintId} className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+        <p id={hintId} className="mt-1.5 text-xs text-muted-fg dark:text-muted-fg">
           {hint}
         </p>
       )}
@@ -316,4 +316,4 @@ export function FormField({ label, children, error, hint, htmlFor, required, lab
 }
 
 export const inputCls =
-  'w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-800 dark:text-slate-100';
+  'w-full bg-bg dark:bg-slate-800 border border-border dark:border-white/10 px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-800 dark:text-slate-100';

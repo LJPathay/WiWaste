@@ -3,7 +3,7 @@ import { Loader2 } from 'lucide-react';
 export function PageLoader({ message }: { message?: string }) {
   return (
     <div className="flex items-center justify-center min-h-[60vh]">
-      <div className="flex flex-col items-center gap-3 text-gray-400 dark:text-slate-500">
+      <div className="flex flex-col items-center gap-3 text-gray-400 dark:text-muted-fg">
         <Loader2 className="w-8 h-8 animate-spin" />
         <span className="text-sm font-medium">{message ?? 'Loading...'}</span>
       </div>

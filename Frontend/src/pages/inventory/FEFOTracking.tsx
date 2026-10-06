@@ -89,7 +89,7 @@ export function FEFOTracking() {
       render: (row) => (
         <div>
           <div className="font-semibold text-[#0F172A] dark:text-slate-100">{row.product_name}</div>
-          <div className="text-[10px] font-mono text-[#64748B] dark:text-slate-400">{row.sku}</div>
+          <div className="text-[10px] font-mono text-[#64748B] dark:text-muted-fg">{row.sku}</div>
         </div>
       ),
     },
@@ -99,7 +99,7 @@ export function FEFOTracking() {
       truncate: true,
       minWidth: '100px',
       render: (row) => (
-        <span className="font-mono text-[#64748B] dark:text-slate-400">
+        <span className="font-mono text-[#64748B] dark:text-muted-fg">
           {row.batch_number ?? `BATCH-${row.batch_id}`}
         </span>
       ),
@@ -109,7 +109,7 @@ export function FEFOTracking() {
       header: 'Expiry Date',
       minWidth: '100px',
       render: (row) => (
-        <span className="text-[#64748B] dark:text-slate-400 whitespace-nowrap">
+        <span className="text-[#64748B] dark:text-muted-fg whitespace-nowrap">
           {new Date(row.expiry_date).toLocaleDateString('en-PH', {
             year: 'numeric', month: 'short', day: 'numeric',
           })}
@@ -179,13 +179,13 @@ export function FEFOTracking() {
             <h1 className="text-xl font-bold text-[#0F172A] dark:text-slate-100 tracking-tight">
               FEFO Batch Tracking
             </h1>
-            <p className="mt-0.5 text-xs text-[#64748B] dark:text-slate-400">
+            <p className="mt-0.5 text-xs text-[#64748B] dark:text-muted-fg">
               First-Expired-First-Out monitoring &mdash; prioritise near-expiry stock to minimise write-offs
             </p>
           </div>
           <UITooltip>
             <TooltipTrigger asChild>
-              <Info className="mt-1 h-4 w-4 text-slate-400 hover:text-slate-600 cursor-help shrink-0" />
+              <Info className="mt-1 h-4 w-4 text-muted-fg hover:text-muted-fg cursor-help shrink-0" />
             </TooltipTrigger>
             <TooltipContent className="bg-slate-900 text-white max-w-xs">
               First-Expired-First-Out batch tracking with dynamic urgency status to minimise write-offs.
@@ -195,45 +195,45 @@ export function FEFOTracking() {
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <div className="flex items-center gap-3 rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 px-4 py-3 shadow-sm">
+        <div className="flex items-center gap-3 rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated px-4 py-3 shadow-sm">
           <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-red-50 dark:bg-red-950/30">
             <TrendingDown className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
           </div>
           <div>
             <p className="text-sm font-bold text-[#0F172A] dark:text-slate-100">{criticalCount}</p>
-            <p className="text-[9px] font-semibold text-[#64748B] dark:text-slate-400">Critical Batches</p>
+            <p className="text-[9px] font-semibold text-[#64748B] dark:text-muted-fg">Critical Batches</p>
             <p className="text-[9px] text-red-600 dark:text-red-400">Expire in &le;5 days</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 px-4 py-3 shadow-sm">
+        <div className="flex items-center gap-3 rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated px-4 py-3 shadow-sm">
           <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-green-50 dark:bg-green-950/30">
             <DollarSign className="h-3.5 w-3.5 text-green-700 dark:text-green-400" />
           </div>
           <div>
             <p className="text-sm font-bold text-[#0F172A] dark:text-slate-100">{mockBatches.length}</p>
-            <p className="text-[9px] font-semibold text-[#64748B] dark:text-slate-400">Total Batches</p>
+            <p className="text-[9px] font-semibold text-[#64748B] dark:text-muted-fg">Total Batches</p>
             <p className="text-[9px] text-green-700 dark:text-green-400">Across all products</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 px-4 py-3 shadow-sm">
+        <div className="flex items-center gap-3 rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated px-4 py-3 shadow-sm">
           <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950/30">
             <ShieldCheck className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
           </div>
           <div>
             <p className="text-sm font-bold text-[#0F172A] dark:text-slate-100">{mockBatches.filter(b => b.days_left >= 0 && b.days_left <= 7).length}</p>
-            <p className="text-[9px] font-semibold text-[#64748B] dark:text-slate-400">Expiring in 7 Days</p>
+            <p className="text-[9px] font-semibold text-[#64748B] dark:text-muted-fg">Expiring in 7 Days</p>
             <p className="text-[9px] text-blue-600 dark:text-blue-400">Requires immediate action</p>
           </div>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-xl border border-[#E5E7EB] dark:border-white/10 shadow-sm overflow-hidden">
+      <div className="bg-bg-elevated rounded-xl border border-[#E5E7EB] dark:border-white/10 shadow-sm overflow-hidden">
         <div className="px-4 py-3 border-b border-[#F1F5F9] dark:border-white/10 flex items-center justify-between gap-3">
           <span className="text-sm font-bold text-[#0F172A] dark:text-slate-100">
             Batch Register
-            <span className="ml-2 text-[9px] font-normal text-[#64748B] dark:text-slate-400">({filteredAll.length} batches)</span>
+            <span className="ml-2 text-[9px] font-normal text-[#64748B] dark:text-muted-fg">({filteredAll.length} batches)</span>
           </span>
           <div className="relative w-52">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#64748B] pointer-events-none" />
@@ -254,9 +254,9 @@ export function FEFOTracking() {
           emptyMessage="No batches found"
           emptyState={
             <div className="flex flex-col items-center gap-2">
-              <PackageX className="h-8 w-8 text-[#64748B] dark:text-slate-500" />
-              <span className="text-sm font-medium text-[#64748B] dark:text-slate-400">No batches found</span>
-              <span className="text-[9px] text-[#94A3B8] dark:text-slate-500">Try adjusting your search</span>
+              <PackageX className="h-8 w-8 text-[#64748B] dark:text-muted-fg" />
+              <span className="text-sm font-medium text-[#64748B] dark:text-muted-fg">No batches found</span>
+              <span className="text-[9px] text-[#94A3B8] dark:text-muted-fg">Try adjusting your search</span>
             </div>
           }
           actions={(row) => {
@@ -264,7 +264,7 @@ export function FEFOTracking() {
             return (
               <div className="inline-flex items-center gap-0.5">
                 {daysLeft < 0 ? (
-                  <span className="text-[9px] text-[#64748B] dark:text-slate-400 italic">Expired</span>
+                  <span className="text-[9px] text-[#64748B] dark:text-muted-fg italic">Expired</span>
                 ) : daysLeft <= 5 ? (
                   <ActionButton
                     icon={<Flag className="h-3.5 w-3.5" />}
@@ -300,7 +300,7 @@ export function FEFOTracking() {
         />
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 px-4 py-2 shadow-sm text-[9px] text-[#64748B] dark:text-slate-400">
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated px-4 py-2 shadow-sm text-[9px] text-[#64748B] dark:text-muted-fg">
         <span className="font-semibold text-[#0F172A] dark:text-slate-100">Status Legend:</span>
         <span className="inline-flex items-center gap-1.5">
           <span className="inline-block h-2 w-2 rounded-full bg-red-500" />

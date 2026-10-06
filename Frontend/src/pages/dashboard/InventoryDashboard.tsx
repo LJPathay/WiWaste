@@ -158,14 +158,14 @@ export function InventoryDashboard() {
           </h1>
           <UITooltip>
             <TooltipTrigger asChild>
-              <Info className="h-4 w-4 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 cursor-help shrink-0" />
+              <Info className="h-4 w-4 text-muted-fg dark:text-muted-fg hover:text-muted-fg dark:hover:text-slate-300 cursor-help shrink-0" />
             </TooltipTrigger>
             <TooltipContent className="bg-slate-900 text-white max-w-xs">
               Real-time inventory overview for operational staff
             </TooltipContent>
           </UITooltip>
         </div>
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs font-medium text-[#64748B] dark:text-slate-400 shadow-sm">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated px-3 py-1.5 text-xs font-medium text-[#64748B] dark:text-muted-fg shadow-sm">
           <span className="h-1.5 w-1.5 rounded-full bg-[#0F766E]" />
           {todayLabel}
         </span>
@@ -178,7 +178,7 @@ export function InventoryDashboard() {
           return (
             <div
               key={card.label}
-              className="group relative flex flex-col justify-between rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 p-3.5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md hover:border-[#0F766E]"
+              className="group relative flex flex-col justify-between rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated p-3.5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md hover:border-[#0F766E]"
             >
               <div className="flex items-start justify-between gap-2">
                 <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${card.iconBg}`}>
@@ -196,7 +196,7 @@ export function InventoryDashboard() {
                   {card.value}
                 </div>
                 <div className="mt-0.5 text-xs font-semibold text-[#0F172A] dark:text-slate-100">{card.label}</div>
-                <div className="mt-0.5 text-[10px] text-[#64748B] dark:text-slate-400">{card.description}</div>
+                <div className="mt-0.5 text-[10px] text-[#64748B] dark:text-muted-fg">{card.description}</div>
               </div>
               <div className="mt-2 flex justify-end">
                 <Link
@@ -216,7 +216,7 @@ export function InventoryDashboard() {
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
 
         {/* Stock Movement Chart */}
-        <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 p-4 shadow-sm xl:col-span-2">
+        <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated p-4 shadow-sm xl:col-span-2">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-xs font-bold text-[#0F172A] dark:text-slate-100">
               Stock Movement
@@ -231,7 +231,7 @@ export function InventoryDashboard() {
               <option value="90">Last 3 months</option>
             </select>
           </div>
-          <div className="mb-2 flex items-center gap-3 text-[10px] text-[#64748B] dark:text-slate-400">
+          <div className="mb-2 flex items-center gap-3 text-[10px] text-[#64748B] dark:text-muted-fg">
             <span className="flex items-center gap-1">
               <span className="inline-block h-2 w-2 rounded-sm bg-[#0F766E]" />
               Stock In
@@ -295,7 +295,7 @@ export function InventoryDashboard() {
         </div>
 
         {/* Expiration Risk */}
-        <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 p-4 shadow-sm">
+        <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated p-4 shadow-sm">
           <h2 className="mb-3 text-xs font-bold text-[#0F172A] dark:text-slate-100">Expiration Risk</h2>
           <div className="space-y-1.5">
             {[
@@ -319,20 +319,20 @@ export function InventoryDashboard() {
           </div>
 
           <div className="mt-3 pt-3 border-t border-[#E5E7EB] dark:border-white/10">
-            <h3 className="text-[10px] font-bold text-[#64748B] dark:text-slate-400 uppercase tracking-wider mb-2">
+            <h3 className="text-[10px] font-bold text-[#64748B] dark:text-muted-fg uppercase tracking-wider mb-2">
               Today's Activity
             </h3>
             <div className="space-y-1.5 text-[11px]">
               <div className="flex justify-between">
-                <span className="text-[#64748B] dark:text-slate-400">Sales</span>
+                <span className="text-[#64748B] dark:text-muted-fg">Sales</span>
                 <span className="font-bold text-[#0F172A] dark:text-slate-100">{stats?.today_sales_count ?? 0}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#64748B] dark:text-slate-400">Wastage</span>
+                <span className="text-[#64748B] dark:text-muted-fg">Wastage</span>
                 <span className="font-bold text-[#0F172A] dark:text-slate-100">{stats?.today_wastage_count ?? 0}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#64748B] dark:text-slate-400">Returns</span>
+                <span className="text-[#64748B] dark:text-muted-fg">Returns</span>
                 <span className="font-bold text-[#0F172A] dark:text-slate-100">{stats?.today_returns_count ?? 0}</span>
               </div>
             </div>
@@ -344,7 +344,7 @@ export function InventoryDashboard() {
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
 
         {/* Wastage Trend */}
-        <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 p-4 shadow-sm">
+        <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated p-4 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-xs font-bold text-[#0F172A] dark:text-slate-100">Wastage Trend</h2>
             <select
@@ -383,7 +383,7 @@ export function InventoryDashboard() {
         </div>
 
         {/* Top Wasted Products */}
-        <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 p-4 shadow-sm">
+        <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated p-4 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-xs font-bold text-[#0F172A] dark:text-slate-100">Top Wasted Products</h2>
             <div className="flex gap-0.5">
@@ -392,7 +392,7 @@ export function InventoryDashboard() {
                 className={`px-1.5 py-0.5 text-[9px] font-semibold rounded ${
                   wastageView === 'value'
                     ? 'bg-[#0F766E] text-white'
-                    : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+                    : 'bg-slate-100 text-muted-fg dark:bg-slate-800 dark:text-muted-fg'
                 }`}
               >
                 Value
@@ -402,7 +402,7 @@ export function InventoryDashboard() {
                 className={`px-2 py-1 text-[10px] font-semibold rounded ${
                   wastageView === 'quantity'
                     ? 'bg-[#0F766E] text-white'
-                    : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+                    : 'bg-slate-100 text-muted-fg dark:bg-slate-800 dark:text-muted-fg'
                 }`}
               >
                 Quantity
@@ -441,30 +441,30 @@ export function InventoryDashboard() {
 
       {/* ── Section 5: Low Stock Alerts ── */}
       {(stats?.low_stock_items?.length ?? 0) > 0 && (
-        <section className="rounded-2xl border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 p-6 shadow-sm">
+        <section className="rounded-2xl border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated p-6 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-base font-bold text-[#0F172A] dark:text-slate-100">Low Stock / Reorder Alerts</h2>
-            <span className="text-xs text-[#64748B] dark:text-slate-400">{stats?.low_stock_items?.length} products</span>
+            <span className="text-xs text-[#64748B] dark:text-muted-fg">{stats?.low_stock_items?.length} products</span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
                 <tr className="bg-[#F8FAFC] dark:bg-slate-800 border-b border-[#E5E7EB] dark:border-white/10">
-                  <th className="px-4 py-2.5 text-left font-semibold text-[10px] uppercase tracking-wider text-[#64748B] dark:text-slate-400">Product</th>
-                  <th className="px-4 py-2.5 text-left font-semibold text-[10px] uppercase tracking-wider text-[#64748B] dark:text-slate-400">Category</th>
-                  <th className="px-4 py-2.5 text-left font-semibold text-[10px] uppercase tracking-wider text-[#64748B] dark:text-slate-400">Current</th>
-                  <th className="px-4 py-2.5 text-left font-semibold text-[10px] uppercase tracking-wider text-[#64748B] dark:text-slate-400">Reorder</th>
-                  <th className="px-4 py-2.5 text-left font-semibold text-[10px] uppercase tracking-wider text-[#64748B] dark:text-slate-400">Status</th>
-                  <th className="px-4 py-2.5 text-right font-semibold text-[10px] uppercase tracking-wider text-[#64748B] dark:text-slate-400">Actions</th>
+                  <th className="px-4 py-2.5 text-left font-semibold text-[10px] uppercase tracking-wider text-[#64748B] dark:text-muted-fg">Product</th>
+                  <th className="px-4 py-2.5 text-left font-semibold text-[10px] uppercase tracking-wider text-[#64748B] dark:text-muted-fg">Category</th>
+                  <th className="px-4 py-2.5 text-left font-semibold text-[10px] uppercase tracking-wider text-[#64748B] dark:text-muted-fg">Current</th>
+                  <th className="px-4 py-2.5 text-left font-semibold text-[10px] uppercase tracking-wider text-[#64748B] dark:text-muted-fg">Reorder</th>
+                  <th className="px-4 py-2.5 text-left font-semibold text-[10px] uppercase tracking-wider text-[#64748B] dark:text-muted-fg">Status</th>
+                  <th className="px-4 py-2.5 text-right font-semibold text-[10px] uppercase tracking-wider text-[#64748B] dark:text-muted-fg">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#F1F5F9] dark:divide-white/5">
                 {stats?.low_stock_items?.map((product) => (
                   <tr key={product.product_id} className="hover:bg-[#F8FAFC] dark:hover:bg-slate-800/50">
                     <td className="px-4 py-3 font-semibold text-[#0F172A] dark:text-slate-100">{product.product_name}</td>
-                    <td className="px-4 py-3 text-[#64748B] dark:text-slate-400">{product.category}</td>
+                    <td className="px-4 py-3 text-[#64748B] dark:text-muted-fg">{product.category}</td>
                     <td className="px-4 py-3 font-bold text-red-600 dark:text-red-400">{product.current_stock}</td>
-                    <td className="px-4 py-3 text-[#64748B] dark:text-slate-400">{product.reorder_level}</td>
+                    <td className="px-4 py-3 text-[#64748B] dark:text-muted-fg">{product.reorder_level}</td>
                     <td className="px-4 py-3">
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400">
                         <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />

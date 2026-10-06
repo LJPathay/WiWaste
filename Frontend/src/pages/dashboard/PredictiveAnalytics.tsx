@@ -133,14 +133,14 @@ export function PredictiveAnalyticsPage() {
     <div className="space-y-4">
       {/* Page Header */}
       <div className="flex flex-wrap items-center gap-2">
-        <Link to="/dashboard?highlightKpi=0" className="inline-flex items-center justify-center h-7 w-7 rounded-lg border border-slate-200 dark:border-white/10 text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-white/10 dark:hover:text-slate-200 transition-colors" aria-label="Back to Dashboard"><ArrowLeft className="h-3.5 w-3.5" /></Link>
+        <Link to="/dashboard?highlightKpi=0" className="inline-flex items-center justify-center h-7 w-7 rounded-lg border border-border dark:border-white/10 text-muted-fg hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-white/10 dark:hover:text-slate-200 transition-colors" aria-label="Back to Dashboard"><ArrowLeft className="h-3.5 w-3.5" /></Link>
         <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Predictive Analytics</h1>
         <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2.5 py-0.5 text-[9px] font-bold text-sky-700 dark:bg-sky-500/20 dark:text-sky-300">
           <Brain className="h-3 w-3" /> Model: ARIMA
         </span>
         <UITooltip>
           <TooltipTrigger asChild>
-            <Info className="h-5 w-5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
+            <Info className="h-5 w-5 text-muted-fg hover:text-muted-fg dark:hover:text-slate-300 cursor-help" />
           </TooltipTrigger>
           <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
             AI-powered demand forecasts from the Python ARIMA/SARIMAX service, plus projected wastage trends and anomaly detection.
@@ -182,13 +182,13 @@ export function PredictiveAnalyticsPage() {
       ) : (
         <>
 {/* ── Section 1: Stock Movement Forecast ── */}
-          <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-slate-900">
+          <section className="rounded-xl border border-border bg-white p-4 shadow-sm dark:border-white/10 dark:bg-slate-900">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <h2 className="text-sm font-bold text-[#0F172A] dark:text-slate-100">Stock Movement Forecast</h2>
                 <UITooltip>
                   <TooltipTrigger asChild>
-                    <Info className="h-3.5 w-3.5 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 cursor-help" />
+                    <Info className="h-3.5 w-3.5 text-muted-fg hover:text-emerald-600 dark:hover:text-emerald-400 cursor-help" />
                   </TooltipTrigger>
                   <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
                     Predicted stock in/out and wastage for the next 7 days based on historical patterns.
@@ -204,7 +204,7 @@ export function PredictiveAnalyticsPage() {
                 {generating ? 'Generating…' : 'Regenerate Forecast'}
               </button>
             </div>
-            <div className="mb-2 flex items-center gap-3 text-[10px] text-[#64748B] dark:text-slate-400">
+            <div className="mb-2 flex items-center gap-3 text-[10px] text-[#64748B] dark:text-muted-fg">
               <span className="flex items-center gap-1">
                 <span className="inline-block h-2 w-2 rounded-sm bg-[#0F766E]" />
                 Stock In
@@ -268,13 +268,13 @@ export function PredictiveAnalyticsPage() {
           </section>
 
           {/* ── Section 2: Wastage Trend (Predicted vs Actual) ── */}
-          <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-slate-900">
+          <section className="rounded-xl border border-border bg-white p-4 shadow-sm dark:border-white/10 dark:bg-slate-900">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <h2 className="text-sm font-bold text-[#0F172A] dark:text-slate-100">Wastage Trend</h2>
                 <UITooltip>
                   <TooltipTrigger asChild>
-                    <Info className="h-3.5 w-3.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 cursor-help" />
+                    <Info className="h-3.5 w-3.5 text-muted-fg hover:text-rose-600 dark:hover:text-rose-400 cursor-help" />
                   </TooltipTrigger>
                   <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
                     Predicted vs actual wastage value. Helps identify forecast accuracy gaps.
@@ -320,7 +320,7 @@ export function PredictiveAnalyticsPage() {
                 </LineChart>
               </ResponsiveContainer>
             </div>
-            <div className="mt-2 flex items-center gap-3 text-[10px] text-[#64748B] dark:text-slate-400">
+            <div className="mt-2 flex items-center gap-3 text-[10px] text-[#64748B] dark:text-muted-fg">
               <span className="flex items-center gap-1">
                 <span className="inline-block h-2 w-5 rounded-sm bg-[#3B82F6]" />
                 Predicted
@@ -333,19 +333,19 @@ export function PredictiveAnalyticsPage() {
           </section>
 
           {/* ── Section 3: Forecast Summary ── */}
-          <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-slate-900">
+          <section className="rounded-xl border border-border bg-white p-4 shadow-sm dark:border-white/10 dark:bg-slate-900">
             <h2 className="mb-3 text-sm font-bold text-[#0F172A] dark:text-slate-100">ARIMA Forecast Summary</h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="rounded-lg border border-[#E5E7EB] dark:border-white/10 p-3">
-                <div className="text-xs font-medium text-[#64748B] dark:text-slate-400">Products Analyzed</div>
+                <div className="text-xs font-medium text-[#64748B] dark:text-muted-fg">Products Analyzed</div>
                 <div className="text-2xl font-bold text-[#0F172A] dark:text-slate-100">{overview?.total_products ?? 0}</div>
               </div>
               <div className="rounded-lg border border-[#E5E7EB] dark:border-white/10 p-3">
-                <div className="text-xs font-medium text-[#64748B] dark:text-slate-400">Avg Confidence</div>
+                <div className="text-xs font-medium text-[#64748B] dark:text-muted-fg">Avg Confidence</div>
                 <div className="text-2xl font-bold text-[#0F172A] dark:text-slate-100">{Math.round(overview?.avg_confidence ?? 0)}%</div>
               </div>
               <div className="rounded-lg border border-[#E5E7EB] dark:border-white/10 p-3">
-                <div className="text-xs font-medium text-[#64748B] dark:text-slate-400">Model</div>
+                <div className="text-xs font-medium text-[#64748B] dark:text-muted-fg">Model</div>
                 <div className="text-2xl font-bold text-[#0F172A] dark:text-slate-100">ARIMA/SARIMAX</div>
               </div>
             </div>
@@ -359,7 +359,7 @@ export function PredictiveAnalyticsPage() {
               return (
                 <div
                   key={detection.title}
-                  className={`rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm dark:border-white/10 dark:bg-slate-900 border-l-3 ${style.border} transition-all hover:-translate-y-0.5 hover:shadow-md`}
+                  className={`rounded-xl border border-border bg-white p-3.5 shadow-sm dark:border-white/10 dark:bg-slate-900 border-l-3 ${style.border} transition-all hover:-translate-y-0.5 hover:shadow-md`}
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-1.5">
@@ -375,7 +375,7 @@ export function PredictiveAnalyticsPage() {
                       {detection.severity}
                     </span>
                   </div>
-                  <p className="mt-2 text-xs leading-5 text-slate-600 dark:text-slate-400">{detection.detail}</p>
+                  <p className="mt-2 text-xs leading-5 text-muted-fg dark:text-muted-fg">{detection.detail}</p>
                   <div className={`mt-3 rounded-xl border border-slate-100 dark:border-white/5 ${style.bg} p-2.5 text-xs text-slate-700 dark:text-slate-300`}>
                     <span className="font-semibold text-slate-900 dark:text-slate-100">Recommended fix: </span>{detection.action}
                   </div>

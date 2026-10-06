@@ -116,7 +116,7 @@ export function PaymentMethodBadge({ method }: { method: string; size?: 'sm' | '
       )},
   };
 
-  const config = methodColors[method] || { bg: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700', text: '', icon: null };
+  const config = methodColors[method] || { bg: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-border dark:border-slate-700', text: '', icon: null };
 
   return (
     <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${config.bg}`}>

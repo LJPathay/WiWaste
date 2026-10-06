@@ -61,7 +61,7 @@ export function Suppliers() {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-3">
         <AlertCircle className="h-10 w-10 text-red-400" />
-        <p className="text-sm text-slate-600 dark:text-slate-400">{error}</p>
+        <p className="text-sm text-muted-fg dark:text-muted-fg">{error}</p>
       </div>
     );
   }
@@ -75,22 +75,22 @@ export function Suppliers() {
           </h1>
           <UITooltip>
             <TooltipTrigger>
-              <Info className="h-4 w-4 text-slate-400" />
+              <Info className="h-4 w-4 text-muted-fg" />
             </TooltipTrigger>
             <TooltipContent>
               View suppliers and their products
             </TooltipContent>
           </UITooltip>
         </div>
-        <span className="text-xs text-[#64748B] dark:text-slate-400">
+        <span className="text-xs text-[#64748B] dark:text-muted-fg">
           {supplierList.length} supplier{supplierList.length !== 1 ? 's' : ''}
         </span>
       </div>
 
       {supplierList.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-48 gap-3">
-          <Users className="h-12 w-12 text-slate-300 dark:text-slate-600" />
-          <p className="text-sm text-slate-500 dark:text-slate-400">No suppliers found</p>
+          <Users className="h-12 w-12 text-slate-300 dark:text-muted-fg" />
+          <p className="text-sm text-muted-fg dark:text-muted-fg">No suppliers found</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -102,26 +102,26 @@ export function Suppliers() {
             return (
               <div
                 key={supplier.id}
-                className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 p-3 shadow-sm"
+                className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated p-3 shadow-sm"
               >
                 <div className="mb-3">
                   <h3 className="text-sm font-bold text-[#0F172A] dark:text-slate-100">
                     {supplier.name}
                   </h3>
                   {supplier.contact_person && (
-                    <p className="text-xs text-[#64748B] dark:text-slate-400">
+                    <p className="text-xs text-[#64748B] dark:text-muted-fg">
                       {supplier.contact_person}
                     </p>
                   )}
                 </div>
 
                 <div className="space-y-1 mb-3">
-                  <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
+                  <div className="flex items-center gap-2 text-xs text-muted-fg dark:text-muted-fg">
                     <Phone className="h-3.5 w-3.5 shrink-0" />
                     <span className="font-mono">{supplier.contact_number}</span>
                   </div>
                   {supplier.address && (
-                    <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
+                    <div className="flex items-center gap-2 text-xs text-muted-fg dark:text-muted-fg">
                       <MapPin className="h-3.5 w-3.5 shrink-0" />
                       <span className="truncate">{supplier.address}</span>
                     </div>
@@ -129,7 +129,7 @@ export function Suppliers() {
                 </div>
 
                 <div className="flex items-center justify-between text-sm mb-4">
-                  <span className="text-[#64748B] dark:text-slate-400">
+                  <span className="text-[#64748B] dark:text-muted-fg">
                     Products Supplied:{' '}
                     <span className="font-semibold text-[#0F172A] dark:text-slate-100">
                       {supplier.product_count ?? 0}
@@ -152,7 +152,7 @@ export function Suppliers() {
                       </div>
                     ) : detail?.recent_products?.length ? (
                       <div className="space-y-2">
-                        <p className="text-xs font-semibold text-[#64748B] dark:text-slate-400 uppercase tracking-wider">
+                        <p className="text-xs font-semibold text-[#64748B] dark:text-muted-fg uppercase tracking-wider">
                           Recent Products
                         </p>
                         {detail.recent_products.map((p) => (
@@ -179,7 +179,7 @@ export function Suppliers() {
                         )}
                       </div>
                     ) : (
-                      <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-4">
+                      <p className="text-sm text-muted-fg dark:text-muted-fg text-center py-4">
                         No product data available
                       </p>
                     )}

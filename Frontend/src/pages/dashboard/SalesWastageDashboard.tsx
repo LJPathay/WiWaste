@@ -107,14 +107,14 @@ export function SalesWastageDashboard() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Sales vs Wastage Dashboard</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Track units sold vs wasted, identify loss drivers, and monitor near-expiry risk.</p>
+          <p className="text-sm text-muted-fg dark:text-muted-fg mt-1">Track units sold vs wasted, identify loss drivers, and monitor near-expiry risk.</p>
         </div>
         <div className="flex items-center gap-3">
           <DateRangePicker from={from} to={to} onChange={({ from: f, to: t }) => { setFrom(f); setTo(t); }} />
           <button
             onClick={handleExport}
             disabled={exportLoading}
-            className="h-9 px-4 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-semibold flex items-center gap-2 transition-colors border border-slate-200 dark:border-slate-700"
+            className="h-9 px-4 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-semibold flex items-center gap-2 transition-colors border border-border dark:border-slate-700"
           >
             <FileSpreadsheet className="h-4 w-4" />
             {exportLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Export CSV'}
@@ -162,7 +162,7 @@ export function SalesWastageDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card title="Units Sold vs Wasted by Category" icon={<BarChart2 className="h-4 w-4" />}>
           {overviewLoading ? (
-            <div className="h-80 flex items-center justify-center text-slate-400">Loading...</div>
+            <div className="h-80 flex items-center justify-center text-muted-fg">Loading...</div>
           ) : overview?.category_breakdown ? (
             <ResponsiveContainer width="100%" height={320}>
               <BarChart data={overview.category_breakdown} layout="vertical">
@@ -191,13 +191,13 @@ export function SalesWastageDashboard() {
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-80 flex items-center justify-center text-slate-400">No category data available</div>
+            <div className="h-80 flex items-center justify-center text-muted-fg">No category data available</div>
           )}
         </Card>
 
         <Card title="Waste by Reason" icon={<PieChart className="h-4 w-4" />}>
           {overviewLoading ? (
-            <div className="h-80 flex items-center justify-center text-slate-400">Loading...</div>
+            <div className="h-80 flex items-center justify-center text-muted-fg">Loading...</div>
           ) : overview?.waste_by_reason && Object.keys(overview.waste_by_reason).length > 0 ? (
             <ResponsiveContainer width="100%" height={320}>
               <RechartsPieChart>
@@ -236,7 +236,7 @@ export function SalesWastageDashboard() {
               </RechartsPieChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-80 flex items-center justify-center text-slate-400">No wastage data for this period</div>
+            <div className="h-80 flex items-center justify-center text-muted-fg">No wastage data for this period</div>
           )}
         </Card>
       </div>
@@ -244,7 +244,7 @@ export function SalesWastageDashboard() {
       {/* Time Series Chart */}
       <Card title="Daily Trend: Units Sold vs Wasted" icon={<BarChart2 className="h-4 w-4" />} fullWidth>
         {timeSeriesLoading ? (
-          <div className="h-80 flex items-center justify-center text-slate-400">Loading trend data...</div>
+          <div className="h-80 flex items-center justify-center text-muted-fg">Loading trend data...</div>
         ) : timeSeries && timeSeries.length > 0 ? (
           <ResponsiveContainer width="100%" height={320}>
             <BarChart data={timeSeries}>
@@ -273,7 +273,7 @@ export function SalesWastageDashboard() {
             </BarChart>
           </ResponsiveContainer>
         ) : (
-          <div className="h-80 flex items-center justify-center text-slate-400">No trend data available for this period</div>
+          <div className="h-80 flex items-center justify-center text-muted-fg">No trend data available for this period</div>
         )}
       </Card>
 
@@ -281,7 +281,7 @@ export function SalesWastageDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card title="Top 10 Wasted Products" icon={<AlertTriangle className="h-4 w-4" />}>
           {overviewLoading ? (
-            <div className="h-80 flex items-center justify-center text-slate-400">Loading...</div>
+            <div className="h-80 flex items-center justify-center text-muted-fg">Loading...</div>
           ) : overview?.top_wasted_products && overview.top_wasted_products.length > 0 ? (
             <DataTable
               columns={[
@@ -293,13 +293,13 @@ export function SalesWastageDashboard() {
               data={overview.top_wasted_products}
             />
           ) : (
-            <div className="h-64 flex items-center justify-center text-slate-400">No wasted products data</div>
+            <div className="h-64 flex items-center justify-center text-muted-fg">No wasted products data</div>
           )}
         </Card>
 
         <Card title="Slow Movers (Lowest Sales)" icon={<TrendingDown className="h-4 w-4" />}>
           {overviewLoading ? (
-            <div className="h-80 flex items-center justify-center text-slate-400">Loading...</div>
+            <div className="h-80 flex items-center justify-center text-muted-fg">Loading...</div>
           ) : overview?.slow_movers && overview.slow_movers.length > 0 ? (
             <DataTable
               columns={[
@@ -311,7 +311,7 @@ export function SalesWastageDashboard() {
               data={overview.slow_movers}
             />
           ) : (
-            <div className="h-64 flex items-center justify-center text-slate-400">No slow movers data</div>
+            <div className="h-64 flex items-center justify-center text-muted-fg">No slow movers data</div>
           )}
         </Card>
       </div>
@@ -328,10 +328,10 @@ function KpiCard({ label, value, icon, iconBg, trend, trendUp }: {
   trendUp: boolean;
 }) {
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm">
+    <div className="bg-bg-elevated rounded-xl border border-border dark:border-slate-700 p-5 shadow-sm">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{label}</p>
+          <p className="text-sm font-semibold text-muted-fg dark:text-muted-fg uppercase tracking-wider">{label}</p>
           <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">{value}</p>
           <p className={`text-xs font-semibold mt-2 flex items-center gap-1 ${trendUp ? 'text-emerald-600' : 'text-rose-600'}`}>
             {trendUp ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
@@ -346,10 +346,10 @@ function KpiCard({ label, value, icon, iconBg, trend, trendUp }: {
 
 function Card({ title, icon, children, fullWidth = false }: { title: string; icon: React.ReactNode; children: React.ReactNode; fullWidth?: boolean }) {
   return (
-    <div className={`bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm ${fullWidth ? 'lg:col-span-2' : ''}`}>
-      <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 px-5 py-4">
+    <div className={`bg-bg-elevated rounded-xl border border-border dark:border-slate-700 shadow-sm ${fullWidth ? 'lg:col-span-2' : ''}`}>
+      <div className="flex items-center justify-between border-b border-border dark:border-slate-700 px-5 py-4">
         <div className="flex items-center gap-2">
-          <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">{icon}</div>
+          <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-muted-fg dark:text-slate-300">{icon}</div>
           <h3 className="text-base font-bold text-slate-900 dark:text-white">{title}</h3>
         </div>
       </div>
@@ -363,9 +363,9 @@ function DataTable({ columns, data }: { columns: Array<{ key: string; header: st
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-slate-200 dark:border-slate-700">
+          <tr className="border-b border-border dark:border-slate-700">
             {columns.map(col => (
-              <th key={col.key} className={`text-left py-2 px-3 font-semibold text-slate-600 dark:text-slate-400 ${col.numeric ? 'text-right' : ''}`} style={{ minWidth: col.minWidth }}>
+              <th key={col.key} className={`text-left py-2 px-3 font-semibold text-muted-fg dark:text-muted-fg ${col.numeric ? 'text-right' : ''}`} style={{ minWidth: col.minWidth }}>
                 {col.header}
               </th>
             ))}
@@ -373,7 +373,7 @@ function DataTable({ columns, data }: { columns: Array<{ key: string; header: st
         </thead>
         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
           {data.map((row, i) => (
-            <tr key={i} className={i % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50 dark:bg-slate-800/50'}>
+            <tr key={i} className={i % 2 === 0 ? 'bg-bg-elevated' : 'bg-bg dark:bg-slate-800/50'}>
               {columns.map(col => {
                 const value = row[col.key];
                 return (

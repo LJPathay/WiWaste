@@ -200,7 +200,7 @@ export function ReturnsRefunds() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Returns & Refunds</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-sm text-muted-fg dark:text-muted-fg mt-1">
             Process returns with 7-day cooling-off period (RA 7394). Auto-approved within 7 days for standard reasons.
           </p>
         </div>
@@ -223,7 +223,7 @@ export function ReturnsRefunds() {
       </div>
 
       {/* Create Return Form */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 space-y-6">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-border dark:border-slate-700 p-6 space-y-6">
         <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Create New Return</h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -232,7 +232,7 @@ export function ReturnsRefunds() {
               Search Transaction <span className="text-red-500">*</span>
             </label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-fg" />
               <input
                 type="text"
                 placeholder="Search by Transaction #, Product, or SKU..."
@@ -244,31 +244,31 @@ export function ReturnsRefunds() {
           </div>
         </div>
 
-        {loading && <div className="text-center py-4 text-slate-500">Loading transactions...</div>}
+        {loading && <div className="text-center py-4 text-muted-fg">Loading transactions...</div>}
         {salesError && <div className="text-red-600 text-sm">{salesError}</div>}
 
         {!loading && filteredSales.length === 0 && query && (
-          <div className="text-center py-4 text-slate-500">No transactions found matching "{query}"</div>
+          <div className="text-center py-4 text-muted-fg">No transactions found matching "{query}"</div>
         )}
 
         {!loading && filteredSales.length > 0 && (
-          <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
+          <div className="overflow-x-auto rounded-lg border border-border dark:border-slate-700">
             <table className="w-full">
-              <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
+              <thead className="bg-bg dark:bg-slate-800/50 border-b border-border dark:border-slate-700">
                 <tr>
-                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Transaction</th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Item</th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">SKU</th>
-                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Sold Qty</th>
-                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Unit Price</th>
-                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Line Total</th>
-                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Action</th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg">Transaction</th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg">Item</th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg">SKU</th>
+                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg">Sold Qty</th>
+                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg">Unit Price</th>
+                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg">Line Total</th>
+                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                 {filteredSales.flatMap(sale =>
                   sale.items.map((item, idx) => (
-                    <tr key={`${sale.id}-${idx}`} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer"
+                    <tr key={`${sale.id}-${idx}`} className="hover:bg-bg dark:hover:bg-slate-700/50 cursor-pointer"
                       onClick={() => {
                         setSelectedItem({
                           sale_item_id: item.id,
@@ -283,9 +283,9 @@ export function ReturnsRefunds() {
                     >
                       <td className="px-3 py-2 text-sm font-mono text-slate-900 dark:text-white">{sale.id}</td>
                       <td className="px-3 py-2 text-sm font-medium text-slate-900 dark:text-white">{item.product_name}</td>
-                      <td className="px-3 py-2 text-sm text-slate-500 font-mono">{item.sku}</td>
+                      <td className="px-3 py-2 text-sm text-muted-fg font-mono">{item.sku}</td>
                       <td className="px-3 py-2 text-sm text-right text-slate-900 dark:text-white">{item.quantity}</td>
-                      <td className="px-3 py-2 text-sm text-right text-slate-500 dark:text-slate-400">{formatCurrency(item.unit_price)}</td>
+                      <td className="px-3 py-2 text-sm text-right text-muted-fg dark:text-muted-fg">{formatCurrency(item.unit_price)}</td>
                       <td className="px-3 py-2 text-sm text-right font-medium text-slate-900 dark:text-white">{formatCurrency(item.subtotal)}</td>
                       <td className="px-3 py-2 text-right">
                         <ActionButton
@@ -317,7 +317,7 @@ export function ReturnsRefunds() {
           <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-slate-900 dark:text-white">Return Details: {selectedItem.product_name}</h3>
-              <button onClick={() => setSelectedItem(null)} className="text-slate-400 hover:text-slate-600">
+              <button onClick={() => setSelectedItem(null)} className="text-muted-fg hover:text-muted-fg">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -404,7 +404,7 @@ export function ReturnsRefunds() {
               <button
                 type="button"
                 onClick={() => setSelectedItem(null)}
-                className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
+                className="px-4 py-2 text-muted-fg dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
               >
                 Cancel
               </button>
@@ -424,28 +424,28 @@ export function ReturnsRefunds() {
       </div>
 
       {/* Returns History */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
-        <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-border dark:border-slate-700">
+        <div className="p-4 border-b border-border dark:border-slate-700 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Returns History</h2>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-500 dark:text-slate-400">{returnsHistory.length} returns</span>
+            <span className="text-xs text-muted-fg dark:text-muted-fg">{returnsHistory.length} returns</span>
           </div>
         </div>
 
         <div className="overflow-x-auto">
           {returnsHistory.length === 0 ? (
             <div className="p-12 text-center">
-              <RotateCcw className="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600 mb-4" />
-              <p className="text-slate-500 dark:text-slate-400">No returns recorded yet</p>
+              <RotateCcw className="w-12 h-12 mx-auto text-slate-300 dark:text-muted-fg mb-4" />
+              <p className="text-muted-fg dark:text-muted-fg">No returns recorded yet</p>
             </div>
           ) : (
             <>
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
+                  <thead className="bg-bg dark:bg-slate-800/50 border-b border-border dark:border-slate-700">
                     <tr>
                       {returnHistoryColumns.map(col => (
-                        <th key={col.key} className={`px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 ${col.pinned ? 'sticky left-0 bg-white dark:bg-slate-800 z-10' : ''}`}>
+                        <th key={col.key} className={`px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg ${col.pinned ? 'sticky left-0 bg-white dark:bg-slate-800 z-10' : ''}`}>
                           {col.header}
                         </th>
                       ))}
@@ -453,7 +453,7 @@ export function ReturnsRefunds() {
                   </thead>
                   <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                     {returnsHistory.slice(0, 20).map((row, _idx) => (
-                      <tr key={row.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                      <tr key={row.id} className="hover:bg-bg dark:hover:bg-slate-700/50">
                         {returnHistoryColumns.map(col => (
                           <td key={`${row.id}-${col.key}`} className="px-3 py-2 text-sm">
                             {col.render ? col.render(row, cellValue(row, col.key)) : cellValue(row, col.key)?.toString() ?? ''}
@@ -465,7 +465,7 @@ export function ReturnsRefunds() {
                 </table>
               </div>
               {returnsHistory.length > 20 && (
-                <div className="p-4 border-t border-slate-200 dark:border-slate-700 text-center">
+                <div className="p-4 border-t border-border dark:border-slate-700 text-center">
                   <button className="text-sm text-brand-600 hover:text-brand-700 font-medium">
                     Load more returns ({returnsHistory.length} total)
                   </button>

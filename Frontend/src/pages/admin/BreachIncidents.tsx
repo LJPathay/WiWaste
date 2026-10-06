@@ -146,7 +146,7 @@ export function BreachIncidents() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Breach Incident Log</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-sm text-muted-fg dark:text-muted-fg mt-1">
             Track data breach incidents through detection, assessment, notification, and resolution
           </p>
         </div>
@@ -162,37 +162,37 @@ export function BreachIncidents() {
       {/* Summary Cards */}
       {statsData && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-sm text-slate-500 dark:text-slate-400">Total Incidents</div>
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-border dark:border-slate-700">
+            <div className="text-sm text-muted-fg dark:text-muted-fg">Total Incidents</div>
             <div className="text-2xl font-bold text-slate-900 dark:text-white">{statsData.total}</div>
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-sm text-slate-500 dark:text-slate-400">Open / Investigating</div>
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-border dark:border-slate-700">
+            <div className="text-sm text-muted-fg dark:text-muted-fg">Open / Investigating</div>
             <div className="text-2xl font-bold text-red-600">
               {(statsData.by_status?.open ?? 0) + (statsData.by_status?.investigating ?? 0)}
             </div>
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-sm text-slate-500 dark:text-slate-400">Contained / Resolved</div>
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-border dark:border-slate-700">
+            <div className="text-sm text-muted-fg dark:text-muted-fg">Contained / Resolved</div>
             <div className="text-2xl font-bold text-green-600">
               {(statsData.by_status?.contained ?? 0) + (statsData.by_status?.resolved ?? 0)}
             </div>
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-sm text-slate-500 dark:text-slate-400">NPC Notified</div>
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-border dark:border-slate-700">
+            <div className="text-sm text-muted-fg dark:text-muted-fg">NPC Notified</div>
             <div className="text-2xl font-bold text-blue-600">{statsData.npc_notified}</div>
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-sm text-slate-500 dark:text-slate-400">Subjects Notified</div>
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-border dark:border-slate-700">
+            <div className="text-sm text-muted-fg dark:text-muted-fg">Subjects Notified</div>
             <div className="text-2xl font-bold text-purple-600">{statsData.subjects_notified}</div>
           </div>
         </div>
       )}
 
       {/* Filters */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row gap-4">
+      <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-border dark:border-slate-700 flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1 max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-fg" />
           <input
             type="text"
             placeholder="Search description, affected data..."
@@ -220,26 +220,26 @@ export function BreachIncidents() {
       </div>
 
       {/* Data Table */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-border dark:border-slate-700 overflow-hidden">
         {filtered.length === 0 ? (
           <div className="p-12 text-center">
-            <ShieldAlert className="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600 mb-4" />
-            <p className="text-slate-500 dark:text-slate-400">No breach incidents found</p>
+            <ShieldAlert className="w-12 h-12 mx-auto text-slate-300 dark:text-muted-fg mb-4" />
+            <p className="text-muted-fg dark:text-muted-fg">No breach incidents found</p>
           </div>
         ) : (
           <>
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
+                <thead className="bg-bg dark:bg-slate-800/50 border-b border-border dark:border-slate-700">
                   <tr>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Date</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Description</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Data Affected</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Risk</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Status</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">NPC Notified</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Subjects Notified</th>
-                    <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 pr-4">Actions</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg">Date</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg">Description</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg">Data Affected</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg">Risk</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg">Status</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg">NPC Notified</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg">Subjects Notified</th>
+                    <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg pr-4">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
@@ -247,13 +247,13 @@ export function BreachIncidents() {
                     const status = STATUS_BADGES[b.status] ?? { label: b.status, cls: '', icon: null };
                     const risk = RISK_BADGES[b.risk_assessment] ?? { label: b.risk_assessment, cls: '', icon: null };
                     return (
-                      <tr key={b.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                        <td className="px-3 py-3 text-sm text-slate-500 dark:text-slate-400">{formatShortDate(b.detected_at)}</td>
+                      <tr key={b.id} className="hover:bg-bg dark:hover:bg-slate-700/50">
+                        <td className="px-3 py-3 text-sm text-muted-fg dark:text-muted-fg">{formatShortDate(b.detected_at)}</td>
                         <td className="px-3 py-3">
                           <div className="font-medium text-slate-900 dark:text-white line-clamp-1 max-w-xs">{b.description}</div>
-                          <div className="text-xs text-slate-500 dark:text-slate-400">{b.personal_data_affected}</div>
+                          <div className="text-xs text-muted-fg dark:text-muted-fg">{b.personal_data_affected}</div>
                         </td>
-                        <td className="px-3 py-3 text-sm text-slate-500 dark:text-slate-400 max-w-xs truncate">{b.personal_data_affected}</td>
+                        <td className="px-3 py-3 text-sm text-muted-fg dark:text-muted-fg max-w-xs truncate">{b.personal_data_affected}</td>
                         <td className="px-3 py-3">
                           <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${risk.cls}`}>
                             {risk.icon}

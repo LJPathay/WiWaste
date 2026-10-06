@@ -144,12 +144,12 @@ export function DataTable<T>({
    */
   const pinnedCellBg =
     "bg-white dark:bg-slate-950 " +
-    "group-hover:bg-slate-50 dark:group-hover:bg-slate-900 " +
+    "group-hover:bg-bg dark:group-hover:bg-slate-900 " +
     "group-data-[state=selected]:bg-teal-50 dark:group-data-[state=selected]:bg-teal-950/40";
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-950 rounded-xl border border-border dark:border-white/10 shadow-sm overflow-hidden">
         {loadingComponent ?? (
           <div className="flex items-center justify-center h-48">
             <div className="relative w-10 h-10">
@@ -162,11 +162,11 @@ export function DataTable<T>({
   }
 
   return (
-    <div className={cn("w-full bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden", className)}>
+    <div className={cn("w-full bg-white dark:bg-slate-950 rounded-xl border border-border dark:border-white/10 shadow-sm overflow-hidden", className)}>
       <div className={cn(horizontalScroll && "w-full overflow-x-auto")}>
         <Table ref={tableRef} className={cn("w-full", hasPinnedCol && "min-w-[800px]")}>
           {showHeader && (
-            <TableHeader className="sticky top-0 z-20 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-white/10">
+            <TableHeader className="sticky top-0 z-20 bg-bg dark:bg-slate-900 border-b border-border dark:border-white/10">
               <TableRow className="hover:bg-transparent">
                 {selectable && (
                   <TableHead className="w-10 text-center">
@@ -188,8 +188,8 @@ export function DataTable<T>({
                       className={cn(
                         col.align === 'numeric' && "text-left",
                         col.align === 'center' && "text-center",
-                        pin === 'start' && "sticky left-0 z-30 bg-slate-50 dark:bg-slate-900",
-                        pin === 'end' && "sticky right-0 z-30 bg-slate-50 dark:bg-slate-900",
+                        pin === 'start' && "sticky left-0 z-30 bg-bg dark:bg-slate-900",
+                        pin === 'end' && "sticky right-0 z-30 bg-bg dark:bg-slate-900",
                         col.hideOnMobile && "hidden md:table-cell",
                       )}
                       style={{
@@ -219,7 +219,7 @@ export function DataTable<T>({
                   className="text-center py-12"
                 >
                   {emptyState ?? (
-                    <p className="text-sm text-slate-400 dark:text-slate-500">{emptyMessage}</p>
+                    <p className="text-sm text-muted-fg dark:text-muted-fg">{emptyMessage}</p>
                   )}
                 </TableCell>
               </TableRow>
@@ -306,7 +306,7 @@ export function DataTable<T>({
       </div>
 
       {pagination && (
-        <div className="border-t border-slate-200 dark:border-white/10">
+        <div className="border-t border-border dark:border-white/10">
           {pagination}
         </div>
       )}

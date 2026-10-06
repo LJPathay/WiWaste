@@ -24,7 +24,7 @@ function getDaysUntil(date: Date) {
 function getDeadlineRisk(daysUntilDeadline: number) {
   if (daysUntilDeadline < 0) return { label: 'Missed', color: '#94a3b8', tone: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300', border: 'border-l-slate-400' };
   if (daysUntilDeadline <= 10) return { label: 'Urgent', color: '#94a3b8', tone: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300', border: 'border-l-slate-400' };
-  return { label: 'Open', color: '#94a3b8', tone: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400', border: 'border-l-slate-300' };
+  return { label: 'Open', color: '#94a3b8', tone: 'bg-slate-100 text-muted-fg dark:bg-slate-800 dark:text-muted-fg', border: 'border-l-slate-300' };
 }
 
 const columns: DataTableColumn<typeof MOCK_VENDOR_RETURNS[number]>[] = [
@@ -33,7 +33,7 @@ const columns: DataTableColumn<typeof MOCK_VENDOR_RETURNS[number]>[] = [
   { key: 'returnItems', header: 'Processed By', truncate: true, minWidth: '100px', render: (row) => row.returnItems.slice(0, 2).join(', ') + (row.returnItems.length > 2 ? ` +${row.returnItems.length - 2}` : '') },
   { key: 'returnDeadline', header: 'Date', minWidth: '100px', render: (row) => {
     const days = getDaysUntil(row.returnDeadline);
-    return <span className="font-semibold text-slate-600 dark:text-slate-400">{days < 0 ? `${Math.abs(days)}d overdue` : `${days}d left`}</span>;
+    return <span className="font-semibold text-muted-fg dark:text-muted-fg">{days < 0 ? `${Math.abs(days)}d overdue` : `${days}d left`}</span>;
   }},
   { key: 'eligibleCredit', header: 'Refund', numeric: true, minWidth: '100px', render: (row) => currencyFormatter.format(row.eligibleCredit) },
 ];
@@ -41,7 +41,7 @@ const columns: DataTableColumn<typeof MOCK_VENDOR_RETURNS[number]>[] = [
 function getActionLabel(daysUntilDeadline: number) {
   if (daysUntilDeadline < 0) return { label: 'Request Exception', color: 'text-slate-700 bg-slate-100 dark:bg-slate-800 dark:text-slate-300' };
   if (daysUntilDeadline <= 10) return { label: 'File Claim Now', color: 'text-slate-700 bg-slate-100 dark:bg-slate-800 dark:text-slate-300' };
-  return { label: 'Prepare Docs', color: 'text-slate-600 bg-slate-100 dark:bg-slate-800 dark:text-slate-400' };
+  return { label: 'Prepare Docs', color: 'text-muted-fg bg-slate-100 dark:bg-slate-800 dark:text-muted-fg' };
 }
 
 export function VendorCreditsPage() {
@@ -64,11 +64,11 @@ export function VendorCreditsPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <Link to="/dashboard?highlightKpi=2" className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-slate-200 dark:border-white/10 text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-white/10 dark:hover:text-slate-200 transition-colors" aria-label="Back to Dashboard"><ArrowLeft className="h-4 w-4" /></Link>
+        <Link to="/dashboard?highlightKpi=2" className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-border dark:border-white/10 text-muted-fg hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-white/10 dark:hover:text-slate-200 transition-colors" aria-label="Back to Dashboard"><ArrowLeft className="h-4 w-4" /></Link>
         <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Vendor Credit Recovery</h1>
         <UITooltip>
           <TooltipTrigger asChild>
-            <Info className="h-4 w-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
+            <Info className="h-4 w-4 text-muted-fg hover:text-muted-fg dark:hover:text-slate-300 cursor-help" />
           </TooltipTrigger>
           <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs text-xs">
             Track supplier return opportunities and recoverable credits. Act before return windows close permanently.
@@ -103,13 +103,13 @@ export function VendorCreditsPage() {
         </div>
       </div>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-slate-900">
+      <section className="rounded-xl border border-border bg-white p-4 shadow-sm dark:border-white/10 dark:bg-slate-900">
         <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
           <div className="flex items-center gap-2">
             <h2 className="text-sm font-bold text-[#0b1c30] dark:text-slate-100">Credit by Vendor</h2>
             <UITooltip>
               <TooltipTrigger asChild>
-                <Info className="h-3.5 w-3.5 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 cursor-help" />
+                <Info className="h-3.5 w-3.5 text-muted-fg hover:text-emerald-600 dark:hover:text-emerald-400 cursor-help" />
               </TooltipTrigger>
               <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs text-xs">
                 Color-coded by deadline risk — red=missed, amber=urgent, teal=open
@@ -148,22 +148,22 @@ export function VendorCreditsPage() {
         </div>
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 dark:border-white/10 dark:bg-slate-800/40">
+      <section className="rounded-xl border border-border bg-bg p-3.5 dark:border-white/10 dark:bg-slate-800/40">
         <div className="flex items-start gap-2">
           <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-200 dark:bg-slate-700">
-            <TimerReset className="h-3.5 w-3.5 text-slate-600 dark:text-slate-300" />
+            <TimerReset className="h-3.5 w-3.5 text-muted-fg dark:text-slate-300" />
           </div>
           <div>
             <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">What does a missed window mean?</h4>
-            <p className="mt-0.5 text-xs leading-5 text-slate-600 dark:text-slate-400">
+            <p className="mt-0.5 text-xs leading-5 text-muted-fg dark:text-muted-fg">
               A missed window means the vendor's return deadline has passed. Credits may be permanently lost unless the supplier grants a special exception. Always prepare return documentation and photos before deadlines close.
             </p>
           </div>
         </div>
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-slate-900 overflow-hidden">
-        <div className="p-3.5 border-b border-slate-200 dark:border-white/10 flex items-center gap-2">
+      <section className="rounded-xl border border-border bg-white shadow-sm dark:border-white/10 dark:bg-slate-900 overflow-hidden">
+        <div className="p-3.5 border-b border-border dark:border-white/10 flex items-center gap-2">
           <FileCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
           <h3 className="text-sm font-bold text-[#0b1c30] dark:text-slate-100">Return-Window Detections</h3>
         </div>

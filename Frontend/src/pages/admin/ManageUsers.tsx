@@ -344,7 +344,7 @@ export function ManageUsers() {
     {
       key: 'username', header: 'Username', truncate: true, minWidth: '100px',
       render: (row) => (
-        <span className="text-slate-600 dark:text-slate-400 font-mono text-xs">@{row.username}</span>
+        <span className="text-muted-fg dark:text-muted-fg font-mono text-xs">@{row.username}</span>
       ),
     },
     {
@@ -354,12 +354,12 @@ export function ManageUsers() {
           <div className="flex items-center gap-1.5 group">
             <span className="font-mono text-xs">{isAllEmailsUnmasked || unmaskedEmailIds.has(row.id) ? row.email : maskEmail(row.email)}</span>
             <button type="button" onClick={(e) => { e.stopPropagation(); toggleSingleEmailMask(row.id); }}
-              className="text-slate-400 opacity-60 group-hover:opacity-100 hover:text-slate-600 dark:hover:text-slate-200 transition-all p-0.5 rounded"
+              className="text-muted-fg opacity-60 group-hover:opacity-100 hover:text-muted-fg dark:hover:text-slate-200 transition-all p-0.5 rounded"
               title={isAllEmailsUnmasked || unmaskedEmailIds.has(row.id) ? "Mask Email" : "Unmask Email"}>
               {isAllEmailsUnmasked || unmaskedEmailIds.has(row.id) ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
             </button>
           </div>
-        ) : <span className="text-slate-400 italic">No email</span>
+        ) : <span className="text-muted-fg italic">No email</span>
       ),
     },
     {
@@ -395,7 +395,7 @@ export function ManageUsers() {
                     type="button"
                     onClick={(e) => { e.stopPropagation(); setArchiveModalUser(row); }}
                     aria-label={`Archive ${row.name}`}
-                    className="h-7 w-7 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-rose-600 hover:text-white transition-all inline-flex items-center justify-center"
+                    className="h-7 w-7 rounded-lg bg-slate-100 dark:bg-slate-800 text-muted-fg dark:text-slate-300 hover:bg-rose-600 hover:text-white transition-all inline-flex items-center justify-center"
                   >
                     <UserX className="h-3.5 w-3.5" />
                   </button>
@@ -411,7 +411,7 @@ export function ManageUsers() {
                   type="button"
                   onClick={(e) => { e.stopPropagation(); setReactivateModalUser(row); }}
                   aria-label={`Reactivate ${row.name}`}
-                  className="h-7 w-7 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-emerald-600 hover:text-white transition-all inline-flex items-center justify-center"
+                  className="h-7 w-7 rounded-lg bg-slate-100 dark:bg-slate-800 text-muted-fg dark:text-slate-300 hover:bg-emerald-600 hover:text-white transition-all inline-flex items-center justify-center"
                 >
                   <RotateCcw className="h-3.5 w-3.5" />
                 </button>
@@ -427,15 +427,15 @@ export function ManageUsers() {
   if (loading) return (
     <div className="flex flex-col items-center justify-center h-56 gap-3">
       <div className="relative w-12 h-12">
-        <div className="absolute inset-0 rounded-full border-3 border-slate-200 dark:border-slate-800"></div>
+        <div className="absolute inset-0 rounded-full border-3 border-border dark:border-slate-800"></div>
         <div className="absolute inset-0 rounded-full border-3 border-transparent border-t-[#006a61] border-r-[#006a61] animate-spin"></div>
         <div className="absolute inset-1.5 flex items-center justify-center">
           <Users className="h-6 w-6 text-[#006a61] dark:text-[#7ef0cf] animate-pulse" />
         </div>
       </div>
       <div className="text-center">
-        <p className="text-slate-600 dark:text-slate-400 font-semibold text-sm">Loading users...</p>
-        <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Fetching user accounts</p>
+        <p className="text-muted-fg dark:text-muted-fg font-semibold text-sm">Loading users...</p>
+        <p className="text-xs text-muted-fg dark:text-muted-fg mt-0.5">Fetching user accounts</p>
       </div>
     </div>
   );
@@ -468,7 +468,7 @@ export function ManageUsers() {
             <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Manage Users</h1>
             <UITooltip>
               <TooltipTrigger asChild>
-                <Info className="h-5 w-5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
+                <Info className="h-5 w-5 text-muted-fg hover:text-muted-fg dark:hover:text-slate-300 cursor-help" />
               </TooltipTrigger>
               <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
                 Configure system users, role access levels, and user accounts.
@@ -487,18 +487,18 @@ export function ManageUsers() {
       {/* Filter toolbar. This sits outside <DataTable> because DataTable has no
           children slot — passing it children (and a `footer` prop, which does not
           exist either) rendered neither this toolbar nor the pagination. */}
-      <div className="bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm">
-        <div className="p-3.5 border-b border-slate-200 dark:border-white/10 space-y-2.5">
+      <div className="bg-white dark:bg-slate-950 rounded-xl border border-border dark:border-white/10 shadow-sm">
+        <div className="p-3.5 border-b border-border dark:border-white/10 space-y-2.5">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-1" role="group" aria-label="Filter by status">
-              <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 px-2 uppercase tracking-wider">Status:</span>
+              <span className="text-[9px] font-bold text-muted-fg dark:text-muted-fg px-2 uppercase tracking-wider">Status:</span>
               {statusTabs.map(tab => {
                 const TabIcon = tab.Icon;
                 const isSelected = statusFilter === tab.id;
                 return (
                   <button key={tab.id} onClick={() => { setStatusFilter(tab.id); setCurrentPage(1); }}
                     aria-pressed={isSelected}
-                    className={`flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${isSelected ? 'bg-slate-100 dark:bg-slate-950 text-[#006a61] dark:text-[#7ef0cf] shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'}`}>
+                    className={`flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${isSelected ? 'bg-slate-100 dark:bg-slate-950 text-[#006a61] dark:text-[#7ef0cf] shadow-sm' : 'text-muted-fg dark:text-muted-fg hover:text-slate-900 dark:hover:text-slate-200'}`}>
                     {TabIcon && <TabIcon className="h-3.5 w-3.5" />}
                     <span>{tab.label}</span>
                     {tab.count > 0 && <span className="px-1.5 py-0.2 rounded-full text-[9px] bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300">{tab.count}</span>}
@@ -509,9 +509,9 @@ export function ManageUsers() {
 
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex items-center gap-1">
-                <label htmlFor="user-role-filter" className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Role:</label>
+                <label htmlFor="user-role-filter" className="text-[9px] font-bold text-muted-fg dark:text-muted-fg uppercase tracking-wider">Role:</label>
                 <select id="user-role-filter" value={roleFilter} onChange={e => setRoleFilter(e.target.value as 'all' | RoleKey)}
-                  className="h-8 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-xs font-medium rounded-lg px-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#006a61]">
+                  className="h-8 bg-bg dark:bg-slate-900 border border-border dark:border-white/10 text-xs font-medium rounded-lg px-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#006a61]">
                   <option value="all">All Roles</option>
                   {(Object.keys(ROLE_CONFIG) as RoleKey[]).map(key => (
                     <option key={key} value={key}>{ROLE_CONFIG[key].label}</option>
@@ -520,14 +520,14 @@ export function ManageUsers() {
               </div>
 
               <div className="relative max-w-xs w-full sm:w-56">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-fg" />
                 <input type="text" placeholder="Search name, username, email..." value={search} onChange={e => setSearch(e.target.value)}
-                  className="h-8 w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-white/10 pl-8 pr-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-700 dark:text-slate-200" />
+                  className="h-8 w-full bg-bg dark:bg-slate-900/50 border border-border dark:border-white/10 pl-8 pr-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-700 dark:text-slate-200" />
               </div>
 
               {isFiltered && (
                 <button onClick={() => { setStatusFilter('all'); setRoleFilter('all'); setSearch(''); }}
-                  className="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 underline font-medium">Reset Filters</button>
+                  className="text-xs text-muted-fg hover:text-slate-700 dark:hover:text-slate-300 underline font-medium">Reset Filters</button>
               )}
             </div>
           </div>
@@ -547,7 +547,7 @@ export function ManageUsers() {
         onRowClick={(row) => setViewingUser(row)}
         pagination={
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3.5">
-            <div className="text-xs text-slate-500 dark:text-slate-400">
+            <div className="text-xs text-muted-fg dark:text-muted-fg">
               {filteredUsers.length === 0 ? (
                 <span>No users match your filters</span>
               ) : (
@@ -563,57 +563,57 @@ export function ManageUsers() {
       {/* ── ADD USER MODAL ── */}
       {isAddOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-3 overflow-y-auto" role="dialog" aria-modal="true">
-          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-lg p-4 relative shadow-2xl my-6">
-            <button type="button" aria-label="Close" onClick={() => setIsAddOpen(false)} className="absolute top-3 right-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5">
+          <div className="bg-bg-elevated rounded-xl border border-border dark:border-white/10 w-full max-w-lg p-4 relative shadow-2xl my-6">
+            <button type="button" aria-label="Close" onClick={() => setIsAddOpen(false)} className="absolute top-3 right-3 text-muted-fg hover:text-muted-fg dark:hover:text-slate-200 p-0.5">
               <X className="h-4 w-4" />
             </button>
             <div className="flex items-center gap-2 mb-3 border-b border-slate-100 dark:border-white/5 pb-2.5">
               <div className="p-1.5 rounded-lg bg-[#006a61]/10 text-[#006a61] dark:text-[#7ef0cf]"><Plus className="h-4 w-4" /></div>
               <div>
                 <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Add New User</h2>
-                <p className="text-xs text-slate-500">Enter the name, email address and role. The username and password are generated for you.</p>
+                <p className="text-xs text-muted-fg">Enter the name, email address and role. The username and password are generated for you.</p>
               </div>
             </div>
 
             <form onSubmit={handleAddUser} className="space-y-3">
               <div className="grid grid-cols-3 gap-2">
                 <div>
-                  <label htmlFor="add-user-first-name" className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">First Name <span className="text-rose-500">*</span></label>
+                  <label htmlFor="add-user-first-name" className="block text-sm font-bold text-muted-fg dark:text-muted-fg mb-1">First Name <span className="text-rose-500">*</span></label>
                   <input id="add-user-first-name" type="text" required placeholder="First" value={form.first_name}
                     onChange={e => setForm(prev => ({ ...prev, first_name: e.target.value }))}
-                    className={`h-8 w-full bg-slate-50 dark:bg-slate-800 border px-3 rounded-lg text-xs focus:outline-none focus:ring-1 text-slate-900 dark:text-slate-100 ${isDuplicateName ? 'border-rose-500 focus:ring-rose-500' : 'border-slate-200 dark:border-white/10 focus:ring-[#006a61]'}`} />
+                    className={`h-8 w-full bg-bg dark:bg-slate-800 border px-3 rounded-lg text-xs focus:outline-none focus:ring-1 text-slate-900 dark:text-slate-100 ${isDuplicateName ? 'border-rose-500 focus:ring-rose-500' : 'border-border dark:border-white/10 focus:ring-[#006a61]'}`} />
                 </div>
                 <div>
-                  <label htmlFor="add-user-middle-name" className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">Middle Name</label>
+                  <label htmlFor="add-user-middle-name" className="block text-sm font-bold text-muted-fg dark:text-muted-fg mb-1">Middle Name</label>
                   <input id="add-user-middle-name" type="text" placeholder="Middle" value={form.middle_name}
                     onChange={e => setForm(prev => ({ ...prev, middle_name: e.target.value }))}
-                    className="h-8 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100" />
+                    className="h-8 w-full bg-bg dark:bg-slate-800 border border-border dark:border-white/10 px-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100" />
                 </div>
                 <div>
-                  <label htmlFor="add-user-last-name" className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">Last Name <span className="text-rose-500">*</span></label>
+                  <label htmlFor="add-user-last-name" className="block text-sm font-bold text-muted-fg dark:text-muted-fg mb-1">Last Name <span className="text-rose-500">*</span></label>
                   <input id="add-user-last-name" type="text" required placeholder="Last" value={form.surname}
                     onChange={e => setForm(prev => ({ ...prev, surname: e.target.value }))}
-                    className={`h-8 w-full bg-slate-50 dark:bg-slate-800 border px-3 rounded-lg text-xs focus:outline-none focus:ring-1 text-slate-900 dark:text-slate-100 ${isDuplicateName ? 'border-rose-500 focus:ring-rose-500' : 'border-slate-200 dark:border-white/10 focus:ring-[#006a61]'}`} />
+                    className={`h-8 w-full bg-bg dark:bg-slate-800 border px-3 rounded-lg text-xs focus:outline-none focus:ring-1 text-slate-900 dark:text-slate-100 ${isDuplicateName ? 'border-rose-500 focus:ring-rose-500' : 'border-border dark:border-white/10 focus:ring-[#006a61]'}`} />
                 </div>
               </div>
               {isDuplicateName && <p className="text-rose-500 text-[10px] font-semibold mt-1 flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> A user with this name already exists.</p>}
 
               {fullName.trim() && (
-                <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-white/5 space-y-1.5">
-                  <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Auto-generated credentials:</span>
+                <div className="p-2.5 rounded-lg bg-bg dark:bg-slate-800/70 border border-border dark:border-white/5 space-y-1.5">
+                  <span className="text-[10px] font-bold text-muted-fg dark:text-muted-fg uppercase tracking-wider">Auto-generated credentials:</span>
                   <div className="flex items-center gap-2 text-xs">
-                    <span className="text-slate-500 dark:text-slate-400">Username:</span>
+                    <span className="text-muted-fg dark:text-muted-fg">Username:</span>
                     <span className="font-mono font-semibold text-slate-900 dark:text-slate-100">@{autoUsername}</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs">
-                    <span className="text-slate-500 dark:text-slate-400">Password:</span>
+                    <span className="text-muted-fg dark:text-muted-fg">Password:</span>
                     <span className="font-mono font-semibold text-slate-900 dark:text-slate-100">{DEFAULT_PASSWORD}</span>
                   </div>
                   {/* The policy was computed but never displayed, so the form gave no
                       indication of what the shared password has to satisfy. */}
-                  <ul className="pt-1 mt-0.5 border-t border-slate-200 dark:border-white/5 space-y-0.5">
+                  <ul className="pt-1 mt-0.5 border-t border-border dark:border-white/5 space-y-0.5">
                     {passwordRules.map(rule => (
-                      <li key={rule.id} className={`flex items-center gap-1.5 text-[10px] ${rule.met ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'}`}>
+                      <li key={rule.id} className={`flex items-center gap-1.5 text-[10px] ${rule.met ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-fg dark:text-muted-fg'}`}>
                         {rule.met
                           ? <Check className="h-3 w-3 shrink-0" aria-hidden="true" />
                           : <span className="w-3 shrink-0 text-center" aria-hidden="true">&bull;</span>}
@@ -625,14 +625,14 @@ export function ManageUsers() {
               )}
 
               <div>
-                <label htmlFor="add-user-contact-number" className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">Contact Number</label>
+                <label htmlFor="add-user-contact-number" className="block text-sm font-bold text-muted-fg dark:text-muted-fg mb-1">Contact Number</label>
                 <input id="add-user-contact-number" type="text" placeholder="e.g. 09171234567" value={form.contact_number}
                   onChange={e => setForm(prev => ({ ...prev, contact_number: e.target.value }))}
-                  className="h-8 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100" />
+                  className="h-8 w-full bg-bg dark:bg-slate-800 border border-border dark:border-white/10 px-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100" />
               </div>
 
               <div>
-                <label htmlFor="add-user-email" className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">
+                <label htmlFor="add-user-email" className="block text-sm font-bold text-muted-fg dark:text-muted-fg mb-1">
                   Email Address <span className="text-rose-500">*</span>
                 </label>
                 <input
@@ -642,41 +642,41 @@ export function ManageUsers() {
                   placeholder="name@company.com"
                   value={effectiveEmail}
                   onChange={e => { setForm(prev => ({ ...prev, email: e.target.value })); setEmailEdited(true); }}
-                  className="h-8 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100"
+                  className="h-8 w-full bg-bg dark:bg-slate-800 border border-border dark:border-white/10 px-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100"
                 />
-                <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+                <p className="text-[10px] text-muted-fg dark:text-muted-fg mt-1">
                   Pre-filled from the name. Change it to the address this person actually
                   uses — "Forgot password" sends the reset code here.
                 </p>
               </div>
 
               <div className="relative">
-                <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">Assign Role <span className="text-rose-500">*</span></label>
+                <label className="block text-sm font-bold text-muted-fg dark:text-muted-fg mb-1">Assign Role <span className="text-rose-500">*</span></label>
                 <div className="relative">
                   <button type="button" onClick={() => setRoleDropdownOpen(prev => !prev)}
-                    className="h-8 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 rounded-lg text-xs flex items-center justify-between focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100">
+                    className="h-8 w-full bg-bg dark:bg-slate-800 border border-border dark:border-white/10 px-3 rounded-lg text-xs flex items-center justify-between focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100">
                     <div className="flex items-center gap-2">
                       {React.createElement(roleConfigFor(form.role).icon, { className: `h-3.5 w-3.5 ${roleConfigFor(form.role).iconColor}` })}
                       <span className="font-medium">{roleConfigFor(form.role).label}</span>
                     </div>
-                    <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+                    <ChevronDown className="h-3.5 w-3.5 text-muted-fg" />
                   </button>
                   {roleDropdownOpen && (
-                    <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white dark:bg-slate-850 rounded-xl border border-slate-200 dark:border-white/10 shadow-xl overflow-hidden py-1">
+                    <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white dark:bg-slate-850 rounded-xl border border-border dark:border-white/10 shadow-xl overflow-hidden py-1">
                       {(Object.keys(ROLE_CONFIG) as RoleKey[]).map(roleKey => {
                         const item = ROLE_CONFIG[roleKey];
                         const ItemIcon = item.icon;
                         const isSelected = form.role === roleKey;
                         return (
                           <button key={roleKey} type="button" onClick={() => { setForm(prev => ({ ...prev, role: roleKey })); setRoleDropdownOpen(false); }}
-                            className={`w-full text-left px-3 py-2 flex items-start gap-2.5 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors ${isSelected ? 'bg-[#006a61]/5 dark:bg-[#006a61]/20' : ''}`}>
+                            className={`w-full text-left px-3 py-2 flex items-start gap-2.5 hover:bg-bg dark:hover:bg-white/5 transition-colors ${isSelected ? 'bg-[#006a61]/5 dark:bg-[#006a61]/20' : ''}`}>
                             <ItemIcon className={`h-3.5 w-3.5 mt-0.5 shrink-0 ${item.iconColor}`} />
                             <div className="flex-1">
                               <div className="flex items-center justify-between">
                                 <span className="font-semibold text-xs text-slate-900 dark:text-slate-100">{item.label}</span>
                                 {isSelected && <Check className="h-3.5 w-3.5 text-[#006a61] dark:text-[#7ef0cf]" />}
                               </div>
-                              <span className="text-[10px] text-slate-500 dark:text-slate-400">{item.description}</span>
+                              <span className="text-[10px] text-muted-fg dark:text-muted-fg">{item.description}</span>
                             </div>
                           </button>
                         );
@@ -704,77 +704,77 @@ export function ManageUsers() {
       {/* ── EDIT USER MODAL ── */}
       {isEditOpen && editingUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-3 overflow-y-auto" role="dialog" aria-modal="true">
-          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-lg p-4 relative shadow-2xl my-6">
-            <button type="button" aria-label="Close" onClick={() => { setIsEditOpen(false); setViewingUser(null); }} className="absolute top-3 right-3 text-slate-400 hover:text-slate-600 p-0.5">
+          <div className="bg-bg-elevated rounded-xl border border-border dark:border-white/10 w-full max-w-lg p-4 relative shadow-2xl my-6">
+            <button type="button" aria-label="Close" onClick={() => { setIsEditOpen(false); setViewingUser(null); }} className="absolute top-3 right-3 text-muted-fg hover:text-muted-fg p-0.5">
               <X className="h-4 w-4" />
             </button>
             <div className="flex items-center gap-2 mb-3 border-b border-slate-100 dark:border-white/5 pb-2.5">
               <div className="p-1.5 rounded-lg bg-[#006a61]/10 text-[#006a61] dark:text-[#7ef0cf]"><Edit2 className="h-4 w-4" /></div>
               <div>
                 <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Edit User</h2>
-                <p className="text-xs text-slate-500">@{editingUser.username}</p>
+                <p className="text-xs text-muted-fg">@{editingUser.username}</p>
               </div>
             </div>
 
             <form onSubmit={handleEditUser} className="space-y-3">
               <div className="grid grid-cols-3 gap-2">
                 <div>
-                  <label htmlFor="edit-user-first-name" className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">First Name <span className="text-rose-500">*</span></label>
+                  <label htmlFor="edit-user-first-name" className="block text-sm font-bold text-muted-fg dark:text-muted-fg mb-1">First Name <span className="text-rose-500">*</span></label>
                   <input id="edit-user-first-name" type="text" required value={form.first_name}
                     onChange={e => setForm(prev => ({ ...prev, first_name: e.target.value }))}
-                    className={`h-8 w-full bg-slate-50 dark:bg-slate-800 border px-3 rounded-lg text-xs focus:outline-none focus:ring-1 text-slate-900 dark:text-slate-100 ${isDuplicateName ? 'border-rose-500 focus:ring-rose-500' : 'border-slate-200 dark:border-white/10 focus:ring-[#006a61]'}`} />
+                    className={`h-8 w-full bg-bg dark:bg-slate-800 border px-3 rounded-lg text-xs focus:outline-none focus:ring-1 text-slate-900 dark:text-slate-100 ${isDuplicateName ? 'border-rose-500 focus:ring-rose-500' : 'border-border dark:border-white/10 focus:ring-[#006a61]'}`} />
                 </div>
                 <div>
-                  <label htmlFor="edit-user-middle-name" className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">Middle Name</label>
+                  <label htmlFor="edit-user-middle-name" className="block text-sm font-bold text-muted-fg dark:text-muted-fg mb-1">Middle Name</label>
                   <input id="edit-user-middle-name" type="text" value={form.middle_name}
                     onChange={e => setForm(prev => ({ ...prev, middle_name: e.target.value }))}
-                    className="h-8 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100" />
+                    className="h-8 w-full bg-bg dark:bg-slate-800 border border-border dark:border-white/10 px-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100" />
                 </div>
                 <div>
-                  <label htmlFor="edit-user-last-name" className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">Last Name <span className="text-rose-500">*</span></label>
+                  <label htmlFor="edit-user-last-name" className="block text-sm font-bold text-muted-fg dark:text-muted-fg mb-1">Last Name <span className="text-rose-500">*</span></label>
                   <input id="edit-user-last-name" type="text" required value={form.surname}
                     onChange={e => setForm(prev => ({ ...prev, surname: e.target.value }))}
-                    className={`h-8 w-full bg-slate-50 dark:bg-slate-800 border px-3 rounded-lg text-xs focus:outline-none focus:ring-1 text-slate-900 dark:text-slate-100 ${isDuplicateName ? 'border-rose-500 focus:ring-rose-500' : 'border-slate-200 dark:border-white/10 focus:ring-[#006a61]'}`} />
+                    className={`h-8 w-full bg-bg dark:bg-slate-800 border px-3 rounded-lg text-xs focus:outline-none focus:ring-1 text-slate-900 dark:text-slate-100 ${isDuplicateName ? 'border-rose-500 focus:ring-rose-500' : 'border-border dark:border-white/10 focus:ring-[#006a61]'}`} />
                 </div>
               </div>
               {isDuplicateName && <p className="text-rose-500 text-[10px] font-semibold mt-1">A user with this name already exists.</p>}
 
               <div>
-                <label htmlFor="edit-user-email" className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">
+                <label htmlFor="edit-user-email" className="block text-sm font-bold text-muted-fg dark:text-muted-fg mb-1">
                   Email Address <span className="text-rose-500">*</span>
                 </label>
                 <input id="edit-user-email" type="email" required value={form.email}
                   onChange={e => setForm(prev => ({ ...prev, email: e.target.value }))}
-                  className="h-8 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100" />
+                  className="h-8 w-full bg-bg dark:bg-slate-800 border border-border dark:border-white/10 px-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100" />
               </div>
 
               <div>
-                <label htmlFor="edit-user-contact-number" className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">Contact Number</label>
+                <label htmlFor="edit-user-contact-number" className="block text-sm font-bold text-muted-fg dark:text-muted-fg mb-1">Contact Number</label>
                 <input id="edit-user-contact-number" type="text" value={form.contact_number}
                   onChange={e => setForm(prev => ({ ...prev, contact_number: e.target.value }))}
-                  className="h-8 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100" />
+                  className="h-8 w-full bg-bg dark:bg-slate-800 border border-border dark:border-white/10 px-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100" />
               </div>
 
               <div className="relative">
-                <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">Role</label>
+                <label className="block text-sm font-bold text-muted-fg dark:text-muted-fg mb-1">Role</label>
                 <div className="relative">
                   <button type="button" onClick={() => setRoleDropdownOpen(prev => !prev)}
-                    className="h-8 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 rounded-lg text-xs flex items-center justify-between focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100">
+                    className="h-8 w-full bg-bg dark:bg-slate-800 border border-border dark:border-white/10 px-3 rounded-lg text-xs flex items-center justify-between focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100">
                     <div className="flex items-center gap-2">
                       {React.createElement(roleConfigFor(form.role).icon, { className: `h-3.5 w-3.5 ${roleConfigFor(form.role).iconColor}` })}
                       <span className="font-medium">{roleConfigFor(form.role).label}</span>
                     </div>
-                    <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+                    <ChevronDown className="h-3.5 w-3.5 text-muted-fg" />
                   </button>
                   {roleDropdownOpen && (
-                    <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white dark:bg-slate-850 rounded-xl border border-slate-200 dark:border-white/10 shadow-xl overflow-hidden py-1">
+                    <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white dark:bg-slate-850 rounded-xl border border-border dark:border-white/10 shadow-xl overflow-hidden py-1">
                       {(Object.keys(ROLE_CONFIG) as RoleKey[]).map(roleKey => {
                         const item = ROLE_CONFIG[roleKey];
                         const ItemIcon = item.icon;
                         const isSelected = form.role === roleKey;
                         return (
                           <button key={roleKey} type="button" onClick={() => { setForm(prev => ({ ...prev, role: roleKey })); setRoleDropdownOpen(false); }}
-                            className={`w-full text-left px-3 py-1.5 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-white/5 ${isSelected ? 'bg-[#006a61]/10' : ''}`}>
+                            className={`w-full text-left px-3 py-1.5 flex items-center justify-between hover:bg-bg dark:hover:bg-white/5 ${isSelected ? 'bg-[#006a61]/10' : ''}`}>
                             <div className="flex items-center gap-2">
                               <ItemIcon className={`h-3.5 w-3.5 ${item.iconColor}`} />
                               <span className="font-medium text-xs">{item.label}</span>
@@ -792,20 +792,20 @@ export function ManageUsers() {
                   been explicitly confirmed. Archived is absent on purpose: it is
                   reached through Archive, which has its own confirmation. */}
               <div>
-                <label htmlFor="edit-user-status" className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">Account Status</label>
+                <label htmlFor="edit-user-status" className="block text-sm font-bold text-muted-fg dark:text-muted-fg mb-1">Account Status</label>
                 <select
                   id="edit-user-status"
                   value={form.status}
                   onChange={e => requestStatusChange(e.target.value as UserStatus)}
                   aria-describedby="edit-user-status-help"
-                  className={`h-8 w-full bg-slate-50 dark:bg-slate-800 border px-3 rounded-lg text-xs focus:outline-none focus:ring-1 text-slate-900 dark:text-slate-100 ${pendingStatus ? 'border-amber-400 focus:ring-amber-400' : 'border-slate-200 dark:border-white/10 focus:ring-[#006a61]'}`}
+                  className={`h-8 w-full bg-bg dark:bg-slate-800 border px-3 rounded-lg text-xs focus:outline-none focus:ring-1 text-slate-900 dark:text-slate-100 ${pendingStatus ? 'border-amber-400 focus:ring-amber-400' : 'border-border dark:border-white/10 focus:ring-[#006a61]'}`}
                 >
                   {ASSIGNABLE_STATUSES.map(status => (
                     <option key={status} value={status}>{STATUS_CONFIG[status].label}</option>
                   ))}
                   {form.status === 'Archived' && <option value="Archived">Archived</option>}
                 </select>
-                <p id="edit-user-status-help" className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+                <p id="edit-user-status-help" className="text-[10px] text-muted-fg dark:text-muted-fg mt-1">
                   {STATUS_CONFIG[(form.status as UserStatus) ?? 'Active']?.description ?? ''}
                 </p>
               </div>
@@ -822,7 +822,7 @@ export function ManageUsers() {
                   </p>
                   <div className="flex items-center gap-2">
                     <button type="button" onClick={cancelStatusChange}
-                      className="h-7 px-2.5 text-[11px] font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-white/10 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">
+                      className="h-7 px-2.5 text-[11px] font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-white/10 rounded-lg hover:bg-bg dark:hover:bg-slate-700 transition-all">
                       Cancel
                     </button>
                     <button type="button" onClick={() => setPendingStatus(null)}
@@ -847,43 +847,43 @@ export function ManageUsers() {
       {/* ── VIEW USER MODAL ── */}
       {viewingUser && !isEditOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-3 overflow-y-auto" role="dialog" aria-modal="true">
-          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-md p-4 relative shadow-2xl my-6">
-            <button type="button" aria-label="Close" onClick={() => setViewingUser(null)} className="absolute top-3 right-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5">
+          <div className="bg-bg-elevated rounded-xl border border-border dark:border-white/10 w-full max-w-md p-4 relative shadow-2xl my-6">
+            <button type="button" aria-label="Close" onClick={() => setViewingUser(null)} className="absolute top-3 right-3 text-muted-fg hover:text-muted-fg dark:hover:text-slate-200 p-0.5">
               <X className="h-4 w-4" />
             </button>
             <div className="flex items-center gap-2.5 mb-4 border-b border-slate-100 dark:border-white/5 pb-3">
               <div className="p-2 rounded-full bg-[#006a61]/10 text-[#006a61] dark:text-[#7ef0cf]"><Users className="h-5 w-5" /></div>
               <div>
                 <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">{viewingUser.name}</h2>
-                <p className="text-xs text-slate-500">User Account Details</p>
+                <p className="text-xs text-muted-fg">User Account Details</p>
               </div>
             </div>
 
             <div className="space-y-3">
               <div>
-                <label className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Full Name</label>
+                <label className="text-[9px] font-bold text-muted-fg dark:text-muted-fg uppercase tracking-wider">Full Name</label>
                 <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 mt-0.5">{viewingUser.name}</p>
               </div>
 
               {viewingUser.contact_number && (
                 <div>
-                  <label className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Contact Number</label>
+                  <label className="text-[9px] font-bold text-muted-fg dark:text-muted-fg uppercase tracking-wider">Contact Number</label>
                   <p className="text-sm text-slate-700 dark:text-slate-300 mt-0.5">{viewingUser.contact_number}</p>
                 </div>
               )}
 
               <div>
-                <label className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Username</label>
+                <label className="text-[9px] font-bold text-muted-fg dark:text-muted-fg uppercase tracking-wider">Username</label>
                 <p className="text-sm font-mono text-slate-700 dark:text-slate-300 mt-0.5">@{viewingUser.username}</p>
               </div>
 
               <div>
-                <label className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Email Address</label>
+                <label className="text-[9px] font-bold text-muted-fg dark:text-muted-fg uppercase tracking-wider">Email Address</label>
                 <p className="text-sm text-slate-700 dark:text-slate-300 mt-0.5 break-all">{viewingUser.email || 'Not provided'}</p>
               </div>
 
               <div>
-                <label className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Role</label>
+                <label className="text-[9px] font-bold text-muted-fg dark:text-muted-fg uppercase tracking-wider">Role</label>
                 <div className="mt-0.5">
                   {(() => {
                     const roleConfig = roleConfigFor(viewingUser.role);
@@ -899,11 +899,11 @@ export function ManageUsers() {
               </div>
 
               <div>
-                <label className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Account Status</label>
+                <label className="text-[9px] font-bold text-muted-fg dark:text-muted-fg uppercase tracking-wider">Account Status</label>
                 <div className="mt-0.5 flex items-center gap-2 flex-wrap">
                   <StatusBadge status={viewingUser.status} />
                   {viewingUser.status !== 'Active' && (
-                    <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                    <span className="text-[10px] text-muted-fg dark:text-muted-fg">
                       {STATUS_CONFIG[viewingUser.status as UserStatus]?.description}
                     </span>
                   )}
@@ -912,7 +912,7 @@ export function ManageUsers() {
 
               {viewingUser.created_at && (
                 <div>
-                  <label className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Account Created</label>
+                  <label className="text-[9px] font-bold text-muted-fg dark:text-muted-fg uppercase tracking-wider">Account Created</label>
                   <p className="text-sm text-slate-700 dark:text-slate-300 mt-0.5">
                     {new Date(viewingUser.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </p>
@@ -948,22 +948,22 @@ export function ManageUsers() {
       {/* ── ARCHIVE CONFIRM MODAL ── */}
       {archiveModalUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-3" role="dialog" aria-modal="true">
-          <div className="bg-white dark:bg-slate-900 rounded-xl border border-rose-200 dark:border-rose-800/40 w-full max-w-md p-4 relative shadow-2xl">
-            <button type="button" aria-label="Close" onClick={() => setArchiveModalUser(null)} className="absolute top-3 right-3 text-slate-400 hover:text-slate-600"><X className="h-4 w-4" /></button>
+          <div className="bg-bg-elevated rounded-xl border border-rose-200 dark:border-rose-800/40 w-full max-w-md p-4 relative shadow-2xl">
+            <button type="button" aria-label="Close" onClick={() => setArchiveModalUser(null)} className="absolute top-3 right-3 text-muted-fg hover:text-muted-fg"><X className="h-4 w-4" /></button>
             <div className="flex items-center gap-2.5 mb-2.5">
               <div className="p-2.5 rounded-full bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400"><UserX className="h-5 w-5" /></div>
               <div>
                 <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Archive User Account</h3>
-                <p className="text-xs text-slate-500">Remove from active user list</p>
+                <p className="text-xs text-muted-fg">Remove from active user list</p>
               </div>
             </div>
-            <p className="text-xs text-slate-600 dark:text-slate-300 mb-3 leading-relaxed">
+            <p className="text-xs text-muted-fg dark:text-slate-300 mb-3 leading-relaxed">
               Are you sure you want to archive <strong className="text-slate-900 dark:text-slate-100">{archiveModalUser.name}</strong> (@{archiveModalUser.username})?
               <br /><br />
               This user will be blocked from logging in and moved to the <strong className="text-rose-600 dark:text-rose-400">Archived</strong> list. This can be reversed by an administrator.
             </p>
             <div className="flex items-center justify-end gap-2">
-              <button onClick={() => setArchiveModalUser(null)} className="h-8 px-3 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-all">Cancel</button>
+              <button onClick={() => setArchiveModalUser(null)} className="h-8 px-3 text-xs font-semibold text-muted-fg dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-all">Cancel</button>
               <button onClick={handleArchiveConfirm} disabled={submitting}
                 className="h-8 px-3 text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition-all shadow-sm disabled:opacity-50 flex items-center gap-1.5">
                 <UserX className="h-3.5 w-3.5" />{submitting ? 'Archiving...' : 'Archive User'}
@@ -976,16 +976,16 @@ export function ManageUsers() {
       {/* ── REACTIVATE CONFIRM MODAL ── */}
       {reactivateModalUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-3" role="dialog" aria-modal="true">
-          <div className="bg-white dark:bg-slate-900 rounded-xl border border-emerald-200 dark:border-emerald-800/40 w-full max-w-md p-4 relative shadow-2xl">
-            <button type="button" aria-label="Close" onClick={() => setReactivateModalUser(null)} className="absolute top-3 right-3 text-slate-400 hover:text-slate-600"><X className="h-4 w-4" /></button>
+          <div className="bg-bg-elevated rounded-xl border border-emerald-200 dark:border-emerald-800/40 w-full max-w-md p-4 relative shadow-2xl">
+            <button type="button" aria-label="Close" onClick={() => setReactivateModalUser(null)} className="absolute top-3 right-3 text-muted-fg hover:text-muted-fg"><X className="h-4 w-4" /></button>
             <div className="flex items-center gap-2.5 mb-2.5">
               <div className="p-2.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400"><RotateCcw className="h-5 w-5" /></div>
               <div>
                 <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Reactivate User Account</h3>
-                <p className="text-xs text-slate-500">Restore sign-in access</p>
+                <p className="text-xs text-muted-fg">Restore sign-in access</p>
               </div>
             </div>
-            <p className="text-xs text-slate-600 dark:text-slate-300 mb-3 leading-relaxed">
+            <p className="text-xs text-muted-fg dark:text-slate-300 mb-3 leading-relaxed">
               Reactivate <strong className="text-slate-900 dark:text-slate-100">{reactivateModalUser.name}</strong> (@{reactivateModalUser.username})?
               <br /><br />
               The account will move from{' '}
@@ -993,7 +993,7 @@ export function ManageUsers() {
               <StatusBadge status="Active" /> and be able to sign in again. The account itself was never deleted.
             </p>
             <div className="flex items-center justify-end gap-2">
-              <button onClick={() => setReactivateModalUser(null)} className="h-8 px-3 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-all">Cancel</button>
+              <button onClick={() => setReactivateModalUser(null)} className="h-8 px-3 text-xs font-semibold text-muted-fg dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-all">Cancel</button>
               <button onClick={handleReactivateConfirm} disabled={submitting}
                 className="h-8 px-3 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-all shadow-sm disabled:opacity-50 flex items-center gap-1.5">
                 <RotateCcw className="h-3.5 w-3.5" />{submitting ? 'Reactivating...' : 'Reactivate User'}

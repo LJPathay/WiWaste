@@ -62,7 +62,7 @@ export function SalesReports() {
 
   // VAT Summary Tab
   const VatSummaryTab = () => {
-    if (!vatData) return <div className="p-8 text-center text-slate-500">Loading VAT data...</div>;
+    if (!vatData) return <div className="p-8 text-center text-muted-fg">Loading VAT data...</div>;
 
     const s = vatData.summary;
     const daily = vatData.daily_breakdown;
@@ -71,58 +71,58 @@ export function SalesReports() {
       <div className="space-y-6">
         {/* Summary Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-sm text-slate-500 dark:text-slate-400">Total Sales</div>
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-border dark:border-slate-700">
+            <div className="text-sm text-muted-fg dark:text-muted-fg">Total Sales</div>
             <div className="text-2xl font-bold text-slate-900 dark:text-white">{formatCurrency(s.total_sales ?? 0)}</div>
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-sm text-slate-500 dark:text-slate-400">VAT (12%)</div>
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-border dark:border-slate-700">
+            <div className="text-sm text-muted-fg dark:text-muted-fg">VAT (12%)</div>
             <div className="text-2xl font-bold text-brand-600 dark:text-brand-400">{formatCurrency(s.total_vat ?? 0)}</div>
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-sm text-slate-500 dark:text-slate-400">VATable Sales</div>
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-border dark:border-slate-700">
+            <div className="text-sm text-muted-fg dark:text-muted-fg">VATable Sales</div>
             <div className="text-2xl font-bold text-slate-900 dark:text-white">{formatCurrency(s.total_vatable ?? 0)}</div>
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-sm text-slate-500 dark:text-slate-400">Non-VAT Sales</div>
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-border dark:border-slate-700">
+            <div className="text-sm text-muted-fg dark:text-muted-fg">Non-VAT Sales</div>
             <div className="text-2xl font-bold text-slate-900 dark:text-white">{formatCurrency(s.total_non_vatable ?? 0)}</div>
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-sm text-slate-500 dark:text-slate-400">Senior/PWD Discount</div>
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-border dark:border-slate-700">
+            <div className="text-sm text-muted-fg dark:text-muted-fg">Senior/PWD Discount</div>
             <div className="text-2xl font-bold text-amber-600">{formatCurrency(s.total_senior_pwd_discount ?? 0)}</div>
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-sm text-slate-500 dark:text-slate-400">Senior/PWD VAT Exempt</div>
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-border dark:border-slate-700">
+            <div className="text-sm text-muted-fg dark:text-muted-fg">Senior/PWD VAT Exempt</div>
             <div className="text-2xl font-bold text-green-600">{formatCurrency(s.total_senior_pwd_vat_exempt ?? 0)}</div>
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-sm text-slate-500 dark:text-slate-400">Other Discounts</div>
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-border dark:border-slate-700">
+            <div className="text-sm text-muted-fg dark:text-muted-fg">Other Discounts</div>
             <div className="text-2xl font-bold text-red-600">{formatCurrency(s.total_discount ?? 0)}</div>
           </div>
         </div>
 
         {/* Daily Breakdown Table */}
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-          <div className="p-4 border-b border-slate-200 dark:border-slate-700">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-border dark:border-slate-700 overflow-hidden">
+          <div className="p-4 border-b border-border dark:border-slate-700">
             <h3 className="font-semibold text-slate-900 dark:text-white">Daily VAT Breakdown</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
+              <thead className="bg-bg dark:bg-slate-800/50 border-b border-border dark:border-slate-700">
                 <tr>
-                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Date</th>
-                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Transactions</th>
-                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Daily Sales</th>
-                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">VAT</th>
-                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">VATable</th>
-                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Non-VAT</th>
-                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Senior/PWD Disc.</th>
-                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Discounts</th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-fg">Date</th>
+                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-muted-fg">Transactions</th>
+                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-muted-fg">Daily Sales</th>
+                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-muted-fg">VAT</th>
+                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-muted-fg">VATable</th>
+                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-muted-fg">Non-VAT</th>
+                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-muted-fg">Senior/PWD Disc.</th>
+                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-muted-fg">Discounts</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                 {daily.slice((page - 1) * pageSize, page * pageSize).map((d, idx) => (
-                  <tr key={`${d.date}-${idx}`} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                  <tr key={`${d.date}-${idx}`} className="hover:bg-bg dark:hover:bg-slate-700/50">
                     <td className="px-3 py-2 text-sm text-slate-900 dark:text-white">{d.date}</td>
                     <td className="px-3 py-2 text-right text-sm">{d.transaction_count}</td>
                     <td className="px-3 py-2 text-right text-sm">{formatCurrency(d.daily_sales)}</td>
@@ -143,7 +143,7 @@ export function SalesReports() {
 
   // Discount Summary Tab
   const DiscountSummaryTab = () => {
-    if (!discountData) return <div className="p-8 text-center text-slate-500">Loading discount data...</div>;
+    if (!discountData) return <div className="p-8 text-center text-muted-fg">Loading discount data...</div>;
 
     const t = discountData.transaction_level;
     const i = discountData.item_level;
@@ -152,36 +152,36 @@ export function SalesReports() {
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-sm text-slate-500 dark:text-slate-400">Total Discounts (Txn)</div>
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-border dark:border-slate-700">
+            <div className="text-sm text-muted-fg dark:text-muted-fg">Total Discounts (Txn)</div>
             <div className="text-2xl font-bold text-red-600">{formatCurrency(t.total_discount ?? 0)}</div>
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-sm text-slate-500 dark:text-slate-400">Senior/PWD (Txn)</div>
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-border dark:border-slate-700">
+            <div className="text-sm text-muted-fg dark:text-muted-fg">Senior/PWD (Txn)</div>
             <div className="text-2xl font-bold text-amber-600">{formatCurrency(t.total_senior_pwd_discount ?? 0)}</div>
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-sm text-slate-500 dark:text-slate-400">Senior/PWD VAT Exempt</div>
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-border dark:border-slate-700">
+            <div className="text-sm text-muted-fg dark:text-muted-fg">Senior/PWD VAT Exempt</div>
             <div className="text-2xl font-bold text-green-600">{formatCurrency(t.total_senior_pwd_vat_exempt ?? 0)}</div>
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-sm text-slate-500 dark:text-slate-400">Item Discounts</div>
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-border dark:border-slate-700">
+            <div className="text-sm text-muted-fg dark:text-muted-fg">Item Discounts</div>
             <div className="text-2xl font-bold text-red-600">{formatCurrency(i.total_item_discount ?? 0)}</div>
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-sm text-slate-500 dark:text-slate-400">Senior/PWD Item Disc.</div>
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-border dark:border-slate-700">
+            <div className="text-sm text-muted-fg dark:text-muted-fg">Senior/PWD Item Disc.</div>
             <div className="text-2xl font-bold text-amber-600">{formatCurrency(i.senior_pwd_item_discount ?? 0)}</div>
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-sm text-slate-500 dark:text-slate-400">Discounted Items</div>
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-border dark:border-slate-700">
+            <div className="text-sm text-muted-fg dark:text-muted-fg">Discounted Items</div>
             <div className="text-2xl font-bold text-slate-900 dark:text-white">{i.discounted_items_count ?? 0}</div>
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700 md:col-span-2 lg:col-span-2">
-            <div className="text-sm text-slate-500 dark:text-slate-400">Combined Total Discount</div>
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-border dark:border-slate-700 md:col-span-2 lg:col-span-2">
+            <div className="text-sm text-muted-fg dark:text-muted-fg">Combined Total Discount</div>
             <div className="text-2xl font-bold text-red-600">{formatCurrency(c.total_discount ?? 0)}</div>
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700 md:col-span-2 lg:col-span-2">
-            <div className="text-sm text-slate-500 dark:text-slate-400">Combined Senior/PWD Discount</div>
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-border dark:border-slate-700 md:col-span-2 lg:col-span-2">
+            <div className="text-sm text-muted-fg dark:text-muted-fg">Combined Senior/PWD Discount</div>
             <div className="text-2xl font-bold text-amber-600">{formatCurrency(c.total_senior_pwd_discount ?? 0)}</div>
           </div>
         </div>
@@ -194,27 +194,27 @@ export function SalesReports() {
     if (loading && seniorPwdData.length === 0) return <div className="p-8 text-center">Loading...</div>;
 
     return (
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-border dark:border-slate-700 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
+            <thead className="bg-bg dark:bg-slate-800/50 border-b border-border dark:border-slate-700">
               <tr>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Txn ID</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Date</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Cashier</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Type</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">ID Presented</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Name</th>
-                <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Discount</th>
-                <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">VAT Exempt</th>
-                <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Total</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-fg">Txn ID</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-fg">Date</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-fg">Cashier</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-fg">Type</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-fg">ID Presented</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-fg">Name</th>
+                <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-muted-fg">Discount</th>
+                <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-muted-fg">VAT Exempt</th>
+                <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-muted-fg">Total</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
               {seniorPwdData.slice((page - 1) * pageSize, page * pageSize).map((t, idx) => (
-                <tr key={`${t.transaction_id}-${idx}`} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                <tr key={`${t.transaction_id}-${idx}`} className="hover:bg-bg dark:hover:bg-slate-700/50">
                   <td className="px-3 py-2 text-sm font-mono text-slate-900 dark:text-white">{t.transaction_id}</td>
-                  <td className="px-3 py-2 text-sm text-slate-500">{formatDate(t.date)}</td>
+                  <td className="px-3 py-2 text-sm text-muted-fg">{formatDate(t.date)}</td>
                   <td className="px-3 py-2 text-sm">{t.cashier}</td>
                   <td className="px-3 py-2">
                     <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${t.senior_pwd_type === 'senior' ? 'bg-blue-50 text-blue-700' : 'bg-purple-50 text-purple-700'}`}>
@@ -241,13 +241,13 @@ export function SalesReports() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Sales Reports</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-sm text-muted-fg dark:text-muted-fg mt-1">
             VAT breakdown, discount analysis, and Senior/PWD transaction logs
           </p>
         </div>
         <div className="flex items-center gap-4">
           <div className="relative">
-            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-fg" />
             <input
               type="date"
               value={fromDate}
@@ -255,9 +255,9 @@ export function SalesReports() {
               className={`${inputCls} pl-10 w-40`}
             />
           </div>
-          <span className="text-slate-400">to</span>
+          <span className="text-muted-fg">to</span>
           <div className="relative">
-            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-fg" />
             <input
               type="date"
               value={toDate}
@@ -265,7 +265,7 @@ export function SalesReports() {
               className={`${inputCls} pl-10 w-40`}
             />
           </div>
-          <span className="text-sm text-slate-500 dark:text-slate-400 ml-2">{dateRangeDisplay}</span>
+          <span className="text-sm text-muted-fg dark:text-muted-fg ml-2">{dateRangeDisplay}</span>
           <button
             onClick={loadReports}
             disabled={loading}
@@ -284,8 +284,8 @@ export function SalesReports() {
       </div>
 
       {/* Tab Navigation */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
-        <div className="flex border-b border-slate-200 dark:border-slate-700 mb-4">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-border dark:border-slate-700 p-4">
+        <div className="flex border-b border-border dark:border-slate-700 mb-4">
           {[
             { key: 'vat', label: 'VAT Summary', icon: <DollarSign className="w-4 h-4 mr-2" /> },
             { key: 'discount', label: 'Discounts', icon: <Percent className="w-4 h-4 mr-2" /> },
@@ -297,7 +297,7 @@ export function SalesReports() {
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === tab.key
                   ? 'bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 border-b-2 border-brand-500'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                  : 'text-muted-fg dark:text-muted-fg hover:text-slate-700 dark:hover:text-slate-200'
               }`}
             >
               {tab.icon}

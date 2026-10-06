@@ -41,7 +41,7 @@ export function CashierHistory() {
     <div className="space-y-6 w-full font-sans">
       <div>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Transaction History</h1>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Current shift completed transactions.</p>
+        <p className="text-xs text-muted-fg dark:text-muted-fg mt-1">Current shift completed transactions.</p>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-6">
@@ -59,10 +59,10 @@ export function CashierHistory() {
           )}
         />
 
-        <div className="bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm p-5">
+        <div className="bg-white dark:bg-slate-950 rounded-xl border border-border dark:border-white/10 shadow-sm p-5">
           <div className="flex items-center justify-between gap-3 mb-4">
             <div className="flex items-center gap-2">
-              <Receipt className="h-4 w-4 text-slate-500" />
+              <Receipt className="h-4 w-4 text-muted-fg" />
               <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">Receipt Preview</h2>
             </div>
             {selectedReceipt && (
@@ -74,10 +74,10 @@ export function CashierHistory() {
           </div>
           {selectedReceipt ? (
             <div className="space-y-2 text-xs">
-              <div className="flex justify-between gap-4"><span className="text-slate-500">Transaction</span><span className="text-right font-mono">{selectedReceipt.transaction_id}</span></div>
-              <div className="flex justify-between gap-4"><span className="text-slate-500">Cashier</span><span className="text-right">{selectedReceipt.cashier_name}</span></div>
-              <div className="flex justify-between gap-4"><span className="text-slate-500">Payment</span><span className="text-right">{selectedReceipt.payment_method}</span></div>
-              <div className="border-t border-slate-200 dark:border-white/10 pt-2 space-y-1">
+              <div className="flex justify-between gap-4"><span className="text-muted-fg">Transaction</span><span className="text-right font-mono">{selectedReceipt.transaction_id}</span></div>
+              <div className="flex justify-between gap-4"><span className="text-muted-fg">Cashier</span><span className="text-right">{selectedReceipt.cashier_name}</span></div>
+              <div className="flex justify-between gap-4"><span className="text-muted-fg">Payment</span><span className="text-right">{selectedReceipt.payment_method}</span></div>
+              <div className="border-t border-border dark:border-white/10 pt-2 space-y-1">
                 {selectedReceipt.items.map(item => (
                   <div key={item.sales_item_id} className="flex justify-between gap-4">
                     <span>{item.product_name} x{item.quantity}</span>
@@ -85,13 +85,13 @@ export function CashierHistory() {
                   </div>
                 ))}
               </div>
-              <div className="flex justify-between gap-4 border-t border-slate-200 dark:border-white/10 pt-2 text-sm font-bold">
+              <div className="flex justify-between gap-4 border-t border-border dark:border-white/10 pt-2 text-sm font-bold">
                 <span>Total</span>
                 <span className="text-right">{formatCurrency(selectedReceipt.total_amount)}</span>
               </div>
             </div>
           ) : (
-            <div className="text-center py-10 text-sm text-slate-400">Choose a transaction to preview a receipt.</div>
+            <div className="text-center py-10 text-sm text-muted-fg">Choose a transaction to preview a receipt.</div>
           )}
         </div>
       </div>

@@ -51,8 +51,8 @@ export function roleConfigFor(role: string): { label: string; icon: typeof Shiel
   return {
     label: role || 'Unassigned',
     icon: Shield,
-    iconColor: 'text-slate-500 dark:text-slate-400',
-    badgeClass: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700/50',
+    iconColor: 'text-muted-fg dark:text-muted-fg',
+    badgeClass: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-border dark:border-slate-700/50',
   };
 }
 

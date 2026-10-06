@@ -40,7 +40,7 @@ const columns: DataTableColumn<ApiRecommendation>[] = [
     render: (row) => (
       <div>
         <div className="font-semibold text-[#0F172A] dark:text-slate-100">{row.product_name}</div>
-        <div className="text-[10px] font-mono text-[#64748B] dark:text-slate-400">{row.sku}</div>
+        <div className="text-[10px] font-mono text-[#64748B] dark:text-muted-fg">{row.sku}</div>
       </div>
     ),
   },
@@ -197,29 +197,29 @@ export function Recommendations() {
 
       {rejectingId !== null && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" role="dialog" aria-modal="true">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+          <div className="bg-bg-elevated rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
               <h3 className="text-sm font-bold text-gray-900">Reject Recommendation</h3>
               <button onClick={() => { setRejectingId(null); setRejectReason(''); }} className="p-1.5 rounded-lg hover:bg-gray-100">
-                <X className="h-4 w-4 text-gray-500" />
+                <X className="h-4 w-4 text-muted-fg" />
               </button>
             </div>
             <div className="p-5 space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Reason for Rejection</label>
+                <label className="block text-xs font-semibold text-muted-fg mb-1.5">Reason for Rejection</label>
                 <textarea
                   value={rejectReason}
                   onChange={e => setRejectReason(e.target.value)}
                   placeholder="Explain why this recommendation is being rejected..."
                   rows={4}
-                  className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 bg-white dark:bg-slate-900 text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#0F766E] resize-none"
+                  className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-bg-elevated text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#0F766E] resize-none"
                   required
                 />
               </div>
               <div className="flex gap-3">
                 <button
                   onClick={() => { setRejectingId(null); setRejectReason(''); }}
-                  className="flex-1 py-2 rounded-lg border border-gray-200 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+                  className="flex-1 py-2 rounded-lg border border-border text-xs font-semibold text-muted-fg hover:bg-bg"
                 >
                   Cancel
                 </button>
@@ -241,31 +241,31 @@ export function Recommendations() {
           <h1 className="text-xl font-bold text-[#0F172A] dark:text-slate-100">System Recommendations</h1>
           <UITooltip>
             <TooltipTrigger asChild>
-              <Info className="h-4 w-4 text-slate-400 dark:text-slate-500 hover:text-slate-600 cursor-help" />
+              <Info className="h-4 w-4 text-muted-fg dark:text-muted-fg hover:text-muted-fg cursor-help" />
             </TooltipTrigger>
             <TooltipContent className="bg-slate-900 text-white max-w-xs">
               Review and act on system-generated stock recommendations to optimise inventory levels.
             </TooltipContent>
           </UITooltip>
         </div>
-        <p className="text-xs text-[#64748B] dark:text-slate-400 dark:text-slate-500">
+        <p className="text-xs text-[#64748B] dark:text-muted-fg dark:text-muted-fg">
           Review and act on system-generated stock actions to optimise inventory levels and reduce waste
         </p>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-xl border border-[#E5E7EB] dark:border-white/10 shadow-sm px-4 py-3">
-        <p className="text-[10px] font-semibold text-[#64748B] dark:text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3">Approval Workflow</p>
+      <div className="bg-bg-elevated rounded-xl border border-[#E5E7EB] dark:border-white/10 shadow-sm px-4 py-3">
+        <p className="text-[10px] font-semibold text-[#64748B] dark:text-muted-fg dark:text-muted-fg uppercase tracking-wider mb-3">Approval Workflow</p>
         <div className="flex items-center flex-wrap gap-1">
           {WORKFLOW_STEPS.map((step, idx) => (
             <React.Fragment key={step.label}>
               <span className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
-                step.active ? 'bg-[#0F766E] text-white border-[#0F766E] shadow-sm' : 'bg-slate-50 dark:bg-slate-800 text-[#64748B] dark:text-slate-400 dark:text-slate-500 border-[#E5E7EB] dark:border-white/10'
+                step.active ? 'bg-[#0F766E] text-white border-[#0F766E] shadow-sm' : 'bg-bg dark:bg-slate-800 text-[#64748B] dark:text-muted-fg dark:text-muted-fg border-[#E5E7EB] dark:border-white/10'
               }`}>
-                {step.active && <span className="inline-block w-1.5 h-1.5 rounded-full bg-white dark:bg-slate-900 mr-1.5 align-middle" />}
+                {step.active && <span className="inline-block w-1.5 h-1.5 rounded-full bg-bg-elevated mr-1.5 align-middle" />}
                 {step.label}
               </span>
               {idx < WORKFLOW_STEPS.length - 1 && (
-                <ChevronRight className="h-3.5 w-3.5 text-slate-300 dark:text-slate-500 flex-shrink-0" />
+                <ChevronRight className="h-3.5 w-3.5 text-slate-300 dark:text-muted-fg flex-shrink-0" />
               )}
             </React.Fragment>
           ))}
@@ -304,19 +304,19 @@ export function Recommendations() {
 
       <div className="flex flex-col sm:flex-row gap-2">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 dark:text-slate-500 pointer-events-none" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-fg dark:text-muted-fg pointer-events-none" />
           <input
             type="text"
             placeholder="Search product or SKU..."
             value={search}
             onChange={e => { setSearch(e.target.value); setPage(1); }}
-            className="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 text-[#374151] dark:text-slate-300 dark:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all shadow-sm"
+            className="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated text-[#374151] dark:text-slate-300 dark:text-muted-fg focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all shadow-sm"
           />
         </div>
         <select
           value={statusFilter}
           onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
-          className="px-3 py-2 text-xs rounded-lg border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 text-[#374151] dark:text-slate-300 dark:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30"
+          className="px-3 py-2 text-xs rounded-lg border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated text-[#374151] dark:text-slate-300 dark:text-muted-fg focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30"
         >
           <option value="">All Status</option>
           <option value="pending">Pending</option>
@@ -326,13 +326,13 @@ export function Recommendations() {
       </div>
 
       {filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 gap-3 bg-white dark:bg-slate-900 rounded-xl border border-[#E5E7EB] dark:border-white/10 shadow-sm">
+        <div className="flex flex-col items-center justify-center py-12 gap-3 bg-bg-elevated rounded-xl border border-[#E5E7EB] dark:border-white/10 shadow-sm">
           <div className="rounded-full bg-emerald-50 dark:bg-emerald-950/30 p-3">
             <CheckCircle className="h-6 w-6 text-[#0F766E]" />
           </div>
           <div className="text-center">
             <p className="text-sm font-bold text-[#0F172A] dark:text-slate-100">No recommendations found</p>
-            <p className="text-xs text-[#64748B] dark:text-slate-400 mt-1">Try adjusting your search or filters.</p>
+            <p className="text-xs text-[#64748B] dark:text-muted-fg mt-1">Try adjusting your search or filters.</p>
           </div>
         </div>
       ) : (
@@ -359,7 +359,7 @@ export function Recommendations() {
                 />
               </>
             ) : (
-              <span className="text-xs text-[#64748B] dark:text-slate-400 pr-1 whitespace-nowrap">
+              <span className="text-xs text-[#64748B] dark:text-muted-fg pr-1 whitespace-nowrap">
                 {row.status === 'approved' ? 'Approved' : 'Rejected'}
                 {row.reviewed_by ? ` by ${row.reviewed_by}` : ''}
               </span>
@@ -395,15 +395,15 @@ export function Recommendations() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-3">
                 <div>
-                  <p className="text-xs text-[#64748B] dark:text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider">SKU</p>
+                  <p className="text-xs text-[#64748B] dark:text-muted-fg dark:text-muted-fg font-semibold uppercase tracking-wider">SKU</p>
                   <p className="text-sm font-mono font-semibold text-[#0F172A] dark:text-slate-100 mt-0.5">{selectedRec.sku}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-[#64748B] dark:text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider">Category</p>
+                  <p className="text-xs text-[#64748B] dark:text-muted-fg dark:text-muted-fg font-semibold uppercase tracking-wider">Category</p>
                   <p className="text-sm font-semibold text-[#0F172A] dark:text-slate-100 mt-0.5">{selectedRec.category}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-[#64748B] dark:text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider">Current Stock</p>
+                  <p className="text-xs text-[#64748B] dark:text-muted-fg dark:text-muted-fg font-semibold uppercase tracking-wider">Current Stock</p>
                   <p className="text-lg font-bold text-[#0F172A] dark:text-slate-100 mt-0.5">{selectedRec.current_stock}</p>
                 </div>
                 {selectedRec.rejection_reason && (
@@ -416,11 +416,11 @@ export function Recommendations() {
 
               <div className="space-y-4">
                 <div>
-                  <p className="text-xs text-[#64748B] dark:text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider">Recommended Stock</p>
+                  <p className="text-xs text-[#64748B] dark:text-muted-fg dark:text-muted-fg font-semibold uppercase tracking-wider">Recommended Stock</p>
                   <p className="text-xl font-black text-[#0F766E] mt-0.5">{selectedRec.recommended_stock}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-[#64748B] dark:text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider">Confidence Score</p>
+                  <p className="text-xs text-[#64748B] dark:text-muted-fg dark:text-muted-fg font-semibold uppercase tracking-wider">Confidence Score</p>
                   <div className="flex items-center gap-3 mt-1.5">
                     <div className="flex-1 rounded-full bg-slate-100 dark:bg-slate-700 h-2">
                       <div className="h-2 rounded-full bg-[#0F766E]" style={{ width: `${Math.round(selectedRec.confidence_score * 100)}%` }} />
@@ -429,14 +429,14 @@ export function Recommendations() {
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs text-[#64748B] dark:text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider">Status</p>
+                  <p className="text-xs text-[#64748B] dark:text-muted-fg dark:text-muted-fg font-semibold uppercase tracking-wider">Status</p>
                   <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold mt-1 ${getStatusBadge(selectedRec.status).cls}`}>
                     {getStatusBadge(selectedRec.status).label}
                   </span>
                 </div>
                 {selectedRec.reviewed_by && (
                   <div>
-                    <p className="text-xs text-[#64748B] dark:text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider">Reviewed By</p>
+                    <p className="text-xs text-[#64748B] dark:text-muted-fg dark:text-muted-fg font-semibold uppercase tracking-wider">Reviewed By</p>
                     <p className="text-sm font-semibold text-[#0F172A] dark:text-slate-100 mt-0.5">{selectedRec.reviewed_by}</p>
                   </div>
                 )}

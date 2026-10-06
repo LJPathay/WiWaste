@@ -34,7 +34,7 @@ export const STATUS_COLORS = {
     dot: 'bg-emerald-500',
   },
   Inactive: {
-    bg: 'bg-slate-50 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700/50',
+    bg: 'bg-bg text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-border dark:border-slate-700/50',
     dot: 'bg-slate-400',
   },
   Quarantined: {

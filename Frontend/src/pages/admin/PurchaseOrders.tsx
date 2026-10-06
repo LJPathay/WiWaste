@@ -10,7 +10,7 @@ import { Pagination } from '../../components/ui/pagination';
 const currencyFormatter = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 });
 
 const statusColor: Record<string, string> = {
-  Draft: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
+  Draft: 'bg-slate-100 text-muted-fg dark:bg-slate-700 dark:text-slate-300',
   Ordered: 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400',
   'Partially Received': 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400',
   Received: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400',
@@ -186,7 +186,7 @@ export function PurchaseOrders() {
       header: 'Date',
       minWidth: '100px',
       render: (row) => (
-        <span className="text-slate-500">{new Date(row.created_at).toLocaleDateString()}</span>
+        <span className="text-muted-fg">{new Date(row.created_at).toLocaleDateString()}</span>
       ),
     },
   ];
@@ -198,7 +198,7 @@ export function PurchaseOrders() {
           <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Purchase Orders</h1>
           <UITooltip>
             <TooltipTrigger asChild>
-              <Eye className="h-4 w-4 text-slate-400 cursor-help" />
+              <Eye className="h-4 w-4 text-muted-fg cursor-help" />
             </TooltipTrigger>
             <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs text-xs">
               Create and manage purchase orders to suppliers.
@@ -213,16 +213,16 @@ export function PurchaseOrders() {
         </button>
       </div>
 
-      <div className="bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden">
-        <div className="p-3.5 flex flex-col sm:flex-row sm:items-center gap-2 border-b border-slate-200 dark:border-white/10">
+      <div className="bg-white dark:bg-slate-950 rounded-xl border border-border dark:border-white/10 shadow-sm overflow-hidden">
+        <div className="p-3.5 flex flex-col sm:flex-row sm:items-center gap-2 border-b border-border dark:border-white/10">
           <div className="relative flex-1">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-fg" />
             <input type="text" placeholder="Search PO number or supplier..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
-              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 pl-8 pr-3 h-8 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-700 dark:text-slate-300"
+              className="w-full bg-bg dark:bg-slate-800 border border-border dark:border-white/10 pl-8 pr-3 h-8 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-700 dark:text-slate-300"
               aria-label="Search PO number or supplier" />
           </div>
           <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
-            className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 h-8 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-400 focus:outline-none focus:ring-1 focus:ring-[#006a61]">
+            className="bg-bg dark:bg-slate-800 border border-border dark:border-white/10 px-3 h-8 rounded-lg text-xs font-medium text-muted-fg dark:text-muted-fg focus:outline-none focus:ring-1 focus:ring-[#006a61]">
             <option value="">All Status</option>
             <option value="Draft">Draft</option>
             <option value="Ordered">Ordered</option>
@@ -276,50 +276,50 @@ export function PurchaseOrders() {
 
       {showCreate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" role="dialog" aria-modal="true" onClick={() => setShowCreate(false)}>
-          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto m-4" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-white/10">
+          <div className="bg-bg-elevated rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto m-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b border-border dark:border-white/10">
               <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">New Purchase Order</h2>
               <button onClick={() => setShowCreate(false)} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700" aria-label="Close"><X className="h-4 w-4" /></button>
             </div>
             <div className="p-4 space-y-3">
               <div>
-                <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 mb-1">Supplier</label>
+                <label className="block text-[9px] font-bold text-muted-fg dark:text-muted-fg mb-1">Supplier</label>
                 <select value={formData.supplier_id} onChange={e => setFormData(f => ({ ...f, supplier_id: Number(e.target.value) }))}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg px-3 h-8 text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61]">
+                  className="w-full bg-bg dark:bg-slate-800 border border-border dark:border-white/10 rounded-lg px-3 h-8 text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61]">
                   <option value={0}>Select supplier...</option>
                   {suppliers.map(s => <option key={s.id ?? s.supplier_id} value={s.id ?? s.supplier_id}>{s.name ?? s.supplier_name}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 mb-1">Notes (optional)</label>
+                <label className="block text-[9px] font-bold text-muted-fg dark:text-muted-fg mb-1">Notes (optional)</label>
                 <textarea value={formData.notes} onChange={e => setFormData(f => ({ ...f, notes: e.target.value }))}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg px-3 h-8 text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61]" rows={2} />
+                  className="w-full bg-bg dark:bg-slate-800 border border-border dark:border-white/10 rounded-lg px-3 h-8 text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61]" rows={2} />
               </div>
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-[9px] font-bold text-slate-600 dark:text-slate-400">Items</label>
+                  <label className="text-[9px] font-bold text-muted-fg dark:text-muted-fg">Items</label>
                   <button onClick={addItem} className="text-xs text-[#006a61] hover:underline font-semibold">+ Add Item</button>
                 </div>
                 <div className="space-y-1.5">
                   {formData.items.map((item, idx) => (
                     <div key={idx} className="flex gap-1.5 items-start">
                       <select value={item.product_id} onChange={e => updateItem(idx, 'product_id', Number(e.target.value))}
-                        className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg px-2 h-8 text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61]">
+                        className="flex-1 bg-bg dark:bg-slate-800 border border-border dark:border-white/10 rounded-lg px-2 h-8 text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61]">
                         <option value={0}>Select product...</option>
                         {products.map(p => <option key={p.id ?? p.product_id} value={p.id ?? p.product_id}>{p.name ?? p.product_name}</option>)}
                       </select>
                       <input type="number" min={1} value={item.quantity} onChange={e => updateItem(idx, 'quantity', Number(e.target.value))}
-                        className="w-20 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg px-2 h-8 text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61]" placeholder="Qty" />
+                        className="w-20 bg-bg dark:bg-slate-800 border border-border dark:border-white/10 rounded-lg px-2 h-8 text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61]" placeholder="Qty" />
                       <input type="number" min={0} step="0.01" value={item.unit_price} onChange={e => updateItem(idx, 'unit_price', Number(e.target.value))}
-                        className="w-24 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg px-2 h-8 text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61]" placeholder="Price" />
-                      <button onClick={() => removeItem(idx)} className="p-1.5 rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-600" aria-label="Remove item"><X className="h-3.5 w-3.5" /></button>
+                        className="w-24 bg-bg dark:bg-slate-800 border border-border dark:border-white/10 rounded-lg px-2 h-8 text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61]" placeholder="Price" />
+                      <button onClick={() => removeItem(idx)} className="p-1.5 rounded-lg hover:bg-rose-50 text-muted-fg hover:text-rose-600" aria-label="Remove item"><X className="h-3.5 w-3.5" /></button>
                     </div>
                   ))}
                 </div>
               </div>
             </div>
-            <div className="p-4 border-t border-slate-200 dark:border-white/10 flex justify-end gap-2">
-              <button onClick={() => setShowCreate(false)} className="px-3 h-8 rounded-lg border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800">Cancel</button>
+            <div className="p-4 border-t border-border dark:border-white/10 flex justify-end gap-2">
+              <button onClick={() => setShowCreate(false)} className="px-3 h-8 rounded-lg border border-border dark:border-white/10 text-xs font-semibold text-muted-fg dark:text-muted-fg hover:bg-bg dark:hover:bg-slate-800">Cancel</button>
               <button onClick={handleCreate} disabled={submitting}
                 className="inline-flex items-center gap-2 bg-[#006a61] hover:bg-[#00574f] disabled:opacity-60 text-white px-3 h-8 rounded-lg text-xs font-semibold transition-colors">
                 {submitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}Create PO
@@ -331,24 +331,24 @@ export function PurchaseOrders() {
 
       {showDetail.open && showDetail.order && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" role="dialog" aria-modal="true" onClick={() => setShowDetail({ open: false, order: null })}>
-          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto m-4" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-white/10">
+          <div className="bg-bg-elevated rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto m-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b border-border dark:border-white/10">
               <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">{showDetail.order.po_number}</h2>
               <button onClick={() => setShowDetail({ open: false, order: null })} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700" aria-label="Close detail"><X className="h-4 w-4" /></button>
             </div>
             <div className="p-4 space-y-2.5 text-xs">
               <div className="grid grid-cols-2 gap-3">
-                <div><span className="text-slate-500">Supplier:</span> <span className="font-semibold text-slate-800 dark:text-slate-200">{showDetail.order.supplier}</span></div>
-                <div><span className="text-slate-500">Created by:</span> <span className="font-semibold text-slate-800 dark:text-slate-200">{showDetail.order.user}</span></div>
-                <div><span className="text-slate-500">Status:</span> <span className={`inline-block rounded-full px-2 py-0.5 text-[9px] font-medium ${statusColor[showDetail.order.status] ?? ''}`}>{showDetail.order.status}</span></div>
-                <div><span className="text-slate-500">Total:</span> <span className="font-semibold text-slate-800 dark:text-slate-200">{currencyFormatter.format(showDetail.order.total_amount)}</span></div>
-                <div><span className="text-slate-500">Date:</span> <span className="font-semibold text-slate-800 dark:text-slate-200">{new Date(showDetail.order.created_at).toLocaleString()}</span></div>
+                <div><span className="text-muted-fg">Supplier:</span> <span className="font-semibold text-slate-800 dark:text-slate-200">{showDetail.order.supplier}</span></div>
+                <div><span className="text-muted-fg">Created by:</span> <span className="font-semibold text-slate-800 dark:text-slate-200">{showDetail.order.user}</span></div>
+                <div><span className="text-muted-fg">Status:</span> <span className={`inline-block rounded-full px-2 py-0.5 text-[9px] font-medium ${statusColor[showDetail.order.status] ?? ''}`}>{showDetail.order.status}</span></div>
+                <div><span className="text-muted-fg">Total:</span> <span className="font-semibold text-slate-800 dark:text-slate-200">{currencyFormatter.format(showDetail.order.total_amount)}</span></div>
+                <div><span className="text-muted-fg">Date:</span> <span className="font-semibold text-slate-800 dark:text-slate-200">{new Date(showDetail.order.created_at).toLocaleString()}</span></div>
               </div>
-              {showDetail.order.notes && <div><span className="text-slate-500">Notes:</span> <span className="text-slate-700 dark:text-slate-300">{showDetail.order.notes}</span></div>}
-              <div className="pt-2 border-t border-slate-200 dark:border-white/10">
-                <h3 className="text-[9px] font-bold text-slate-500 mb-1.5 uppercase tracking-wide">Items</h3>
+              {showDetail.order.notes && <div><span className="text-muted-fg">Notes:</span> <span className="text-slate-700 dark:text-slate-300">{showDetail.order.notes}</span></div>}
+              <div className="pt-2 border-t border-border dark:border-white/10">
+                <h3 className="text-[9px] font-bold text-muted-fg mb-1.5 uppercase tracking-wide">Items</h3>
                 <table className="w-full text-xs">
-                  <thead><tr className="text-slate-400"><th className="text-left py-2 px-3 text-[9px]">Product</th><th className="text-right py-2 px-3 text-[9px]">Qty</th><th className="text-right py-2 px-3 text-[9px]">Price</th><th className="text-right py-2 px-3 text-[9px]">Subtotal</th><th className="text-right py-2 px-3 text-[9px]">Received</th></tr></thead>
+                  <thead><tr className="text-muted-fg"><th className="text-left py-2 px-3 text-[9px]">Product</th><th className="text-right py-2 px-3 text-[9px]">Qty</th><th className="text-right py-2 px-3 text-[9px]">Price</th><th className="text-right py-2 px-3 text-[9px]">Subtotal</th><th className="text-right py-2 px-3 text-[9px]">Received</th></tr></thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-white/5">
                     {(showDetail.order.items ?? []).map(i => (
                       <tr key={i.id}><td className="py-2 px-3 text-slate-700 dark:text-slate-300">{i.product}</td><td className="py-2 px-3 text-right text-slate-700 dark:text-slate-300">{i.quantity}</td><td className="py-2 px-3 text-right text-slate-700 dark:text-slate-300">{currencyFormatter.format(i.unit_price)}</td><td className="py-2 px-3 text-right font-semibold text-slate-800 dark:text-slate-200">{currencyFormatter.format(i.subtotal)}</td><td className="py-2 px-3 text-right text-emerald-600">{i.received_qty}</td></tr>
@@ -357,8 +357,8 @@ export function PurchaseOrders() {
                 </table>
               </div>
             </div>
-            <div className="p-4 border-t border-slate-200 dark:border-white/10 flex justify-end">
-              <button onClick={() => setShowDetail({ open: false, order: null })} className="px-3 h-8 rounded-lg border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-600 dark:text-slate-400">Close</button>
+            <div className="p-4 border-t border-border dark:border-white/10 flex justify-end">
+              <button onClick={() => setShowDetail({ open: false, order: null })} className="px-3 h-8 rounded-lg border border-border dark:border-white/10 text-xs font-semibold text-muted-fg dark:text-muted-fg">Close</button>
             </div>
           </div>
         </div>
@@ -366,17 +366,17 @@ export function PurchaseOrders() {
 
       {showReceive.open && showReceive.order && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" role="dialog" aria-modal="true" onClick={() => setShowReceive({ open: false, order: null })}>
-          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-lg m-4" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-white/10">
+          <div className="bg-bg-elevated rounded-xl shadow-2xl w-full max-w-lg m-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b border-border dark:border-white/10">
               <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Receive Stock — {showReceive.order.po_number}</h2>
               <button onClick={() => setShowReceive({ open: false, order: null })} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700" aria-label="Close receive"><X className="h-4 w-4" /></button>
             </div>
             <div className="p-4 space-y-2.5">
-              <p className="text-xs text-slate-500">Enter the quantity received for each item.</p>
+              <p className="text-xs text-muted-fg">Enter the quantity received for each item.</p>
               {(showReceive.order.items ?? []).filter(i => i.received_qty < i.quantity).map(item => (
                 <div key={item.id} className="flex items-center gap-2">
                   <span className="flex-1 text-xs text-slate-700 dark:text-slate-300">{item.product}</span>
-                  <span className="text-[9px] text-slate-400">Ordered: {item.quantity}</span>
+                  <span className="text-[9px] text-muted-fg">Ordered: {item.quantity}</span>
                   <input type="number" min={0} max={item.quantity - item.received_qty}
                     value={item.received_qty}
                     onChange={e => {
@@ -392,15 +392,15 @@ export function PurchaseOrders() {
                         };
                       });
                     }}
-                    className="w-20 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg px-2 h-8 text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61]" />
+                    className="w-20 bg-bg dark:bg-slate-800 border border-border dark:border-white/10 rounded-lg px-2 h-8 text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61]" />
                 </div>
               ))}
               {(showReceive.order.items ?? []).filter(i => i.received_qty >= i.quantity).length > 0 && (
                 <p className="text-xs text-emerald-600">All items fully received.</p>
               )}
             </div>
-            <div className="p-4 border-t border-slate-200 dark:border-white/10 flex justify-end gap-2">
-              <button onClick={() => setShowReceive({ open: false, order: null })} className="px-3 h-8 rounded-lg border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-600 dark:text-slate-400">Cancel</button>
+            <div className="p-4 border-t border-border dark:border-white/10 flex justify-end gap-2">
+              <button onClick={() => setShowReceive({ open: false, order: null })} className="px-3 h-8 rounded-lg border border-border dark:border-white/10 text-xs font-semibold text-muted-fg dark:text-muted-fg">Cancel</button>
               <button onClick={handleReceive} disabled={submitting}
                 className="inline-flex items-center gap-2 bg-[#006a61] hover:bg-[#00574f] disabled:opacity-60 text-white px-3 h-8 rounded-lg text-xs font-semibold transition-colors">
                 {submitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}<CheckCircle className="h-3.5 w-3.5" /> Confirm Receive

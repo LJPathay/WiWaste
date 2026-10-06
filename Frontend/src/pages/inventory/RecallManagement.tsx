@@ -25,12 +25,12 @@ interface RecallRow {
 }
 
 const STATUS_BADGES: Record<string, { label: string; cls: string }> = {
-  draft: { label: 'Draft', cls: 'bg-slate-100 text-slate-700 border border-slate-200' },
+  draft: { label: 'Draft', cls: 'bg-slate-100 text-slate-700 border border-border' },
   active: { label: 'Active', cls: 'bg-blue-50 text-blue-700 border border-blue-100' },
   quarantined: { label: 'Quarantined', cls: 'bg-amber-50 text-amber-700 border border-amber-100' },
   notified: { label: 'Notified', cls: 'bg-purple-50 text-purple-700 border border-purple-100' },
   resolved: { label: 'Resolved', cls: 'bg-green-50 text-green-700 border border-green-100' },
-  closed: { label: 'Closed', cls: 'bg-slate-100 text-slate-600 border border-slate-200' },
+  closed: { label: 'Closed', cls: 'bg-slate-100 text-muted-fg border border-border' },
 };
 
 const SEVERITY_BADGES: Record<string, { label: string; cls: string; icon: React.ReactNode }> = {
@@ -161,7 +161,7 @@ export function RecallManagement() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Recall Management</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-sm text-muted-fg dark:text-muted-fg mt-1">
             Manage product recalls, quarantine batches, and track resolution
           </p>
         </div>
@@ -177,33 +177,33 @@ export function RecallManagement() {
       {/* Summary Cards */}
       {summaryData && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-sm text-slate-500 dark:text-slate-400">Total Recalls</div>
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-border dark:border-slate-700">
+            <div className="text-sm text-muted-fg dark:text-muted-fg">Total Recalls</div>
             <div className="text-2xl font-bold text-slate-900 dark:text-white">{summaryData.total}</div>
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-sm text-slate-500 dark:text-slate-400">Active / Quarantined</div>
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-border dark:border-slate-700">
+            <div className="text-sm text-muted-fg dark:text-muted-fg">Active / Quarantined</div>
             <div className="text-2xl font-bold text-amber-600">
               {(summaryData.by_status?.active ?? 0) + (summaryData.by_status?.quarantined ?? 0)}
             </div>
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-sm text-slate-500 dark:text-slate-400">Critical / High</div>
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-border dark:border-slate-700">
+            <div className="text-sm text-muted-fg dark:text-muted-fg">Critical / High</div>
             <div className="text-2xl font-bold text-red-600">
               {(summaryData.by_severity?.critical ?? 0) + (summaryData.by_severity?.high ?? 0)}
             </div>
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-sm text-slate-500 dark:text-slate-400">Total Qty Affected</div>
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-border dark:border-slate-700">
+            <div className="text-sm text-muted-fg dark:text-muted-fg">Total Qty Affected</div>
             <div className="text-2xl font-bold text-slate-900 dark:text-white">{summaryData.total_quantity_affected?.toLocaleString() ?? '0'}</div>
           </div>
         </div>
       )}
 
       {/* Filters */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row gap-4">
+      <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-border dark:border-slate-700 flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1 max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-fg" />
           <input
             type="text"
             placeholder="Search recall #, product, batch..."
@@ -233,25 +233,25 @@ export function RecallManagement() {
       </div>
 
       {/* Data Table */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-border dark:border-slate-700 overflow-hidden">
         {filtered.length === 0 ? (
           <div className="p-12 text-center">
-            <Package className="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600 mb-4" />
-            <p className="text-slate-500 dark:text-slate-400">No recalls found</p>
+            <Package className="w-12 h-12 mx-auto text-slate-300 dark:text-muted-fg mb-4" />
+            <p className="text-muted-fg dark:text-muted-fg">No recalls found</p>
           </div>
         ) : (
           <>
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
+                <thead className="bg-bg dark:bg-slate-900/50 border-b border-border dark:border-slate-700">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Recall #</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Product / Batch</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Status</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Severity</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Initiated</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 pr-4">Qty Affected</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 pr-4">Actions</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg">Recall #</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg">Product / Batch</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg">Severity</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg">Initiated</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg pr-4">Qty Affected</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg pr-4">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
@@ -261,14 +261,14 @@ export function RecallManagement() {
                     const actions = getAvailableActions(r.status);
                     
                     return (
-                      <tr key={r.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                      <tr key={r.id} className="hover:bg-bg dark:hover:bg-slate-700/50">
                         <td className="px-4 py-3">
                           <span className="font-mono text-sm font-medium text-brand-600 dark:text-brand-400">{r.recall_number}</span>
                         </td>
                         <td className="px-4 py-3">
                           <div className="font-medium text-slate-900 dark:text-white">{r.product_name}</div>
                           {r.batch_number && (
-                            <div className="text-sm text-slate-500 dark:text-slate-400 font-mono">Batch: {r.batch_number}</div>
+                            <div className="text-sm text-muted-fg dark:text-muted-fg font-mono">Batch: {r.batch_number}</div>
                           )}
                         </td>
                         <td className="px-4 py-3">
@@ -282,7 +282,7 @@ export function RecallManagement() {
                             {severity.label}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-sm">{r.initiated_date}</td>
+                        <td className="px-4 py-3 text-muted-fg dark:text-muted-fg text-sm">{r.initiated_date}</td>
                         <td className="px-4 py-3 text-right text-slate-900 dark:text-white font-medium">{r.total_quantity_affected.toLocaleString()}</td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-1">
@@ -423,8 +423,8 @@ export function RecallManagement() {
               </button>
             </div>
           </FormField>
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
-            <button type="button" onClick={() => setShowCreateModal(false)} className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
+          <div className="flex justify-end gap-3 pt-4 border-t border-border dark:border-slate-700">
+            <button type="button" onClick={() => setShowCreateModal(false)} className="px-4 py-2 text-muted-fg dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
               Cancel
             </button>
             <button type="submit" className="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg">

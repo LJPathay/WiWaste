@@ -55,7 +55,7 @@ const actionColor: Record<string, string> = {
   'Return to Supplier': 'bg-sky-100 text-sky-700 dark:bg-sky-500/10 dark:text-sky-400',
   'Markdown & Sell': 'bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400',
   Liquidate: 'bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400',
-  'Donate / Write-off': 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
+  'Donate / Write-off': 'bg-slate-100 text-muted-fg dark:bg-slate-700 dark:text-slate-300',
 };
 
 const columns: DataTableColumn<OverstockItem>[] = [
@@ -68,7 +68,7 @@ const columns: DataTableColumn<OverstockItem>[] = [
     render: (row) => (
       <div>
         <div className="font-medium text-slate-800 dark:text-slate-100">{row.name}</div>
-        <div className="text-slate-500 dark:text-slate-400">{row.category}</div>
+        <div className="text-muted-fg dark:text-muted-fg">{row.category}</div>
       </div>
     ),
   },
@@ -110,7 +110,7 @@ const columns: DataTableColumn<OverstockItem>[] = [
     truncate: true,
     minWidth: '150px',
     render: (row) => (
-      <span className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-medium ${actionColor[row.recommendedAction] ?? 'bg-slate-100 text-slate-600'}`}>
+      <span className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-medium ${actionColor[row.recommendedAction] ?? 'bg-slate-100 text-muted-fg'}`}>
         {row.recommendedAction}
       </span>
     ),
@@ -159,7 +159,7 @@ export function OverstockRisks() {
         <h1 className="text-xl font-bold text-slate-800 dark:text-white">Overstock Risks</h1>
         <UITooltip>
           <TooltipTrigger asChild>
-            <Info className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
+            <Info className="h-3.5 w-3.5 text-muted-fg hover:text-muted-fg dark:hover:text-slate-300 cursor-help" />
           </TooltipTrigger>
           <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
             Identify excess inventory above reorder thresholds and apply remediation actions to free up capital.
@@ -168,25 +168,25 @@ export function OverstockRisks() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 p-3 shadow-sm">
-          <p className="text-[9px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Total Overstock Exposure</p>
+        <div className="rounded-xl bg-white dark:bg-slate-800 border border-border dark:border-white/10 p-3 shadow-sm">
+          <p className="text-[9px] font-medium text-muted-fg dark:text-muted-fg uppercase tracking-wide">Total Overstock Exposure</p>
           <p className="mt-1 text-sm font-bold text-red-600">{currencyFormatter.format(totalExposure)}</p>
-          <p className="text-[9px] text-slate-400 mt-1">Across all flagged items</p>
+          <p className="text-[9px] text-muted-fg mt-1">Across all flagged items</p>
         </div>
-        <div className="rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 p-3 shadow-sm">
-          <p className="text-[9px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Items Flagged</p>
+        <div className="rounded-xl bg-white dark:bg-slate-800 border border-border dark:border-white/10 p-3 shadow-sm">
+          <p className="text-[9px] font-medium text-muted-fg dark:text-muted-fg uppercase tracking-wide">Items Flagged</p>
           <p className="mt-1 text-sm font-bold text-slate-800 dark:text-white">{items.length}</p>
-          <p className="text-[9px] text-slate-400 mt-1">Requiring action</p>
+          <p className="text-[9px] text-muted-fg mt-1">Requiring action</p>
         </div>
-        <div className="rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 p-3 shadow-sm">
-          <p className="text-[9px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Actions Applied</p>
+        <div className="rounded-xl bg-white dark:bg-slate-800 border border-border dark:border-white/10 p-3 shadow-sm">
+          <p className="text-[9px] font-medium text-muted-fg dark:text-muted-fg uppercase tracking-wide">Actions Applied</p>
           <p className="mt-1 text-sm font-bold text-[#006a61]">{appliedCount} / {items.length}</p>
-          <p className="text-[9px] text-slate-400 mt-1">Resolved this period</p>
+          <p className="text-[9px] text-muted-fg mt-1">Resolved this period</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 p-4 shadow-sm">
+        <div className="bg-bg-elevated rounded-xl border border-border dark:border-white/10 p-4 shadow-sm">
           <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-4">Total Overstock Exposure Trend (Full Year)</h3>
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -213,7 +213,7 @@ export function OverstockRisks() {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 p-4 shadow-sm">
+        <div className="bg-bg-elevated rounded-xl border border-border dark:border-white/10 p-4 shadow-sm">
           <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-4">Overstock by Category</h3>
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -244,11 +244,11 @@ export function OverstockRisks() {
         </div>
       </div>
 
-      <div className="rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 shadow-sm">
+      <div className="rounded-xl bg-white dark:bg-slate-800 border border-border dark:border-white/10 shadow-sm">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-3.5 border-b border-slate-100 dark:border-white/10">
           <h2 className="text-sm font-bold text-slate-700 dark:text-slate-200">Flagged Overstock Items</h2>
           <input type="text" placeholder="Search items…" value={search} onChange={(e) => setSearch(e.target.value)}
-            className="w-full sm:w-64 h-8 rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-700 px-3 text-xs text-slate-700 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#006a61]"
+            className="w-full sm:w-64 h-8 rounded-lg border border-border dark:border-white/10 bg-bg dark:bg-slate-700 px-3 text-xs text-slate-700 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#006a61]"
             aria-label="Search overstock items" />
         </div>
         <DataTable
@@ -270,7 +270,7 @@ export function OverstockRisks() {
             )
           )}
         />
-        <div className="px-3 py-2 border-t border-slate-100 dark:border-white/10 text-xs text-slate-400">Showing {filtered.length} of {items.length} items</div>
+        <div className="px-3 py-2 border-t border-slate-100 dark:border-white/10 text-xs text-muted-fg">Showing {filtered.length} of {items.length} items</div>
       </div>
       <Toast toasts={toasts} onDismiss={dismiss} />
     </div>

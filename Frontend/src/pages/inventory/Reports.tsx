@@ -174,7 +174,7 @@ export function Reports() {
           </h1>
           <UITooltip>
             <TooltipTrigger>
-              <Info className="h-4 w-4 text-slate-400" />
+              <Info className="h-4 w-4 text-muted-fg" />
             </TooltipTrigger>
             <TooltipContent>
               Generate reports to analyze inventory performance and trends
@@ -195,7 +195,7 @@ export function Reports() {
           return (
             <div
               key={card.id}
-              className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 shadow-sm"
+              className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated shadow-sm"
             >
               <div className="p-3.5">
                 <div className="flex items-start gap-2 mb-2">
@@ -206,7 +206,7 @@ export function Reports() {
                     <h3 className="text-sm font-bold text-[#0F172A] dark:text-slate-100">
                       {card.title}
                     </h3>
-                    <p className="text-xs text-[#64748B] dark:text-slate-400 mt-0.5">
+                    <p className="text-xs text-[#64748B] dark:text-muted-fg mt-0.5">
                       {card.description}
                     </p>
                   </div>
@@ -220,7 +220,7 @@ export function Reports() {
                       onChange={(e) => setDateFrom((prev) => ({ ...prev, [card.id]: e.target.value }))}
                       className="flex-1 h-8 px-3 text-xs rounded-lg border border-[#E5E7EB] dark:border-white/10 bg-[#F8FAFC] dark:bg-slate-800 text-[#0F172A] dark:text-slate-100"
                     />
-                    <span className="text-xs text-[#64748B] dark:text-slate-400">to</span>
+                    <span className="text-xs text-[#64748B] dark:text-muted-fg">to</span>
                     <input
                       type="date"
                       value={dateTo[card.id] ?? ''}
@@ -255,7 +255,7 @@ export function Reports() {
                   {data?.length ? (
                     <button
                       onClick={() => setExpandedId(isExpanded ? null : card.id)}
-                      className="h-8 flex items-center justify-center px-2 text-[#64748B] dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors"
+                      className="h-8 flex items-center justify-center px-2 text-[#64748B] dark:text-muted-fg hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors"
                     >
                       {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                     </button>

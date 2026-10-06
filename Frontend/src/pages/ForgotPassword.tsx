@@ -97,7 +97,7 @@ export function ForgotPassword() {
   }
 
   return (
-    <div className="min-h-full flex items-center justify-center bg-slate-50 dark:bg-slate-950 px-4 py-10">
+    <div className="min-h-full flex items-center justify-center bg-bg dark:bg-slate-950 px-4 py-10">
       <Toast toasts={toasts} onDismiss={dismiss} />
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center gap-3 mb-8">
@@ -105,7 +105,7 @@ export function ForgotPassword() {
           <span className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">WiWaste</span>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-8">
+        <div className="bg-bg-elevated rounded-2xl border border-border dark:border-slate-800 p-8">
           {/* ── Step indicator ── */}
           <ol className="flex items-center justify-center gap-2 mb-8">
             {[1, 2, 3].map((n) => (
@@ -117,7 +117,7 @@ export function ForgotPassword() {
                       ? 'bg-emerald-500 text-white'
                       : n === stepNumbers[step]
                         ? 'bg-brand-600 text-white'
-                        : 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
+                        : 'bg-slate-200 dark:bg-slate-700 text-muted-fg dark:text-muted-fg'
                   }`}
                 >
                   {n < stepNumbers[step] ? <CheckCircle aria-hidden="true" className="h-5 w-5" /> : n}
@@ -136,13 +136,13 @@ export function ForgotPassword() {
           {step === 'email' && (
             <>
               <h1 className="text-xl font-bold text-slate-900 dark:text-white">Enter your email</h1>
-              <p className="mt-2 mb-6 text-sm text-slate-500 dark:text-slate-400">
+              <p className="mt-2 mb-6 text-sm text-muted-fg dark:text-muted-fg">
                 We will send a 6-digit code to your registered email address.
               </p>
               <form className="space-y-5" onSubmit={handleForgotPassword}>
                 <div className="space-y-1.5">
                   <label
-                    className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300"
+                    className="block text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-slate-300"
                     htmlFor="email"
                   >
                     Email address
@@ -150,12 +150,12 @@ export function ForgotPassword() {
                   <div className="relative">
                     <Mail
                       aria-hidden="true"
-                      className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
+                      className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-fg"
                     />
                     <input
                       autoComplete="email"
                       autoFocus
-                      className="block w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 py-3.5 pl-10 pr-4 text-slate-800 dark:text-slate-100 placeholder-slate-400 transition-colors focus:border-transparent focus:outline-none focus:ring-2 focus:ring-brand-500"
+                      className="block w-full rounded-lg border border-border dark:border-slate-700 bg-white dark:bg-slate-800/80 py-3.5 pl-10 pr-4 text-slate-800 dark:text-slate-100 placeholder-slate-400 transition-colors focus:border-transparent focus:outline-none focus:ring-2 focus:ring-brand-500"
                       disabled={loading}
                       id="email"
                       name="email"
@@ -189,12 +189,12 @@ export function ForgotPassword() {
           {step === 'otp' && (
             <>
               <h1 className="text-xl font-bold text-slate-900 dark:text-white">Enter verification code</h1>
-              <p className="mt-2 mb-6 text-sm text-slate-500 dark:text-slate-400">
+              <p className="mt-2 mb-6 text-sm text-muted-fg dark:text-muted-fg">
                 We sent a 6-digit code to <span className="font-semibold text-slate-700 dark:text-slate-200">{email}</span>.
               </p>
               <form className="space-y-5" onSubmit={handleVerifyOtp}>
                 <div>
-                  <span className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                  <span className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-slate-300">
                     Verification code
                   </span>
                   <div className="flex gap-2">
@@ -202,7 +202,7 @@ export function ForgotPassword() {
                       <input
                         aria-label={`Digit ${i + 1}`}
                         autoComplete="one-time-code"
-                        className="h-12 w-10 rounded-lg border-2 border-slate-200 bg-white text-center font-mono text-2xl font-bold text-slate-900 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-brand-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+                        className="h-12 w-10 rounded-lg border-2 border-border bg-white text-center font-mono text-2xl font-bold text-slate-900 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-brand-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
                         data-index={i}
                         disabled={loading}
                         inputMode="numeric"
@@ -245,7 +245,7 @@ export function ForgotPassword() {
                     'Verify code'
                   )}
                 </button>
-                <p className="text-center text-sm text-slate-500 dark:text-slate-400">
+                <p className="text-center text-sm text-muted-fg dark:text-muted-fg">
                   Did not receive the code?{' '}
                   <button
                     className="font-medium text-brand-600 underline hover:text-brand-700 disabled:opacity-50 dark:text-brand-400 dark:hover:text-brand-300"
@@ -264,13 +264,13 @@ export function ForgotPassword() {
           {step === 'reset' && (
             <>
               <h1 className="text-xl font-bold text-slate-900 dark:text-white">Create new password</h1>
-              <p className="mt-2 mb-6 text-sm text-slate-500 dark:text-slate-400">
+              <p className="mt-2 mb-6 text-sm text-muted-fg dark:text-muted-fg">
                 Your new password must be different from previous passwords.
               </p>
               <form className="space-y-5" onSubmit={handleReset}>
                 <div className="space-y-1.5">
                   <label
-                    className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300"
+                    className="block text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-slate-300"
                     htmlFor="password"
                   >
                     New password
@@ -278,11 +278,11 @@ export function ForgotPassword() {
                   <div className="relative">
                     <Lock
                       aria-hidden="true"
-                      className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
+                      className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-fg"
                     />
                     <input
                       autoComplete="new-password"
-                      className="block w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 py-3.5 pl-10 pr-4 text-slate-800 dark:text-slate-100 placeholder-slate-400 transition-colors focus:border-transparent focus:outline-none focus:ring-2 focus:ring-brand-500"
+                      className="block w-full rounded-lg border border-border dark:border-slate-700 bg-white dark:bg-slate-800/80 py-3.5 pl-10 pr-4 text-slate-800 dark:text-slate-100 placeholder-slate-400 transition-colors focus:border-transparent focus:outline-none focus:ring-2 focus:ring-brand-500"
                       disabled={loading}
                       id="password"
                       name="password"
@@ -293,13 +293,13 @@ export function ForgotPassword() {
                       value={password}
                     />
                   </div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                  <p className="text-xs text-muted-fg dark:text-muted-fg">
                     Min 8 chars: uppercase, lowercase, number, special character
                   </p>
                 </div>
                 <div className="space-y-1.5">
                   <label
-                    className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300"
+                    className="block text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-slate-300"
                     htmlFor="confirmPassword"
                   >
                     Confirm password
@@ -307,11 +307,11 @@ export function ForgotPassword() {
                   <div className="relative">
                     <Lock
                       aria-hidden="true"
-                      className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
+                      className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-fg"
                     />
                     <input
                       autoComplete="new-password"
-                      className="block w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 py-3.5 pl-10 pr-4 text-slate-800 dark:text-slate-100 placeholder-slate-400 transition-colors focus:border-transparent focus:outline-none focus:ring-2 focus:ring-brand-500"
+                      className="block w-full rounded-lg border border-border dark:border-slate-700 bg-white dark:bg-slate-800/80 py-3.5 pl-10 pr-4 text-slate-800 dark:text-slate-100 placeholder-slate-400 transition-colors focus:border-transparent focus:outline-none focus:ring-2 focus:ring-brand-500"
                       disabled={loading}
                       id="confirmPassword"
                       name="password_confirmation"
@@ -351,7 +351,7 @@ export function ForgotPassword() {
             </div>
           )}
 
-          <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
+          <p className="mt-6 text-center text-sm text-muted-fg dark:text-muted-fg">
             Remember your password?{' '}
             <Link className="font-medium text-brand-600 underline hover:text-brand-700 dark:text-brand-400" to="/login">
               Sign in

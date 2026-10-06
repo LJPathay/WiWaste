@@ -17,7 +17,7 @@ function getReasonBadge(reason: string): string {
   if (r.includes('expired')) return 'bg-red-50 text-red-700 border border-red-100';
   if (r.includes('mould') || r.includes('spoilage') || r.includes('spillage')) return 'bg-orange-50 text-orange-700 border border-orange-100';
   if (r.includes('damaged') || r.includes('broken') || r.includes('seal') || r.includes('defect')) return 'bg-amber-50 text-amber-700 border border-amber-100';
-  return 'bg-slate-100 text-slate-600 border border-slate-200';
+  return 'bg-slate-100 text-muted-fg border border-border';
 }
 
 export function RecordWastage() {
@@ -174,7 +174,7 @@ export function RecordWastage() {
       render: (row) => (
         <div>
           <div className="font-semibold text-[#0F172A] dark:text-slate-100">{String(row.name)}</div>
-          <div className="font-mono text-[10px] text-slate-400">{String(row.sku)}</div>
+          <div className="font-mono text-[10px] text-muted-fg">{String(row.sku)}</div>
         </div>
       ),
     },
@@ -232,14 +232,14 @@ export function RecordWastage() {
           <h1 className="text-xl font-bold text-[#0F172A] dark:text-slate-100">Record Wastage</h1>
           <UITooltip>
             <TooltipTrigger asChild>
-              <Info className="h-4 w-4 text-slate-400 hover:text-slate-600 cursor-help" />
+              <Info className="h-4 w-4 text-muted-fg hover:text-muted-fg cursor-help" />
             </TooltipTrigger>
             <TooltipContent className="bg-slate-900 text-white max-w-xs">
               Log inventory spoilage, shelf expirations, packaging ruptures, or vendor write-offs.
             </TooltipContent>
           </UITooltip>
         </div>
-        <p className="text-xs text-[#64748B] dark:text-slate-400">
+        <p className="text-xs text-[#64748B] dark:text-muted-fg">
           Log inventory losses for audit, analytics, and cost recovery tracking
         </p>
       </div>
@@ -275,7 +275,7 @@ export function RecordWastage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-[400px_1fr] gap-4 items-start">
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-[#E5E7EB] dark:border-white/10 shadow-sm p-3.5 h-fit">
+        <div className="bg-bg-elevated rounded-xl border border-[#E5E7EB] dark:border-white/10 shadow-sm p-3.5 h-fit">
           <div className="flex items-center gap-2 mb-3">
             <div className="rounded-lg h-7 w-7 bg-red-50 flex items-center justify-center">
               <Trash2 className="h-3.5 w-3.5 text-red-600" />
@@ -289,7 +289,7 @@ export function RecordWastage() {
                 Search Registered Product Catalog
               </label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-fg pointer-events-none" />
                 <input
                   type="text"
                   placeholder="Type product name or SKU (e.g. Biogesic)..."
@@ -303,13 +303,13 @@ export function RecordWastage() {
                   className="w-full pl-9 pr-8 h-8 rounded-lg border border-[#E5E7EB] dark:border-white/10 text-xs text-[#0F172A] dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all"
                   required
                 />
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-fg pointer-events-none" />
               </div>
 
               {showDropdown && (
-                <div className="absolute z-30 top-full left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl shadow-xl divide-y divide-slate-100 dark:divide-white/5">
+                <div className="absolute z-30 top-full left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-bg-elevated border border-border dark:border-white/10 rounded-xl shadow-xl divide-y divide-slate-100 dark:divide-white/5">
                   {matchingProducts.length === 0 ? (
-                    <div className="p-3 text-xs text-slate-400 text-center">
+                    <div className="p-3 text-xs text-muted-fg text-center">
                       No registered products match "{itemQuery}"
                     </div>
                   ) : (
@@ -318,11 +318,11 @@ export function RecordWastage() {
                         key={p.id}
                         type="button"
                         onClick={() => handleSelectProduct(p)}
-                        className="w-full text-left p-2 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-between transition-colors text-xs"
+                        className="w-full text-left p-2 hover:bg-bg dark:hover:bg-slate-800 flex items-center justify-between transition-colors text-xs"
                       >
                         <div>
                           <p className="font-semibold text-slate-900 dark:text-slate-100">{p.name}</p>
-                          <p className="font-mono text-[10px] text-slate-400">{p.sku}</p>
+                          <p className="font-mono text-[10px] text-muted-fg">{p.sku}</p>
                         </div>
                         <span className="font-bold text-[#0F766E] bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded">
                           {currencyFormatter.format(p.cost)}
@@ -354,7 +354,7 @@ export function RecordWastage() {
                   placeholder="Auto-filled"
                   value={unitCost || ''}
                   onChange={(e) => setUnitCost(Number(e.target.value))}
-                  className="w-full px-3 h-8 rounded-lg border border-[#E5E7EB] dark:border-white/10 text-xs text-[#0F172A] dark:text-slate-100 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all"
+                  className="w-full px-3 h-8 rounded-lg border border-[#E5E7EB] dark:border-white/10 text-xs text-[#0F172A] dark:text-slate-100 bg-bg dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all"
                 />
               </div>
             </div>
@@ -397,22 +397,22 @@ export function RecordWastage() {
           </form>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-[#E5E7EB] dark:border-white/10 shadow-sm overflow-hidden flex flex-col">
+        <div className="bg-bg-elevated rounded-xl border border-[#E5E7EB] dark:border-white/10 shadow-sm overflow-hidden flex flex-col">
           <div className="px-5 py-4 border-b border-[#E5E7EB] dark:border-white/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
               <h3 className="text-sm font-bold text-[#0F172A] dark:text-slate-100">Wastage Logs</h3>
-              <p className="text-xs text-[#64748B] dark:text-slate-400 mt-0.5">
+              <p className="text-xs text-[#64748B] dark:text-muted-fg mt-0.5">
                 {filteredRecords.length} record{filteredRecords.length !== 1 ? 's' : ''} found
               </p>
             </div>
             <div className="relative w-full sm:max-w-xs">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-fg pointer-events-none" />
               <input
                 type="text"
                 placeholder="Search logs..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 rounded-lg border border-[#E5E7EB] dark:border-white/10 text-xs text-[#374151] dark:text-slate-300 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all"
+                className="w-full pl-9 pr-3 py-2 rounded-lg border border-[#E5E7EB] dark:border-white/10 text-xs text-[#374151] dark:text-slate-300 bg-bg dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all"
               />
             </div>
           </div>
@@ -420,8 +420,8 @@ export function RecordWastage() {
           <DataTable columns={columns} data={filteredRecords} rowKey={(row) => row.id} emptyMessage="No wastage records found" />
 
           {filteredRecords.length > 0 && (
-            <div className="px-5 py-3 border-t border-[#E5E7EB] dark:border-white/10 bg-slate-50 dark:bg-slate-800 flex items-center justify-between">
-              <span className="text-xs font-semibold text-[#64748B] dark:text-slate-400">
+            <div className="px-5 py-3 border-t border-[#E5E7EB] dark:border-white/10 bg-bg dark:bg-slate-800 flex items-center justify-between">
+              <span className="text-xs font-semibold text-[#64748B] dark:text-muted-fg">
                 Total Loss ({filteredRecords.length} items)
               </span>
               <span className="text-sm font-black text-[#DC2626]">

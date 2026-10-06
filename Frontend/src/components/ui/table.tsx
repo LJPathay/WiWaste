@@ -28,17 +28,17 @@ const TableRow = React.forwardRef<HTMLTableRowElement, React.HTMLAttributes<HTML
   ({ className, ...props }, ref) => (
     // Row states are fully opaque rather than alpha-blended. A sticky column has to
     // repaint its own background to match the row underneath it, and it can only do
-    // that exactly when the row colour is a solid value — with `bg-slate-50/50` the
+    // that exactly when the row colour is a solid value — with `bg-bg/50` the
     // pinned cell either stayed white (a white block on the hovered row) or showed the
     // scrolled columns bleeding through it.
-    <tr ref={ref} className={cn("border-b border-transparent transition-colors hover:bg-slate-50 dark:hover:bg-slate-900 data-[state=selected]:bg-teal-50 dark:data-[state=selected]:bg-teal-950/40", className)} {...props} />
+    <tr ref={ref} className={cn("border-b border-transparent transition-colors hover:bg-bg dark:hover:bg-slate-900 data-[state=selected]:bg-teal-50 dark:data-[state=selected]:bg-teal-950/40", className)} {...props} />
   )
 )
 TableRow.displayName = "TableRow"
 
 const TableHead = React.forwardRef<HTMLTableCellElement, React.ThHTMLAttributes<HTMLTableCellElement>>(
   ({ className, ...props }, ref) => (
-    <th ref={ref} className={cn("h-10 px-4 text-left align-middle font-semibold text-slate-500 dark:text-slate-400 [&:has([role=checkbox])]:pr-0", className)} {...props} />
+    <th ref={ref} className={cn("h-10 px-4 text-left align-middle font-semibold text-muted-fg dark:text-muted-fg [&:has([role=checkbox])]:pr-0", className)} {...props} />
   )
 )
 TableHead.displayName = "TableHead"

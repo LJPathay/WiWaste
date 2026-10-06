@@ -28,8 +28,8 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
 /* ── Section Card ── */
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden">
-      <div className="px-4 py-3 border-b border-slate-200 dark:border-white/10">
+    <div className="bg-white dark:bg-slate-950 rounded-xl border border-border dark:border-white/10 shadow-sm overflow-hidden">
+      <div className="px-4 py-3 border-b border-border dark:border-white/10">
         <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100">{title}</h2>
       </div>
       <div className="p-4">{children}</div>
@@ -53,7 +53,7 @@ function AlertRow({
     <div className="flex items-start justify-between gap-3 py-2 border-b border-slate-100 dark:border-white/5 last:border-0">
       <div className="flex-1 min-w-0">
         <p className="text-xs font-medium text-slate-800 dark:text-slate-100">{label}</p>
-        <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">{description}</p>
+        <p className="text-[10px] text-muted-fg dark:text-muted-fg mt-0.5">{description}</p>
       </div>
       <Toggle checked={checked} onChange={onChange} />
     </div>
@@ -177,7 +177,7 @@ export function SystemSettings() {
             <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">System Settings</h1>
             <UITooltip>
               <TooltipTrigger asChild>
-                <Info className="h-4 w-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
+                <Info className="h-4 w-4 text-muted-fg hover:text-muted-fg dark:hover:text-slate-300 cursor-help" />
               </TooltipTrigger>
               <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs text-xs">
                 Configure your store profile, alert preferences and data management options.
@@ -212,7 +212,7 @@ export function SystemSettings() {
               type="text"
               value={profile.storeName}
               onChange={e => setProfile(p => ({ ...p, storeName: e.target.value }))}
-              className="h-8 text-xs px-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#006a61]/20 focus:border-[#006a61] transition-colors"
+              className="h-8 text-xs px-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-bg-elevated text-slate-900 dark:text-slate-100 placeholder:text-muted-fg dark:placeholder:text-muted-fg focus:outline-none focus:ring-2 focus:ring-[#006a61]/20 focus:border-[#006a61] transition-colors"
               placeholder="WiWaste Store"
             />
           </FormField>
@@ -221,7 +221,7 @@ export function SystemSettings() {
               type="email"
               value={profile.storeEmail}
               onChange={e => setProfile(p => ({ ...p, storeEmail: e.target.value }))}
-              className="h-8 text-xs px-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#006a61]/20 focus:border-[#006a61] transition-colors"
+              className="h-8 text-xs px-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-bg-elevated text-slate-900 dark:text-slate-100 placeholder:text-muted-fg dark:placeholder:text-muted-fg focus:outline-none focus:ring-2 focus:ring-[#006a61]/20 focus:border-[#006a61] transition-colors"
               placeholder="owner@wiwaste.com"
             />
           </FormField>
@@ -230,7 +230,7 @@ export function SystemSettings() {
               type="tel"
               value={profile.storePhone}
               onChange={e => setProfile(p => ({ ...p, storePhone: e.target.value }))}
-              className="h-8 text-xs px-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#006a61]/20 focus:border-[#006a61] transition-colors"
+              className="h-8 text-xs px-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-bg-elevated text-slate-900 dark:text-slate-100 placeholder:text-muted-fg dark:placeholder:text-muted-fg focus:outline-none focus:ring-2 focus:ring-[#006a61]/20 focus:border-[#006a61] transition-colors"
               placeholder="(02) 8123 4567"
             />
           </FormField>
@@ -239,7 +239,7 @@ export function SystemSettings() {
               type="text"
               value={profile.storeAddress}
               onChange={e => setProfile(p => ({ ...p, storeAddress: e.target.value }))}
-              className="h-8 text-xs px-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#006a61]/20 focus:border-[#006a61] transition-colors"
+              className="h-8 text-xs px-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-bg-elevated text-slate-900 dark:text-slate-100 placeholder:text-muted-fg dark:placeholder:text-muted-fg focus:outline-none focus:ring-2 focus:ring-[#006a61]/20 focus:border-[#006a61] transition-colors"
               placeholder="123 Eco Street, Quezon City"
             />
           </FormField>
@@ -247,7 +247,7 @@ export function SystemSettings() {
             <select
               value={profile.currency}
               onChange={e => setProfile(p => ({ ...p, currency: e.target.value }))}
-              className="h-8 text-xs px-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#006a61]/20 focus:border-[#006a61] transition-colors"
+              className="h-8 text-xs px-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-bg-elevated text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#006a61]/20 focus:border-[#006a61] transition-colors"
             >
               <option value="PHP">PHP — Philippine Peso</option>
               <option value="USD">USD — US Dollar</option>
@@ -259,7 +259,7 @@ export function SystemSettings() {
             <select
               value={profile.timezone}
               onChange={e => setProfile(p => ({ ...p, timezone: e.target.value }))}
-              className="h-8 text-xs px-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#006a61]/20 focus:border-[#006a61] transition-colors"
+              className="h-8 text-xs px-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-bg-elevated text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#006a61]/20 focus:border-[#006a61] transition-colors"
             >
               <option value="Asia/Manila">Asia/Manila (UTC+8)</option>
               <option value="Asia/Singapore">Asia/Singapore (UTC+8)</option>
@@ -272,7 +272,7 @@ export function SystemSettings() {
 
       {/* ── Header Element Customization ── */}
       <SectionCard title="Header Element & Navigation Customization">
-        <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+        <p className="text-xs text-muted-fg dark:text-muted-fg mb-3">
           Choose which element is displayed on the main top navigation header bar across all pages.
         </p>
 
@@ -284,7 +284,7 @@ export function SystemSettings() {
             className={`p-3.5 rounded-xl border text-left flex flex-col justify-between gap-2.5 transition-all cursor-pointer ${
               headerStyle === 'quick-access'
                 ? 'border-[#006a61] bg-[#006a61]/10 dark:bg-[#006a61]/20 ring-2 ring-[#006a61]/30 shadow-sm'
-                : 'border-slate-200 dark:border-white/10 bg-slate-50/60 dark:bg-slate-900/60 hover:border-[#006a61] hover:bg-slate-100 dark:hover:bg-slate-800'
+                : 'border-border dark:border-white/10 bg-bg/60 dark:bg-slate-900/60 hover:border-[#006a61] hover:bg-slate-100 dark:hover:bg-slate-800'
             }`}
           >
             <div className="flex items-center justify-between w-full">
@@ -299,7 +299,7 @@ export function SystemSettings() {
             </div>
             <div>
               <h4 className="font-bold text-xs text-slate-900 dark:text-slate-100">Quick Access Bar</h4>
-              <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 leading-normal">
+              <p className="text-[10px] text-muted-fg dark:text-muted-fg mt-0.5 leading-normal">
                 Displays shortcut pills for your top most visited pages with icons.
               </p>
             </div>
@@ -312,7 +312,7 @@ export function SystemSettings() {
             className={`p-3.5 rounded-xl border text-left flex flex-col justify-between gap-2.5 transition-all cursor-pointer ${
               headerStyle === 'action-text'
                 ? 'border-[#006a61] bg-[#006a61]/10 dark:bg-[#006a61]/20 ring-2 ring-[#006a61]/30 shadow-sm'
-                : 'border-slate-200 dark:border-white/10 bg-slate-50/60 dark:bg-slate-900/60 hover:border-[#006a61] hover:bg-slate-100 dark:hover:bg-slate-800'
+                : 'border-border dark:border-white/10 bg-bg/60 dark:bg-slate-900/60 hover:border-[#006a61] hover:bg-slate-100 dark:hover:bg-slate-800'
             }`}
           >
             <div className="flex items-center justify-between w-full">
@@ -327,7 +327,7 @@ export function SystemSettings() {
             </div>
             <div>
               <h4 className="font-bold text-xs text-slate-900 dark:text-slate-100">Backup Text / Actions</h4>
-              <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 leading-normal">
+              <p className="text-[10px] text-muted-fg dark:text-muted-fg mt-0.5 leading-normal">
                 Displays real-time action logs (e.g. Added product, user, supplier or saved changes).
               </p>
             </div>
@@ -340,7 +340,7 @@ export function SystemSettings() {
             className={`p-3.5 rounded-xl border text-left flex flex-col justify-between gap-2.5 transition-all cursor-pointer ${
               headerStyle === 'welcome-text'
                 ? 'border-[#006a61] bg-[#006a61]/10 dark:bg-[#006a61]/20 ring-2 ring-[#006a61]/30 shadow-sm'
-                : 'border-slate-200 dark:border-white/10 bg-slate-50/60 dark:bg-slate-900/60 hover:border-[#006a61] hover:bg-slate-100 dark:hover:bg-slate-800'
+                : 'border-border dark:border-white/10 bg-bg/60 dark:bg-slate-900/60 hover:border-[#006a61] hover:bg-slate-100 dark:hover:bg-slate-800'
             }`}
           >
             <div className="flex items-center justify-between w-full">
@@ -355,7 +355,7 @@ export function SystemSettings() {
             </div>
             <div>
               <h4 className="font-bold text-xs text-slate-900 dark:text-slate-100">Welcome Text</h4>
-              <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 leading-normal">
+              <p className="text-[10px] text-muted-fg dark:text-muted-fg mt-0.5 leading-normal">
                 Displays the default user welcome greeting and system tagline.
               </p>
             </div>
@@ -365,7 +365,7 @@ export function SystemSettings() {
 
       {/* ── Smart Alerts ── */}
       <SectionCard title="Smart Alerts">
-        <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+        <p className="text-xs text-muted-fg dark:text-muted-fg mb-3">
           Enable or disable automated notifications sent to Owner/Administrators.
         </p>
         <div className="divide-y divide-slate-100 dark:divide-white/5">
@@ -410,7 +410,7 @@ export function SystemSettings() {
 
       {/* ── Data Management ── */}
       <SectionCard title="Data Management">
-        <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+        <p className="text-xs text-muted-fg dark:text-muted-fg mb-3">
           Manage your inventory and waste data. These actions are irreversible — proceed with caution.
         </p>
         <div className="flex flex-col sm:flex-row gap-2">
@@ -418,7 +418,7 @@ export function SystemSettings() {
           <button
             onClick={handleExport}
             disabled={exportLoading}
-            className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 px-3 h-8 text-xs font-semibold transition-colors disabled:opacity-60"
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-border dark:border-white/10 bg-bg dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 px-3 h-8 text-xs font-semibold transition-colors disabled:opacity-60"
           >
             {exportLoading ? (
               <>
@@ -437,7 +437,7 @@ export function SystemSettings() {
           <button
             onClick={handleDownloadLogs}
             disabled={downloadLoading}
-            className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 px-3 h-8 text-xs font-semibold transition-colors disabled:opacity-60"
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-border dark:border-white/10 bg-bg dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 px-3 h-8 text-xs font-semibold transition-colors disabled:opacity-60"
           >
             {downloadLoading ? (
               <>

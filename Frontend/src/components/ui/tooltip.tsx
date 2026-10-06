@@ -179,7 +179,7 @@ function TooltipContent({
             role="tooltip"
             className={cn(
                 "fixed z-[9999] w-max max-w-64 rounded-md px-3 py-2 text-[11px] font-medium shadow-lg",
-                "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border border-slate-700 dark:border-slate-200",
+                "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border border-slate-700 dark:border-border",
                 className
             )}
             style={{ ...vertical, ...horizontal }}

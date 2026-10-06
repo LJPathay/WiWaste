@@ -30,7 +30,7 @@ function getStatusBadge(status: string) {
     return { label: 'Partial', cls: 'bg-sky-50 text-sky-700 border border-sky-100' };
   if (status === 'rejected')
     return { label: 'Rejected', cls: 'bg-rose-50 text-rose-700 border border-rose-100' };
-  return { label: status, cls: 'bg-slate-100 text-slate-600 border border-slate-200' };
+  return { label: status, cls: 'bg-slate-100 text-muted-fg border border-border' };
 }
 
 /**
@@ -101,7 +101,7 @@ export function StockReceiving() {
       { label: 'Total', value: all.length, icon: Package, color: 'text-slate-700' },
       { label: 'Pending', value: pending, icon: Truck, color: 'text-amber-700' },
       { label: 'Received', value: received, icon: CheckCircle, color: 'text-green-700' },
-      { label: 'Rejected', value: cancelled, icon: XCircle, color: 'text-slate-500' },
+      { label: 'Rejected', value: cancelled, icon: XCircle, color: 'text-muted-fg' },
     ];
   }, [receivingData]);
 
@@ -151,7 +151,7 @@ export function StockReceiving() {
       key: 'supplier',
       header: 'Supplier',
       render: (row) => (
-        <span className="text-xs text-slate-600">{row.supplier}</span>
+        <span className="text-xs text-muted-fg">{row.supplier}</span>
       ),
     },
     {
@@ -159,7 +159,7 @@ export function StockReceiving() {
       header: 'Received',
       render: (row) => (
         <div className="flex items-center gap-1.5">
-          <Calendar className="h-3.5 w-3.5 text-slate-400" />
+          <Calendar className="h-3.5 w-3.5 text-muted-fg" />
           <span className="text-xs">{row.received_at?.slice(0, 10) ?? '—'}</span>
         </div>
       ),
@@ -235,7 +235,7 @@ export function StockReceiving() {
         <Package className="h-6 w-6 text-[#0F766E]" />
         <div>
           <h1 className="text-xl font-bold text-slate-900">Stock Receiving</h1>
-          <p className="text-xs text-slate-500">Manage and track incoming stock deliveries</p>
+          <p className="text-xs text-muted-fg">Manage and track incoming stock deliveries</p>
         </div>
       </div>
 
@@ -245,13 +245,13 @@ export function StockReceiving() {
           return (
             <div
               key={card.label}
-              className="rounded-xl border border-slate-200 bg-white p-3"
+              className="rounded-xl border border-border bg-white p-3"
             >
               <div className="flex items-center justify-between">
-                <span className="text-[9px] font-semibold uppercase tracking-widest text-slate-500">
+                <span className="text-[9px] font-semibold uppercase tracking-widest text-muted-fg">
                   {card.label}
                 </span>
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-50">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-bg">
                   <Icon className={`h-3.5 w-3.5 ${card.color} opacity-60`} />
                 </div>
               </div>
@@ -268,7 +268,7 @@ export function StockReceiving() {
         <div
           role="group"
           aria-label="Filter deliveries by status"
-          className="flex gap-1 rounded-lg border border-slate-200 bg-white p-1"
+          className="flex gap-1 rounded-lg border border-border bg-white p-1"
         >
           {STATUSES.map((f) => (
             <button
@@ -278,7 +278,7 @@ export function StockReceiving() {
               className={`h-8 rounded-md px-3 text-xs font-semibold transition-colors ${
                 statusFilter === f
                   ? 'bg-[#0F766E] text-white'
-                  : 'text-slate-600 hover:bg-slate-100'
+                  : 'text-muted-fg hover:bg-slate-100'
               }`}
             >
               {f.charAt(0).toUpperCase() + f.slice(1)}
@@ -287,7 +287,7 @@ export function StockReceiving() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-slate-200 bg-white p-3.5">
+      <div className="rounded-xl border border-border bg-white p-3.5">
         <DataTable
           columns={columns}
           data={orders}

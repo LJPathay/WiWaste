@@ -30,7 +30,7 @@ export function Pricing() {
                         animate={{ opacity: 1, y: 0 }}
                         whileHover={{ y: -5 }}
                         transition={{ duration: 0.5, delay: 0.1 }}
-                        className="bg-white rounded-xl border border-gray-200 p-8 shadow-sm flex flex-col h-full"
+                        className="bg-white rounded-xl border border-border p-8 shadow-sm flex flex-col h-full"
                     >
                         <div className="mb-8">
                             <h3 className="font-['Hanken_Grotesk',sans-serif] text-2xl font-semibold text-[#0b1c30] mb-2">Sari-Sari Plus</h3>
@@ -79,7 +79,7 @@ export function Pricing() {
                         animate={{ opacity: 1, y: 0 }}
                         whileHover={{ y: -8, scale: 1.02 }}
                         transition={{ duration: 0.5, delay: 0.2 }}
-                        className="bg-white rounded-xl border-t-4 border-t-[#006b5f] border-x border-b border-gray-200 p-8 shadow-xl flex flex-col h-full relative transform md:-translate-y-4 z-10"
+                        className="bg-white rounded-xl border-t-4 border-t-[#006b5f] border-x border-b border-border p-8 shadow-xl flex flex-col h-full relative transform md:-translate-y-4 z-10"
                     >
                         <motion.div
                             animate={{ opacity: [0.3, 0.8, 0.3] }}
@@ -136,7 +136,7 @@ export function Pricing() {
                         animate={{ opacity: 1, y: 0 }}
                         whileHover={{ y: -5 }}
                         transition={{ duration: 0.5, delay: 0.3 }}
-                        className="bg-white rounded-xl border border-gray-200 p-8 shadow-sm flex flex-col h-full"
+                        className="bg-white rounded-xl border border-border p-8 shadow-sm flex flex-col h-full"
                     >
                         <div className="mb-8">
                             <h3 className="font-['Hanken_Grotesk',sans-serif] text-2xl font-semibold text-[#0b1c30] mb-2">Enterprise Hub</h3>
@@ -180,14 +180,14 @@ export function Pricing() {
                 <h2 className="text-3xl font-semibold text-center text-[#0b1c30] mb-12">Frequently Asked Questions</h2>
 
                 <div className="space-y-6">
-                    <div className="bg-white rounded-xl border border-gray-100 p-8 shadow-sm">
+                    <div className="bg-white rounded-xl border border-border p-8 shadow-sm">
                         <h4 className="text-xl font-semibold text-[#0b1c30] mb-3">Do you fully support Philippine Peso (PHP) billing?</h4>
                         <p className="text-[#45464d] leading-relaxed">
                             Yes. All our plans are billed locally in PHP, ensuring you aren't subjected to unpredictable foreign exchange fluctuations. Invoices are fully compliant with local BIR requirements.
                         </p>
                     </div>
 
-                    <div className="bg-white rounded-xl border border-gray-100 p-8 shadow-sm">
+                    <div className="bg-white rounded-xl border border-border p-8 shadow-sm">
                         <h4 className="text-xl font-semibold text-[#0b1c30] mb-3">Can you handle custom local implementation?</h4>
                         <p className="text-[#45464d] leading-relaxed">
                             Absolutely. For our Enterprise Hub clients, our local Manila-based team provides hands-on implementation, ensuring the system integrates smoothly with your existing regional logistics and point-of-sale systems.

@@ -58,7 +58,7 @@ export function InventoryPerformance() {
           <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Inventory Performance Audit</h1>
           <UITooltip>
             <TooltipTrigger asChild>
-              <Info className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
+              <Info className="h-3.5 w-3.5 text-muted-fg hover:text-muted-fg dark:hover:text-slate-300 cursor-help" />
             </TooltipTrigger>
             <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
               Stock turnover metrics, high-velocity assets, and shelf placement diagnostics to optimize inventory flow.
@@ -83,16 +83,16 @@ export function InventoryPerformance() {
           { label: 'Dead Stock Items', value: String(deadStockCount), note: `Est. ₱${(deadStockCount * 708).toLocaleString()} capital locked` },
           { label: 'Avg Days on Shelf', value: '18 days', note: 'Target: 20 days' },
         ].map((card) => (
-          <div key={card.label} className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 p-3 shadow-sm">
-            <div className="text-[9px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{card.label}</div>
+          <div key={card.label} className="bg-bg-elevated rounded-xl border border-border dark:border-white/10 p-3 shadow-sm">
+            <div className="text-[9px] font-semibold text-muted-fg dark:text-muted-fg uppercase tracking-wider">{card.label}</div>
             <div className="mt-2 text-sm font-black text-slate-900 dark:text-slate-100">{card.value}</div>
-            <div className="mt-1 text-xs text-slate-400 dark:text-slate-500">{card.note}</div>
+            <div className="mt-1 text-xs text-muted-fg dark:text-muted-fg">{card.note}</div>
           </div>
         ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1.3fr_0.7fr] gap-4">
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 p-4 shadow-sm">
+        <div className="bg-bg-elevated rounded-xl border border-border dark:border-white/10 p-4 shadow-sm">
           <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-3">Top Products by Turnover</h3>
           <div className="h-48 w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -118,17 +118,17 @@ export function InventoryPerformance() {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 p-4 shadow-sm">
+        <div className="bg-bg-elevated rounded-xl border border-border dark:border-white/10 p-4 shadow-sm">
           <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-3 flex items-center gap-2">
             <Award className="h-3.5 w-3.5 text-amber-500" />
             Top Velocity SKUs
           </h3>
           <div className="space-y-2">
             {products.slice(0, 5).map((p) => (
-              <div key={p.product_id} className="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-white/5">
+              <div key={p.product_id} className="flex items-center justify-between p-2 bg-bg dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-white/5">
                 <div className="min-w-0">
                   <div className="text-xs font-semibold truncate text-slate-800 dark:text-slate-100">{p.product_name}</div>
-                  <div className="text-[10px] text-slate-400 mt-0.5">{p.category} · {p.total_sold} sold</div>
+                  <div className="text-[10px] text-muted-fg mt-0.5">{p.category} · {p.total_sold} sold</div>
                 </div>
                 <div className="text-right flex-shrink-0 ml-3">
                   <div className="text-xs font-bold text-slate-800 dark:text-slate-200">{p.turnover_rate.toFixed(1)}x</div>
@@ -137,7 +137,7 @@ export function InventoryPerformance() {
               </div>
             ))}
             {products.length === 0 && !loading && (
-              <div className="text-xs text-slate-500 dark:text-slate-400 text-center py-4">
+              <div className="text-xs text-muted-fg dark:text-muted-fg text-center py-4">
                 No turnover data available
               </div>
             )}

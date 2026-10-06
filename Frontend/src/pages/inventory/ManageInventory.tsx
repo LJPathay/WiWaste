@@ -304,7 +304,7 @@ export function ManageInventory() {
       render: (row) => (
         <div>
           <div className="font-bold text-gray-900 dark:text-slate-100 group-hover:text-[#0F766E] transition-colors">{row.itemName}</div>
-          <div className="text-gray-400 dark:text-slate-500 font-mono mt-0.5">{row.sku}</div>
+          <div className="text-gray-400 dark:text-muted-fg font-mono mt-0.5">{row.sku}</div>
         </div>
       ),
     },
@@ -314,7 +314,7 @@ export function ManageInventory() {
       truncate: true,
       minWidth: '100px',
       render: (row) => (
-        <span className="text-gray-600 dark:text-slate-300">{row.category}</span>
+        <span className="text-muted-fg dark:text-slate-300">{row.category}</span>
       ),
     },
     {
@@ -340,7 +340,7 @@ export function ManageInventory() {
       header: 'Nearest Expiry',
       minWidth: '100px',
       render: (row) => (
-        <span className="text-gray-500 dark:text-slate-400">{getExpiryDate(row)}</span>
+        <span className="text-muted-fg dark:text-muted-fg">{getExpiryDate(row)}</span>
       ),
     },
     {
@@ -348,7 +348,7 @@ export function ManageInventory() {
       header: 'Last Movement',
       minWidth: '100px',
       render: (row) => (
-        <span className="text-gray-500 dark:text-slate-400">{row.lastUpdated}</span>
+        <span className="text-muted-fg dark:text-muted-fg">{row.lastUpdated}</span>
       ),
     },
   ];
@@ -356,12 +356,12 @@ export function ManageInventory() {
   const emptyState = (
     <div className="flex flex-col items-center justify-center py-16 gap-3">
       <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-slate-800 flex items-center justify-center">
-        <Package className="h-7 w-7 text-gray-300 dark:text-slate-600" />
+        <Package className="h-7 w-7 text-gray-300 dark:text-muted-fg" />
       </div>
-      <p className="text-sm font-semibold text-gray-400 dark:text-slate-500">No inventory items match your search</p>
+      <p className="text-sm font-semibold text-gray-400 dark:text-muted-fg">No inventory items match your search</p>
       <button
         onClick={() => { setSearch(''); setCategoryFilter(''); setStatusFilter(''); }}
-        className="mt-1 px-4 py-2 rounded-lg border border-gray-200 dark:border-white/10 text-xs font-semibold text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 dark:bg-slate-800 transition-colors"
+        className="mt-1 px-4 py-2 rounded-lg border border-border dark:border-white/10 text-xs font-semibold text-muted-fg dark:text-slate-300 hover:bg-bg dark:hover:bg-slate-800 dark:bg-slate-800 transition-colors"
       >
         Clear Filters
       </button>
@@ -426,7 +426,7 @@ export function ManageInventory() {
                   placeholder="Type to search products..."
                 />
                 {showDropdown && addSearch && (
-                  <div className="absolute left-0 right-0 top-full mt-1 z-20 max-h-48 overflow-y-auto rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 shadow-lg">
+                  <div className="absolute left-0 right-0 top-full mt-1 z-20 max-h-48 overflow-y-auto rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated shadow-lg">
                     {items
                       .filter(i =>
                         i.itemName.toLowerCase().includes(addSearch.toLowerCase()) ||
@@ -452,7 +452,7 @@ export function ManageInventory() {
                         >
                           <div>
                             <span className="font-medium text-[#0F172A] dark:text-slate-100">{i.itemName}</span>
-                            <span className="ml-2 font-mono text-[#64748B] dark:text-slate-400">{i.sku}</span>
+                            <span className="ml-2 font-mono text-[#64748B] dark:text-muted-fg">{i.sku}</span>
                           </div>
                           <span className="font-semibold text-[#0F766E]">₱{(i.sellingPrice ?? 0).toFixed(2)}</span>
                         </button>
@@ -472,7 +472,7 @@ export function ManageInventory() {
                 <FormField label="Selected Product">
                   <input
                     type="text"
-                    className={`${inputCls} bg-slate-100 dark:bg-slate-800 text-slate-500 cursor-not-allowed`}
+                    className={`${inputCls} bg-slate-100 dark:bg-slate-800 text-muted-fg cursor-not-allowed`}
                     value={addForm.itemName}
                     disabled
                   />
@@ -480,7 +480,7 @@ export function ManageInventory() {
                 <FormField label="SKU">
                   <input
                     type="text"
-                    className={`${inputCls} bg-slate-100 dark:bg-slate-800 text-slate-500 cursor-not-allowed`}
+                    className={`${inputCls} bg-slate-100 dark:bg-slate-800 text-muted-fg cursor-not-allowed`}
                     value={addForm.sku}
                     disabled
                   />
@@ -499,7 +499,7 @@ export function ManageInventory() {
                 <FormField label="Selling Price (₱)">
                   <input
                     type="text"
-                    className={`${inputCls} bg-slate-100 dark:bg-slate-800 text-slate-500 cursor-not-allowed`}
+                    className={`${inputCls} bg-slate-100 dark:bg-slate-800 text-muted-fg cursor-not-allowed`}
                     value={addForm.sellingPrice ? `₱${Number(addForm.sellingPrice).toFixed(2)}` : ''}
                     disabled
                   />
@@ -515,7 +515,7 @@ export function ManageInventory() {
               <button
                 type="button"
                 onClick={() => { setShowAddModal(false); setAddSearch(''); }}
-                className="flex-1 rounded-lg border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-600 dark:text-slate-300 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                className="flex-1 rounded-lg border border-border dark:border-white/10 text-xs font-semibold text-muted-fg dark:text-slate-300 py-2 hover:bg-bg dark:hover:bg-slate-800 transition-colors"
               >
                 Cancel
               </button>
@@ -533,65 +533,65 @@ export function ManageInventory() {
 
       {adjustItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" role="dialog" aria-modal="true">
-          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-white/10">
+          <div className="bg-bg-elevated rounded-xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border dark:border-white/10">
               <div>
                 <h3 className="text-base font-bold text-gray-900 dark:text-slate-100">Adjust Stock</h3>
-                <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">{adjustItem.itemName}</p>
+                <p className="text-xs text-gray-400 dark:text-muted-fg mt-0.5">{adjustItem.itemName}</p>
               </div>
               <button
                 onClick={() => { setAdjustItem(null); setAdjustQty(''); setAdjustRemarks(''); }}
                 className="p-1.5 rounded-lg hover:bg-gray-100 dark:bg-slate-800 transition-colors"
               >
-                <X className="h-4 w-4 text-gray-500 dark:text-slate-400" />
+                <X className="h-4 w-4 text-muted-fg dark:text-muted-fg" />
               </button>
             </div>
             <div className="p-4 space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1.5">Item Name</label>
+                <label className="block text-xs font-semibold text-muted-fg dark:text-slate-300 mb-1.5">Item Name</label>
                 <input
                   type="text"
                   readOnly
                   value={adjustItem.itemName}
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-slate-800 text-gray-500 dark:text-slate-400 cursor-not-allowed"
+                  className="w-full px-3 py-2 text-xs rounded-lg border border-border dark:border-white/10 bg-bg dark:bg-slate-800 text-muted-fg dark:text-muted-fg cursor-not-allowed"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1.5">Adjustment Type</label>
+                <label className="block text-xs font-semibold text-muted-fg dark:text-slate-300 mb-1.5">Adjustment Type</label>
                 <select
                   value={adjustType}
                   onChange={e => setAdjustType(e.target.value as 'Stock In' | 'Stock Out')}
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-900 text-gray-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F766E]"
+                  className="w-full px-3 py-2 text-xs rounded-lg border border-border dark:border-white/10 bg-bg-elevated text-gray-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F766E]"
                 >
                   <option value="Stock In">Stock In</option>
                   <option value="Stock Out">Stock Out</option>
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1.5">Quantity</label>
+                <label className="block text-xs font-semibold text-muted-fg dark:text-slate-300 mb-1.5">Quantity</label>
                 <input
                   type="number"
                   min="1"
                   value={adjustQty}
                   onChange={e => setAdjustQty(e.target.value)}
                   placeholder="Enter quantity"
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-900 text-gray-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F766E]"
+                  className="w-full px-3 py-2 text-xs rounded-lg border border-border dark:border-white/10 bg-bg-elevated text-gray-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F766E]"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1.5">Remarks</label>
+                <label className="block text-xs font-semibold text-muted-fg dark:text-slate-300 mb-1.5">Remarks</label>
                 <input
                   type="text"
                   value={adjustRemarks}
                   onChange={e => setAdjustRemarks(e.target.value)}
                   placeholder="e.g. Regular restock"
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-900 text-gray-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F766E]"
+                  className="w-full px-3 py-2 text-xs rounded-lg border border-border dark:border-white/10 bg-bg-elevated text-gray-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F766E]"
                 />
               </div>
               <div className="flex gap-3 pt-1">
                 <button
                   onClick={() => { setAdjustItem(null); setAdjustQty(''); setAdjustRemarks(''); }}
-                  className="flex-1 h-8 text-xs rounded-lg border border-gray-200 dark:border-white/10 font-semibold text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 dark:bg-slate-800 transition-colors"
+                  className="flex-1 h-8 text-xs rounded-lg border border-border dark:border-white/10 font-semibold text-muted-fg dark:text-slate-300 hover:bg-bg dark:hover:bg-slate-800 dark:bg-slate-800 transition-colors"
                 >
                   Cancel
                 </button>
@@ -610,28 +610,28 @@ export function ManageInventory() {
 
       {historyItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" role="dialog" aria-modal="true">
-          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-white/10">
+          <div className="bg-bg-elevated rounded-xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border dark:border-white/10">
               <div>
                 <h3 className="text-base font-bold text-gray-900 dark:text-slate-100">Stock Movement History</h3>
-                <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">{historyItem.itemName}</p>
+                <p className="text-xs text-gray-400 dark:text-muted-fg mt-0.5">{historyItem.itemName}</p>
               </div>
               <button onClick={() => setHistoryItem(null)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:bg-slate-800 transition-colors">
-                <X className="h-4 w-4 text-gray-500 dark:text-slate-400" />
+                <X className="h-4 w-4 text-muted-fg dark:text-muted-fg" />
               </button>
             </div>
             <div className="p-4 max-h-96 overflow-y-auto space-y-3">
 {historyLoading ? (
-            <div className="text-center py-10 text-gray-400 dark:text-slate-500 text-sm">Loading movements...</div>
+            <div className="text-center py-10 text-gray-400 dark:text-muted-fg text-sm">Loading movements...</div>
           ) : historyItem.recentMovements.length === 0 ? (
-            <div className="text-center py-10 text-gray-400 dark:text-slate-500 text-sm">No movement history available</div>
+            <div className="text-center py-10 text-gray-400 dark:text-muted-fg text-sm">No movement history available</div>
           ) : (
                 <div className="relative pl-5">
                   <div className="absolute left-2 top-0 bottom-0 w-px bg-gray-100 dark:bg-slate-800" />
                   {historyItem.recentMovements.map((mv) => (
                     <div key={mv.id} className="relative flex gap-3 pb-4">
                       <div className={`absolute -left-[13px] top-0.5 w-3.5 h-3.5 rounded-full border-2 border-white shadow-sm flex-shrink-0 ${mv.type === 'Stock In' ? 'bg-status-ok' : 'bg-status-critical'}`} />
-                      <div className="flex-1 ml-2 bg-gray-50 dark:bg-slate-800 rounded-lg p-3 border border-gray-100 dark:border-white/10">
+                      <div className="flex-1 ml-2 bg-bg dark:bg-slate-800 rounded-lg p-3 border border-border dark:border-white/10">
                         <div className="flex items-center justify-between">
                           <span className={`text-xs font-bold ${mv.type === 'Stock In' ? 'text-status-ok' : 'text-status-critical'}`}>
                             {mv.type === 'Stock In' ? '+' : '-'}{mv.quantity} units
@@ -640,9 +640,9 @@ export function ManageInventory() {
                             {mv.type}
                           </span>
                         </div>
-                        <div className="mt-1.5 text-xs text-gray-500 dark:text-slate-400">{mv.date} · {mv.user}</div>
-                        <div className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">{mv.source}</div>
-                        {mv.remarks && <div className="text-xs text-gray-500 dark:text-slate-400 italic mt-1">"{mv.remarks}"</div>}
+                        <div className="mt-1.5 text-xs text-muted-fg dark:text-muted-fg">{mv.date} · {mv.user}</div>
+                        <div className="text-xs text-gray-400 dark:text-muted-fg mt-0.5">{mv.source}</div>
+                        {mv.remarks && <div className="text-xs text-muted-fg dark:text-muted-fg italic mt-1">"{mv.remarks}"</div>}
                       </div>
                     </div>
                   ))}
@@ -656,12 +656,12 @@ export function ManageInventory() {
       {selectedItem && (
         <Modal title={selectedItem.itemName} onClose={() => setSelectedItem(null)} size="lg">
           <div className="space-y-4">
-            <div className="flex items-center gap-3 pb-2 border-b border-gray-100 dark:border-white/10">
-              <span className="font-mono text-xs text-gray-400 dark:text-slate-500 bg-gray-100 dark:bg-slate-800 px-2 py-1 rounded">{selectedItem.sku}</span>
+            <div className="flex items-center gap-3 pb-2 border-b border-border dark:border-white/10">
+              <span className="font-mono text-xs text-gray-400 dark:text-muted-fg bg-gray-100 dark:bg-slate-800 px-2 py-1 rounded">{selectedItem.sku}</span>
               <span className="text-xs font-semibold text-[#0F766E] bg-[#0F766E]/10 px-2.5 py-1 rounded-full">{selectedItem.category}</span>
             </div>
 
-            <div className="flex gap-2 border-b border-slate-200 dark:border-white/10">
+            <div className="flex gap-2 border-b border-border dark:border-white/10">
               {[
                 { id: 'details', label: 'Details', icon: Package },
                 { id: 'stockin', label: 'Stock In', icon: ArrowDownRight },
@@ -676,7 +676,7 @@ export function ManageInventory() {
                     className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 transition-colors ${
                       activeTab === tab.id
                         ? 'border-[#0F766E] text-[#0F766E]'
-                        : 'border-transparent text-slate-500 hover:text-slate-700'
+                        : 'border-transparent text-muted-fg hover:text-slate-700'
                     }`}
                   >
                     <Icon className="h-4 w-4" />
@@ -698,7 +698,7 @@ export function ManageInventory() {
                     { label: 'Last Updated', value: selectedItem.lastUpdated },
                   ].map(row => (
                     <div key={row.label} className="flex items-center justify-between py-2 border-b border-gray-50">
-                      <span className="text-xs font-semibold text-gray-400 dark:text-slate-500">{row.label}</span>
+                      <span className="text-xs font-semibold text-gray-400 dark:text-muted-fg">{row.label}</span>
                       <span className={`text-xs font-semibold ${
                         row.label === 'Status'
                           ? selectedItem.stockStatus === 'Low Stock' ? 'text-status-warning' : selectedItem.stockStatus === 'Overstock' ? 'text-status-info' : 'text-status-ok'
@@ -709,11 +709,11 @@ export function ManageInventory() {
                 </div>
 
                 <div>
-                  <p className="text-xs font-bold text-gray-500 dark:text-slate-400 mb-3 uppercase tracking-wide">Stock Movement Timeline</p>
+                  <p className="text-xs font-bold text-muted-fg dark:text-muted-fg mb-3 uppercase tracking-wide">Stock Movement Timeline</p>
                   {historyLoading ? (
-                    <div className="text-center py-6 text-gray-400 dark:text-slate-500 text-xs">Loading movements...</div>
+                    <div className="text-center py-6 text-gray-400 dark:text-muted-fg text-xs">Loading movements...</div>
                   ) : selectedItem.recentMovements.length === 0 ? (
-                    <div className="text-center py-6 text-gray-400 dark:text-slate-500 text-xs">No recent movements</div>
+                    <div className="text-center py-6 text-gray-400 dark:text-muted-fg text-xs">No recent movements</div>
                   ) : (
                     <div className="relative pl-5">
                       <div className="absolute left-2 top-0 bottom-0 w-px bg-gray-100 dark:bg-slate-800" />
@@ -725,10 +725,10 @@ export function ManageInventory() {
                               <span className={`text-xs font-bold ${mv.type === 'Stock In' ? 'text-status-ok' : 'text-status-critical'}`}>
                                 {mv.type === 'Stock In' ? '+' : '-'}{mv.quantity}
                               </span>
-                              <span className="text-xs text-gray-400 dark:text-slate-500">{mv.type}</span>
+                              <span className="text-xs text-gray-400 dark:text-muted-fg">{mv.type}</span>
                             </div>
-                            <div className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">{mv.date} · {mv.user}</div>
-                            {mv.remarks && <div className="text-xs text-gray-400 dark:text-slate-500 italic">"{mv.remarks}"</div>}
+                            <div className="text-xs text-gray-400 dark:text-muted-fg mt-0.5">{mv.date} · {mv.user}</div>
+                            {mv.remarks && <div className="text-xs text-gray-400 dark:text-muted-fg italic">"{mv.remarks}"</div>}
                           </div>
                         </div>
                       ))}
@@ -804,9 +804,9 @@ export function ManageInventory() {
             {activeTab === 'history' && (
               <div className="space-y-2 max-h-64 overflow-y-auto">
 {historyLoading ? (
-                    <div className="text-center py-8 text-slate-400 text-sm">Loading movements...</div>
+                    <div className="text-center py-8 text-muted-fg text-sm">Loading movements...</div>
                   ) : selectedItem.recentMovements.length === 0 ? (
-                    <div className="text-center py-8 text-slate-400 text-sm">No recent movements</div>
+                    <div className="text-center py-8 text-muted-fg text-sm">No recent movements</div>
                   ) : (
                   selectedItem.recentMovements.map(movement => (
                     <div
@@ -832,10 +832,10 @@ export function ManageInventory() {
                         <div className="text-sm font-semibold text-slate-800 dark:text-slate-100">
                           {movement.type}
                         </div>
-                        <div className="text-xs text-slate-500">
+                        <div className="text-xs text-muted-fg">
                           {movement.user} • {movement.date}
                         </div>
-                        <span className="mt-1 inline-flex rounded bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[10px] font-bold text-slate-500 dark:text-slate-400">
+                        <span className="mt-1 inline-flex rounded bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[10px] font-bold text-muted-fg dark:text-muted-fg">
                           {movement.source}
                         </span>
                       </div>
@@ -848,7 +848,7 @@ export function ManageInventory() {
                           {movement.type === 'Stock In' ? '+' : '-'}{movement.quantity}
                         </div>
                         {movement.remarks && (
-                          <div className="text-xs text-slate-400">{movement.remarks}</div>
+                          <div className="text-xs text-muted-fg">{movement.remarks}</div>
                         )}
                       </div>
                     </div>
@@ -863,7 +863,7 @@ export function ManageInventory() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900 dark:text-slate-100 tracking-tight">Manage Inventory</h1>
-          <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">Track, adjust, and audit your full product catalogue</p>
+          <p className="mt-1 text-xs text-muted-fg dark:text-muted-fg">Track, adjust, and audit your full product catalogue</p>
         </div>
         <button
           onClick={() => setShowAddModal(true)}
@@ -880,38 +880,38 @@ export function ManageInventory() {
           return (
             <div
               key={kpi.label}
-              className="bg-white dark:bg-slate-900 border border-[#E5E7EB] dark:border-white/10 rounded-xl p-3 shadow-sm flex items-center gap-3 hover:shadow-md transition-shadow"
+              className="bg-bg-elevated border border-[#E5E7EB] dark:border-white/10 rounded-xl p-3 shadow-sm flex items-center gap-3 hover:shadow-md transition-shadow"
             >
               <div className={`h-7 w-7 rounded-xl flex items-center justify-center flex-shrink-0 ${kpi.iconBg}`}>
                 <Icon className={`h-3.5 w-3.5 ${kpi.iconColor}`} />
               </div>
               <div>
                 <div className={`text-sm font-bold ${kpi.valueCls}`}>{kpi.value}</div>
-                <div className="text-[9px] text-gray-500 dark:text-slate-400 font-medium mt-0.5">{kpi.label}</div>
+                <div className="text-[9px] text-muted-fg dark:text-muted-fg font-medium mt-0.5">{kpi.label}</div>
               </div>
             </div>
           );
         })}
       </div>
 
-      <div className="bg-white dark:bg-slate-900 border border-[#E5E7EB] dark:border-white/10 rounded-xl p-3.5 shadow-sm flex flex-col sm:flex-row items-center gap-3">
+      <div className="bg-bg-elevated border border-[#E5E7EB] dark:border-white/10 rounded-xl p-3.5 shadow-sm flex flex-col sm:flex-row items-center gap-3">
         <div className="relative flex-1 w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-slate-500 pointer-events-none" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-muted-fg pointer-events-none" />
           <input
             type="text"
             placeholder="Search by name, SKU, or category…"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 h-8 text-xs px-2.5 rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-slate-800 text-gray-700 dark:text-slate-300 placeholder-gray-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition"
+            className="w-full pl-10 pr-4 h-8 text-xs px-2.5 rounded-lg border border-border dark:border-white/10 bg-bg dark:bg-slate-800 text-gray-700 dark:text-slate-300 placeholder-gray-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition"
           />
         </div>
 
         <div className="relative">
-          <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 dark:text-slate-500 pointer-events-none" />
+          <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 dark:text-muted-fg pointer-events-none" />
           <select
             value={categoryFilter}
             onChange={e => setCategoryFilter(e.target.value)}
-            className="pl-8 pr-8 h-8 text-xs rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-slate-800 text-gray-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition appearance-none cursor-pointer"
+            className="pl-8 pr-8 h-8 text-xs rounded-lg border border-border dark:border-white/10 bg-bg dark:bg-slate-800 text-gray-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition appearance-none cursor-pointer"
           >
             <option value="">All Categories</option>
             {uniqueCategories.map(c => (
@@ -923,7 +923,7 @@ export function ManageInventory() {
         <select
           value={statusFilter}
           onChange={e => setStatusFilter(e.target.value)}
-          className="px-3 h-8 text-xs rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-slate-800 text-gray-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition appearance-none cursor-pointer"
+          className="px-3 h-8 text-xs rounded-lg border border-border dark:border-white/10 bg-bg dark:bg-slate-800 text-gray-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition appearance-none cursor-pointer"
         >
           <option value="">All Status</option>
           <option value="Normal">Normal</option>
@@ -933,7 +933,7 @@ export function ManageInventory() {
 
         <button
           onClick={handleExportCSV}
-          className="inline-flex items-center gap-2 h-8 text-xs px-3 rounded-lg border border-gray-200 dark:border-white/10 font-semibold text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 dark:bg-slate-800 hover:border-gray-300 transition-all flex-shrink-0"
+          className="inline-flex items-center gap-2 h-8 text-xs px-3 rounded-lg border border-border dark:border-white/10 font-semibold text-muted-fg dark:text-slate-300 hover:bg-bg dark:hover:bg-slate-800 dark:bg-slate-800 hover:border-gray-300 transition-all flex-shrink-0"
         >
           <Download className="h-4 w-4" />
           Export CSV

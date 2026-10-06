@@ -185,7 +185,7 @@ export function DashboardOverview() {
           <h1 className="text-2xl font-bold text-[#0F172A] dark:text-slate-100 tracking-tight">Dashboard</h1>
           <UITooltip>
             <TooltipTrigger asChild>
-              <Info className="h-4 w-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help shrink-0" />
+              <Info className="h-4 w-4 text-muted-fg hover:text-muted-fg dark:hover:text-slate-300 cursor-help shrink-0" />
             </TooltipTrigger>
             <TooltipContent className="bg-slate-900 text-white max-w-xs">
               Business performance overview. All metrics draw from a single data source.
@@ -204,7 +204,7 @@ export function DashboardOverview() {
               <Link
                 key={card.label}
                 to={card.route}
-                className={`group relative flex flex-col justify-between rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 p-3.5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md hover:border-[#0F766E] ${
+                className={`group relative flex flex-col justify-between rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated p-3.5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md hover:border-[#0F766E] ${
                   isActive ? 'ring-2 ring-[#0F766E] border-transparent scale-[1.01] shadow-lg' : ''
                 }`}
               >
@@ -225,7 +225,7 @@ export function DashboardOverview() {
                 <div className="mt-2.5">
                   <div className="text-xl font-bold tracking-tight text-[#0F172A] dark:text-slate-100">{card.value}</div>
                   <div className="mt-0.5 text-xs font-semibold text-[#0F172A] dark:text-slate-100">{card.label}</div>
-                  <div className="mt-0.5 text-[10px] text-[#64748B] dark:text-slate-400">{card.note}</div>
+                  <div className="mt-0.5 text-[10px] text-[#64748B] dark:text-muted-fg">{card.note}</div>
                 </div>
                 <div className="mt-2 flex justify-end">
                   <span className="text-[10px] font-medium text-[#0F766E] group-hover:underline flex items-center gap-0.5">
@@ -247,13 +247,13 @@ export function DashboardOverview() {
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
 
           {/* Leakage by Category */}
-          <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 p-4 shadow-sm">
+          <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated p-4 shadow-sm">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <h3 className="text-xs font-bold text-[#0F172A] dark:text-slate-100">Leakage by Category</h3>
                 <UITooltip>
                   <TooltipTrigger asChild>
-                    <Info className="h-3.5 w-3.5 text-slate-400 hover:text-rose-600 cursor-help" />
+                    <Info className="h-3.5 w-3.5 text-muted-fg hover:text-rose-600 cursor-help" />
                   </TooltipTrigger>
                   <TooltipContent>Financial losses broken down by product category</TooltipContent>
                 </UITooltip>
@@ -309,13 +309,13 @@ export function DashboardOverview() {
           </div>
 
           {/* Inventory Health */}
-          <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 p-4 shadow-sm">
+          <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated p-4 shadow-sm">
             <div className="mb-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <h3 className="text-xs font-bold text-[#0F172A] dark:text-slate-100">Inventory Health</h3>
                 <UITooltip>
                   <TooltipTrigger asChild>
-                    <Info className="h-3.5 w-3.5 text-slate-400 hover:text-sky-600 cursor-help" />
+                    <Info className="h-3.5 w-3.5 text-muted-fg hover:text-sky-600 cursor-help" />
                   </TooltipTrigger>
                   <TooltipContent>Distribution of inventory by health status</TooltipContent>
                 </UITooltip>
@@ -347,7 +347,7 @@ export function DashboardOverview() {
             {/* Top Wasted Products */}
             <div className="mt-4 pt-3 border-t border-[#E5E7EB] dark:border-white/10">
               <div className="flex items-center justify-between mb-2">
-                <h4 className="text-[10px] font-bold text-[#64748B] dark:text-slate-400 uppercase tracking-wider">Top Wasted Products</h4>
+                <h4 className="text-[10px] font-bold text-[#64748B] dark:text-muted-fg uppercase tracking-wider">Top Wasted Products</h4>
                 <Link to="/dashboard/leakage" className="text-[9px] font-semibold text-[#0F766E] hover:underline">View All</Link>
               </div>
               <div className="space-y-2">
@@ -381,13 +381,13 @@ export function DashboardOverview() {
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
 
           {/* Sales & Revenue Trend */}
-          <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 p-4 shadow-sm">
+          <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated p-4 shadow-sm">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <h3 className="text-xs font-bold text-[#0F172A] dark:text-slate-100">Sales & Revenue Trend</h3>
                 <UITooltip>
                   <TooltipTrigger asChild>
-                    <Info className="h-3.5 w-3.5 text-slate-400 hover:text-emerald-600 cursor-help" />
+                    <Info className="h-3.5 w-3.5 text-muted-fg hover:text-emerald-600 cursor-help" />
                   </TooltipTrigger>
                   <TooltipContent>Daily revenue from completed POS transactions</TooltipContent>
                 </UITooltip>
@@ -429,13 +429,13 @@ export function DashboardOverview() {
           </div>
 
           {/* Wastage Trend */}
-          <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 p-4 shadow-sm">
+          <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated p-4 shadow-sm">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <h3 className="text-xs font-bold text-[#0F172A] dark:text-slate-100">Wastage Trend</h3>
                 <UITooltip>
                   <TooltipTrigger asChild>
-                    <Info className="h-3.5 w-3.5 text-slate-400 hover:text-rose-600 cursor-help" />
+                    <Info className="h-3.5 w-3.5 text-muted-fg hover:text-rose-600 cursor-help" />
                   </TooltipTrigger>
                   <TooltipContent>Monetary value of inventory waste over time</TooltipContent>
                 </UITooltip>
@@ -480,13 +480,13 @@ export function DashboardOverview() {
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
 
           {/* Demand Forecast */}
-          <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 p-4 shadow-sm">
+          <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated p-4 shadow-sm">
             <div className="mb-3 flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <h3 className="text-xs font-bold text-[#0F172A] dark:text-slate-100">Demand Forecast</h3>
                 <UITooltip>
                   <TooltipTrigger asChild>
-                    <Info className="h-3.5 w-3.5 text-slate-400 hover:text-sky-600 cursor-help" />
+                    <Info className="h-3.5 w-3.5 text-muted-fg hover:text-sky-600 cursor-help" />
                   </TooltipTrigger>
                   <TooltipContent>ARIMA-projected demand for the next period</TooltipContent>
                 </UITooltip>
@@ -497,7 +497,7 @@ export function DashboardOverview() {
                 </span>
               )}
             </div>
-            <p className="text-[11px] text-[#64748B] dark:text-slate-400 mb-3">
+            <p className="text-[11px] text-[#64748B] dark:text-muted-fg mb-3">
               Predicted waste volume with model confidence. Used for purchase order planning and FEFO prioritization.
             </p>
             <Link to="/dashboard/predictive" className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#0F766E] hover:underline">
@@ -506,13 +506,13 @@ export function DashboardOverview() {
           </div>
 
           {/* Revenue by Payment Method */}
-          <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 p-4 shadow-sm">
+          <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated p-4 shadow-sm">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <h3 className="text-xs font-bold text-[#0F172A] dark:text-slate-100">Revenue by Payment Method</h3>
                 <UITooltip>
                   <TooltipTrigger asChild>
-                    <Info className="h-3.5 w-3.5 text-slate-400 hover:text-[#0F766E] cursor-help" />
+                    <Info className="h-3.5 w-3.5 text-muted-fg hover:text-[#0F766E] cursor-help" />
                   </TooltipTrigger>
                   <TooltipContent>Revenue share from completed POS transactions</TooltipContent>
                 </UITooltip>
@@ -537,7 +537,7 @@ export function DashboardOverview() {
                 </ResponsiveContainer>
               </div>
             ) : (
-              <div className="h-48 flex items-center justify-center text-sm text-[#64748B] dark:text-slate-400">
+              <div className="h-48 flex items-center justify-center text-sm text-[#64748B] dark:text-muted-fg">
                 No payment data available
               </div>
             )}
@@ -558,13 +558,13 @@ export function DashboardOverview() {
               <Link
                 key={stat.label}
                 to={stat.link}
-                className="group rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 p-3.5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md hover:border-[#0F766E]"
+                className="group rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated p-3.5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md hover:border-[#0F766E]"
               >
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#F8FAFC] dark:bg-slate-800 mb-2 transition-colors group-hover:bg-[#0F766E]/10">
-                  <Icon className="h-4 w-4 text-[#64748B] dark:text-slate-400 transition-colors group-hover:text-[#0F766E]" />
+                  <Icon className="h-4 w-4 text-[#64748B] dark:text-muted-fg transition-colors group-hover:text-[#0F766E]" />
                 </div>
                 <div className="text-lg font-bold text-[#0F172A] dark:text-slate-100">{stat.value}</div>
-                <div className="mt-0.5 text-[10px] font-semibold uppercase tracking-widest text-[#64748B] dark:text-slate-400">{stat.label}</div>
+                <div className="mt-0.5 text-[10px] font-semibold uppercase tracking-widest text-[#64748B] dark:text-muted-fg">{stat.label}</div>
                 <div className="mt-1.5 flex items-center gap-1 text-[10px] font-semibold text-[#0F766E] opacity-0 group-hover:opacity-100 transition-opacity">
                   Manage <ChevronRight className="h-2.5 w-2.5" />
                 </div>

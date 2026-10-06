@@ -67,7 +67,7 @@ const columns: DataTableColumn<ApiSupplier & Record<string, unknown>>[] = [
     truncate: true,
     minWidth: '120px',
     render: (row) => (
-      <span className="text-slate-600 dark:text-slate-400">
+      <span className="text-muted-fg dark:text-muted-fg">
         {row.contact_person ?? '—'}
       </span>
     ),
@@ -77,7 +77,7 @@ const columns: DataTableColumn<ApiSupplier & Record<string, unknown>>[] = [
     header: 'Phone',
     minWidth: '100px',
     render: (row) => (
-      <span className="text-slate-600 dark:text-slate-400 font-mono">
+      <span className="text-muted-fg dark:text-muted-fg font-mono">
         {row.contact_number}
       </span>
     ),
@@ -88,7 +88,7 @@ const columns: DataTableColumn<ApiSupplier & Record<string, unknown>>[] = [
     truncate: true,
     minWidth: '160px',
     render: (row) => (
-      <span className="text-slate-600 dark:text-slate-400">
+      <span className="text-muted-fg dark:text-muted-fg">
         {row.email ?? '—'}
       </span>
     ),
@@ -99,7 +99,7 @@ const columns: DataTableColumn<ApiSupplier & Record<string, unknown>>[] = [
     truncate: true,
     minWidth: '150px',
     render: (row) => (
-      <span className="text-slate-600 dark:text-slate-400">
+      <span className="text-muted-fg dark:text-muted-fg">
         {row.address ?? '—'}
       </span>
     ),
@@ -110,7 +110,7 @@ const columns: DataTableColumn<ApiSupplier & Record<string, unknown>>[] = [
     numeric: true,
     minWidth: '80px',
     render: (row) => (
-      <span className="text-slate-600 dark:text-slate-400 font-medium tabular-nums">
+      <span className="text-muted-fg dark:text-muted-fg font-medium tabular-nums">
         {row.product_count ?? 0} items
       </span>
     ),
@@ -360,15 +360,15 @@ export function ManageSuppliers() {
   if (loading) return (
     <div className="flex flex-col items-center justify-center h-48 gap-3">
       <div className="relative w-12 h-12">
-        <div className="absolute inset-0 rounded-full border-3 border-slate-200 dark:border-slate-800"></div>
+        <div className="absolute inset-0 rounded-full border-3 border-border dark:border-slate-800"></div>
         <div className="absolute inset-0 rounded-full border-3 border-transparent border-t-[#006a61] border-r-[#006a61] animate-spin"></div>
         <div className="absolute inset-1.5 flex items-center justify-center">
           <Briefcase className="h-6 w-6 text-[#006a61] dark:text-[#7ef0cf] animate-pulse" />
         </div>
       </div>
       <div className="text-center">
-        <p className="text-slate-600 dark:text-slate-400 font-semibold text-sm">Loading suppliers...</p>
-        <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Fetching supplier list</p>
+        <p className="text-muted-fg dark:text-muted-fg font-semibold text-sm">Loading suppliers...</p>
+        <p className="text-xs text-muted-fg dark:text-muted-fg mt-0.5">Fetching supplier list</p>
       </div>
     </div>
   );
@@ -405,7 +405,7 @@ export function ManageSuppliers() {
             <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Manage Suppliers</h1>
             <UITooltip>
               <TooltipTrigger asChild>
-                <Info className="h-4 w-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
+                <Info className="h-4 w-4 text-muted-fg hover:text-muted-fg dark:hover:text-slate-300 cursor-help" />
               </TooltipTrigger>
               <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
                 View and manage your product suppliers.
@@ -423,7 +423,7 @@ export function ManageSuppliers() {
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div className="bg-white dark:bg-slate-950 rounded-xl border border-border dark:border-white/10 shadow-sm p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-2">
           <span className="px-2.5 py-0.5 bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-lg">
             All Suppliers ({suppliers.length})
@@ -434,7 +434,7 @@ export function ManageSuppliers() {
           <select
             value={sortBy}
             onChange={e => setSortBy(e.target.value as 'name-asc' | 'name-desc' | 'products-desc' | 'products-asc' | 'id-desc')}
-            className="w-full sm:w-auto h-8 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-xs font-medium rounded-lg px-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#006a61]"
+            className="w-full sm:w-auto h-8 bg-bg dark:bg-slate-900 border border-border dark:border-white/10 text-xs font-medium rounded-lg px-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#006a61]"
           >
             <option value="name-asc">Sort: A - Z</option>
             <option value="name-desc">Sort: Z - A</option>
@@ -444,13 +444,13 @@ export function ManageSuppliers() {
           </select>
 
           <div className="relative max-w-sm w-full sm:w-64">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-fg" />
             <input
               type="text"
               placeholder="Search by name, contact or phone…"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-full h-8 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-white/10 pl-8 pr-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-700 dark:text-slate-300"
+              className="w-full h-8 bg-bg dark:bg-slate-900/50 border border-border dark:border-white/10 pl-8 pr-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-700 dark:text-slate-300"
             />
           </div>
         </div>
@@ -469,7 +469,7 @@ export function ManageSuppliers() {
             <button
               type="button"
               onClick={() => setSelectedIds([])}
-              className="px-2 py-0.5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium hover:underline"
+              className="px-2 py-0.5 text-muted-fg dark:text-muted-fg hover:text-slate-900 dark:hover:text-slate-100 font-medium hover:underline"
             >
               Deselect All
             </button>
@@ -561,7 +561,7 @@ pagination={
                 aria-describedby="add-phone-hint"
                 onChange={e => setAddForm(f => ({ ...f, contact_number: sanitizeContactNumber(e.target.value) }))}
                 className={inputCls} />
-              <p id="add-phone-hint" className="text-slate-500 text-[9px] mt-0.5">Exactly 11 digits, numbers only.</p>
+              <p id="add-phone-hint" className="text-muted-fg text-[9px] mt-0.5">Exactly 11 digits, numbers only.</p>
               {addPhoneError && <p className="text-red-500 text-[9px] mt-0.5">{addPhoneError}</p>}
               {isDuplicateAddPhone && <p className="text-red-500 text-[9px] mt-0.5">Phone number already exists.</p>}
             </FormField>
@@ -600,7 +600,7 @@ pagination={
                 aria-describedby="edit-phone-hint"
                 onChange={e => setEditForm(f => ({ ...f, contact_number: sanitizeContactNumber(e.target.value) }))}
                 className={inputCls} />
-              <p id="edit-phone-hint" className="text-slate-500 text-[9px] mt-0.5">Exactly 11 digits, numbers only.</p>
+              <p id="edit-phone-hint" className="text-muted-fg text-[9px] mt-0.5">Exactly 11 digits, numbers only.</p>
               {editPhoneError && <p className="text-red-500 text-[9px] mt-0.5">{editPhoneError}</p>}
               {isDuplicateEditPhone && <p className="text-red-500 text-[9px] mt-0.5">Phone number already exists.</p>}
             </FormField>

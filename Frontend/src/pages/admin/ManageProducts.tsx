@@ -388,7 +388,7 @@ export function ManageProducts() {
             return (
               <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
                 p.stock <= 0
-                  ? 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                  ? 'bg-slate-100 text-muted-fg dark:bg-slate-800 dark:text-muted-fg'
                   : p.stock <= p.reorder_level
                   ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
                   : 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200'
@@ -408,7 +408,7 @@ export function ManageProducts() {
             return (
               <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
                 p.status === 'Discontinued'
-                  ? 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-400'
+                  ? 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-muted-fg'
                   : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
               }`}>
                 {p.status ?? 'Active'}
@@ -423,15 +423,15 @@ export function ManageProducts() {
   if (pLoading) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3">
       <div className="relative w-12 h-12">
-        <div className="absolute inset-0 rounded-full border-3 border-slate-200 dark:border-slate-800"></div>
+        <div className="absolute inset-0 rounded-full border-3 border-border dark:border-slate-800"></div>
         <div className="absolute inset-0 rounded-full border-3 border-transparent border-t-[#006a61] border-r-[#006a61] animate-spin"></div>
         <div className="absolute inset-1.5 flex items-center justify-center">
           <Package className="h-6 w-6 text-[#006a61] dark:text-[#7ef0cf] animate-pulse" />
         </div>
       </div>
       <div className="text-center">
-        <p className="text-slate-600 dark:text-slate-400 font-semibold text-sm">Loading products...</p>
-        <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Fetching product catalogue</p>
+        <p className="text-muted-fg dark:text-muted-fg font-semibold text-sm">Loading products...</p>
+        <p className="text-xs text-muted-fg dark:text-muted-fg mt-0.5">Fetching product catalogue</p>
       </div>
     </div>
   );
@@ -467,7 +467,7 @@ export function ManageProducts() {
             <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Manage Products</h1>
             <UITooltip>
               <TooltipTrigger asChild>
-                <Info className="h-4 w-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
+                <Info className="h-4 w-4 text-muted-fg hover:text-muted-fg dark:hover:text-slate-300 cursor-help" />
               </TooltipTrigger>
               <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs text-xs">
                 Maintain product specifications, cost structures, and SKUs.
@@ -485,10 +485,10 @@ export function ManageProducts() {
       </div>
 
       <div className="space-y-2">
-        <div className="bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm p-3.5 space-y-3">
+        <div className="bg-white dark:bg-slate-950 rounded-xl border border-border dark:border-white/10 shadow-sm p-3.5 space-y-3">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-1">
-              <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 px-2 uppercase tracking-wider">Status:</span>
+              <span className="text-[9px] font-bold text-muted-fg dark:text-muted-fg px-2 uppercase tracking-wider">Status:</span>
               {[
                 { id: 'all', label: 'All Products', count: allCount },
                 { id: 'Active', label: 'Active', count: activeCount },
@@ -502,7 +502,7 @@ export function ManageProducts() {
                     className={`flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold rounded transition-all ${
                       isSelected
                         ? 'bg-white dark:bg-slate-950 text-[#006a61] dark:text-[#7ef0cf] shadow-sm'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                        : 'text-muted-fg dark:text-muted-fg hover:text-slate-900 dark:hover:text-slate-200'
                     }`}
                   >
                     <span>{tab.label}</span>
@@ -518,11 +518,11 @@ export function ManageProducts() {
 
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex items-center gap-1">
-                <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Category:</span>
+                <span className="text-[9px] font-bold text-muted-fg dark:text-muted-fg uppercase tracking-wider">Category:</span>
                 <select
                   value={categoryFilter}
                   onChange={e => setCategoryFilter(e.target.value)}
-                  className="h-8 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-xs font-medium rounded-lg px-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#006a61]"
+                  className="h-8 bg-bg dark:bg-slate-900 border border-border dark:border-white/10 text-xs font-medium rounded-lg px-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#006a61]"
                 >
                   <option value="All">All Categories</option>
                   {categories.map(c => (
@@ -532,20 +532,20 @@ export function ManageProducts() {
               </div>
 
               <div className="relative max-w-xs w-full sm:w-64">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-fg" />
                 <input
                   type="text"
                   placeholder="Search product name or SKU..."
                   value={search}
                   onChange={e => setSearch(e.target.value)}
-                  className="h-8 w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-white/10 pl-8 pr-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-700 dark:text-slate-200"
+                  className="h-8 w-full bg-bg dark:bg-slate-900/50 border border-border dark:border-white/10 pl-8 pr-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-700 dark:text-slate-200"
                 />
               </div>
 
               {(statusFilter !== 'all' || categoryFilter !== 'All' || search !== '') && (
                 <button
                   onClick={() => { setStatusFilter('all'); setCategoryFilter('All'); setSearch(''); }}
-                  className="text-[10px] text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 underline font-medium"
+                  className="text-[10px] text-muted-fg hover:text-slate-700 dark:hover:text-slate-300 underline font-medium"
                 >
                   Reset Filters
                 </button>
@@ -555,7 +555,7 @@ export function ManageProducts() {
         </div>
 
         {selectedIds.length > 0 && (
-          <div className="bg-[#006a61]/10 border-x border-slate-200 dark:border-white/10 px-4 py-2 flex items-center justify-between text-[10px] animate-fadeIn">
+          <div className="bg-[#006a61]/10 border-x border-border dark:border-white/10 px-4 py-2 flex items-center justify-between text-[10px] animate-fadeIn">
             <div className="flex items-center gap-1.5 text-[#006a61] dark:text-[#7ef0cf] font-semibold">
               <span className="px-1.5 py-0.5 rounded-full bg-[#006a61] text-white font-bold text-[9px]">
                 {selectedIds.length}
@@ -566,7 +566,7 @@ export function ManageProducts() {
               <button
                 type="button"
                 onClick={() => setSelectedIds([])}
-                className="px-2 py-1 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium hover:underline"
+                className="px-2 py-1 text-muted-fg dark:text-muted-fg hover:text-slate-900 dark:hover:text-slate-100 font-medium hover:underline"
               >
                 Deselect All
               </button>
@@ -677,7 +677,7 @@ export function ManageProducts() {
                 />
               </div>
               {isDuplicateAddBarcode && <p className="text-red-500 text-[10px] mt-1">SKU / Barcode already exists.</p>}
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">USB scanner acts as keyboard — just scan the product</p>
+              <p className="text-xs text-muted-fg dark:text-muted-fg mt-1">USB scanner acts as keyboard — just scan the product</p>
             </FormField>
             <div className="grid grid-cols-2 gap-2">
               <FormField label="Category">
@@ -751,7 +751,7 @@ export function ManageProducts() {
                 />
               </div>
               {isDuplicateEditBarcode && <p className="text-red-500 text-[10px] mt-1">SKU / Barcode already exists.</p>}
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">USB scanner acts as keyboard — just scan the product</p>
+              <p className="text-xs text-muted-fg dark:text-muted-fg mt-1">USB scanner acts as keyboard — just scan the product</p>
             </FormField>
             <div className="grid grid-cols-2 gap-2">
               <FormField label="Category">
@@ -810,13 +810,13 @@ export function ManageProducts() {
           titleClassName="text-base"
         >
           <div className="space-y-4">
-            <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6 text-center">
+            <div className="bg-white dark:bg-slate-800 rounded-lg border border-border dark:border-slate-700 p-6 text-center">
               <div className="mb-4">
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Product</p>
+                <p className="text-xs font-medium text-muted-fg dark:text-muted-fg uppercase tracking-wider">Product</p>
                 <p className="text-lg font-bold text-slate-900 dark:text-white truncate">{labelProduct.name}</p>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">SKU: <span className="font-mono font-medium">{labelProduct.sku ?? labelProduct.id}</span></p>
+                <p className="text-sm text-muted-fg dark:text-muted-fg mt-1">SKU: <span className="font-mono font-medium">{labelProduct.sku ?? labelProduct.id}</span></p>
               </div>
-              <div className="relative inline-block bg-white p-4 rounded-lg border border-slate-200 dark:border-slate-700 dark:bg-slate-800">
+              <div className="relative inline-block bg-white p-4 rounded-lg border border-border dark:border-slate-700 dark:bg-slate-800">
                 <img
                   src={`${import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api/v1'}/products/${labelProduct.id}/label?format=${labelFormat}`}
                   alt={`Barcode label for ${labelProduct.name}`}
@@ -829,12 +829,12 @@ export function ManageProducts() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+            <div className="flex items-center gap-2 p-3 bg-bg dark:bg-slate-800/50 rounded-lg">
               <label className="text-xs font-medium text-slate-700 dark:text-slate-300">Format:</label>
               <select
                 value={labelFormat}
                 onChange={(e) => setLabelFormat(e.target.value as 'png' | 'svg')}
-                className="h-8 px-3 text-xs bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#006a61]"
+                className="h-8 px-3 text-xs bg-white dark:bg-slate-700 border border-border dark:border-slate-600 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#006a61]"
               >
                 <option value="png">PNG (Raster)</option>
                 <option value="svg">SVG (Vector)</option>
@@ -880,7 +880,7 @@ export function ManageProducts() {
                   link.click();
                   document.body.removeChild(link);
                 }}
-                className="flex-1 h-9 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-900 dark:text-slate-100 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 border border-slate-200 dark:border-slate-600"
+                className="flex-1 h-9 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-900 dark:text-slate-100 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 border border-border dark:border-slate-600"
               >
                 <Download className="h-3.5 w-3.5" />
                 Download

@@ -145,7 +145,7 @@ const NavItems = memo(function NavItems({
       {sidebarGroups.map((group) => (
         <div key={group.group} className="mb-2">
           {!compact && (
-            <div className="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-slate-500">
+            <div className="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-muted-fg">
               {group.group}
             </div>
           )}
@@ -208,7 +208,7 @@ const SidebarInner = memo(function SidebarInner({
             <button
               type="button"
               onClick={onToggleCollapse}
-              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-gray-500 dark:text-slate-400 transition-colors hover:bg-gray-100 dark:hover:bg-slate-700"
+              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-border dark:border-white/10 bg-white dark:bg-slate-800 text-muted-fg dark:text-muted-fg transition-colors hover:bg-gray-100 dark:hover:bg-slate-700"
               aria-label={compact ? 'Expand sidebar' : 'Collapse sidebar'}
             >
               {compact ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
@@ -218,7 +218,7 @@ const SidebarInner = memo(function SidebarInner({
             <button
               type="button"
               onClick={onClose}
-              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700"
+              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-border dark:border-white/10 bg-white dark:bg-slate-800 text-muted-fg dark:text-muted-fg hover:bg-gray-100 dark:hover:bg-slate-700"
               aria-label="Close sidebar"
             >
               <X className="h-3.5 w-3.5" />
@@ -230,13 +230,13 @@ const SidebarInner = memo(function SidebarInner({
       {!compact && (
         <div className="px-4 py-3 bg-white dark:bg-slate-950">
           <p className="text-xs font-semibold text-gray-800 dark:text-slate-100 truncate">{session.name}</p>
-          <p className="text-xs text-gray-500 dark:text-slate-400">{getRoleDisplayName(session.role)}</p>
+          <p className="text-xs text-muted-fg dark:text-muted-fg">{getRoleDisplayName(session.role)}</p>
         </div>
       )}
 
       <NavItems compact={compact} onClose={onClose} sidebarGroups={sidebarGroups} currentPath={currentPath} />
 
-      <div className="border-t border-gray-200 dark:border-white/10 p-3 bg-white dark:bg-slate-950 flex items-center gap-2">
+      <div className="border-t border-border dark:border-white/10 p-3 bg-white dark:bg-slate-950 flex items-center gap-2">
         <div className="flex-shrink-0">
           <ThemeToggle compact />
         </div>
@@ -386,7 +386,7 @@ export function DashboardLayout() {
               className="fixed inset-0 z-40 bg-black/40 md:hidden"
               onClick={() => setMobileOpen(false)}
             />
-            <aside ref={sidebarRef} className="fixed inset-y-0 left-0 z-50 w-[248px] flex flex-col overflow-hidden border-r border-gray-200 bg-[#f5f5f5] md:hidden transition-colors duration-200">
+            <aside ref={sidebarRef} className="fixed inset-y-0 left-0 z-50 w-[248px] flex flex-col overflow-hidden border-r border-border bg-[#f5f5f5] md:hidden transition-colors duration-200">
               <SidebarInner
                 onClose={() => setMobileOpen(false)}
                 session={session}
@@ -406,7 +406,7 @@ export function DashboardLayout() {
             <button
               type="button"
               onClick={() => setMobileOpen(true)}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 dark:border-white/10 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-white/10"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border dark:border-white/10 text-muted-fg dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-white/10"
               aria-label="Open sidebar"
             >
               <Menu className="h-5 w-5" />
@@ -442,7 +442,7 @@ export function DashboardLayout() {
                                 className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all shrink-0 border ${
                                   isActive
                                     ? 'bg-brand text-white border-brand shadow-xs font-semibold'
-                                    : 'bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                    : 'bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border-border dark:border-white/10 hover:bg-slate-200 dark:hover:bg-slate-700'
                                 }`}
                               >
                                 <PageIcon className="h-3.5 w-3.5" />
@@ -455,7 +455,7 @@ export function DashboardLayout() {
 
                       {state.textVisible && (
                         <span
-                          className="text-xs font-semibold text-gray-500 dark:text-slate-400 whitespace-nowrap shrink-0"
+                          className="text-xs font-semibold text-muted-fg dark:text-muted-fg whitespace-nowrap shrink-0"
                           style={{
                             opacity: state.textVisible ? 1 : 0,
                             transform: state.textVisible ? 'translateX(0)' : 'translateX(14px)',
@@ -480,7 +480,7 @@ export function DashboardLayout() {
                           {state.text || `Active Module: ${sidebarGroups.flatMap(g=>g.items).find(i=>i.to===location.pathname)?.label ?? 'System Management'} — Changes saved & sync active.`}
                         </span>
                       </div>
-                      <span className="text-[11px] font-medium text-slate-400">Real-time audit log</span>
+                      <span className="text-[11px] font-medium text-muted-fg">Real-time audit log</span>
                     </div>
                   )}
 
@@ -505,7 +505,7 @@ export function DashboardLayout() {
                 </div>
                 {/* Footer */}
                 <footer className="bg-white/50 dark:bg-slate-950/50 py-4 px-6 flex-shrink-0" id="footer" role="contentinfo">
-                  <p className="text-xs text-center text-slate-500 dark:text-slate-400">
+                  <p className="text-xs text-center text-muted-fg dark:text-muted-fg">
                     © 2026 WiWaste. All rights reserved.
                   </p>
                 </footer>

@@ -33,7 +33,7 @@ export const FormField = forwardRef<HTMLInputElement, FormFieldProps>(
         <label
           htmlFor={inputId}
           className={cn(
-            'block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300',
+            'block text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-slate-300',
             required && 'text-rose-500'
           )}
         >
@@ -43,7 +43,7 @@ export const FormField = forwardRef<HTMLInputElement, FormFieldProps>(
 
         <div className="relative">
           {leftIcon && (
-            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-muted-fg">
               {leftIcon}
             </div>
           )}
@@ -56,7 +56,7 @@ export const FormField = forwardRef<HTMLInputElement, FormFieldProps>(
               'block w-full pr-10 py-3.5 text-sm bg-white dark:bg-slate-800/80 rounded-lg text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-colors',
               error
                 ? 'border-rose-500 focus:ring-rose-500'
-                : 'border-slate-200 dark:border-white/10',
+                : 'border-border dark:border-white/10',
               leftIcon && 'pl-10',
               rightIcon && 'pr-10',
               className
@@ -81,7 +81,7 @@ export const FormField = forwardRef<HTMLInputElement, FormFieldProps>(
         )}
 
         {hint && !error && (
-          <p id={`${inputId}-hint`} className="text-xs text-slate-400 dark:text-slate-500">
+          <p id={`${inputId}-hint`} className="text-xs text-muted-fg dark:text-muted-fg">
             {hint}
           </p>
         )}
@@ -120,7 +120,7 @@ export const FormSelect = forwardRef<HTMLSelectElement, FormSelectProps>(
       <div className="space-y-1.5">
         <label
           htmlFor={id || label.toLowerCase().replace(/\s+/g, '-')}
-          className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300"
+          className="block text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-slate-300"
         >
           {label}
           {required && <span className="text-rose-500 ml-0.5">*</span>}
@@ -134,7 +134,7 @@ export const FormSelect = forwardRef<HTMLSelectElement, FormSelectProps>(
               'block w-full appearance-none bg-white dark:bg-slate-800/80 border rounded-lg px-3 py-3.5 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-colors',
               error
                 ? 'border-rose-500 focus:ring-rose-500'
-                : 'border-slate-200 dark:border-white/10',
+                : 'border-border dark:border-white/10',
               className
             )}
             aria-invalid={error ? 'true' : 'false'}
@@ -154,7 +154,7 @@ export const FormSelect = forwardRef<HTMLSelectElement, FormSelectProps>(
           </select>
 
           <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-            <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 text-muted-fg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
             </svg>
           </div>
@@ -168,7 +168,7 @@ export const FormSelect = forwardRef<HTMLSelectElement, FormSelectProps>(
         )}
 
         {hint && !error && (
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+          <p className="text-xs text-muted-fg dark:text-muted-fg mt-1">
             {hint}
           </p>
         )}

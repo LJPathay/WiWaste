@@ -76,7 +76,7 @@ export function SupplierPerformance() {
         <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Supplier Performance Audit</h1>
         <UITooltip>
           <TooltipTrigger asChild>
-            <Info className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
+            <Info className="h-3.5 w-3.5 text-muted-fg hover:text-muted-fg dark:hover:text-slate-300 cursor-help" />
           </TooltipTrigger>
           <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs text-xs">
             Delivery fulfillment rates, return statistics, and pending credits by distributor to evaluate supplier reliability.
@@ -101,8 +101,8 @@ export function SupplierPerformance() {
           { label: 'Avg Lead Time', value: `${(suppliers.reduce((s, x) => s + x.leadTime, 0) / suppliers.length).toFixed(1)} days` },
           { label: 'Active Suppliers', value: `${suppliers.length}` },
         ].map(card => (
-          <div key={card.label} className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 p-3 shadow-sm">
-            <div className="text-[9px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{card.label}</div>
+          <div key={card.label} className="bg-bg-elevated rounded-xl border border-border dark:border-white/10 p-3 shadow-sm">
+            <div className="text-[9px] font-semibold text-muted-fg dark:text-muted-fg uppercase tracking-wider">{card.label}</div>
             <div className="mt-1 text-sm font-black text-slate-900 dark:text-slate-100">{card.value}</div>
           </div>
         ))}
@@ -111,7 +111,7 @@ export function SupplierPerformance() {
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Bar chart */}
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 p-3.5 shadow-sm">
+        <div className="bg-bg-elevated rounded-xl border border-border dark:border-white/10 p-3.5 shadow-sm">
           <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-3">Delivery Rate vs Return Exposure</h3>
           <div className="h-56 w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -150,7 +150,7 @@ export function SupplierPerformance() {
         </div>
 
         {/* Line trend */}
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 p-3.5 shadow-sm">
+        <div className="bg-bg-elevated rounded-xl border border-border dark:border-white/10 p-3.5 shadow-sm">
           <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-3">Top 3 Supplier Delivery Trend (Full Year)</h3>
           <div className="h-56 w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -219,14 +219,14 @@ export function SupplierPerformance() {
                 disabled={row.creditPending}
                 className={`h-8 text-xs font-semibold px-3 rounded-lg transition-colors ${
                   row.creditPending
-                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-400'
+                    ? 'bg-slate-100 dark:bg-slate-800 text-muted-fg'
                     : 'bg-[#006a61] hover:bg-[#00574f] text-white'
                 }`}
               >
                 {row.creditPending ? 'Requested' : 'Request Credits'}
               </button>
             ) : (
-              <span className="text-slate-300 dark:text-slate-600 text-xs">No credits</span>
+              <span className="text-slate-300 dark:text-muted-fg text-xs">No credits</span>
             )}
           </>
         )}

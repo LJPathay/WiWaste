@@ -182,7 +182,7 @@ export function GenerateReports() {
       render: (row) => (
         <div>
           <div className="font-semibold text-slate-900 dark:text-slate-100">{row.product_name}</div>
-          <div className="text-[9px] text-slate-400 font-mono mt-0.5">SKU #{row.product_id}</div>
+          <div className="text-[9px] text-muted-fg font-mono mt-0.5">SKU #{row.product_id}</div>
         </div>
       ),
     },
@@ -194,7 +194,7 @@ export function GenerateReports() {
         <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
           row.order_qty > 0
             ? 'bg-[#006a61]/10 text-[#006a61] dark:bg-[#7ef0cf]/10 dark:text-[#7ef0cf]'
-            : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
+            : 'bg-slate-100 dark:bg-slate-800 text-muted-fg'
         }`}>
           {row.order_qty > 0 ? `+${row.order_qty}` : '—'}
         </span>
@@ -221,19 +221,19 @@ export function GenerateReports() {
       key: 'id',
       header: 'Transaction ID',
       pinned: true,
-      render: (row) => <span className="font-mono text-slate-600 dark:text-slate-300">{row.id}</span>,
+      render: (row) => <span className="font-mono text-muted-fg dark:text-slate-300">{row.id}</span>,
     },
     {
       key: 'transaction_date',
       header: 'Date',
-      render: (row) => <span className="text-slate-600 dark:text-slate-400">{row.transaction_date}</span>,
+      render: (row) => <span className="text-muted-fg dark:text-muted-fg">{row.transaction_date}</span>,
     },
     {
       key: 'items',
       header: 'Items',
       align: 'numeric',
       numeric: true,
-      render: (row) => <span className="text-slate-600 dark:text-slate-400">{row.items?.length ?? 0}</span>,
+      render: (row) => <span className="text-muted-fg dark:text-muted-fg">{row.items?.length ?? 0}</span>,
     },
     {
       key: 'total_amount',
@@ -245,7 +245,7 @@ export function GenerateReports() {
     {
       key: 'payment_method',
       header: 'Payment',
-      render: (row) => <span className="text-slate-600 dark:text-slate-400">{row.payment_method}</span>,
+      render: (row) => <span className="text-muted-fg dark:text-muted-fg">{row.payment_method}</span>,
     },
   ];
 
@@ -257,7 +257,7 @@ export function GenerateReports() {
       truncate: true,
       render: (row) => (
         <div className="flex items-center gap-1.5">
-          <FileText className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+          <FileText className="h-3.5 w-3.5 text-muted-fg shrink-0" />
           <span className="font-semibold text-slate-900 dark:text-slate-100">{row.reportName}</span>
         </div>
       ),
@@ -265,12 +265,12 @@ export function GenerateReports() {
     {
       key: 'generatedBy',
       header: 'Generated',
-      render: (row) => <span className="text-slate-600 dark:text-slate-400">{row.generatedBy}</span>,
+      render: (row) => <span className="text-muted-fg dark:text-muted-fg">{row.generatedBy}</span>,
     },
     {
       key: 'size',
       header: 'Size',
-      render: (row) => <span className="text-slate-600 dark:text-slate-400">{row.size}</span>,
+      render: (row) => <span className="text-muted-fg dark:text-muted-fg">{row.size}</span>,
     },
     {
       key: 'status',
@@ -305,17 +305,17 @@ export function GenerateReports() {
       key: 'id',
       header: 'Return ID',
       pinned: true,
-      render: (row) => <span className="font-mono text-slate-600 dark:text-slate-300">{row.id}</span>,
+      render: (row) => <span className="font-mono text-muted-fg dark:text-slate-300">{row.id}</span>,
     },
     {
       key: 'product_name',
       header: 'Product',
-      render: (row) => <span className="text-slate-600 dark:text-slate-400">{row.product_name}</span>,
+      render: (row) => <span className="text-muted-fg dark:text-muted-fg">{row.product_name}</span>,
     },
     {
       key: 'reason',
       header: 'Reason',
-      render: (row) => <span className="text-slate-600 dark:text-slate-400">{row.reason}</span>,
+      render: (row) => <span className="text-muted-fg dark:text-muted-fg">{row.reason}</span>,
     },
     {
       key: 'refund_amount',
@@ -327,7 +327,7 @@ export function GenerateReports() {
     {
       key: 'return_date',
       header: 'Date',
-      render: (row) => <span className="text-slate-600 dark:text-slate-400">{row.return_date}</span>,
+      render: (row) => <span className="text-muted-fg dark:text-muted-fg">{row.return_date}</span>,
     },
   ];
 
@@ -348,20 +348,20 @@ export function GenerateReports() {
 
       {/* Report Cards Grid */}
       <div>
-        <h2 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Available Reports</h2>
+        <h2 className="text-sm font-bold text-muted-fg dark:text-muted-fg uppercase tracking-wider mb-3">Available Reports</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
           {REPORT_CARDS.map(card => {
             const isGenerating = generatingIds.has(card.id);
             return (
               <div
                 key={card.id}
-                className="bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm p-3 flex flex-col gap-2 hover:shadow-md transition-shadow"
+                className="bg-white dark:bg-slate-950 rounded-xl border border-border dark:border-white/10 shadow-sm p-3 flex flex-col gap-2 hover:shadow-md transition-shadow"
               >
                 <div className="flex items-start gap-2">
                   <span className="h-7 w-7 flex items-center justify-center text-base leading-none mt-0.5">{card.icon}</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-semibold text-slate-800 dark:text-slate-100 leading-snug">{card.title}</p>
-                    <p className="text-[9px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">{card.description}</p>
+                    <p className="text-[9px] text-muted-fg dark:text-muted-fg mt-0.5 leading-relaxed">{card.description}</p>
                   </div>
                 </div>
                 <button
@@ -397,18 +397,18 @@ export function GenerateReports() {
         <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
       </div>
 
-      <div className="bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm p-4 space-y-3">
+      <div className="bg-white dark:bg-slate-950 rounded-xl border border-border dark:border-white/10 shadow-sm p-4 space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-end gap-2">
           <div className="flex-1">
-            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Budget (₱)</label>
+            <label className="block text-xs font-bold text-muted-fg dark:text-muted-fg uppercase tracking-wide mb-1">Budget (₱)</label>
             <div className="relative">
-              <Wallet className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+              <Wallet className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-fg" />
               <input
                 type="number"
                 min={1}
                 value={optBudget}
                 onChange={e => setOptBudget(Math.max(0, Number(e.target.value)))}
-                className="h-8 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 pl-9 pr-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-700 dark:text-slate-200"
+                className="h-8 w-full bg-bg dark:bg-slate-800 border border-border dark:border-white/10 pl-9 pr-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-700 dark:text-slate-200"
               />
             </div>
           </div>
@@ -432,23 +432,23 @@ export function GenerateReports() {
         {optPlan && !optError && (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="rounded-lg border border-slate-200 dark:border-white/10 p-3">
-                <div className="flex items-center gap-1.5 text-[9px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+              <div className="rounded-lg border border-border dark:border-white/10 p-3">
+                <div className="flex items-center gap-1.5 text-[9px] font-semibold text-muted-fg dark:text-muted-fg uppercase tracking-wider">
                   <Wallet className="h-3 w-3 text-[#006a61]" /> Total Order Value
                 </div>
                 <div className="mt-1 text-base font-black text-slate-900 dark:text-slate-100">
                   {formatCurrency(optPlan.total_order_value)}
-                  <span className="text-[9px] font-semibold text-slate-400"> / {formatCurrency(optPlan.budget)}</span>
+                  <span className="text-[9px] font-semibold text-muted-fg"> / {formatCurrency(optPlan.budget)}</span>
                 </div>
               </div>
-              <div className="rounded-lg border border-slate-200 dark:border-white/10 p-3">
-                <div className="flex items-center gap-1.5 text-[9px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+              <div className="rounded-lg border border-border dark:border-white/10 p-3">
+                <div className="flex items-center gap-1.5 text-[9px] font-semibold text-muted-fg dark:text-muted-fg uppercase tracking-wider">
                   <Target className="h-3 w-3 text-[#006a61]" /> Fitness
                 </div>
                 <div className="mt-1 text-base font-black text-slate-900 dark:text-slate-100">{optPlan.fitness.toLocaleString()}</div>
               </div>
-              <div className="rounded-lg border border-slate-200 dark:border-white/10 p-3">
-                <div className="flex items-center gap-1.5 text-[9px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+              <div className="rounded-lg border border-border dark:border-white/10 p-3">
+                <div className="flex items-center gap-1.5 text-[9px] font-semibold text-muted-fg dark:text-muted-fg uppercase tracking-wider">
                   <CheckCircle2 className="h-3 w-3 text-[#006a61]" /> Confidence
                 </div>
                 <div className="mt-1 text-base font-black text-slate-900 dark:text-slate-100">{Math.round(optPlan.confidence * 100)}%</div>
@@ -464,7 +464,7 @@ export function GenerateReports() {
             />
 
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-1">
-              <p className="text-[9px] text-slate-400">
+              <p className="text-[9px] text-muted-fg">
                 Generated {new Date(optPlan.generated_at).toLocaleString()} · {optPlan.generations_run} generations.
               </p>
               <div className="flex flex-col sm:flex-row gap-2">
@@ -506,15 +506,15 @@ export function GenerateReports() {
       </div>
 
       <div>
-        <h2 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Sales Transaction Filters</h2>
-        <div className="bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm p-4">
+        <h2 className="text-sm font-bold text-muted-fg dark:text-muted-fg uppercase tracking-wider mb-3">Sales Transaction Filters</h2>
+        <div className="bg-white dark:bg-slate-950 rounded-xl border border-border dark:border-white/10 shadow-sm p-4">
           <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-2 items-end">
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">Payment Method</label>
+              <label className="block text-xs font-bold text-muted-fg uppercase tracking-wide mb-1">Payment Method</label>
               <select
                 value={paymentFilter}
                 onChange={e => setPaymentFilter(e.target.value as 'all' | PaymentMethod)}
-                className="h-8 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-850 dark:text-slate-100"
+                className="h-8 w-full bg-bg dark:bg-slate-800 border border-border dark:border-white/10 px-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-850 dark:text-slate-100"
               >
                 <option value="all">All payment methods</option>
                 {paymentMethods.map(method => (
@@ -523,11 +523,11 @@ export function GenerateReports() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">Cashier</label>
+              <label className="block text-xs font-bold text-muted-fg uppercase tracking-wide mb-1">Cashier</label>
               <select
                 value={cashierFilter}
                 onChange={e => setCashierFilter(e.target.value)}
-                className="h-8 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 px-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-850 dark:text-slate-100"
+                className="h-8 w-full bg-bg dark:bg-slate-800 border border-border dark:border-white/10 px-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-850 dark:text-slate-100"
               >
                 <option value="all">All cashiers</option>
                 {cashierOptions.map(cashier => (
@@ -535,8 +535,8 @@ export function GenerateReports() {
                 ))}
               </select>
             </div>
-            <div className="rounded-lg bg-slate-50 dark:bg-slate-900 px-3 py-2">
-              <div className="text-[9px] text-slate-500 dark:text-slate-400">Filtered Revenue</div>
+            <div className="rounded-lg bg-bg dark:bg-slate-900 px-3 py-2">
+              <div className="text-[9px] text-muted-fg dark:text-muted-fg">Filtered Revenue</div>
               <div className="text-right text-xs font-bold text-slate-900 dark:text-slate-100">{formatCurrency(filteredRevenue)}</div>
             </div>
           </div>
@@ -554,7 +554,7 @@ export function GenerateReports() {
 
       {/* Recent Compilations Table */}
       <div>
-        <h2 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Recent Compilations</h2>
+        <h2 className="text-sm font-bold text-muted-fg dark:text-muted-fg uppercase tracking-wider mb-3">Recent Compilations</h2>
         <DataTable
           columns={compilationColumns}
           data={compilations}
@@ -562,7 +562,7 @@ export function GenerateReports() {
           emptyMessage="No compilations found."
           
           pagination={
-            <div className="px-4 py-2 text-[9px] text-slate-400">
+            <div className="px-4 py-2 text-[9px] text-muted-fg">
               {compilations.length} report{compilations.length !== 1 ? 's' : ''} compiled
             </div>
           }
@@ -570,7 +570,7 @@ export function GenerateReports() {
       </div>
 
       <div>
-        <h2 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Returns Oversight</h2>
+        <h2 className="text-sm font-bold text-muted-fg dark:text-muted-fg uppercase tracking-wider mb-3">Returns Oversight</h2>
         <DataTable
           columns={returnColumns}
           data={returnsData}

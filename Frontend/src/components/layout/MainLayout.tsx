@@ -66,7 +66,7 @@ export function MainLayout() {
                             <Link to="/" className="flex items-center gap-2 mb-4">
                                 <img src={BRAND_WORDMARK} alt="WiWaste" className="h-10 w-auto object-contain" />
                             </Link>
-                            <p className="text-sm text-[#45464d] max-w-xs dark:text-slate-400">
+                            <p className="text-sm text-[#45464d] max-w-xs dark:text-muted-fg">
                                 Inventory intelligence for all retail operations.
                             </p>
                         </div>
@@ -74,32 +74,32 @@ export function MainLayout() {
                         <div>
                             <h4 className="font-semibold text-sm mb-4 text-[#1b1b1d] tracking-wider uppercase dark:text-slate-100">Product</h4>
                             <ul className="space-y-3">
-                                <li><Link to="/#features" className="text-sm text-[#45464d] hover:text-brand dark:text-slate-400 dark:hover:text-[#7ef0cf]">Features</Link></li>
-                                <li><Link to="/solutions" className="text-sm text-[#45464d] hover:text-brand dark:text-slate-400 dark:hover:text-[#7ef0cf]">Solutions</Link></li>
-                                <li><Link to="/" className="text-sm text-[#45464d] hover:text-brand dark:text-slate-400 dark:hover:text-[#7ef0cf]">Security</Link></li>
+                                <li><Link to="/#features" className="text-sm text-[#45464d] hover:text-brand dark:text-muted-fg dark:hover:text-[#7ef0cf]">Features</Link></li>
+                                <li><Link to="/solutions" className="text-sm text-[#45464d] hover:text-brand dark:text-muted-fg dark:hover:text-[#7ef0cf]">Solutions</Link></li>
+                                <li><Link to="/" className="text-sm text-[#45464d] hover:text-brand dark:text-muted-fg dark:hover:text-[#7ef0cf]">Security</Link></li>
                             </ul>
                         </div>
 
                         <div>
                             <h4 className="font-semibold text-sm mb-4 text-[#1b1b1d] tracking-wider uppercase dark:text-slate-100">Company</h4>
                             <ul className="space-y-3">
-                                <li><Link to="/" className="text-sm text-[#45464d] hover:text-brand dark:text-slate-400 dark:hover:text-[#7ef0cf]">About Us</Link></li>
-                                <li><Link to="/" className="text-sm text-[#45464d] hover:text-brand dark:text-slate-400 dark:hover:text-[#7ef0cf]">Careers</Link></li>
-                                <li><Link to="/" className="text-sm text-[#45464d] hover:text-brand dark:text-slate-400 dark:hover:text-[#7ef0cf]">Contact</Link></li>
+                                <li><Link to="/" className="text-sm text-[#45464d] hover:text-brand dark:text-muted-fg dark:hover:text-[#7ef0cf]">About Us</Link></li>
+                                <li><Link to="/" className="text-sm text-[#45464d] hover:text-brand dark:text-muted-fg dark:hover:text-[#7ef0cf]">Careers</Link></li>
+                                <li><Link to="/" className="text-sm text-[#45464d] hover:text-brand dark:text-muted-fg dark:hover:text-[#7ef0cf]">Contact</Link></li>
                             </ul>
                         </div>
 
                         <div>
                             <h4 className="font-semibold text-sm mb-4 text-[#1b1b1d] tracking-wider uppercase dark:text-slate-100">Legal</h4>
                             <ul className="space-y-3">
-                                <li><Link to="/" className="text-sm text-[#45464d] hover:text-brand dark:text-slate-400 dark:hover:text-[#7ef0cf]">Privacy Policy</Link></li>
-                                <li><Link to="/" className="text-sm text-[#45464d] hover:text-brand dark:text-slate-400 dark:hover:text-[#7ef0cf]">Terms of Service</Link></li>
+                                <li><Link to="/" className="text-sm text-[#45464d] hover:text-brand dark:text-muted-fg dark:hover:text-[#7ef0cf]">Privacy Policy</Link></li>
+                                <li><Link to="/" className="text-sm text-[#45464d] hover:text-brand dark:text-muted-fg dark:hover:text-[#7ef0cf]">Terms of Service</Link></li>
                             </ul>
                         </div>
                     </div>
 
                     <div className="border-t border-[#c6c6cd] pt-8 flex flex-col md:flex-row justify-between items-center gap-4 dark:border-white/10">
-                        <p className="text-sm text-[#45464d] dark:text-slate-400">
+                        <p className="text-sm text-[#45464d] dark:text-muted-fg">
                             © 2026 WiWaste. All rights reserved.
                         </p>
                     </div>

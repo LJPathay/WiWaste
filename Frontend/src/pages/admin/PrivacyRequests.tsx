@@ -133,7 +133,7 @@ export function PrivacyRequests() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Data Subject Requests</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-sm text-muted-fg dark:text-muted-fg mt-1">
             Manage DPA data subject requests (Access, Rectification, Erasure, Portability, Restriction, Objection)
           </p>
         </div>
@@ -147,9 +147,9 @@ export function PrivacyRequests() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row gap-4">
+      <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-border dark:border-slate-700 flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1 max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-fg" />
           <input
             type="text"
             placeholder="Search subject ID, request type..."
@@ -174,25 +174,25 @@ export function PrivacyRequests() {
       </div>
 
       {/* Data Table */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-border dark:border-slate-700 overflow-hidden">
         {filtered.length === 0 ? (
           <div className="p-12 text-center">
-            <FileText className="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600 mb-4" />
-            <p className="text-slate-500 dark:text-slate-400">No data subject requests found</p>
+            <FileText className="w-12 h-12 mx-auto text-slate-300 dark:text-muted-fg mb-4" />
+            <p className="text-muted-fg dark:text-muted-fg">No data subject requests found</p>
           </div>
         ) : (
           <>
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
+                <thead className="bg-bg dark:bg-slate-800/50 border-b border-border dark:border-slate-700">
                   <tr>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Request ID</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Type</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Subject</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Status</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Requested</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Completed</th>
-                    <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 pr-4">Actions</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg">Request ID</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg">Type</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg">Subject</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg">Status</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg">Requested</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg">Completed</th>
+                    <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg pr-4">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
@@ -202,7 +202,7 @@ export function PrivacyRequests() {
                     const actions = getAvailableActions(r.status);
                     
                     return (
-                      <tr key={r.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                      <tr key={r.id} className="hover:bg-bg dark:hover:bg-slate-700/50">
                         <td className="px-3 py-3 text-sm font-mono text-slate-900 dark:text-white">#{r.id}</td>
                         <td className="px-3 py-3">
                           <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium bg-brand-50 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">
@@ -217,8 +217,8 @@ export function PrivacyRequests() {
                             {status.label}
                           </span>
                         </td>
-                        <td className="px-3 py-3 text-sm text-slate-500 dark:text-slate-400">{formatDate(r.requested_at)}</td>
-                        <td className="px-3 py-3 text-sm text-slate-500 dark:text-slate-400">{r.completed_at ? formatDate(r.completed_at) : '—'}</td>
+                        <td className="px-3 py-3 text-sm text-muted-fg dark:text-muted-fg">{formatDate(r.requested_at)}</td>
+                        <td className="px-3 py-3 text-sm text-muted-fg dark:text-muted-fg">{r.completed_at ? formatDate(r.completed_at) : '—'}</td>
                         <td className="px-3 py-3 text-right">
                           <div className="flex items-center justify-end gap-1">
                             {actions.map(action => (
@@ -228,7 +228,7 @@ export function PrivacyRequests() {
                                 className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg border transition-colors
                                   {action === 'approve' ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100' :
                                    action === 'reject' ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100' :
-                                   'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}"
+                                   'bg-bg text-slate-700 border-border hover:bg-slate-100'}"
                               >
                                 {action.charAt(0).toUpperCase() + action.slice(1)}
                               </button>
@@ -279,8 +279,8 @@ export function PrivacyRequests() {
               placeholder="Additional context..."
             />
           </FormField>
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
-            <button type="button" onClick={() => { setShowCreateModal(false); setForm({ request_type: 'access', subject_identifier: '', notes: '' }); }} className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
+          <div className="flex justify-end gap-3 pt-4 border-t border-border dark:border-slate-700">
+            <button type="button" onClick={() => { setShowCreateModal(false); setForm({ request_type: 'access', subject_identifier: '', notes: '' }); }} className="px-4 py-2 text-muted-fg dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
               Cancel
             </button>
             <button type="submit" className="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg">

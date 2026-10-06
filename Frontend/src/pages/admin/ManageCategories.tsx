@@ -81,7 +81,7 @@ const getCategoryIcon = (categoryName: string = '') => {
     return { icon: Flame, label: 'Chemicals & Fuel', color: 'text-red-600 bg-red-50 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800/50' };
   }
 
-  return { icon: Tag, label: 'General', color: 'text-slate-600 bg-slate-100 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700' };
+  return { icon: Tag, label: 'General', color: 'text-muted-fg bg-slate-100 dark:bg-slate-800 dark:text-muted-fg border-border dark:border-slate-700' };
 };
 
 export function ManageCategories() {
@@ -404,15 +404,15 @@ export function ManageCategories() {
   if (loading) return (
     <div className="flex flex-col items-center justify-center h-48 gap-3">
       <div className="relative w-12 h-12">
-        <div className="absolute inset-0 rounded-full border-3 border-slate-200 dark:border-slate-800"></div>
+        <div className="absolute inset-0 rounded-full border-3 border-border dark:border-slate-800"></div>
         <div className="absolute inset-0 rounded-full border-3 border-transparent border-t-[#006a61] border-r-[#006a61] animate-spin"></div>
         <div className="absolute inset-1.5 flex items-center justify-center">
           <Tag className="h-6 w-6 text-[#006a61] dark:text-[#7ef0cf] animate-pulse" />
         </div>
       </div>
       <div className="text-center">
-        <p className="text-slate-600 dark:text-slate-400 font-semibold text-sm">Loading categories...</p>
-        <p className="text-[9px] text-slate-400 dark:text-slate-500 mt-0.5">Fetching category list</p>
+        <p className="text-muted-fg dark:text-muted-fg font-semibold text-sm">Loading categories...</p>
+        <p className="text-[9px] text-muted-fg dark:text-muted-fg mt-0.5">Fetching category list</p>
       </div>
     </div>
   );
@@ -448,7 +448,7 @@ export function ManageCategories() {
             <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Manage Categories</h1>
             <UITooltip>
               <TooltipTrigger asChild>
-                <Info className="h-4 w-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
+                <Info className="h-4 w-4 text-muted-fg hover:text-muted-fg dark:hover:text-slate-300 cursor-help" />
               </TooltipTrigger>
               <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs text-xs">
                 Classify product inventory sectors for shelf placement index.
@@ -465,10 +465,10 @@ export function ManageCategories() {
         </button>
       </div>
 
-      <div className="bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden">
-        <div className="p-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-200 dark:border-white/10">
+      <div className="bg-white dark:bg-slate-950 rounded-xl border border-border dark:border-white/10 shadow-sm overflow-hidden">
+        <div className="p-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border dark:border-white/10">
           <div className="flex items-center gap-1" role="group" aria-label="Filter by status">
-            <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 px-2 uppercase tracking-wider">Status:</span>
+            <span className="text-[9px] font-bold text-muted-fg dark:text-muted-fg px-2 uppercase tracking-wider">Status:</span>
             {[
               { id: 'all' as const, label: 'Active', icon: Check },
               { id: 'Archived' as const, label: 'Archived', icon: Archive },
@@ -478,7 +478,7 @@ export function ManageCategories() {
               return (
                 <button key={tab.id} onClick={() => { setStatusFilter(tab.id); setCurrentPage(1); }}
                   aria-pressed={isSelected}
-                  className={`flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${isSelected ? 'bg-slate-100 dark:bg-slate-950 text-[#006a61] dark:text-[#7ef0cf] shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'}`}>
+                  className={`flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${isSelected ? 'bg-slate-100 dark:bg-slate-950 text-[#006a61] dark:text-[#7ef0cf] shadow-sm' : 'text-muted-fg dark:text-muted-fg hover:text-slate-900 dark:hover:text-slate-200'}`}>
                   <TabIcon className="h-3.5 w-3.5" />
                   <span>{tab.label}</span>
                 </button>
@@ -493,7 +493,7 @@ export function ManageCategories() {
             <select
               value={sortBy}
               onChange={e => setSortBy(e.target.value as 'name-asc' | 'name-desc' | 'products-desc' | 'products-asc' | 'id-desc')}
-              className="w-full sm:w-auto h-8 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-xs font-medium rounded-lg px-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#006a61]"
+              className="w-full sm:w-auto h-8 bg-bg dark:bg-slate-900 border border-border dark:border-white/10 text-xs font-medium rounded-lg px-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#006a61]"
             >
               <option value="name-asc">Sort: A - Z</option>
               <option value="name-desc">Sort: Z - A</option>
@@ -503,13 +503,13 @@ export function ManageCategories() {
             </select>
 
             <div className="relative max-w-xs w-full sm:w-64">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-fg" />
               <input
                 type="text"
                 placeholder="Search category name..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="w-full h-8 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-white/10 pl-8 pr-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-700 dark:text-slate-200"
+                className="w-full h-8 bg-bg dark:bg-slate-900/50 border border-border dark:border-white/10 pl-8 pr-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-700 dark:text-slate-200"
               />
             </div>
           </div>
@@ -527,7 +527,7 @@ export function ManageCategories() {
               <button
                 type="button"
                 onClick={() => setSelectedIds([])}
-                className="px-2 py-0.5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium hover:underline text-xs"
+                className="px-2 py-0.5 text-muted-fg dark:text-muted-fg hover:text-slate-900 dark:hover:text-slate-100 font-medium hover:underline text-xs"
               >
                 Deselect All
               </button>
@@ -632,7 +632,7 @@ export function ManageCategories() {
                         <button
                           type="button"
                           onClick={() => setTilePickerRowIndex(idx)}
-                          className="h-8 px-3 rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-800 hover:border-[#006a61] text-xs font-semibold text-[#006a61] dark:text-[#7ef0cf] flex items-center gap-1.5 transition-all cursor-pointer shrink-0 shadow-xs"
+                          className="h-8 px-3 rounded-lg border border-border dark:border-white/10 bg-bg dark:bg-slate-800 hover:border-[#006a61] text-xs font-semibold text-[#006a61] dark:text-[#7ef0cf] flex items-center gap-1.5 transition-all cursor-pointer shrink-0 shadow-xs"
                           title="Open Visual Category Tiles Grid"
                         >
                           <Grid className="h-3.5 w-3.5" />
@@ -643,7 +643,7 @@ export function ManageCategories() {
                           <button
                             type="button"
                             onClick={() => handleRemoveRow(idx)}
-                            className="p-1.5 text-slate-400 hover:text-red-500 transition-colors"
+                            className="p-1.5 text-muted-fg hover:text-red-500 transition-colors"
                             title="Remove category row"
                           >
                             <Archive className="h-3.5 w-3.5" />
@@ -677,8 +677,8 @@ export function ManageCategories() {
                       {!isOthersSelected && trimmed && (() => {
                         const { icon: CatIcon, color: catColor } = getCategoryIcon(rowName);
                         return (
-                          <div className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400">
-                            <span className="text-[9px] text-slate-400">Auto Icon:</span>
+                          <div className="flex items-center gap-2 text-xs font-semibold text-muted-fg dark:text-muted-fg">
+                            <span className="text-[9px] text-muted-fg">Auto Icon:</span>
                             <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold border ${catColor}`}>
                               <CatIcon className="h-3 w-3" />
                               <span>{rowName}</span>
@@ -781,18 +781,18 @@ export function ManageCategories() {
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <div className="relative flex-1">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-fg" />
                 <input
                   type="text"
                   placeholder="Search category tiles..."
                   value={tileSearch}
                   onChange={e => setTileSearch(e.target.value)}
-                  className="w-full h-8 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 pl-8 pr-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100"
+                  className="w-full h-8 bg-bg dark:bg-slate-800 border border-border dark:border-white/10 pl-8 pr-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100"
                 />
               </div>
             </div>
 
-            <p className="text-[9px] text-slate-500">
+            <p className="text-[9px] text-muted-fg">
               Click any category tile below to select its auto-icon and pre-set category name:
             </p>
 
@@ -810,7 +810,7 @@ export function ManageCategories() {
                     className={`p-2.5 rounded-xl border text-left flex flex-col justify-between gap-1.5 transition-all cursor-pointer ${
                       isSelected
                         ? 'border-[#006a61] bg-[#006a61]/10 dark:bg-[#006a61]/20 shadow-md ring-2 ring-[#006a61]/30'
-                        : 'border-slate-200 dark:border-white/10 bg-slate-50/60 dark:bg-slate-800/60 hover:border-[#006a61] hover:bg-slate-100 dark:hover:bg-slate-800 hover:scale-[1.02]'
+                        : 'border-border dark:border-white/10 bg-bg/60 dark:bg-slate-800/60 hover:border-[#006a61] hover:bg-slate-100 dark:hover:bg-slate-800 hover:scale-[1.02]'
                     }`}
                   >
                     <div className="flex items-center justify-between w-full">
@@ -828,7 +828,7 @@ export function ManageCategories() {
                         <span>{isOthers ? 'Others' : catName}</span>
                         {isOthers && <Sparkles className="h-2.5 w-2.5 text-amber-500" />}
                       </div>
-                      <p className="text-[9px] text-slate-400 mt-0.5">
+                      <p className="text-[9px] text-muted-fg mt-0.5">
                         {isOthers ? 'Type custom name' : 'Preset icon'}
                       </p>
                     </div>

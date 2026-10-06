@@ -3,15 +3,13 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Product;
+use App\Models\FEFOBatch;
 use App\Models\Inventory;
-use App\Models\SalesItem;
+use App\Models\Product;
+use App\Models\ReturnTransaction;
+use App\Models\SalesTransaction;
 use App\Models\StockMovement;
 use App\Models\WastageRecord;
-use App\Models\FEFOBatch;
-use App\Models\SalesTransaction;
-use App\Models\ReturnTransaction;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
@@ -47,20 +45,20 @@ class InventoryAnalyticsController extends Controller
                 $daysOnShelf = $turnover > 0 ? round(365 / $turnover) : 365;
 
                 return [
-                    'product_id'    => $r->product_id,
-                    'product_name'  => $r->product_name,
-                    'category'      => $r->category,
-                    'total_sold'    => (int) $r->total_sold,
-                    'avg_stock'     => $avgStock,
+                    'product_id' => $r->product_id,
+                    'product_name' => $r->product_name,
+                    'category' => $r->category,
+                    'total_sold' => (int) $r->total_sold,
+                    'avg_stock' => $avgStock,
                     'turnover_rate' => $turnover,
                     'days_on_shelf' => $daysOnShelf,
-                    'status'        => $turnover >= 4 ? 'Excellent' : ($turnover >= 2 ? 'Normal' : 'Slow'),
+                    'status' => $turnover >= 4 ? 'Excellent' : ($turnover >= 2 ? 'Normal' : 'Slow'),
                 ];
             });
 
             return [
-                'products'         => $data->sortByDesc('turnover_rate')->values(),
-                'avg_turnover'     => round($data->avg('turnover_rate'), 2),
+                'products' => $data->sortByDesc('turnover_rate')->values(),
+                'avg_turnover' => round($data->avg('turnover_rate'), 2),
                 'total_dead_stock' => $data->filter(fn ($p) => $p['turnover_rate'] < 1)->count(),
             ];
         });
@@ -90,22 +88,22 @@ class InventoryAnalyticsController extends Controller
                 $exposure = $excess * $r->cost_price;
 
                 return [
-                    'id'                 => $r->product_id,
-                    'name'               => $r->product_name,
-                    'category'           => $r->category,
-                    'qty_on_hand'        => $r->current_stock,
-                    'reorder_point'      => $r->reorder_level,
-                    'excess_qty'         => $excess,
-                    'unit_cost'          => (float) $r->cost_price,
-                    'exposure'           => round($exposure, 2),
+                    'id' => $r->product_id,
+                    'name' => $r->product_name,
+                    'category' => $r->category,
+                    'qty_on_hand' => $r->current_stock,
+                    'reorder_point' => $r->reorder_level,
+                    'excess_qty' => $excess,
+                    'unit_cost' => (float) $r->cost_price,
+                    'exposure' => round($exposure, 2),
                     'recommended_action' => $excess > $r->reorder_level * 3 ? 'Return to Supplier' : 'Markdown & Sell',
                 ];
             })->values();
 
             return [
-                'items'           => $items,
-                'total_exposure'  => round($items->sum('exposure'), 2),
-                'total_items'     => $items->count(),
+                'items' => $items,
+                'total_exposure' => round($items->sum('exposure'), 2),
+                'total_items' => $items->count(),
             ];
         });
     }
@@ -119,9 +117,9 @@ class InventoryAnalyticsController extends Controller
                 ->limit(5)
                 ->get()
                 ->map(fn ($i) => [
-                    'product_id'    => $i->product_id,
-                    'product_name'  => $i->product?->product_name,
-                    'category'      => $i->product?->category?->Category_name ?? '',
+                    'product_id' => $i->product_id,
+                    'product_name' => $i->product?->product_name,
+                    'category' => $i->product?->category?->Category_name ?? '',
                     'current_stock' => $i->current_stock,
                     'reorder_level' => $i->product?->reorder_level,
                     'selling_price' => (float) ($i->product?->selling_price ?? 0),
@@ -134,10 +132,10 @@ class InventoryAnalyticsController extends Controller
                 ->limit(5)
                 ->get()
                 ->map(fn ($p) => [
-                    'product_id'      => $p->product_id,
-                    'product_name'    => $p->product_name,
+                    'product_id' => $p->product_id,
+                    'product_name' => $p->product_name,
                     'expiration_date' => $p->expiration_date,
-                    'days_until'      => now()->diffInDays($p->expiration_date),
+                    'days_until' => now()->diffInDays($p->expiration_date),
                 ]);
 
             $totalStockValue = DB::selectOne("
@@ -148,23 +146,23 @@ class InventoryAnalyticsController extends Controller
             ");
 
             return [
-                'low_stock_count'       => Inventory::where('stock_status', 'Low Stock')->count(),
-                'low_stock_items'       => $lowStockItems,
-                'expiring_soon_count'   => Product::whereNotNull('expiration_date')
+                'low_stock_count' => Inventory::where('stock_status', 'Low Stock')->count(),
+                'low_stock_items' => $lowStockItems,
+                'expiring_soon_count' => Product::whereNotNull('expiration_date')
                     ->where('expiration_date', '>=', now())
                     ->where('expiration_date', '<=', now()->addDays(30))
                     ->count(),
-                'expiring_soon_items'   => $expiringSoon,
-                'today_movements'       => StockMovement::whereDate('movement_date', today())->count(),
-                'today_sales_count'     => SalesTransaction::whereDate('transaction_date', today())->count(),
-                'today_wastage_count'   => WastageRecord::whereDate('date_recorded', today())->count(),
-                'today_returns_count'   => ReturnTransaction::whereDate('return_date', today())->count(),
+                'expiring_soon_items' => $expiringSoon,
+                'today_movements' => StockMovement::whereDate('movement_date', today())->count(),
+                'today_sales_count' => SalesTransaction::whereDate('transaction_date', today())->count(),
+                'today_wastage_count' => WastageRecord::whereDate('date_recorded', today())->count(),
+                'today_returns_count' => ReturnTransaction::whereDate('return_date', today())->count(),
                 'pending_wastage_count' => WastageRecord::whereDate('date_recorded', today())->count(),
-                'critical_fefo_count'   => FEFOBatch::where('status', 'active')
+                'critical_fefo_count' => FEFOBatch::where('status', 'active')
                     ->where('expiry_date', '>=', now())
                     ->where('expiry_date', '<=', now()->addDays(7))
                     ->count(),
-                'total_stock_value'     => (float) ($totalStockValue?->total ?? 0),
+                'total_stock_value' => (float) ($totalStockValue?->total ?? 0),
             ];
         });
     }
@@ -194,20 +192,20 @@ class InventoryAnalyticsController extends Controller
 
             $items = collect($rows)->map(function ($r) {
                 return [
-                    'id'              => $r->product_id,
-                    'name'            => $r->product_name,
-                    'category'        => $r->category,
-                    'stock'           => $r->current_stock,
-                    'cost_price'      => (float) $r->cost_price,
-                    'locked_capital'  => round($r->current_stock * $r->cost_price, 2),
-                    'days_on_shelf'   => 90,
+                    'id' => $r->product_id,
+                    'name' => $r->product_name,
+                    'category' => $r->category,
+                    'stock' => $r->current_stock,
+                    'cost_price' => (float) $r->cost_price,
+                    'locked_capital' => round($r->current_stock * $r->cost_price, 2),
+                    'days_on_shelf' => 90,
                 ];
             })->values();
 
             return [
-                'items'                => $items,
+                'items' => $items,
                 'total_locked_capital' => round($items->sum('locked_capital'), 2),
-                'total_items'          => $items->count(),
+                'total_items' => $items->count(),
             ];
         });
     }

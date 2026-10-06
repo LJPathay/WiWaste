@@ -2,10 +2,11 @@
 
 namespace App\Console\Commands;
 
+use App\Models\FEFOLog;
+use App\Models\Inventory;
+use App\Models\WastageRecord;
 use App\Services\Ml\MlServiceClient;
 use App\Services\Ml\MlServiceUnavailableException;
-use App\Models\Inventory;
-use App\Models\FEFOLog;
 use Illuminate\Console\Command;
 
 class ScoreLossRisk extends Command
@@ -21,6 +22,7 @@ class ScoreLossRisk extends Command
 
             if ($products->isEmpty()) {
                 $this->info('No products to score.');
+
                 return self::SUCCESS;
             }
 
@@ -57,10 +59,10 @@ class ScoreLossRisk extends Command
 
                     // Create wastage draft if expected loss > 5000 and stock is not low
                     if ($expectedLoss > 5000 && $product->stock_status !== 'Low Stock') {
-                        \App\Models\WastageRecord::create([
+                        WastageRecord::create([
                             'product_id' => $product->product_id,
                             'quantity' => 1,
-                            'reason' => 'Auto-flagged: high expected loss (₱' . number_format($expectedLoss, 2) . ')',
+                            'reason' => 'Auto-flagged: high expected loss (₱'.number_format($expectedLoss, 2).')',
                             'unit_cost' => $product->cost_price,
                             'recorded_by' => 'System (ML)',
                         ]);
@@ -72,9 +74,11 @@ class ScoreLossRisk extends Command
             }
 
             $this->info("Scored {$scored} product(s), flagged {$flagged} batch(es).");
+
             return self::SUCCESS;
         } catch (\Exception $e) {
             $this->error("Loss-risk scoring failed: {$e->getMessage()}");
+
             return self::FAILURE;
         }
     }

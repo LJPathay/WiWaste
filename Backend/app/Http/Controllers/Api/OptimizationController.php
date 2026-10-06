@@ -3,17 +3,14 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\ReplenishmentOptimizationRequest;
 use App\Models\InventoryRecommendation;
 use App\Services\Ml\MlServiceUnavailableException;
 use App\Services\Ml\OptimizationService;
-use App\Http\Requests\Api\ReplenishmentOptimizationRequest;
-use Illuminate\Http\Request;
 
 class OptimizationController extends Controller
 {
-    public function __construct(private readonly OptimizationService $optimization)
-    {
-    }
+    public function __construct(private readonly OptimizationService $optimization) {}
 
     /**
      * Run the GA replenishment optimizer and persist pending 'Reorder'
@@ -44,7 +41,7 @@ class OptimizationController extends Controller
         }
 
         return response()->json(array_merge($result, [
-            'generated_at'           => now()->toDateTimeString(),
+            'generated_at' => now()->toDateTimeString(),
             'recommendations_written' => $recommendationsWritten,
         ]));
     }
@@ -72,13 +69,13 @@ class OptimizationController extends Controller
 
         foreach ($toOrder as $item) {
             InventoryRecommendation::create([
-                'product_id'         => $item['product_id'],
-                'current_stock'      => (int) round((float) $item['current_stock']),
-                'recommended_stock'  => (int) round((float) $item['current_stock'] + (float) $item['order_qty']),
-                'recommendation_type'=> 'Reorder',
-                'confidence_score'   => round($confidence, 2),
-                'status'             => 'pending',
-                'created_at'         => now(),
+                'product_id' => $item['product_id'],
+                'current_stock' => (int) round((float) $item['current_stock']),
+                'recommended_stock' => (int) round((float) $item['current_stock'] + (float) $item['order_qty']),
+                'recommendation_type' => 'Reorder',
+                'confidence_score' => round($confidence, 2),
+                'status' => 'pending',
+                'created_at' => now(),
             ]);
         }
 

@@ -8,7 +8,9 @@ use Illuminate\Support\Facades\Hash;
 class PasswordResetOtp extends Model
 {
     protected $table = 'password_reset_otps';
+
     protected $primaryKey = 'id';
+
     public $timestamps = true;
 
     protected $fillable = [
@@ -54,13 +56,14 @@ class PasswordResetOtp extends Model
             ->latest()
             ->first();
 
-        if (!$record || !Hash::check($otp, $record->otp_hash)) {
+        if (! $record || ! Hash::check($otp, $record->otp_hash)) {
             if ($record) {
                 $record->increment('attempts');
                 if ($record->attempts >= 5) {
                     $record->update(['used' => true]);
                 }
             }
+
             return false;
         }
 
@@ -75,7 +78,7 @@ class PasswordResetOtp extends Model
             ->latest()
             ->first();
 
-        if (!$record || !Hash::check($otp, $record->otp_hash)) {
+        if (! $record || ! Hash::check($otp, $record->otp_hash)) {
             return false;
         }
 

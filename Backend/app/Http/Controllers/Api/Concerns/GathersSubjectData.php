@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers\Api\Concerns;
 
-use App\Models\SalesTransaction;
-use App\Models\ReturnTransaction;
 use App\Models\AuditLog;
 use App\Models\Customer;
+use App\Models\ReturnTransaction;
+use App\Models\SalesTransaction;
 
 trait GathersSubjectData
 {
@@ -48,8 +48,8 @@ trait GathersSubjectData
         return Customer::where('business_id', $businessId)
             ->where(function ($q) use ($identifier) {
                 $q->where('customer_name', 'like', "%{$identifier}%")
-                  ->orWhere('customer_phone', $identifier)
-                  ->orWhere('customer_email', $identifier);
+                    ->orWhere('customer_phone', $identifier)
+                    ->orWhere('customer_email', $identifier);
             })
             ->first();
     }
@@ -59,8 +59,8 @@ trait GathersSubjectData
         return SalesTransaction::where('business_id', $businessId)
             ->where(function ($q) use ($identifier) {
                 $q->where('customer_name', 'like', "%{$identifier}%")
-                  ->orWhere('customer_phone', $identifier)
-                  ->orWhere('customer_email', $identifier);
+                    ->orWhere('customer_phone', $identifier)
+                    ->orWhere('customer_email', $identifier);
             })
             ->with(['salesItems.product'])
             ->get()
@@ -84,22 +84,22 @@ trait GathersSubjectData
     {
         return ReturnTransaction::whereHas('saleItem.transaction', function ($q) use ($businessId, $identifier) {
             $q->where('business_id', $businessId)
-              ->where(function ($q) use ($identifier) {
-                  $q->where('customer_name', 'like', "%{$identifier}%")
-                    ->orWhere('customer_phone', $identifier)
-                    ->orWhere('customer_email', $identifier);
-              });
+                ->where(function ($q) use ($identifier) {
+                    $q->where('customer_name', 'like', "%{$identifier}%")
+                        ->orWhere('customer_phone', $identifier)
+                        ->orWhere('customer_email', $identifier);
+                });
         })->with(['saleItem.product'])->get()
-          ->map(fn ($r) => [
-              'return_id' => $r->return_id,
-              'date' => $r->return_date,
-              'reason' => $r->reason,
-              'refund' => $r->refund_amount,
-              'items' => $r->saleItem ? [
-                  'product' => $r->saleItem->product?->product_name,
-                  'quantity' => $r->quantity_returned,
-              ] : [],
-          ]);
+            ->map(fn ($r) => [
+                'return_id' => $r->return_id,
+                'date' => $r->return_date,
+                'reason' => $r->reason,
+                'refund' => $r->refund_amount,
+                'items' => $r->saleItem ? [
+                    'product' => $r->saleItem->product?->product_name,
+                    'quantity' => $r->quantity_returned,
+                ] : [],
+            ]);
     }
 
     protected function findAuditLogsByIdentifier(int $businessId, string $identifier)
@@ -107,8 +107,8 @@ trait GathersSubjectData
         return AuditLog::where('business_id', $businessId)
             ->where(function ($q) use ($identifier) {
                 $q->where('action', 'like', "%{$identifier}%")
-                  ->orWhere('new_values', 'like', "%{$identifier}%")
-                  ->orWhere('old_values', 'like', "%{$identifier}%");
+                    ->orWhere('new_values', 'like', "%{$identifier}%")
+                    ->orWhere('old_values', 'like', "%{$identifier}%");
             })
             ->orderByDesc('created_at')
             ->limit(50)

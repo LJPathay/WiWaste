@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\DataSubjectRequest;
 use App\Http\Requests\Api\StoreDataSubjectRequestRequest;
 use App\Http\Requests\Api\UpdateDataSubjectRequestRequest;
 use App\Http\Resources\DataSubjectRequestResource;
+use App\Models\DataSubjectRequest;
 use Illuminate\Http\Request;
 
 class DataSubjectRequestController extends Controller
@@ -24,7 +24,7 @@ class DataSubjectRequestController extends Controller
         if ($existing) {
             return response()->json([
                 'message' => 'A similar request is already pending or in progress.',
-                'request' => (new DataSubjectRequestResource($existing))->resolve($request)
+                'request' => (new DataSubjectRequestResource($existing))->resolve($request),
             ], 409);
         }
 
@@ -37,7 +37,7 @@ class DataSubjectRequestController extends Controller
 
         return response()->json([
             'message' => 'Data subject request submitted successfully.',
-            'request' => (new DataSubjectRequestResource($requestObj))->resolve($request)
+            'request' => (new DataSubjectRequestResource($requestObj))->resolve($request),
         ], 201);
     }
 
@@ -56,7 +56,7 @@ class DataSubjectRequestController extends Controller
 
         return response()->json([
             'message' => 'Data subject request updated successfully.',
-            'request' => (new DataSubjectRequestResource($dataSubjectRequest))->resolve($request)
+            'request' => (new DataSubjectRequestResource($dataSubjectRequest))->resolve($request),
         ]);
     }
 
@@ -77,6 +77,7 @@ class DataSubjectRequestController extends Controller
         }
 
         $perPage = min((int) $request->input('per_page', 20), 100);
+
         return response()->json(
             $query->orderByDesc('requested_at')->paginate($perPage)
                 ->through(fn ($r) => (new DataSubjectRequestResource($r))->resolve($request))

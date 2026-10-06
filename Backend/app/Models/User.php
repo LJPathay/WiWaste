@@ -12,7 +12,9 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory;
 
     protected $table = 'User';
+
     protected $primaryKey = 'User_id';
+
     public $timestamps = false;
 
     protected $fillable = [
@@ -40,7 +42,7 @@ class User extends Authenticatable
 
     public function getFullNameAttribute(): string
     {
-        return trim($this->first_name . ' ' . $this->surname);
+        return trim($this->first_name.' '.$this->surname);
     }
 
     public function business()

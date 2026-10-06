@@ -4,12 +4,12 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Concerns\ScopesTenant;
 use App\Http\Controllers\Controller;
-use App\Models\SanitationChecklist;
-use App\Models\AuditLog;
 use App\Http\Requests\Api\StoreSanitationChecklistRequest;
 use App\Http\Requests\Api\UpdateSanitationChecklistRequest;
 use App\Http\Requests\Api\VerifySanitationChecklistRequest;
 use App\Http\Resources\SanitationChecklistResource;
+use App\Models\AuditLog;
+use App\Models\SanitationChecklist;
 use Illuminate\Http\Request;
 
 class SanitationController extends Controller
@@ -38,6 +38,7 @@ class SanitationController extends Controller
         }
 
         $perPage = min((int) $request->input('per_page', 20), 100);
+
         return response()->json(
             $query->orderByDesc('checklist_date')->paginate($perPage)
                 ->through(fn ($c) => (new SanitationChecklistResource($c))->resolve($request))
@@ -51,10 +52,10 @@ class SanitationController extends Controller
         $data = $request->validated();
 
         // Auto-assign business_id and branch_id from user if not provided
-        if (!isset($data['business_id']) && $user && $user->business_id) {
+        if (! isset($data['business_id']) && $user && $user->business_id) {
             $data['business_id'] = $user->business_id;
         }
-        if (!isset($data['branch_id']) && $user && $user->branch_id) {
+        if (! isset($data['branch_id']) && $user && $user->branch_id) {
             $data['branch_id'] = $user->branch_id;
         }
         $data['created_by'] = $user?->User_id ?? 1;
@@ -66,15 +67,15 @@ class SanitationController extends Controller
         $checklist = SanitationChecklist::create($data);
 
         AuditLog::create([
-            'user_id'       => $user?->User_id ?? 1,
-            'action'        => "Created sanitation checklist for {$data['frequency']} {$data['area']} on {$data['checklist_date']}",
-            'entity_type'   => 'Sanitation_Checklist',
-            'entity_id'     => $checklist->checklist_id,
-            'old_values'    => null,
-            'new_values'    => json_encode($data),
-            'created_at'    => now(),
-            'business_id'   => $user?->business_id,
-            'branch_id'     => $user?->branch_id,
+            'user_id' => $user?->User_id ?? 1,
+            'action' => "Created sanitation checklist for {$data['frequency']} {$data['area']} on {$data['checklist_date']}",
+            'entity_type' => 'Sanitation_Checklist',
+            'entity_id' => $checklist->checklist_id,
+            'old_values' => null,
+            'new_values' => json_encode($data),
+            'created_at' => now(),
+            'business_id' => $user?->business_id,
+            'branch_id' => $user?->branch_id,
         ]);
 
         $checklist->load(['creator', 'verifier']);
@@ -113,15 +114,15 @@ class SanitationController extends Controller
         $checklist->update($data);
 
         AuditLog::create([
-            'user_id'       => $user?->User_id ?? 1,
-            'action'        => "Updated sanitation checklist #{$checklist->checklist_id}",
-            'entity_type'   => 'Sanitation_Checklist',
-            'entity_id'     => $checklist->checklist_id,
-            'old_values'    => json_encode($checklist->getOriginal()),
-            'new_values'    => json_encode($data),
-            'created_at'    => now(),
-            'business_id'   => $user?->business_id,
-            'branch_id'     => $user?->branch_id,
+            'user_id' => $user?->User_id ?? 1,
+            'action' => "Updated sanitation checklist #{$checklist->checklist_id}",
+            'entity_type' => 'Sanitation_Checklist',
+            'entity_id' => $checklist->checklist_id,
+            'old_values' => json_encode($checklist->getOriginal()),
+            'new_values' => json_encode($data),
+            'created_at' => now(),
+            'business_id' => $user?->business_id,
+            'branch_id' => $user?->branch_id,
         ]);
 
         $checklist->load(['creator', 'verifier']);
@@ -142,7 +143,7 @@ class SanitationController extends Controller
 
         $data = $request->validated();
 
-        if (!isset($data['verified_by']) && $user && $user->User_id) {
+        if (! isset($data['verified_by']) && $user && $user->User_id) {
             $data['verified_by'] = $user->User_id;
         }
         $data['verified_at'] = now();
@@ -150,15 +151,15 @@ class SanitationController extends Controller
         $checklist->update($data);
 
         AuditLog::create([
-            'user_id'       => $user?->User_id ?? 1,
-            'action'        => "Verified sanitation checklist #{$checklist->checklist_id}",
-            'entity_type'   => 'Sanitation_Checklist',
-            'entity_id'     => $checklist->checklist_id,
-            'old_values'    => json_encode($checklist->getOriginal()),
-            'new_values'    => json_encode($data),
-            'created_at'    => now(),
-            'business_id'   => $user?->business_id,
-            'branch_id'     => $user?->branch_id,
+            'user_id' => $user?->User_id ?? 1,
+            'action' => "Verified sanitation checklist #{$checklist->checklist_id}",
+            'entity_type' => 'Sanitation_Checklist',
+            'entity_id' => $checklist->checklist_id,
+            'old_values' => json_encode($checklist->getOriginal()),
+            'new_values' => json_encode($data),
+            'created_at' => now(),
+            'business_id' => $user?->business_id,
+            'branch_id' => $user?->branch_id,
         ]);
 
         $checklist->load(['creator', 'verifier']);
@@ -202,7 +203,7 @@ class SanitationController extends Controller
                 'general' => $checklists->where('area', 'general')->count(),
             ],
             'failed_checks' => $checklists
-                ->flatMap(fn ($c) => collect($c->checks ?? [])->filter(fn ($check) => !($check['passed'] ?? false)))
+                ->flatMap(fn ($c) => collect($c->checks ?? [])->filter(fn ($check) => ! ($check['passed'] ?? false)))
                 ->values()
                 ->all(),
         ];

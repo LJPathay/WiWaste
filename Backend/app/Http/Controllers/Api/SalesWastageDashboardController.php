@@ -4,16 +4,13 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Concerns\ScopesTenant;
 use App\Http\Controllers\Controller;
-use App\Models\SalesTransaction;
-use App\Models\SalesItem;
-use App\Models\WastageRecord;
-use App\Models\WastageFlag;
 use App\Models\FEFOBatch;
 use App\Models\Inventory;
-use App\Models\Product;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use App\Models\SalesTransaction;
+use App\Models\WastageFlag;
+use App\Models\WastageRecord;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 
 class SalesWastageDashboardController extends Controller
 {
@@ -178,7 +175,7 @@ class SalesWastageDashboardController extends Controller
         $wastage = $wastageQuery->get();
 
         $headers = [
-            'Type', 'Date', 'Product', 'SKU', 'Category', 'Batch', 'Quantity', 'Reason', 'Value'
+            'Type', 'Date', 'Product', 'SKU', 'Category', 'Batch', 'Quantity', 'Reason', 'Value',
         ];
 
         $rows = [];
@@ -213,7 +210,7 @@ class SalesWastageDashboardController extends Controller
             ];
         }
 
-        $callback = function() use ($headers, $rows) {
+        $callback = function () use ($headers, $rows) {
             $file = fopen('php://output', 'w');
             fputcsv($file, $headers);
             foreach ($rows as $row) {
@@ -222,7 +219,7 @@ class SalesWastageDashboardController extends Controller
             fclose($file);
         };
 
-        $filename = 'sales_wastage_report_' . Carbon::now()->format('Ymd_His') . '.csv';
+        $filename = 'sales_wastage_report_'.Carbon::now()->format('Ymd_His').'.csv';
 
         return response()->stream($callback, 200, [
             'Content-Type' => 'text/csv',

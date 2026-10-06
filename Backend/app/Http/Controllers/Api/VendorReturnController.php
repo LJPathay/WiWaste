@@ -4,16 +4,14 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Concerns\ScopesTenant;
 use App\Http\Controllers\Controller;
-use App\Models\VendorReturn;
-use App\Models\VendorReturnItem;
-use App\Models\Inventory;
-use App\Models\FEFOBatch;
-use App\Models\AuditLog;
+use App\Http\Requests\Api\ReceiveVendorReturnRequest;
+use App\Http\Requests\Api\RejectVendorReturnRequest;
 use App\Http\Requests\Api\StoreVendorReturnRequest;
 use App\Http\Requests\Api\UpdateVendorReturnRequest;
-use App\Http\Requests\Api\RejectVendorReturnRequest;
-use App\Http\Requests\Api\ReceiveVendorReturnRequest;
 use App\Http\Resources\VendorReturnResource;
+use App\Models\AuditLog;
+use App\Models\VendorReturn;
+use App\Models\VendorReturnItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -35,6 +33,7 @@ class VendorReturnController extends Controller
         }
 
         $perPage = min((int) $request->input('per_page', 20), 100);
+
         return response()->json(
             $query->orderByDesc('created_at')->paginate($perPage)
                 ->through(fn ($vr) => (new VendorReturnResource($vr))->resolve($request))
@@ -49,15 +48,15 @@ class VendorReturnController extends Controller
         $data = $request->validated();
 
         // Auto-assign business_id and branch_id from user if not provided
-        if (!isset($data['business_id']) && $user && $user->business_id) {
+        if (! isset($data['business_id']) && $user && $user->business_id) {
             $data['business_id'] = $user->business_id;
         }
-        if (!isset($data['branch_id']) && $user && $user->branch_id) {
+        if (! isset($data['branch_id']) && $user && $user->branch_id) {
             $data['branch_id'] = $user->branch_id;
         }
         $data['created_by'] = $userId;
         $data['status'] = 'pending_approval';
-        $data['return_number'] = 'VR-' . now()->format('Ymd') . '-' . strtoupper(substr(uniqid(), -6));
+        $data['return_number'] = 'VR-'.now()->format('Ymd').'-'.strtoupper(substr(uniqid(), -6));
         $data['requested_date'] = now()->toDateString();
 
         return DB::transaction(function () use ($data, $userId) {
@@ -80,18 +79,20 @@ class VendorReturnController extends Controller
                 ]);
             }
 
-            $vendorReturn->update(['total_credit_amount' => array_sum(array_column($data['items'], function($i) { return $i['quantity'] * $i['unit_cost']; }))]);
+            $vendorReturn->update(['total_credit_amount' => array_sum(array_column($data['items'], function ($i) {
+                return $i['quantity'] * $i['unit_cost'];
+            }))]);
 
             AuditLog::create([
-                'user_id'       => $userId,
-                'action'        => "Created vendor return {$vendorReturn->return_number} for supplier #{$data['supplier_id']}",
-                'entity_type'   => 'Vendor_Return',
-                'entity_id'     => $vendorReturn->vendor_return_id,
-                'old_values'    => null,
-                'new_values'    => json_encode($data),
-                'created_at'    => now(),
-                'business_id'   => $data['business_id'] ?? null,
-                'branch_id'     => $data['branch_id'] ?? null,
+                'user_id' => $userId,
+                'action' => "Created vendor return {$vendorReturn->return_number} for supplier #{$data['supplier_id']}",
+                'entity_type' => 'Vendor_Return',
+                'entity_id' => $vendorReturn->vendor_return_id,
+                'old_values' => null,
+                'new_values' => json_encode($data),
+                'created_at' => now(),
+                'business_id' => $data['business_id'] ?? null,
+                'branch_id' => $data['branch_id'] ?? null,
             ]);
 
             $vendorReturn->load(['supplier', 'creator', 'items.product']);
@@ -120,7 +121,7 @@ class VendorReturnController extends Controller
         $query = $this->scopeForBusinessAndBranch($query, $request);
         $vendorReturn = $query->findOrFail($id);
 
-        if (!in_array($vendorReturn->status, ['draft', 'pending_approval'])) {
+        if (! in_array($vendorReturn->status, ['draft', 'pending_approval'])) {
             return response()->json(['message' => 'Cannot modify vendor return in current status.'], 422);
         }
 
@@ -143,19 +144,21 @@ class VendorReturnController extends Controller
                     'reason' => $item['reason'] ?? null,
                 ]);
             }
-            $vendorReturn->update(['total_credit_amount' => array_sum(array_column($data['items'], function($i) { return $i['quantity'] * $i['unit_cost']; }))]);
+            $vendorReturn->update(['total_credit_amount' => array_sum(array_column($data['items'], function ($i) {
+                return $i['quantity'] * $i['unit_cost'];
+            }))]);
         }
 
         AuditLog::create([
-            'user_id'       => $request->user()?->User_id ?? 1,
-            'action'        => "Updated vendor return {$vendorReturn->return_number}",
-            'entity_type'   => 'Vendor_Return',
-            'entity_id'     => $vendorReturn->vendor_return_id,
-            'old_values'    => json_encode($vendorReturn->getOriginal()),
-            'new_values'    => json_encode($data),
-            'created_at'    => now(),
-            'business_id'   => $user?->business_id,
-            'branch_id'     => $user?->branch_id,
+            'user_id' => $request->user()?->User_id ?? 1,
+            'action' => "Updated vendor return {$vendorReturn->return_number}",
+            'entity_type' => 'Vendor_Return',
+            'entity_id' => $vendorReturn->vendor_return_id,
+            'old_values' => json_encode($vendorReturn->getOriginal()),
+            'new_values' => json_encode($data),
+            'created_at' => now(),
+            'business_id' => $user?->business_id,
+            'branch_id' => $user?->branch_id,
         ]);
 
         $vendorReturn->load(['supplier', 'creator', 'approver', 'items.product', 'items.batch']);
@@ -181,14 +184,14 @@ class VendorReturnController extends Controller
         $vendorReturn->approve($user?->User_id ?? 1);
 
         AuditLog::create([
-            'user_id'       => $request->user()?->User_id ?? 1,
-            'action'        => "Approved vendor return {$vendorReturn->return_number}",
-            'entity_type'   => 'Vendor_Return',
-            'entity_id'     => $vendorReturn->vendor_return_id,
-            'new_values'    => json_encode(['status' => 'approved']),
-            'created_at'    => now(),
-            'business_id'   => $user?->business_id,
-            'branch_id'     => $user?->branch_id,
+            'user_id' => $request->user()?->User_id ?? 1,
+            'action' => "Approved vendor return {$vendorReturn->return_number}",
+            'entity_type' => 'Vendor_Return',
+            'entity_id' => $vendorReturn->vendor_return_id,
+            'new_values' => json_encode(['status' => 'approved']),
+            'created_at' => now(),
+            'business_id' => $user?->business_id,
+            'branch_id' => $user?->branch_id,
         ]);
 
         return response()->json([
@@ -214,14 +217,14 @@ class VendorReturnController extends Controller
         $vendorReturn->reject($user?->User_id ?? 1, $data['reason']);
 
         AuditLog::create([
-            'user_id'       => $user?->User_id ?? 1,
-            'action'        => "Rejected vendor return {$vendorReturn->return_number}: {$data['reason']}",
-            'entity_type'   => 'Vendor_Return',
-            'entity_id'     => $vendorReturn->vendor_return_id,
-            'new_values'    => json_encode(['status' => 'rejected', 'rejection_reason' => $data['reason']]),
-            'created_at'    => now(),
-            'business_id'   => $user?->business_id,
-            'branch_id'     => $user?->branch_id,
+            'user_id' => $user?->User_id ?? 1,
+            'action' => "Rejected vendor return {$vendorReturn->return_number}: {$data['reason']}",
+            'entity_type' => 'Vendor_Return',
+            'entity_id' => $vendorReturn->vendor_return_id,
+            'new_values' => json_encode(['status' => 'rejected', 'rejection_reason' => $data['reason']]),
+            'created_at' => now(),
+            'business_id' => $user?->business_id,
+            'branch_id' => $user?->branch_id,
         ]);
 
         return response()->json([
@@ -245,14 +248,14 @@ class VendorReturnController extends Controller
         $vendorReturn->ship();
 
         AuditLog::create([
-            'user_id'       => $request->user()?->User_id ?? 1,
-            'action'        => "Shipped vendor return {$vendorReturn->return_number}",
-            'entity_type'   => 'Vendor_Return',
-            'entity_id'     => $vendorReturn->vendor_return_id,
-            'new_values'    => json_encode(['status' => 'shipped']),
-            'created_at'    => now(),
-            'business_id'   => $user?->business_id,
-            'branch_id'     => $user?->branch_id,
+            'user_id' => $request->user()?->User_id ?? 1,
+            'action' => "Shipped vendor return {$vendorReturn->return_number}",
+            'entity_type' => 'Vendor_Return',
+            'entity_id' => $vendorReturn->vendor_return_id,
+            'new_values' => json_encode(['status' => 'shipped']),
+            'created_at' => now(),
+            'business_id' => $user?->business_id,
+            'branch_id' => $user?->branch_id,
         ]);
 
         return response()->json([
@@ -283,15 +286,15 @@ class VendorReturnController extends Controller
         // Process each item - create credit note for received items
         foreach ($vendorReturn->items as $item) {
             $itemData = collect($data['items'] ?? [])->firstWhere('vendor_return_item_id', $item->vendor_return_item_id);
-            
+
             $receivedQty = $itemData['received_quantity'] ?? $item->quantity;
             $rejectedQty = $itemData['rejected_quantity'] ?? 0;
-            
+
             // Create credit note for received items
             if ($receivedQty > 0) {
                 $creditAmount = $receivedQty * $item->unit_cost;
                 $totalCredit += $creditAmount;
-                
+
                 $receivedItems[] = [
                     'vendor_return_item_id' => $item->vendor_return_item_id,
                     'product_id' => $item->product_id,
@@ -314,18 +317,18 @@ class VendorReturnController extends Controller
         // Create credit note record (in a real implementation, this would create a credit note document)
         // For now, we log the credit in audit log
         AuditLog::create([
-            'user_id'       => $request->user()?->User_id ?? 1,
-            'action'        => "Received vendor return {$vendorReturn->return_number} with credit â‚±{$totalCredit}",
-            'entity_type'   => 'Vendor_Return',
-            'entity_id'     => $vendorReturn->vendor_return_id,
-            'new_values'    => json_encode([
+            'user_id' => $request->user()?->User_id ?? 1,
+            'action' => "Received vendor return {$vendorReturn->return_number} with credit â‚±{$totalCredit}",
+            'entity_type' => 'Vendor_Return',
+            'entity_id' => $vendorReturn->vendor_return_id,
+            'new_values' => json_encode([
                 'status' => 'received',
                 'received_items' => $receivedItems,
                 'total_credit' => $totalCredit,
             ]),
-            'created_at'    => now(),
-            'business_id'   => $user?->business_id,
-            'branch_id'     => $user?->branch_id,
+            'created_at' => now(),
+            'business_id' => $user?->business_id,
+            'branch_id' => $user?->branch_id,
         ]);
 
         return response()->json([
@@ -353,14 +356,14 @@ class VendorReturnController extends Controller
         $vendorReturn->credit();
 
         AuditLog::create([
-            'user_id'       => $user?->User_id ?? 1,
-            'action'        => "Credited vendor return {$vendorReturn->return_number}",
-            'entity_type'   => 'Vendor_Return',
-            'entity_id'     => $vendorReturn->vendor_return_id,
-            'new_values'    => json_encode(['status' => 'credited', 'total_credit' => $vendorReturn->total_credit_amount]),
-            'created_at'    => now(),
-            'business_id'   => $user?->business_id,
-            'branch_id'     => $user?->branch_id,
+            'user_id' => $user?->User_id ?? 1,
+            'action' => "Credited vendor return {$vendorReturn->return_number}",
+            'entity_type' => 'Vendor_Return',
+            'entity_id' => $vendorReturn->vendor_return_id,
+            'new_values' => json_encode(['status' => 'credited', 'total_credit' => $vendorReturn->total_credit_amount]),
+            'created_at' => now(),
+            'business_id' => $user?->business_id,
+            'branch_id' => $user?->branch_id,
         ]);
 
         return response()->json([

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Concerns;
 
+use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 
@@ -21,7 +22,7 @@ trait ScopesTenant
     /**
      * Applies the caller's business and, where the table supports it, branch.
      *
-     * @param  \Illuminate\Database\Query\Builder|\Illuminate\Database\Eloquent\Builder  $query
+     * @param  Builder|\Illuminate\Database\Eloquent\Builder  $query
      * @return mixed
      */
     protected function scopeForBusinessAndBranch($query, Request $request)
@@ -37,7 +38,7 @@ trait ScopesTenant
     /**
      * Business-only variant, for resources that are not branch-scoped.
      *
-     * @param  \Illuminate\Database\Query\Builder|\Illuminate\Database\Eloquent\Builder  $query
+     * @param  Builder|\Illuminate\Database\Eloquent\Builder  $query
      * @return mixed
      */
     protected function scopeForBusiness($query, Request $request)
@@ -51,7 +52,7 @@ trait ScopesTenant
     }
 
     /**
-     * @param  \Illuminate\Database\Query\Builder|\Illuminate\Database\Eloquent\Builder  $query
+     * @param  Builder|\Illuminate\Database\Eloquent\Builder  $query
      * @return mixed
      */
     private function applyTenantScope($query, $businessId, $branchId)

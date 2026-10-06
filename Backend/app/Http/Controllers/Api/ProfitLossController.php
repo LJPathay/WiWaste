@@ -3,11 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\ReturnTransaction;
 use App\Models\SalesTransaction;
 use App\Models\WastageRecord;
-use App\Models\Product;
-use App\Models\ReturnTransaction;
-use App\Models\SalesItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -17,22 +15,22 @@ class ProfitLossController extends Controller
     public function overview()
     {
         return response()->json(Cache::remember('profit_loss.overview', 600, function () {
-            $totalSales       = (float) SalesTransaction::where('status', 'Completed')->sum('total_amount');
+            $totalSales = (float) SalesTransaction::where('status', 'Completed')->sum('total_amount');
             $totalWastageLoss = (float) WastageRecord::sum('estimated_loss');
-            $totalReturns     = (float) ReturnTransaction::sum('refund_amount');
-            $totalCOGS        = (float) DB::table('Sales_Item')
+            $totalReturns = (float) ReturnTransaction::sum('refund_amount');
+            $totalCOGS = (float) DB::table('Sales_Item')
                 ->join('Product', 'Sales_Item.product_id', '=', 'Product.product_id')
                 ->join('Sales_Transaction', 'Sales_Item.transaction_id', '=', 'Sales_Transaction.transaction_id')
                 ->where('Sales_Transaction.status', 'Completed')
                 ->sum(DB::raw('Sales_Item.quantity * Product.cost_price'));
 
             return [
-                'total_sales'        => $totalSales,
-                'total_cogs'         => $totalCOGS,
+                'total_sales' => $totalSales,
+                'total_cogs' => $totalCOGS,
                 'total_wastage_loss' => $totalWastageLoss,
-                'total_returns'      => $totalReturns,
-                'net_profit'         => $totalSales - $totalCOGS - $totalWastageLoss - $totalReturns,
-                'gross_margin'       => $totalSales > 0
+                'total_returns' => $totalReturns,
+                'net_profit' => $totalSales - $totalCOGS - $totalWastageLoss - $totalReturns,
+                'gross_margin' => $totalSales > 0
                     ? round(($totalSales - $totalCOGS) / $totalSales * 100, 2)
                     : 0,
             ];
@@ -47,7 +45,7 @@ class ProfitLossController extends Controller
                 ->leftJoin('Sales_Item AS si', 'p.product_id', '=', 'si.product_id')
                 ->leftJoin('Sales_Transaction AS st', function ($join) {
                     $join->on('si.transaction_id', '=', 'st.transaction_id')
-                         ->where('st.status', '=', 'Completed');
+                        ->where('st.status', '=', 'Completed');
                 })
                 ->select(
                     'c.Category_name AS category',
@@ -68,10 +66,10 @@ class ProfitLossController extends Controller
 
             return $salesByCategory->map(function ($row) use ($wasteByCategory) {
                 return [
-                    'category'         => $row->category,
-                    'total_sales'      => (float) $row->total_sales,
+                    'category' => $row->category,
+                    'total_sales' => (float) $row->total_sales,
                     'total_waste_loss' => (float) ($wasteByCategory[$row->category]->total_waste_loss ?? 0),
-                    'product_count'    => $row->product_count,
+                    'product_count' => $row->product_count,
                 ];
             })->values();
         }));
@@ -79,8 +77,8 @@ class ProfitLossController extends Controller
 
     public function trends(Request $request)
     {
-        $period     = $request->input('period', 'monthly');
-        $cacheKey   = "profit_loss.trends.{$period}";
+        $period = $request->input('period', 'monthly');
+        $cacheKey = "profit_loss.trends.{$period}";
 
         return response()->json(Cache::remember($cacheKey, 600, function () use ($period) {
             $dateFormat = $period === 'yearly' ? '%Y' : '%Y-%m';
@@ -108,8 +106,8 @@ class ProfitLossController extends Controller
             ))->unique()->sort()->values();
 
             return $allPeriods->map(fn ($p) => [
-                'period'       => $p,
-                'sales'        => (float) ($salesTrends[$p]->total ?? 0),
+                'period' => $p,
+                'sales' => (float) ($salesTrends[$p]->total ?? 0),
                 'wastage_loss' => (float) ($wastageTrends[$p]->total ?? 0),
             ]);
         }));

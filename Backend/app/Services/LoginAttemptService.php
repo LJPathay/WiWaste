@@ -2,16 +2,17 @@
 
 namespace App\Services;
 
-use App\Models\LoginAttempt;
-use App\Models\User;
 use App\Mail\FailedLoginMail;
 use App\Mail\SuccessfulLoginMail;
-use Illuminate\Support\Facades\Mail;
+use App\Models\LoginAttempt;
+use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Mail;
 
 class LoginAttemptService
 {
     private const MAX_ATTEMPTS = 5;
+
     private const LOCKOUT_MINUTES = 15;
 
     public function isLocked(string $email): bool
@@ -31,7 +32,7 @@ class LoginAttemptService
             ->latest()
             ->first();
 
-        if (!$latestLock || !$latestLock->locked_until) {
+        if (! $latestLock || ! $latestLock->locked_until) {
             return 0;
         }
 
@@ -43,11 +44,11 @@ class LoginAttemptService
         $user = User::where('email', $email)->first();
 
         LoginAttempt::create([
-            'user_id'         => $user?->User_id,
+            'user_id' => $user?->User_id,
             'email_attempted' => $email,
-            'ip_address'      => $ip,
-            'user_agent'      => $userAgent,
-            'attempt_type'    => 'failed',
+            'ip_address' => $ip,
+            'user_agent' => $userAgent,
+            'attempt_type' => 'failed',
         ]);
 
         $recentFailedCount = LoginAttempt::where('email_attempted', $email)
@@ -68,7 +69,7 @@ class LoginAttemptService
                 try {
                     Mail::to($user->email)->send(new FailedLoginMail($email, $ip, $userAgent, true, self::LOCKOUT_MINUTES));
                 } catch (\Exception $e) {
-                    \Log::error('Failed to send lockout email: ' . $e->getMessage());
+                    \Log::error('Failed to send lockout email: '.$e->getMessage());
                 }
             }
         } else {
@@ -77,7 +78,7 @@ class LoginAttemptService
                 try {
                     Mail::to($user->email)->send(new FailedLoginMail($email, $ip, $userAgent, false, 0));
                 } catch (\Exception $e) {
-                    \Log::error('Failed to send failed login email: ' . $e->getMessage());
+                    \Log::error('Failed to send failed login email: '.$e->getMessage());
                 }
             }
         }
@@ -86,11 +87,11 @@ class LoginAttemptService
     public function recordSuccessfulAttempt(User $user, ?string $ip, ?string $userAgent): void
     {
         LoginAttempt::create([
-            'user_id'         => $user->User_id,
+            'user_id' => $user->User_id,
             'email_attempted' => $user->email,
-            'ip_address'      => $ip,
-            'user_agent'      => $userAgent,
-            'attempt_type'    => 'successful',
+            'ip_address' => $ip,
+            'user_agent' => $userAgent,
+            'attempt_type' => 'successful',
         ]);
 
         // Send successful login notification
@@ -98,7 +99,7 @@ class LoginAttemptService
             try {
                 Mail::to($user->email)->send(new SuccessfulLoginMail($user->email, $ip, $userAgent));
             } catch (\Exception $e) {
-                \Log::error('Failed to send successful login email: ' . $e->getMessage());
+                \Log::error('Failed to send successful login email: '.$e->getMessage());
             }
         }
     }

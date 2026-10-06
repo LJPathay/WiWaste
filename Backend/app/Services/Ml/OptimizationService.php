@@ -6,15 +6,12 @@ use App\Models\ForecastResult;
 use App\Models\Product;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 
 class OptimizationService
 {
     use QueriesSalesVelocity;
 
-    public function __construct(private readonly MlServiceClient $ml)
-    {
-    }
+    public function __construct(private readonly MlServiceClient $ml) {}
 
     /**
      * Build the feature rows for every candidate SKU and run the GA optimizer
@@ -41,20 +38,20 @@ class OptimizationService
             return $demand > 0 || $product->inventory?->stock_status === 'Low Stock';
         })->map(function (Product $product) use ($forecastDemand, $salesVelocity, $horizonDays) {
             return [
-                'product_id'        => $product->product_id,
-                'product_name'      => $product->product_name,
-                'current_stock'     => (float) ($product->inventory?->current_stock ?? 0),
-                'forecast_demand'   => $this->demandFor($product, $forecastDemand, $salesVelocity, $horizonDays),
-                'unit_cost'         => (float) ($product->cost_price ?? 0),
-                'selling_price'     => (float) ($product->selling_price ?? 0),
+                'product_id' => $product->product_id,
+                'product_name' => $product->product_name,
+                'current_stock' => (float) ($product->inventory?->current_stock ?? 0),
+                'forecast_demand' => $this->demandFor($product, $forecastDemand, $salesVelocity, $horizonDays),
+                'unit_cost' => (float) ($product->cost_price ?? 0),
+                'selling_price' => (float) ($product->selling_price ?? 0),
                 'expiring_fraction' => $this->expiringFraction($product->expiration_date),
             ];
         })->values()->all();
 
         return $this->ml->optimizeReplenishment([
-            'budget'   => $budget,
+            'budget' => $budget,
             'products' => $inputs,
-            'seed'     => $seed,
+            'seed' => $seed,
         ]);
     }
 

@@ -4,19 +4,19 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Concerns\ScopesTenant;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\DiscardStockReceivingRequest;
+use App\Http\Requests\Api\ReceiveStockReceivingRequest;
+use App\Http\Requests\Api\RejectStockReceivingRequest;
+use App\Http\Requests\Api\StoreStockReceivingRequest;
+use App\Http\Requests\Api\UpdateStockReceivingRequest;
+use App\Http\Requests\Api\VerifyStockReceivingRequest;
+use App\Http\Resources\StockReceivingResource;
+use App\Models\AuditLog;
+use App\Models\FEFOBatch;
 use App\Models\Inventory;
 use App\Models\StockMovement;
 use App\Models\StockReceiving;
 use App\Models\StockReceivingItem;
-use App\Models\FEFOBatch;
-use App\Models\AuditLog;
-use App\Http\Requests\Api\StoreStockReceivingRequest;
-use App\Http\Requests\Api\ReceiveStockReceivingRequest;
-use App\Http\Requests\Api\UpdateStockReceivingRequest;
-use App\Http\Requests\Api\VerifyStockReceivingRequest;
-use App\Http\Requests\Api\RejectStockReceivingRequest;
-use App\Http\Requests\Api\DiscardStockReceivingRequest;
-use App\Http\Resources\StockReceivingResource;
 use Illuminate\Http\Request;
 
 class StockReceivingController extends Controller
@@ -33,6 +33,7 @@ class StockReceivingController extends Controller
         }
 
         $perPage = min((int) $request->input('per_page', 20), 100);
+
         return response()->json(
             $query->orderByDesc('received_at')->paginate($perPage)
                 ->through(fn ($r) => (new StockReceivingResource($r))->resolve($request))
@@ -66,7 +67,7 @@ class StockReceivingController extends Controller
         $query = $this->scopeForBusinessAndBranch($query, $request);
         $receiving = $query->findOrFail($id);
 
-        if (!in_array($receiving->status, ['pending', 'received', 'partial'])) {
+        if (! in_array($receiving->status, ['pending', 'received', 'partial'])) {
             return response()->json(['message' => 'Cannot receive in current status.'], 422);
         }
 
@@ -162,7 +163,7 @@ class StockReceivingController extends Controller
 
         $receiving->update([
             'status' => 'rejected',
-            'notes' => ($receiving->notes ? $receiving->notes . "\n" : '') . "Rejected: {$data['reason']}",
+            'notes' => ($receiving->notes ? $receiving->notes."\n" : '')."Rejected: {$data['reason']}",
         ]);
 
         $this->logAudit($user, "Rejected stock receiving record #{$receiving->receiving_id}: {$data['reason']}", $receiving, null, $data);
@@ -182,7 +183,7 @@ class StockReceivingController extends Controller
 
         $receiving->update([
             'status' => 'rejected',
-            'notes' => ($receiving->notes ? $receiving->notes . "\n" : '') . "Discarded: {$data['reason']}",
+            'notes' => ($receiving->notes ? $receiving->notes."\n" : '')."Discarded: {$data['reason']}",
         ]);
 
         $this->logAudit($user, "Discarded stock receiving record #{$receiving->receiving_id}: {$data['reason']}", $receiving, null, $data);
@@ -192,11 +193,11 @@ class StockReceivingController extends Controller
 
     protected function applyReceivingDefaults(array &$data, $user): void
     {
-        $data['business_id']  = $data['business_id']  ?? $user?->business_id;
-        $data['branch_id']    = $data['branch_id']    ?? $user?->branch_id;
-        $data['received_by']  = $data['received_by']  ?? $user?->User_id;
+        $data['business_id'] = $data['business_id'] ?? $user?->business_id;
+        $data['branch_id'] = $data['branch_id'] ?? $user?->branch_id;
+        $data['received_by'] = $data['received_by'] ?? $user?->User_id;
         $data['received_at'] ??= now();
-        $data['status']      ??= 'received';
+        $data['status'] ??= 'received';
     }
 
     protected function createReceivingItems(StockReceiving $receiving, array $items): void
@@ -204,11 +205,11 @@ class StockReceivingController extends Controller
         foreach ($items as $itemData) {
             $itemData['receiving_id'] = $receiving->receiving_id;
             $itemData += [
-                'received_quantity'       => 0,
-                'rejected_quantity'       => 0,
-                'condition_check_passed'  => true,
+                'received_quantity' => 0,
+                'rejected_quantity' => 0,
+                'condition_check_passed' => true,
                 'sanitation_check_passed' => true,
-                'status'                  => 'pending',
+                'status' => 'pending',
             ];
             StockReceivingItem::create($itemData);
         }
@@ -219,7 +220,7 @@ class StockReceivingController extends Controller
         $product = $item->product;
         $warning = null;
 
-        if ($product && !empty($itemData['temperature_at_receipt'])) {
+        if ($product && ! empty($itemData['temperature_at_receipt'])) {
             $temp = $itemData['temperature_at_receipt'];
 
             if ($product->required_temp_min !== null && $temp < $product->required_temp_min) {
@@ -240,7 +241,7 @@ class StockReceivingController extends Controller
 
         foreach ($items as $itemData) {
             $item = $receiving->items()->find($itemData['receiving_item_id']);
-            if (!$item) {
+            if (! $item) {
                 continue;
             }
 
@@ -264,13 +265,13 @@ class StockReceivingController extends Controller
     {
         $warnings = [];
 
-        if (!$items || !is_array($items)) {
+        if (! $items || ! is_array($items)) {
             return $warnings;
         }
 
         foreach ($items as $itemData) {
             $item = $receiving->items()->find($itemData['receiving_item_id']);
-            if (!$item) {
+            if (! $item) {
                 continue;
             }
 
@@ -294,23 +295,23 @@ class StockReceivingController extends Controller
 
     protected function appendTemperatureWarnings(array &$data, array $warnings): void
     {
-        if (!empty($warnings)) {
-            $data['notes'] = ($data['notes'] ?? '') . "\n\nTEMPERATURE WARNINGS:\n" . implode("\n", $warnings);
+        if (! empty($warnings)) {
+            $data['notes'] = ($data['notes'] ?? '')."\n\nTEMPERATURE WARNINGS:\n".implode("\n", $warnings);
         }
     }
 
     protected function logAudit($user, string $action, $entity, ?array $oldValues, array $newValues): void
     {
         AuditLog::create([
-            'user_id'     => $user?->User_id ?? 1,
-            'action'      => $action,
+            'user_id' => $user?->User_id ?? 1,
+            'action' => $action,
             'entity_type' => 'Stock_Receiving',
-            'entity_id'   => $entity->receiving_id,
-            'old_values'  => $oldValues ? json_encode($oldValues) : null,
-            'new_values'  => json_encode($newValues),
-            'created_at'  => now(),
+            'entity_id' => $entity->receiving_id,
+            'old_values' => $oldValues ? json_encode($oldValues) : null,
+            'new_values' => json_encode($newValues),
+            'created_at' => now(),
             'business_id' => $user?->business_id,
-            'branch_id'   => $user?->branch_id,
+            'branch_id' => $user?->branch_id,
         ]);
     }
 
@@ -320,13 +321,13 @@ class StockReceivingController extends Controller
             'business_id' => $item->receiving->business_id,
             'branch_id' => $item->receiving->branch_id,
             'product_id' => $item->product_id,
-            'batch_number' => $item->batch_id ? \App\Models\FEFOBatch::find($item->batch_id)?->batch_number : 'BATCH-' . now()->format('YmdHis'),
+            'batch_number' => $item->batch_id ? FEFOBatch::find($item->batch_id)?->batch_number : 'BATCH-'.now()->format('YmdHis'),
             'quantity' => $quantity,
             'expiry_date' => $item->product?->expiration_date ?? now()->addYear(),
             'status' => 'active',
             'received_date' => now()->toDateString(),
             'received_temperature' => $item->temperature_at_receipt,
-            'supplier_batch_number' => $item->batch_id ? \App\Models\FEFOBatch::find($item->batch_id)?->supplier_batch_number : null,
+            'supplier_batch_number' => $item->batch_id ? FEFOBatch::find($item->batch_id)?->supplier_batch_number : null,
             'created_by' => $user?->User_id ?? 1,
             'created_at' => now(),
         ]);
@@ -341,7 +342,7 @@ class StockReceivingController extends Controller
             'user_id' => $user?->User_id ?? 1,
             'movement_type' => 'Stock In',
             'quantity' => $quantity,
-            'remarks' => 'Stock received via receiving #' . $item->receiving->receiving_id,
+            'remarks' => 'Stock received via receiving #'.$item->receiving->receiving_id,
             'movement_date' => now(),
         ]);
 

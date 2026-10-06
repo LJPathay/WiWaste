@@ -2,8 +2,8 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -14,10 +14,10 @@ return new class extends Migration
     {
         // Add business_id and branch_id columns if they don't exist
         Schema::table('User', function (Blueprint $table) {
-            if (!Schema::hasColumn('User', 'business_id')) {
+            if (! Schema::hasColumn('User', 'business_id')) {
                 $table->foreignId('business_id')->nullable()->constrained()->onDelete('cascade');
             }
-            if (!Schema::hasColumn('User', 'branch_id')) {
+            if (! Schema::hasColumn('User', 'branch_id')) {
                 $table->foreignId('branch_id')->nullable()->constrained()->onDelete('cascade');
             }
         });
@@ -42,7 +42,7 @@ return new class extends Migration
         // We will convert all Owner back to Admin as a best effort.
 
         // First, change the role column to a string to allow any value during the rollback
-        DB::statement("ALTER TABLE User MODIFY role VARCHAR(50)");
+        DB::statement('ALTER TABLE User MODIFY role VARCHAR(50)');
 
         // Then, update the role: set Owner to Admin (as a default, since we don't know the original)
         DB::table('User')->where('role', 'Owner')->update(['role' => 'Admin']);

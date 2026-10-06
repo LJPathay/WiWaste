@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 class FEFOBatch extends Model
 {
     protected $table = 'FEFO_Batch';
+
     protected $primaryKey = 'batch_id';
+
     public $timestamps = false;
 
     protected $fillable = [
@@ -101,7 +103,7 @@ class FEFOBatch extends Model
     {
         // One-up: Supplier → This batch
         $trace = [];
-        
+
         // Get the stock receiving record that created this batch.
         // The link lives on stock_receiving_items.batch_id — Stock_Receiving
         // itself has no supplier_batch_number column.

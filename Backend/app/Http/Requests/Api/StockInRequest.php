@@ -15,8 +15,8 @@ class StockInRequest extends FormRequest
     {
         return [
             'product_id' => 'required|integer|exists:Product,product_id',
-            'quantity'   => 'required|integer|min:1',
-            'remarks'    => 'nullable|string|max:255',
+            'quantity' => 'required|integer|min:1',
+            'remarks' => 'nullable|string|max:255',
         ];
     }
 }

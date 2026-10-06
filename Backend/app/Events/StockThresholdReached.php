@@ -16,6 +16,5 @@ class StockThresholdReached
         /** 'low_stock', 'overstock', 'expiring' */
         public readonly string $thresholdType,
         public readonly array $details = [],
-    ) {
-    }
+    ) {}
 }

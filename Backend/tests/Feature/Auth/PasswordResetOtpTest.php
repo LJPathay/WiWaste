@@ -32,8 +32,8 @@ class PasswordResetOtpTest extends TestCase
     private function seedOtp(string $email, string $otp, array $overrides = []): PasswordResetOtp
     {
         return PasswordResetOtp::create(array_merge([
-            'email'      => $email,
-            'otp_hash'   => Hash::make($otp),
+            'email' => $email,
+            'otp_hash' => Hash::make($otp),
             'expires_at' => now()->addMinutes(10),
         ], $overrides));
     }
@@ -41,9 +41,9 @@ class PasswordResetOtpTest extends TestCase
     private function resetPayload(string $email, string $otp, string $password): array
     {
         return [
-            'email'                 => $email,
-            'otp'                   => $otp,
-            'password'              => $password,
+            'email' => $email,
+            'otp' => $otp,
+            'password' => $password,
             'password_confirmation' => $password,
         ];
     }
@@ -74,6 +74,7 @@ class PasswordResetOtpTest extends TestCase
         $sentOtp = null;
         Mail::assertSent(PasswordResetOtpMail::class, function (PasswordResetOtpMail $mail) use (&$sentOtp) {
             $sentOtp = $mail->otp;
+
             return true;
         });
 
@@ -233,9 +234,9 @@ class PasswordResetOtpTest extends TestCase
         $this->seedOtp($user->email, '123456');
 
         $this->postJson('/api/v1/password/reset', [
-            'email'                 => $user->email,
-            'otp'                   => '123456',
-            'password'              => self::VALID_PASSWORD,
+            'email' => $user->email,
+            'otp' => '123456',
+            'password' => self::VALID_PASSWORD,
             'password_confirmation' => 'Different123!',
         ])->assertStatus(422)->assertJsonValidationErrors('password_confirmation');
     }
@@ -277,7 +278,7 @@ class PasswordResetOtpTest extends TestCase
         for ($i = 0; $i < 3; $i++) {
             $this->postJson('/api/v1/password/verify-otp', [
                 'email' => 'nobody@example.com',
-                'otp'   => '000000',
+                'otp' => '000000',
             ])->assertStatus(422);
         }
 

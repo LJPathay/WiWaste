@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 class StockCount extends Model
 {
     protected $table = 'stock_counts';
+
     protected $primaryKey = 'count_id';
+
     public $timestamps = false;
 
     protected $fillable = [

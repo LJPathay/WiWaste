@@ -15,7 +15,7 @@ return new class extends Migration
             $table->integer('recommended_stock');
             $table->enum('recommendation_type', ['Restock', 'Reduce Stock', 'Maintain']);
             $table->decimal('confidence_score', 5, 2);
-            
+
             $table->foreign('product_id')->references('product_id')->on('Product');
         });
     }

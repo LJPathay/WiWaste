@@ -2,10 +2,10 @@
 
 namespace App\Console\Commands;
 
-use App\Services\Ml\OptimizationService;
-use App\Services\Ml\MlServiceUnavailableException;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
+use App\Services\Ml\MlServiceUnavailableException;
+use App\Services\Ml\OptimizationService;
 use Illuminate\Console\Command;
 
 class OptimizationReplenish extends Command
@@ -20,8 +20,9 @@ class OptimizationReplenish extends Command
             // Run optimization with default budget
             $result = $optimization->replenishment(['budget' => 10000, 'persist' => false]);
 
-            if (!$result || empty($result['recommendations'])) {
+            if (! $result || empty($result['recommendations'])) {
                 $this->info('No recommendations generated.');
+
                 return self::SUCCESS;
             }
 
@@ -29,7 +30,7 @@ class OptimizationReplenish extends Command
             $confidence = $result['confidence'] ?? 0;
             $budget = 10000;
 
-            $this->info("Optimization complete: ₱" . number_format($totalOrderValue, 2) . " total order value, " . ($confidence * 100) . "% confidence");
+            $this->info('Optimization complete: ₱'.number_format($totalOrderValue, 2).' total order value, '.($confidence * 100).'% confidence');
 
             // Auto-create draft PO if within budget and confidence threshold
             if ($totalOrderValue <= $budget * 0.9 && $confidence >= 0.7) {
@@ -50,17 +51,19 @@ class OptimizationReplenish extends Command
                     ]);
                 }
 
-                $this->info("Created draft PO #{$po->purchase_order_id} with " . count($result['recommendations']) . " items");
+                $this->info("Created draft PO #{$po->purchase_order_id} with ".count($result['recommendations']).' items');
             } else {
-                $this->info("Order value or confidence below threshold — no PO created");
+                $this->info('Order value or confidence below threshold — no PO created');
             }
 
             return self::SUCCESS;
         } catch (MlServiceUnavailableException $e) {
             $this->error("ML service unavailable: {$e->getMessage()}");
+
             return self::FAILURE;
         } catch (\Exception $e) {
             $this->error("Optimization failed: {$e->getMessage()}");
+
             return self::FAILURE;
         }
     }

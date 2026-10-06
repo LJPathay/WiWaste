@@ -29,8 +29,8 @@ class StockMovementTest extends TestCase
 
         $this->postJson('/api/v1/inventory/stock-in', [
             'product_id' => $product->product_id,
-            'quantity'   => 10,
-            'remarks'    => 'Weekly delivery',
+            'quantity' => 10,
+            'remarks' => 'Weekly delivery',
         ])->assertOk()->assertJsonPath('new_stock', 25);
 
         $inventory->refresh();
@@ -39,9 +39,9 @@ class StockMovementTest extends TestCase
         $this->assertSame('Normal', $inventory->stock_status);
 
         $this->assertDatabaseHas('Stock_Movement', [
-            'product_id'    => $product->product_id,
+            'product_id' => $product->product_id,
             'movement_type' => 'Stock In',
-            'quantity'      => 10,
+            'quantity' => 10,
         ]);
     }
 
@@ -55,7 +55,7 @@ class StockMovementTest extends TestCase
 
         $this->postJson('/api/v1/inventory/stock-in', [
             'product_id' => $product->product_id,
-            'quantity'   => 15,
+            'quantity' => 15,
         ])->assertOk();
 
         // 25 is above the reorder level but below 5x it.
@@ -70,7 +70,7 @@ class StockMovementTest extends TestCase
 
         $this->postJson('/api/v1/inventory/stock-in', [
             'product_id' => $product->product_id,
-            'quantity'   => 0,
+            'quantity' => 0,
         ])->assertStatus(422)->assertJsonValidationErrors('quantity');
     }
 
@@ -80,7 +80,7 @@ class StockMovementTest extends TestCase
 
         $this->postJson('/api/v1/inventory/stock-in', [
             'product_id' => 999999,
-            'quantity'   => 5,
+            'quantity' => 5,
         ])->assertStatus(422)->assertJsonValidationErrors('product_id');
     }
 
@@ -93,10 +93,10 @@ class StockMovementTest extends TestCase
         $inventory = $this->makeInventory($product, 0);
 
         $this->postJson('/api/v1/inventory/receive', [
-            'product_id'   => $product->product_id,
-            'quantity'     => 60,
+            'product_id' => $product->product_id,
+            'quantity' => 60,
             'batch_number' => 'LOT-777',
-            'expiry_date'  => now()->addMonths(6)->toDateString(),
+            'expiry_date' => now()->addMonths(6)->toDateString(),
         ])->assertOk();
 
         $batch = FEFOBatch::where('batch_number', 'LOT-777')->firstOrFail();
@@ -107,8 +107,8 @@ class StockMovementTest extends TestCase
 
         $this->assertDatabaseHas('Stock_Movement', [
             'product_id' => $product->product_id,
-            'batch_id'   => $batch->batch_id,
-            'quantity'   => 60,
+            'batch_id' => $batch->batch_id,
+            'quantity' => 60,
         ]);
     }
 
@@ -119,9 +119,9 @@ class StockMovementTest extends TestCase
         $this->makeInventory($product, 0);
 
         $payload = [
-            'product_id'   => $product->product_id,
+            'product_id' => $product->product_id,
             'batch_number' => 'LOT-888',
-            'expiry_date'  => now()->addMonths(9)->toDateString(),
+            'expiry_date' => now()->addMonths(9)->toDateString(),
         ];
 
         $this->postJson('/api/v1/inventory/receive', $payload + ['quantity' => 20])->assertOk();
@@ -140,10 +140,10 @@ class StockMovementTest extends TestCase
         $this->makeInventory($product, 0);
 
         $this->postJson('/api/v1/inventory/receive', [
-            'product_id'   => $product->product_id,
-            'quantity'     => 10,
+            'product_id' => $product->product_id,
+            'quantity' => 10,
             'batch_number' => 'LOT-OLD',
-            'expiry_date'  => now()->subDay()->toDateString(),
+            'expiry_date' => now()->subDay()->toDateString(),
         ])->assertStatus(422)->assertJsonValidationErrors('expiry_date');
     }
 
@@ -160,7 +160,7 @@ class StockMovementTest extends TestCase
 
         $this->postJson('/api/v1/inventory/stock-out', [
             'product_id' => $product->product_id,
-            'quantity'   => 50,
+            'quantity' => 50,
         ])->assertOk()->assertJsonPath('new_stock', 50);
 
         $this->assertSame(0, $early->fresh()->quantity, 'The 5-day batch must be drained first.');
@@ -189,7 +189,7 @@ class StockMovementTest extends TestCase
 
         $this->postJson('/api/v1/inventory/stock-out', [
             'product_id' => $product->product_id,
-            'quantity'   => 20,
+            'quantity' => 20,
         ])->assertOk();
 
         $this->assertSame(20, $usable->fresh()->quantity);
@@ -210,8 +210,8 @@ class StockMovementTest extends TestCase
 
         $this->postJson('/api/v1/inventory/stock-out', [
             'product_id' => $product->product_id,
-            'quantity'   => 10,
-            'batch_id'   => $later->batch_id,
+            'quantity' => 10,
+            'batch_id' => $later->batch_id,
         ])->assertOk();
 
         $this->assertSame(30, $early->fresh()->quantity, 'An explicit batch must not disturb the earlier one.');
@@ -227,8 +227,8 @@ class StockMovementTest extends TestCase
 
         $this->postJson('/api/v1/inventory/stock-out', [
             'product_id' => $product->product_id,
-            'quantity'   => 10,
-            'batch_id'   => $batch->batch_id,
+            'quantity' => 10,
+            'batch_id' => $batch->batch_id,
         ])->assertStatus(422)->assertJsonPath('message', 'Insufficient quantity in specified batch.');
 
         $this->assertSame(5, $batch->fresh()->quantity);
@@ -244,7 +244,7 @@ class StockMovementTest extends TestCase
 
         $this->postJson('/api/v1/inventory/stock-out', [
             'product_id' => $product->product_id,
-            'quantity'   => 20,
+            'quantity' => 20,
         ])->assertStatus(422)->assertJsonPath('message', 'Insufficient stock.');
 
         $this->assertSame(8, $inventory->fresh()->current_stock);
@@ -261,7 +261,7 @@ class StockMovementTest extends TestCase
 
         $this->postJson('/api/v1/inventory/stock-out', [
             'product_id' => $product->product_id,
-            'quantity'   => 40,
+            'quantity' => 40,
         ])->assertStatus(422)->assertJsonPath('message', 'Insufficient stock in active batches.');
 
         $this->assertSame(50, $inventory->fresh()->current_stock);
@@ -276,7 +276,7 @@ class StockMovementTest extends TestCase
 
         $this->postJson('/api/v1/inventory/stock-out', [
             'product_id' => $product->product_id,
-            'quantity'   => 20,
+            'quantity' => 20,
         ])->assertOk();
 
         $batch->refresh();
@@ -294,8 +294,8 @@ class StockMovementTest extends TestCase
         $this->makeBatch($product, 40, now()->addDays(30)->toDateString());
 
         $this->postJson('/api/v1/inventory/stock-out', [
-            'product_id'      => $product->product_id,
-            'quantity'        => 5,
+            'product_id' => $product->product_id,
+            'quantity' => 5,
             'override_reason' => 'Customer accepted near-expiry unit.',
         ])->assertOk();
 
@@ -317,10 +317,10 @@ class StockMovementTest extends TestCase
         $this->postJson('/api/v1/inventory/stock-in', ['product_id' => $product->product_id, 'quantity' => 10])
             ->assertOk();
         $this->postJson('/api/v1/inventory/receive', [
-            'product_id'   => $product->product_id,
-            'quantity'     => 5,
+            'product_id' => $product->product_id,
+            'quantity' => 5,
             'batch_number' => 'LOT-1',
-            'expiry_date'  => now()->addMonth()->toDateString(),
+            'expiry_date' => now()->addMonth()->toDateString(),
         ])->assertOk();
 
         $response = $this->getJson('/api/v1/inventory/movements');
@@ -364,7 +364,7 @@ class StockMovementTest extends TestCase
 
         $this->postJson('/api/v1/inventory/stock-out', [
             'product_id' => $product->product_id,
-            'quantity'   => 7,
+            'quantity' => 7,
         ])->assertOk();
 
         $this->assertSame(0, $inventory->fresh()->current_stock);

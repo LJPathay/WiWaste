@@ -3,29 +3,34 @@
 namespace App\Providers;
 
 use App\Enums\Role;
-use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
-use Illuminate\Support\Facades\Gate;
+use App\Models\Inventory;
+use App\Models\Product;
+use App\Models\PurchaseOrder;
+use App\Models\SalesTransaction;
 use App\Models\User;
+use App\Models\WastageRecord;
+use App\Policies\CashierPolicy;
+use App\Policies\FEFOPolicy;
 use App\Policies\InventoryPolicy;
 use App\Policies\ProductPolicy;
 use App\Policies\PurchaseOrderPolicy;
-use App\Policies\SalesPolicy;
-use App\Policies\WastagePolicy;
-use App\Policies\UserPolicy;
 use App\Policies\ReportPolicy;
+use App\Policies\SalesPolicy;
 use App\Policies\SettingsPolicy;
-use App\Policies\FEFOPolicy;
-use App\Policies\CashierPolicy;
+use App\Policies\UserPolicy;
+use App\Policies\WastagePolicy;
+use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
+use Illuminate\Support\Facades\Gate;
 
 class AuthServiceProvider extends ServiceProvider
 {
     protected $policies = [
-        \App\Models\Inventory::class => InventoryPolicy::class,
-        \App\Models\Product::class => ProductPolicy::class,
-        \App\Models\PurchaseOrder::class => PurchaseOrderPolicy::class,
-        \App\Models\SalesTransaction::class => SalesPolicy::class,
-        \App\Models\WastageRecord::class => WastagePolicy::class,
-        \App\Models\User::class => UserPolicy::class,
+        Inventory::class => InventoryPolicy::class,
+        Product::class => ProductPolicy::class,
+        PurchaseOrder::class => PurchaseOrderPolicy::class,
+        SalesTransaction::class => SalesPolicy::class,
+        WastageRecord::class => WastagePolicy::class,
+        User::class => UserPolicy::class,
         \App\Models\FEFOPolicy::class => FEFOPolicy::class,
     ];
 

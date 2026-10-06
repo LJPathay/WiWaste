@@ -4,14 +4,15 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Concerns\ScopesTenant;
 use App\Http\Controllers\Controller;
-use App\Models\PurchaseOrder;
-use App\Models\PurchaseOrderItem;
-use App\Models\Inventory;
-use App\Models\StockMovement;
+use App\Http\Requests\Api\ReceivePurchaseOrderRequest;
 use App\Http\Requests\Api\StorePurchaseOrderRequest;
 use App\Http\Requests\Api\UpdatePurchaseOrderRequest;
-use App\Http\Requests\Api\ReceivePurchaseOrderRequest;
 use App\Http\Resources\PurchaseOrderResource;
+use App\Models\FEFOBatch;
+use App\Models\Inventory;
+use App\Models\PurchaseOrder;
+use App\Models\PurchaseOrderItem;
+use App\Models\StockMovement;
 use Illuminate\Http\Request;
 
 class PurchaseOrderController extends Controller
@@ -30,7 +31,7 @@ class PurchaseOrderController extends Controller
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('po_number', 'like', "%{$search}%")
-                  ->orWhereHas('supplier', fn ($s) => $s->where('supplier_name', 'like', "%{$search}%"));
+                    ->orWhereHas('supplier', fn ($s) => $s->where('supplier_name', 'like', "%{$search}%"));
             });
         }
 
@@ -47,14 +48,14 @@ class PurchaseOrderController extends Controller
         $data = $request->validated();
 
         // Auto-assign business_id and branch_id from user if not provided
-        if (!isset($data['business_id']) && $user && $user->business_id) {
+        if (! isset($data['business_id']) && $user && $user->business_id) {
             $data['business_id'] = $user->business_id;
         }
-        if (!isset($data['branch_id']) && $user && $user->branch_id) {
+        if (! isset($data['branch_id']) && $user && $user->branch_id) {
             $data['branch_id'] = $user->branch_id;
         }
 
-        $poNumber = 'PO-' . now()->format('Ymd') . '-' . strtoupper(substr(uniqid(), -6));
+        $poNumber = 'PO-'.now()->format('Ymd').'-'.strtoupper(substr(uniqid(), -6));
         $totalAmount = 0;
         $poItems = [];
 
@@ -113,7 +114,7 @@ class PurchaseOrderController extends Controller
             ];
 
             $current = $po->status;
-            if ($current !== $data['status'] && !in_array($data['status'], $allowedTransitions[$current] ?? [])) {
+            if ($current !== $data['status'] && ! in_array($data['status'], $allowedTransitions[$current] ?? [])) {
                 return response()->json(['message' => "Cannot transition from {$current} to {$data['status']}."], 422);
             }
 
@@ -131,7 +132,7 @@ class PurchaseOrderController extends Controller
         $query = $this->scopeForBusinessAndBranch($query, $request);
         $po = $query->findOrFail($id);
 
-        if (!in_array($po->status, ['Ordered', 'Partially Received'])) {
+        if (! in_array($po->status, ['Ordered', 'Partially Received'])) {
             return response()->json(['message' => 'Only Ordered or Partially Received orders can receive stock.'], 422);
         }
 
@@ -142,7 +143,9 @@ class PurchaseOrderController extends Controller
 
         foreach ($data['items'] as $itemData) {
             $poItem = $po->items->firstWhere('po_item_id', $itemData['po_item_id']);
-            if (!$poItem) continue;
+            if (! $poItem) {
+                continue;
+            }
 
             $newReceived = min($itemData['received_qty'], $poItem->quantity);
             $prevReceived = $poItem->received_qty;
@@ -166,11 +169,11 @@ class PurchaseOrderController extends Controller
                 $inventory->save();
 
                 // Create FEFO batch for received stock
-                $batch = \App\Models\FEFOBatch::create([
+                $batch = FEFOBatch::create([
                     'business_id' => $user?->business_id,
                     'branch_id' => $user?->branch_id,
                     'product_id' => $poItem->product_id,
-                    'batch_number' => 'PO-' . $po->po_number,
+                    'batch_number' => 'PO-'.$po->po_number,
                     'quantity' => $additionalQty,
                     'expiry_date' => $poItem->product?->expiration_date ?? now()->addYear(),
                     'status' => 'active',
@@ -182,14 +185,14 @@ class PurchaseOrderController extends Controller
 
                 $user = $request->user();
                 StockMovement::create([
-                    'business_id'   => $user?->business_id,
-                    'branch_id'     => $user?->branch_id,
-                    'product_id'    => $poItem->product_id,
-                    'batch_id'      => $batch->batch_id,
-                    'user_id'       => $user?->User_id ?? 1,
+                    'business_id' => $user?->business_id,
+                    'branch_id' => $user?->branch_id,
+                    'product_id' => $poItem->product_id,
+                    'batch_id' => $batch->batch_id,
+                    'user_id' => $user?->User_id ?? 1,
                     'movement_type' => 'Stock In',
-                    'quantity'      => $additionalQty,
-                    'remarks'       => "PO receive: {$po->po_number}",
+                    'quantity' => $additionalQty,
+                    'remarks' => "PO receive: {$po->po_number}",
                     'movement_date' => now(),
                 ]);
             }

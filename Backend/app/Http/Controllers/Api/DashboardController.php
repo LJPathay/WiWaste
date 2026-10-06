@@ -3,12 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Product;
-use App\Models\User;
-use App\Models\Supplier;
-use App\Models\SalesTransaction;
-use App\Models\WastageRecord;
 use App\Models\Inventory;
+use App\Models\Product;
+use App\Models\SalesTransaction;
+use App\Models\Supplier;
+use App\Models\User;
+use App\Models\WastageRecord;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -136,7 +136,7 @@ class DashboardController extends Controller
                 ->get();
 
             // Leakage by category
-            $leakageByCategory = DB::select("
+            $leakageByCategory = DB::select('
                 SELECT
                     c.category_name as category,
                     COALESCE(SUM(w.estimated_loss), 0) as value,
@@ -147,7 +147,7 @@ class DashboardController extends Controller
                 WHERE w.date_recorded >= ?
                 GROUP BY c.category_id, c.category_name
                 ORDER BY value DESC
-            ", [$startDate]);
+            ', [$startDate]);
 
             $totalLeakage = array_sum(array_column($leakageByCategory, 'value'));
             foreach ($leakageByCategory as &$item) {
@@ -171,7 +171,7 @@ class DashboardController extends Controller
             ];
 
             // Top wasted products
-            $topWastedProducts = DB::select("
+            $topWastedProducts = DB::select('
                 SELECT
                     w.product_id,
                     p.product_name as name,
@@ -183,7 +183,7 @@ class DashboardController extends Controller
                 GROUP BY w.product_id, p.product_name
                 ORDER BY loss DESC
                 LIMIT 10
-            ", [$startDate]);
+            ', [$startDate]);
 
             // Payment method breakdown
             $paymentBreakdown = SalesTransaction::where('status', 'Completed')

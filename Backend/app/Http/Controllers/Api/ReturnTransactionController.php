@@ -4,18 +4,17 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Concerns\ScopesTenant;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\RejectReturnTransactionRequest;
+use App\Http\Requests\Api\StoreReturnTransactionRequest;
+use App\Http\Resources\ReturnTransactionResource;
+use App\Models\AuditLog;
+use App\Models\Inventory;
 use App\Models\ReturnTransaction;
 use App\Models\SalesItem;
 use App\Models\SalesTransaction;
-use App\Models\Inventory;
 use App\Models\StockMovement;
-use App\Models\AuditLog;
-use App\Http\Requests\Api\StoreReturnTransactionRequest;
-use App\Http\Requests\Api\RejectReturnTransactionRequest;
-use App\Http\Resources\ReturnTransactionResource;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 
 class ReturnTransactionController extends Controller
 {
@@ -43,6 +42,7 @@ class ReturnTransactionController extends Controller
         }
 
         $perPage = min((int) $request->input('per_page', 20), 100);
+
         return response()->json(
             $query->orderByDesc('return_date')->paginate($perPage)->through(fn ($r) => (new ReturnTransactionResource($r))->resolve($request))
         );
@@ -62,7 +62,7 @@ class ReturnTransactionController extends Controller
         $query = $this->scopeForBusinessAndBranch($query, $request);
         $originalSale = $query->first();
 
-        if (!$originalSale) {
+        if (! $originalSale) {
             return response()->json(['message' => 'Original sale not found in your scope.'], 404);
         }
 
@@ -72,7 +72,7 @@ class ReturnTransactionController extends Controller
         $daysSinceSale = $saleDate->diffInDays($returnDate, false);
         $isWithin7Days = $daysSinceSale <= 7;
 
-        if (!$isWithin7Days && !in_array($data['return_reason_code'], ['defective', 'damaged', 'expired'])) {
+        if (! $isWithin7Days && ! in_array($data['return_reason_code'], ['defective', 'damaged', 'expired'])) {
             return response()->json([
                 'message' => 'Returns beyond 7 days are only allowed for defective, damaged, or expired items (RA 7394).',
                 'days_since_sale' => $daysSinceSale,
@@ -95,7 +95,7 @@ class ReturnTransactionController extends Controller
 
         // Calculate refund amount (proportional to original price paid)
         $originalSubtotal = $saleItem->subtotal;
-        $unitRefund = $data['quantity_returned'] > 0 
+        $unitRefund = $data['quantity_returned'] > 0
             ? round(($originalSubtotal / $saleItem->quantity), 2)
             : 0;
         $refundAmount = round($unitRefund * $data['quantity_returned'], 2);
@@ -122,28 +122,28 @@ class ReturnTransactionController extends Controller
         }
 
         StockMovement::create([
-            'business_id'   => $user?->business_id,
-            'branch_id'     => $user?->branch_id,
-            'product_id'    => $saleItem->product_id,
-            'batch_id'      => $saleItem->batch_id ?? null,
-            'user_id'       => $userId,
+            'business_id' => $user?->business_id,
+            'branch_id' => $user?->branch_id,
+            'product_id' => $saleItem->product_id,
+            'batch_id' => $saleItem->batch_id ?? null,
+            'user_id' => $userId,
             'movement_type' => 'Return',
-            'quantity'      => $data['quantity_returned'],
-            'remarks'       => 'Return: ' . ($data['return_reason_code'] ?? $data['reason'] ?? ''),
+            'quantity' => $data['quantity_returned'],
+            'remarks' => 'Return: '.($data['return_reason_code'] ?? $data['reason'] ?? ''),
             'movement_date' => now(),
-            'sale_item_id'  => $data['sale_item_id'],
+            'sale_item_id' => $data['sale_item_id'],
         ]);
 
         AuditLog::create([
-            'user_id'       => $userId,
-            'action'        => "Return: {$data['quantity_returned']} units of {$saleItem->product?->product_name}, refund {$refundAmount}, reason: {$data['return_reason_code']}",
-            'entity_type'   => 'Return',
-            'entity_id'     => $return->return_id,
-            'old_values'    => null,
-            'new_values'    => json_encode($data),
-            'created_at'    => now(),
-            'business_id'   => $user?->business_id,
-            'branch_id'     => $user?->branch_id,
+            'user_id' => $userId,
+            'action' => "Return: {$data['quantity_returned']} units of {$saleItem->product?->product_name}, refund {$refundAmount}, reason: {$data['return_reason_code']}",
+            'entity_type' => 'Return',
+            'entity_id' => $return->return_id,
+            'old_values' => null,
+            'new_values' => json_encode($data),
+            'created_at' => now(),
+            'business_id' => $user?->business_id,
+            'branch_id' => $user?->branch_id,
         ]);
 
         return response()->json([
@@ -174,14 +174,14 @@ class ReturnTransactionController extends Controller
         ]);
 
         AuditLog::create([
-            'user_id'     => $user?->User_id ?? 1,
-            'action'      => "Return #{$id} approved",
+            'user_id' => $user?->User_id ?? 1,
+            'action' => "Return #{$id} approved",
             'entity_type' => 'Return',
-            'entity_id'   => $id,
-            'new_values'  => json_encode(['status' => 'approved']),
-            'created_at'  => now(),
+            'entity_id' => $id,
+            'new_values' => json_encode(['status' => 'approved']),
+            'created_at' => now(),
             'business_id' => $user?->business_id,
-            'branch_id'   => $user?->branch_id,
+            'branch_id' => $user?->branch_id,
         ]);
 
         return response()->json([
@@ -213,14 +213,14 @@ class ReturnTransactionController extends Controller
         ]);
 
         AuditLog::create([
-            'user_id'       => $user?->User_id ?? 1,
-            'action'        => "Return #{$id} rejected: {$data['rejection_reason']}",
-            'entity_type'   => 'Return',
-            'entity_id'     => $id,
-            'new_values'    => json_encode(['status' => 'rejected', 'reason' => $data['rejection_reason']]),
-            'created_at'    => now(),
-            'business_id'   => $user?->business_id,
-            'branch_id'     => $user?->branch_id,
+            'user_id' => $user?->User_id ?? 1,
+            'action' => "Return #{$id} rejected: {$data['rejection_reason']}",
+            'entity_type' => 'Return',
+            'entity_id' => $id,
+            'new_values' => json_encode(['status' => 'rejected', 'reason' => $data['rejection_reason']]),
+            'created_at' => now(),
+            'business_id' => $user?->business_id,
+            'branch_id' => $user?->branch_id,
         ]);
 
         return response()->json([

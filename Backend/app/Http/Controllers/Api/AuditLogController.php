@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\AuditLog;
 use App\Http\Resources\AuditLogResource;
+use App\Models\AuditLog;
 use Illuminate\Http\Request;
 
 class AuditLogController extends Controller
@@ -16,8 +16,8 @@ class AuditLogController extends Controller
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('action', 'like', "%{$search}%")
-                  ->orWhere('entity_type', 'like', "%{$search}%")
-                  ->orWhereHas('user', fn ($u) => $u->where('Full_name', 'like', "%{$search}%"));
+                    ->orWhere('entity_type', 'like', "%{$search}%")
+                    ->orWhereHas('user', fn ($u) => $u->where('Full_name', 'like', "%{$search}%"));
             });
         }
 

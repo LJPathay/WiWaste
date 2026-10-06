@@ -7,10 +7,13 @@ use Illuminate\Database\Eloquent\Model;
 class Inventory extends Model
 {
     protected $table = 'Inventory';
+
     protected $primaryKey = 'inventory_id';
+
     public $timestamps = true;
 
     const UPDATED_AT = 'last_updated';
+
     const CREATED_AT = null;
 
     protected $fillable = [
@@ -23,9 +26,16 @@ class Inventory extends Model
 
     public static function calcStatus(int $stock, int $reorderLevel): string
     {
-        if ($stock <= 0) return 'Out of Stock';
-        if ($stock <= $reorderLevel) return 'Low Stock';
-        if ($stock > $reorderLevel * 5) return 'Overstock';
+        if ($stock <= 0) {
+            return 'Out of Stock';
+        }
+        if ($stock <= $reorderLevel) {
+            return 'Low Stock';
+        }
+        if ($stock > $reorderLevel * 5) {
+            return 'Overstock';
+        }
+
         return 'Normal';
     }
 

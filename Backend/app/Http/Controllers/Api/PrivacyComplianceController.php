@@ -3,16 +3,18 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\CreateDataBreachIncidentRequest;
+use App\Http\Requests\Api\CreateDataSubjectRequestRequest;
+use App\Http\Requests\Api\ResolveDataBreachIncidentRequest;
+use App\Http\Resources\DataBreachIncidentResource;
+use App\Http\Resources\DataSubjectRequestResource;
 use App\Models\AuditLog;
 use App\Models\DataBreachIncident;
 use App\Models\DataSubjectRequest;
 use App\Models\PrivacyProcessingRecord;
-use App\Http\Requests\Api\CreateDataSubjectRequestRequest;
-use App\Http\Requests\Api\CreateDataBreachIncidentRequest;
-use App\Http\Requests\Api\ResolveDataBreachIncidentRequest;
-use App\Http\Resources\DataSubjectRequestResource;
-use App\Http\Resources\DataBreachIncidentResource;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -177,7 +179,7 @@ class PrivacyComplianceController extends Controller
     /**
      * Mean days between a record being raised and it being closed out.
      *
-     * @param  \Illuminate\Support\Collection<int, \Illuminate\Database\Eloquent\Model>  $rows
+     * @param  Collection<int, Model>  $rows
      */
     private function avgResolutionDays($rows, string $from = 'requested_at', string $to = 'completed_at'): float
     {

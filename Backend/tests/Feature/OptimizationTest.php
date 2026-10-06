@@ -23,12 +23,12 @@ class OptimizationTest extends TestCase
     private function makeUser(): User
     {
         return User::create([
-            'Full_name'  => 'Test Owner',
-            'username'   => 'opt-owner',
-            'password'   => bcrypt('password'),
-            'email'      => 'opt@test.com',
-            'role'       => 'Owner',
-            'status'     => 'Active',
+            'Full_name' => 'Test Owner',
+            'username' => 'opt-owner',
+            'password' => bcrypt('password'),
+            'email' => 'opt@test.com',
+            'role' => 'Owner',
+            'status' => 'Active',
             'Created_at' => now(),
         ]);
     }
@@ -41,29 +41,29 @@ class OptimizationTest extends TestCase
 
     private function makeProduct(array $overrides = []): Product
     {
-        $category = Category::create(['Category_name' => 'Opt Cat ' . random_int(1000, 9999)]);
+        $category = Category::create(['Category_name' => 'Opt Cat '.random_int(1000, 9999)]);
         $supplier = Supplier::create([
-            'supplier_name'  => 'Opt Supplier',
+            'supplier_name' => 'Opt Supplier',
             'contact_number' => '09171234567',
         ]);
 
         $product = Product::create(array_merge([
-            'category_id'     => $category->Category_id,
-            'supplier_id'     => $supplier->supplier_id,
-            'barcode'         => '480' . str_pad((string) random_int(0, 999999999), 9, '0', STR_PAD_LEFT),
-            'product_name'    => 'Opt Product ' . random_int(100, 999),
-            'cost_price'      => 10.00,
-            'selling_price'   => 15.00,
-            'reorder_level'   => 5,
+            'category_id' => $category->Category_id,
+            'supplier_id' => $supplier->supplier_id,
+            'barcode' => '480'.str_pad((string) random_int(0, 999999999), 9, '0', STR_PAD_LEFT),
+            'product_name' => 'Opt Product '.random_int(100, 999),
+            'cost_price' => 10.00,
+            'selling_price' => 15.00,
+            'reorder_level' => 5,
             'expiration_date' => now()->addDays(45),
-            'status'          => 'Active',
+            'status' => 'Active',
         ], $overrides));
 
         Inventory::create([
-            'product_id'    => $product->product_id,
+            'product_id' => $product->product_id,
             'current_stock' => 3,
-            'stock_status'  => 'Normal',
-            'last_updated'  => now(),
+            'stock_status' => 'Normal',
+            'last_updated' => now(),
         ]);
 
         return $product;
@@ -72,14 +72,14 @@ class OptimizationTest extends TestCase
     private function addForecast(Product $product, float $demand = 48.0): void
     {
         ForecastResult::create([
-            'product_id'      => $product->product_id,
+            'product_id' => $product->product_id,
             'forecast_period' => now()->toDateString(),
-            'predicted_demand'=> $demand,
-            'lower_bound'     => $demand * 0.8,
-            'upper_bound'     => $demand * 1.2,
-            'confidence'      => 0.9,
-            'overstock_risk'  => 'Medium',
-            'generated_date'  => now(),
+            'predicted_demand' => $demand,
+            'lower_bound' => $demand * 0.8,
+            'upper_bound' => $demand * 1.2,
+            'confidence' => 0.9,
+            'overstock_risk' => 'Medium',
+            'generated_date' => now(),
         ]);
     }
 
@@ -89,20 +89,20 @@ class OptimizationTest extends TestCase
 
         return [
             'plan' => [[
-                'product_id'      => $productId,
-                'product_name'    => $name,
-                'current_stock'   => 3,
+                'product_id' => $productId,
+                'product_name' => $name,
+                'current_stock' => 3,
                 'forecast_demand' => 48,
-                'order_qty'       => $orderQty,
-                'unit_cost'       => 45.0,
-                'order_value'     => $value,
+                'order_qty' => $orderQty,
+                'unit_cost' => 45.0,
+                'order_value' => $value,
             ]],
             'total_order_value' => $value,
-            'budget'            => 5000,
-            'fitness'           => 12.5,
-            'gen0_fitness'      => 900.0,
-            'generations_run'   => 200,
-            'confidence'        => 0.85,
+            'budget' => 5000,
+            'fitness' => 12.5,
+            'gen0_fitness' => 900.0,
+            'generations_run' => 200,
+            'confidence' => 0.85,
         ];
     }
 
@@ -134,12 +134,12 @@ class OptimizationTest extends TestCase
             ->assertJsonPath('plan.0.order_qty', 20);
 
         $this->assertDatabaseHas('Inventory_Recommendation', [
-            'product_id'          => $product->product_id,
-            'current_stock'       => 3,
-            'recommended_stock'   => 23,
+            'product_id' => $product->product_id,
+            'current_stock' => 3,
+            'recommended_stock' => 23,
             'recommendation_type' => 'Reorder',
-            'confidence_score'    => 0.85,
-            'status'              => 'pending',
+            'confidence_score' => 0.85,
+            'status' => 'pending',
         ]);
     }
 

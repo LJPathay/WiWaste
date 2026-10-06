@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Requests\Api\CreateProductRequest;
-use App\Http\Requests\Api\UpdateProductRequest;
 use App\Http\Controllers\Concerns\ScopesTenant;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\CreateProductRequest;
+use App\Http\Requests\Api\UpdateProductRequest;
 use App\Http\Resources\ProductResource;
-use App\Models\Product;
-use App\Models\Inventory;
 use App\Models\AuditLog;
+use App\Models\Inventory;
+use App\Models\Product;
 use Illuminate\Http\Request;
 use Picqer\Barcode\BarcodeGeneratorPNG;
 use Picqer\Barcode\BarcodeGeneratorSVG;
@@ -27,7 +27,7 @@ class ProductController extends Controller
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('product_name', 'like', "%{$search}%")
-                  ->orWhere('barcode', 'like', "%{$search}%");
+                    ->orWhere('barcode', 'like', "%{$search}%");
             });
         }
 
@@ -57,7 +57,7 @@ class ProductController extends Controller
         $data = $request->validated();
 
         // Auto-assign business_id from user if not provided
-        if (!isset($data['business_id']) && $user && $user->business_id) {
+        if (! isset($data['business_id']) && $user && $user->business_id) {
             $data['business_id'] = $user->business_id;
         }
 
@@ -69,7 +69,7 @@ class ProductController extends Controller
         // Auto-create inventory record
         $stockStatus = $initialStock <= 0 ? 'Low Stock' : ($initialStock > 100 ? 'Overstock' : 'Normal');
         $inventoryData = [
-            'product_id'   => $product->product_id,
+            'product_id' => $product->product_id,
             'current_stock' => $initialStock,
             'stock_status' => $stockStatus,
             'last_updated' => now(),
@@ -85,15 +85,15 @@ class ProductController extends Controller
         Inventory::create($inventoryData);
 
         AuditLog::create([
-            'user_id'       => $user?->User_id ?? 1,
-            'action'        => "Created product \"{$product->product_name}\"",
-            'entity_type'   => 'Product',
-            'entity_id'     => $product->product_id,
-            'old_values'    => null,
-            'new_values'    => json_encode($data),
-            'created_at'    => now(),
-            'business_id'   => $user?->business_id,
-            'branch_id'     => $user?->branch_id,
+            'user_id' => $user?->User_id ?? 1,
+            'action' => "Created product \"{$product->product_name}\"",
+            'entity_type' => 'Product',
+            'entity_id' => $product->product_id,
+            'old_values' => null,
+            'new_values' => json_encode($data),
+            'created_at' => now(),
+            'business_id' => $user?->business_id,
+            'branch_id' => $user?->branch_id,
         ]);
 
         $product->load(['category', 'supplier', 'inventory']);
@@ -122,15 +122,15 @@ class ProductController extends Controller
         $product->update($data);
 
         AuditLog::create([
-            'user_id'       => $request->user()?->User_id ?? 1,
-            'action'        => "Updated product \"{$product->product_name}\"",
-            'entity_type'   => 'Product',
-            'entity_id'     => $product->product_id,
-            'old_values'    => json_encode($oldValues),
-            'new_values'    => json_encode($data),
-            'created_at'    => now(),
-            'business_id'   => $request->user()?->business_id,
-            'branch_id'     => $request->user()?->branch_id,
+            'user_id' => $request->user()?->User_id ?? 1,
+            'action' => "Updated product \"{$product->product_name}\"",
+            'entity_type' => 'Product',
+            'entity_id' => $product->product_id,
+            'old_values' => json_encode($oldValues),
+            'new_values' => json_encode($data),
+            'created_at' => now(),
+            'business_id' => $request->user()?->business_id,
+            'branch_id' => $request->user()?->branch_id,
         ]);
 
         return response()->json(['message' => 'Product updated.']);
@@ -146,20 +146,20 @@ class ProductController extends Controller
         $product->update(['status' => $newStatus]);
 
         AuditLog::create([
-            'user_id'       => $request->user()?->User_id ?? 1,
-            'action'        => "Product \"{$product->product_name}\" {$newStatus}",
-            'entity_type'   => 'Product',
-            'entity_id'     => $product->product_id,
-            'old_values'    => json_encode(['status' => $product->getOriginal()['status'] ?? 'Active']),
-            'new_values'    => json_encode(['status' => $newStatus]),
-            'created_at'    => now(),
-            'business_id'   => $request->user()?->business_id,
-            'branch_id'     => $request->user()?->branch_id,
+            'user_id' => $request->user()?->User_id ?? 1,
+            'action' => "Product \"{$product->product_name}\" {$newStatus}",
+            'entity_type' => 'Product',
+            'entity_id' => $product->product_id,
+            'old_values' => json_encode(['status' => $product->getOriginal()['status'] ?? 'Active']),
+            'new_values' => json_encode(['status' => $newStatus]),
+            'created_at' => now(),
+            'business_id' => $request->user()?->business_id,
+            'branch_id' => $request->user()?->branch_id,
         ]);
 
         return response()->json([
             'message' => $newStatus === 'Discontinued' ? 'Product discontinued/archived.' : 'Product re-activated.',
-            'status'  => $newStatus,
+            'status' => $newStatus,
         ]);
     }
 
@@ -170,11 +170,11 @@ class ProductController extends Controller
 
         $product = $query->where('barcode', $code)->first();
 
-        if (!$product && is_numeric($code) && strlen($code) <= 6) {
+        if (! $product && is_numeric($code) && strlen($code) <= 6) {
             $product = $query->find((int) $code);
         }
 
-        if (!$product) {
+        if (! $product) {
             return response()->json(['message' => 'Product not found.'], 404);
         }
 
@@ -191,18 +191,19 @@ class ProductController extends Controller
         $format = $request->query('format', 'png');
 
         if ($format === 'svg') {
-            $generator = new BarcodeGeneratorSVG();
+            $generator = new BarcodeGeneratorSVG;
             $barcodeImage = $generator->getBarcode($barcode, $generator::TYPE_CODE_128, 2, 50);
+
             return response($barcodeImage)
                 ->header('Content-Type', 'image/svg+xml')
-                ->header('Content-Disposition', 'inline; filename="label-' . $barcode . '.svg"');
+                ->header('Content-Disposition', 'inline; filename="label-'.$barcode.'.svg"');
         }
 
-        $generator = new BarcodeGeneratorPNG();
+        $generator = new BarcodeGeneratorPNG;
         $barcodeImage = $generator->getBarcode($barcode, $generator::TYPE_CODE_128, 2, 50);
 
         return response($barcodeImage)
             ->header('Content-Type', 'image/png')
-            ->header('Content-Disposition', 'inline; filename="label-' . $barcode . '.png"');
+            ->header('Content-Disposition', 'inline; filename="label-'.$barcode.'.png"');
     }
 }

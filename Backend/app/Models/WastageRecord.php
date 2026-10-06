@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 class WastageRecord extends Model
 {
     protected $table = 'Wastage_Record';
+
     protected $primaryKey = 'wastage_id';
+
     public $timestamps = false;
 
     protected $fillable = [
@@ -106,12 +108,12 @@ class WastageRecord extends Model
     public function getClassification(): string
     {
         $typeMap = [
-            'Expired'  => 'expiry',
-            'Damaged'  => 'physical',
-            'Spoiled'  => 'quality',
-            'Lost'     => 'shrinkage',
+            'Expired' => 'expiry',
+            'Damaged' => 'physical',
+            'Spoiled' => 'quality',
+            'Lost' => 'shrinkage',
             'Recalled' => 'recall',
-            'Other'    => 'other',
+            'Other' => 'other',
         ];
 
         return $typeMap[$this->wastage_type] ?? 'other';

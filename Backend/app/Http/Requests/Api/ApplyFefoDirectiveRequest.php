@@ -14,9 +14,9 @@ class ApplyFefoDirectiveRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'batch_id'       => 'required|integer|exists:FEFO_Batch,batch_id',
-            'action'         => 'required|in:flag,clear,notify',
-            'directive_notes'=> 'nullable|string|max:500',
+            'batch_id' => 'required|integer|exists:FEFO_Batch,batch_id',
+            'action' => 'required|in:flag,clear,notify',
+            'directive_notes' => 'nullable|string|max:500',
         ];
     }
 }

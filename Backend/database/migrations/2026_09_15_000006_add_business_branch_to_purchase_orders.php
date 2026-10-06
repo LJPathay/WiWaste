@@ -9,10 +9,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('purchase_order', function (Blueprint $table) {
-            if (!Schema::hasColumn('purchase_order', 'business_id')) {
+            if (! Schema::hasColumn('purchase_order', 'business_id')) {
                 $table->foreignId('business_id')->nullable()->constrained('businesses')->onDelete('cascade')->after('supplier_id');
             }
-            if (!Schema::hasColumn('purchase_order', 'branch_id')) {
+            if (! Schema::hasColumn('purchase_order', 'branch_id')) {
                 $table->foreignId('branch_id')->nullable()->constrained('branches')->onDelete('cascade')->after('business_id');
             }
         });
@@ -22,9 +22,13 @@ return new class extends Migration
     {
         Schema::table('purchase_order', function (Blueprint $table) {
             $columns = [];
-            if (Schema::hasColumn('purchase_order', 'business_id')) $columns[] = 'business_id';
-            if (Schema::hasColumn('purchase_order', 'branch_id')) $columns[] = 'branch_id';
-            if (!empty($columns)) {
+            if (Schema::hasColumn('purchase_order', 'business_id')) {
+                $columns[] = 'business_id';
+            }
+            if (Schema::hasColumn('purchase_order', 'branch_id')) {
+                $columns[] = 'branch_id';
+            }
+            if (! empty($columns)) {
                 $table->dropForeign(['business_id']);
                 $table->dropForeign(['branch_id']);
                 $table->dropColumn($columns);

@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\InventoryRecommendation;
-use App\Models\AuditLog;
 use App\Http\Requests\Api\RejectRecommendationRequest;
 use App\Http\Resources\InventoryRecommendationResource;
+use App\Models\AuditLog;
+use App\Models\InventoryRecommendation;
 use Illuminate\Http\Request;
 
 class RecommendationController extends Controller
@@ -43,13 +43,13 @@ class RecommendationController extends Controller
         $recommendation->save();
 
         AuditLog::create([
-            'user_id'     => $recommendation->reviewed_by,
-            'action'      => "Approved recommendation: {$recommendation->recommendation_type} for {$recommendation->product?->product_name}",
+            'user_id' => $recommendation->reviewed_by,
+            'action' => "Approved recommendation: {$recommendation->recommendation_type} for {$recommendation->product?->product_name}",
             'entity_type' => 'Inventory_Recommendation',
-            'entity_id'   => $recommendation->recommendation_id,
-            'old_values'  => json_encode(['status' => 'pending']),
-            'new_values'  => json_encode(['status' => 'approved']),
-            'created_at'  => now(),
+            'entity_id' => $recommendation->recommendation_id,
+            'old_values' => json_encode(['status' => 'pending']),
+            'new_values' => json_encode(['status' => 'approved']),
+            'created_at' => now(),
         ]);
 
         return response()->json(['message' => 'Recommendation approved.']);
@@ -68,13 +68,13 @@ class RecommendationController extends Controller
         $recommendation->save();
 
         AuditLog::create([
-            'user_id'     => $recommendation->reviewed_by,
-            'action'      => "Rejected recommendation: {$recommendation->recommendation_type} for {$recommendation->product?->product_name} â€” {$data['rejection_reason']}",
+            'user_id' => $recommendation->reviewed_by,
+            'action' => "Rejected recommendation: {$recommendation->recommendation_type} for {$recommendation->product?->product_name} â€” {$data['rejection_reason']}",
             'entity_type' => 'Inventory_Recommendation',
-            'entity_id'   => $recommendation->recommendation_id,
-            'old_values'  => json_encode(['status' => 'pending']),
-            'new_values'  => json_encode(['status' => 'rejected', 'rejection_reason' => $data['rejection_reason']]),
-            'created_at'  => now(),
+            'entity_id' => $recommendation->recommendation_id,
+            'old_values' => json_encode(['status' => 'pending']),
+            'new_values' => json_encode(['status' => 'rejected', 'rejection_reason' => $data['rejection_reason']]),
+            'created_at' => now(),
         ]);
 
         return response()->json(['message' => 'Recommendation rejected.']);

@@ -14,6 +14,5 @@ class AnomalyDetected
         public readonly string $description,
         public readonly string $severity = 'warning',
         public readonly array $data = [],
-    ) {
-    }
+    ) {}
 }

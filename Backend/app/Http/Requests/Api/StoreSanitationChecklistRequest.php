@@ -15,15 +15,15 @@ class StoreSanitationChecklistRequest extends FormRequest
     {
         return [
             'business_id' => 'sometimes|integer|exists:businesses,id',
-            'branch_id'   => 'sometimes|integer|exists:branches,id',
+            'branch_id' => 'sometimes|integer|exists:branches,id',
             'checklist_date' => 'required|date',
-            'frequency'   => 'required|in:daily,weekly,monthly',
-            'area'        => 'required|in:receiving,storage,preparation,dispensing,waste,general',
-            'checks'      => 'required|array|min:1',
-            'checks.*.item'       => 'required|string|max:255',
-            'checks.*.passed'     => 'required|boolean',
-            'checks.*.notes'      => 'nullable|string|max:500',
-            'checks.*.photo_url'  => 'nullable|string|max:500',
+            'frequency' => 'required|in:daily,weekly,monthly',
+            'area' => 'required|in:receiving,storage,preparation,dispensing,waste,general',
+            'checks' => 'required|array|min:1',
+            'checks.*.item' => 'required|string|max:255',
+            'checks.*.passed' => 'required|boolean',
+            'checks.*.notes' => 'nullable|string|max:500',
+            'checks.*.photo_url' => 'nullable|string|max:500',
             'notes' => 'nullable|string|max:1000',
         ];
     }

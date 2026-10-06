@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 class DataPurgeLog extends Model
 {
     protected $table = 'data_purge_logs';
+
     protected $primaryKey = 'log_id';
+
     public $timestamps = true;
 
     protected $fillable = [

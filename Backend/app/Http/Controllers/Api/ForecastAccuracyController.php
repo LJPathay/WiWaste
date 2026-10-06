@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use App\Models\ForecastAccuracy;
 use App\Http\Requests\Api\StoreForecastAccuracyRequest;
 use App\Http\Resources\ForecastAccuracyResource;
+use App\Models\ForecastAccuracy;
+use App\Models\Inventory;
 
 class ForecastAccuracyController extends Controller
 {
@@ -42,7 +42,7 @@ class ForecastAccuracyController extends Controller
 
         // Eager-load the product so the loop below never issues one query per
         // inventory row just to resolve a product name.
-        $inventories = \App\Models\Inventory::with('product')->get();
+        $inventories = Inventory::with('product')->get();
         foreach ($inventories as $inventory) {
             $mape = ForecastAccuracy::rollingMape($inventory->product_id, 7);
             if ($mape && $mape > 30) {

@@ -19,6 +19,7 @@ class TrackAccuracy extends Command
 
             if ($products->isEmpty()) {
                 $this->info('No products to track.');
+
                 return self::SUCCESS;
             }
 
@@ -30,7 +31,7 @@ class TrackAccuracy extends Command
                     ->whereDate('forecast_date', now()->subDay())
                     ->first();
 
-                if (!$yesterdayForecast) {
+                if (! $yesterdayForecast) {
                     continue;
                 }
 
@@ -58,9 +59,11 @@ class TrackAccuracy extends Command
             }
 
             $this->info("Tracked accuracy for {$tracked} product(s).");
+
             return self::SUCCESS;
         } catch (\Exception $e) {
             $this->error("Accuracy tracking failed: {$e->getMessage()}");
+
             return self::FAILURE;
         }
     }

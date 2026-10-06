@@ -12,7 +12,7 @@ class CompressResponse
     {
         $response = $next($request);
 
-        if (!$this->shouldCompress($request, $response)) {
+        if (! $this->shouldCompress($request, $response)) {
             return $response;
         }
 
@@ -41,12 +41,12 @@ class CompressResponse
         }
 
         $acceptEncoding = $request->headers->get('Accept-Encoding', '');
-        if (!str_contains($acceptEncoding, 'gzip')) {
+        if (! str_contains($acceptEncoding, 'gzip')) {
             return false;
         }
 
         $contentType = $response->headers->get('Content-Type', '');
-        if (!str_contains($contentType, 'json') && !str_contains($contentType, 'text') && !str_contains($contentType, 'javascript')) {
+        if (! str_contains($contentType, 'json') && ! str_contains($contentType, 'text') && ! str_contains($contentType, 'javascript')) {
             return false;
         }
 

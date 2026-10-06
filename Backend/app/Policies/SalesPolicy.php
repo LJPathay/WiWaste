@@ -3,8 +3,8 @@
 namespace App\Policies;
 
 use App\Enums\Role;
-use App\Models\User;
 use App\Models\SalesTransaction;
+use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class SalesPolicy
@@ -24,6 +24,7 @@ class SalesPolicy
         if ($user->role === 'Cashier') {
             return $sale->user_id === $user->User_id;
         }
+
         return false;
     }
 

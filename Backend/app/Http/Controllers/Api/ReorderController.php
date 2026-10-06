@@ -3,19 +3,14 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Services\ReorderService;
-use App\Models\PurchaseOrder;
-use App\Models\PurchaseOrderItem;
 use App\Http\Requests\Api\ApproveReorderRequest;
 use App\Http\Requests\Api\AutoApproveReorderRequest;
+use App\Services\ReorderService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class ReorderController extends Controller
 {
-    public function __construct(private readonly ReorderService $reorderService)
-    {
-    }
+    public function __construct(private readonly ReorderService $reorderService) {}
 
     public function index(Request $request)
     {
@@ -53,7 +48,7 @@ class ReorderController extends Controller
         $createdPOs = $this->reorderService->createDraftPOs($data['suggestions'], $user->User_id);
 
         return response()->json([
-            'message' => count($createdPOs) . ' draft purchase orders created.',
+            'message' => count($createdPOs).' draft purchase orders created.',
             'purchase_orders' => $createdPOs,
         ], 201);
     }
@@ -75,16 +70,16 @@ class ReorderController extends Controller
         foreach ($suggestions['suggestions'] as $supplier) {
             $totalCost = $supplier['estimated_total_cost'];
             $itemCount = $supplier['total_items'];
-            
+
             $meetsCriteria = true;
-            
+
             if (isset($data['criteria']['max_cost_per_po']) && $totalCost > $data['criteria']['max_cost_per_po']) {
                 $meetsCriteria = false;
             }
             if (isset($data['criteria']['min_items_per_po']) && $itemCount < $data['criteria']['min_items_per_po']) {
                 $meetsCriteria = false;
             }
-            
+
             if ($meetsCriteria) {
                 $approved[] = $supplier;
             }
@@ -97,7 +92,7 @@ class ReorderController extends Controller
         $createdPOs = $this->reorderService->createDraftPOs($approved, $request->user()->User_id);
 
         return response()->json([
-            'message' => count($createdPOs) . ' draft purchase orders auto-created.',
+            'message' => count($createdPOs).' draft purchase orders auto-created.',
             'purchase_orders' => $createdPOs,
         ], 201);
     }

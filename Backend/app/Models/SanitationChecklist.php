@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 class SanitationChecklist extends Model
 {
     protected $table = 'Sanitation_Checklists';
+
     protected $primaryKey = 'checklist_id';
+
     public $timestamps = true;
 
     protected $fillable = [

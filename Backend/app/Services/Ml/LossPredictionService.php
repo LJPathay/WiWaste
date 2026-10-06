@@ -3,6 +3,7 @@
 namespace App\Services\Ml;
 
 use App\Models\Product;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -15,9 +16,7 @@ class LossPredictionService
 
     public const CACHE_TTL = 3600;
 
-    public function __construct(private readonly MlServiceClient $ml)
-    {
-    }
+    public function __construct(private readonly MlServiceClient $ml) {}
 
     /**
      * Score every active product against the XGBoost loss-risk model and cache
@@ -52,19 +51,19 @@ class LossPredictionService
             $product = $byId->get($result['product_id']);
 
             return array_merge($result, [
-                'product_name'  => $product?->product_name ?? "Product #{$result['product_id']}",
-                'sku'           => $product?->barcode ?? '',
-                'category'      => $product?->category?->Category_name ?? '',
+                'product_name' => $product?->product_name ?? "Product #{$result['product_id']}",
+                'sku' => $product?->barcode ?? '',
+                'category' => $product?->category?->Category_name ?? '',
                 'current_stock' => (float) ($product?->inventory?->current_stock ?? 0),
-                'unit_cost'     => (float) ($product?->cost_price ?? 0),
-                'days_to_expiry'=> $this->daysToExpiry($product),
+                'unit_cost' => (float) ($product?->cost_price ?? 0),
+                'days_to_expiry' => $this->daysToExpiry($product),
             ]);
         })->values()->all();
 
         Cache::put(self::CACHE_KEY, [
             'generated_at' => now(),
-            'engine'       => 'xgboost',
-            'results'      => $enriched,
+            'engine' => 'xgboost',
+            'results' => $enriched,
         ], self::CACHE_TTL);
 
         return $enriched;
@@ -77,8 +76,8 @@ class LossPredictionService
     {
         return Cache::get(self::CACHE_KEY, [
             'generated_at' => null,
-            'engine'       => 'xgboost',
-            'results'      => [],
+            'engine' => 'xgboost',
+            'results' => [],
         ]);
     }
 
@@ -98,16 +97,16 @@ class LossPredictionService
         $totalSold = (float) ($salesTotals->get($product->product_id)?->total ?? 0);
 
         return [
-            'product_id'        => $product->product_id,
-            'category'          => $product->category?->Category_name ?? '',
-            'supplier'          => $product->supplier?->supplier_name ?? '',
-            'days_to_expiry'    => $this->daysToExpiry($product),
-            'current_stock'     => $currentStock,
-            'stock_status'      => $product->inventory?->stock_status ?? 'Normal',
+            'product_id' => $product->product_id,
+            'category' => $product->category?->Category_name ?? '',
+            'supplier' => $product->supplier?->supplier_name ?? '',
+            'days_to_expiry' => $this->daysToExpiry($product),
+            'current_stock' => $currentStock,
+            'stock_status' => $product->inventory?->stock_status ?? 'Normal',
             'sales_velocity_7d' => round((float) ($salesVelocity->get($product->product_id)?->total ?? 0) / 7, 4),
             'wastage_count_90d' => (int) ($wastageCounts->get($product->product_id)?->total ?? 0),
-            'turnover_rate'     => round($totalSold / max($currentStock, 1), 4),
-            'unit_cost'         => (float) ($product->cost_price ?? 0),
+            'turnover_rate' => round($totalSold / max($currentStock, 1), 4),
+            'unit_cost' => (float) ($product->cost_price ?? 0),
         ];
     }
 
@@ -152,7 +151,7 @@ class LossPredictionService
             return 365;
         }
 
-        $expiry = \Illuminate\Support\Carbon::parse($product->expiration_date);
+        $expiry = Carbon::parse($product->expiration_date);
 
         return max(0, (float) now()->diffInDays($expiry));
     }

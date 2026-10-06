@@ -2,8 +2,8 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -23,7 +23,7 @@ return new class extends Migration
             $firstName = $parts[0] ?? '';
             $surname = end($parts) ?? '';
             $middleParts = array_slice($parts, 1, -1);
-            $middleName = !empty($middleParts) ? implode(' ', $middleParts) : null;
+            $middleName = ! empty($middleParts) ? implode(' ', $middleParts) : null;
 
             // If only one name, it's the first name and surname is the same
             if (count($parts) <= 1) {
@@ -33,9 +33,9 @@ return new class extends Migration
             DB::table('User')
                 ->where('User_id', $user->User_id)
                 ->update([
-                    'first_name'     => $firstName,
-                    'middle_name'    => $middleName,
-                    'surname'        => $surname,
+                    'first_name' => $firstName,
+                    'middle_name' => $middleName,
+                    'surname' => $surname,
                     'contact_number' => null,
                 ]);
         }

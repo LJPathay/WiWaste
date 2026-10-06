@@ -15,11 +15,11 @@ class StoreStockCountRequest extends FormRequest
     {
         return [
             'business_id' => 'sometimes|integer|exists:businesses,id',
-            'branch_id'   => 'sometimes|integer|exists:branches,id',
-            'product_id'  => 'required|integer|exists:Product,product_id',
-            'batch_id'    => 'nullable|integer|exists:FEFO_Batch,batch_id',
+            'branch_id' => 'sometimes|integer|exists:branches,id',
+            'product_id' => 'required|integer|exists:Product,product_id',
+            'batch_id' => 'nullable|integer|exists:FEFO_Batch,batch_id',
             'counted_qty' => 'required|integer|min:0',
-            'notes'       => 'nullable|string|max:500',
+            'notes' => 'nullable|string|max:500',
         ];
     }
 }

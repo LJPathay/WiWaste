@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 class InventoryRecommendation extends Model
 {
     protected $table = 'Inventory_Recommendation';
+
     protected $primaryKey = 'recommendation_id';
+
     public $timestamps = false;
 
     protected $fillable = [

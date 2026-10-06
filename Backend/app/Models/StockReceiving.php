@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 class StockReceiving extends Model
 {
     protected $table = 'Stock_Receiving';
+
     protected $primaryKey = 'receiving_id';
+
     public $timestamps = true;
 
     protected $fillable = [

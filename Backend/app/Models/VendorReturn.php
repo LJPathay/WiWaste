@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 class VendorReturn extends Model
 {
     protected $table = 'Vendor_Returns';
+
     protected $primaryKey = 'vendor_return_id';
+
     public $timestamps = true;
 
     protected $fillable = [
@@ -108,7 +110,7 @@ class VendorReturn extends Model
         $this->update([
             'status' => 'rejected',
             'approved_by' => $approverId,
-            'notes' => ($this->notes ? $this->notes . "\n" : '') . "Rejected: {$reason}",
+            'notes' => ($this->notes ? $this->notes."\n" : '')."Rejected: {$reason}",
         ]);
     }
 

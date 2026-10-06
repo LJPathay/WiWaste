@@ -39,7 +39,7 @@ class CategoryController extends BaseApiController
         // sees the full set.
         if ($exclude = request()->get('exclude_status')) {
             $query->where('status', '!=', $exclude);
-        } elseif (!request()->has('status')) {
+        } elseif (! request()->has('status')) {
             $query->where('status', '!=', 'Archived');
         }
 
@@ -90,15 +90,15 @@ class CategoryController extends BaseApiController
         $category->update(['status' => $newStatus]);
 
         AuditLog::create([
-            'user_id'     => request()->user()?->User_id ?? null,
-            'action'      => "Category \"{$category->Category_name}\" {$newStatus}",
+            'user_id' => request()->user()?->User_id ?? null,
+            'action' => "Category \"{$category->Category_name}\" {$newStatus}",
             'entity_type' => 'Category',
-            'entity_id'   => $category->Category_id,
-            'old_values'  => json_encode(['status' => $oldStatus]),
-            'new_values'  => json_encode(['status' => $newStatus]),
-            'created_at'  => now(),
+            'entity_id' => $category->Category_id,
+            'old_values' => json_encode(['status' => $oldStatus]),
+            'new_values' => json_encode(['status' => $newStatus]),
+            'created_at' => now(),
             'business_id' => request()->user()?->business_id,
-            'branch_id'   => request()->user()?->branch_id,
+            'branch_id' => request()->user()?->branch_id,
         ]);
 
         return $this->success(

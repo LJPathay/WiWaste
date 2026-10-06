@@ -46,26 +46,26 @@ class WastageTest extends TestCase
         $inventory = $this->makeInventory($product, 100);
 
         $this->postJson('/api/v1/wastage', [
-            'product_id'     => $product->product_id,
-            'wastage_type'   => 'Expired',
-            'quantity'       => 5,
+            'product_id' => $product->product_id,
+            'wastage_type' => 'Expired',
+            'quantity' => 5,
             'estimated_loss' => 50,
-            'date_recorded'  => now()->toDateString(),
+            'date_recorded' => now()->toDateString(),
         ])->assertCreated()->assertJsonPath('message', 'Wastage recorded.');
 
         $this->assertSame(95, $inventory->fresh()->current_stock);
 
         $this->assertDatabaseHas('Wastage_Record', [
-            'product_id'   => $product->product_id,
+            'product_id' => $product->product_id,
             'wastage_type' => 'Expired',
-            'quantity'     => 5,
+            'quantity' => 5,
         ]);
 
         $this->assertDatabaseHas('Stock_Movement', [
-            'product_id'    => $product->product_id,
+            'product_id' => $product->product_id,
             'movement_type' => 'Stock Out',
-            'quantity'      => 5,
-            'remarks'       => 'Wastage: Expired',
+            'quantity' => 5,
+            'remarks' => 'Wastage: Expired',
         ]);
     }
 
@@ -76,11 +76,11 @@ class WastageTest extends TestCase
         $this->makeInventory($product, 10);
 
         $this->postJson('/api/v1/wastage', [
-            'product_id'     => $product->product_id,
-            'wastage_type'   => 'Damaged',
-            'quantity'       => 1,
+            'product_id' => $product->product_id,
+            'wastage_type' => 'Damaged',
+            'quantity' => 1,
             'estimated_loss' => 10,
-            'date_recorded'  => now()->toDateString(),
+            'date_recorded' => now()->toDateString(),
         ])->assertCreated();
 
         Bus::assertDispatched(WarmAnalyticsCache::class);
@@ -95,16 +95,16 @@ class WastageTest extends TestCase
         $this->makeInventory($product, 10);
 
         $this->postJson('/api/v1/wastage', [
-            'product_id'     => $product->product_id,
-            'wastage_type'   => 'Spoiled',
-            'quantity'       => 2,
+            'product_id' => $product->product_id,
+            'wastage_type' => 'Spoiled',
+            'quantity' => 2,
             'estimated_loss' => 20,
-            'date_recorded'  => now()->toDateString(),
+            'date_recorded' => now()->toDateString(),
         ])->assertCreated();
 
         $this->assertDatabaseHas('Wastage_Record', [
             'product_id' => $product->product_id,
-            'user_id'    => $user->User_id,
+            'user_id' => $user->User_id,
         ]);
     }
 
@@ -116,12 +116,12 @@ class WastageTest extends TestCase
         $batch = $this->makeBatch($product, 50, now()->addDays(5)->toDateString());
 
         $this->postJson('/api/v1/wastage', [
-            'product_id'     => $product->product_id,
-            'batch_id'       => $batch->batch_id,
-            'wastage_type'   => 'Expired',
-            'quantity'       => 5,
+            'product_id' => $product->product_id,
+            'batch_id' => $batch->batch_id,
+            'wastage_type' => 'Expired',
+            'quantity' => 5,
             'estimated_loss' => 50,
-            'date_recorded'  => now()->toDateString(),
+            'date_recorded' => now()->toDateString(),
         ])->assertCreated();
 
         $this->assertDatabaseHas('Stock_Movement', [
@@ -138,11 +138,11 @@ class WastageTest extends TestCase
         $inventory = $this->makeInventory($product, 3);
 
         $this->postJson('/api/v1/wastage', [
-            'product_id'     => $product->product_id,
-            'wastage_type'   => 'Damaged',
-            'quantity'       => 10,
+            'product_id' => $product->product_id,
+            'wastage_type' => 'Damaged',
+            'quantity' => 10,
             'estimated_loss' => 100,
-            'date_recorded'  => now()->toDateString(),
+            'date_recorded' => now()->toDateString(),
         ])->assertStatus(422);
 
         $this->assertSame(3, $inventory->fresh()->current_stock);
@@ -156,11 +156,11 @@ class WastageTest extends TestCase
         $this->makeInventory($product, 10);
 
         $this->postJson('/api/v1/wastage', [
-            'product_id'     => $product->product_id,
-            'wastage_type'   => 'Melted',
-            'quantity'       => 1,
+            'product_id' => $product->product_id,
+            'wastage_type' => 'Melted',
+            'quantity' => 1,
             'estimated_loss' => 10,
-            'date_recorded'  => now()->toDateString(),
+            'date_recorded' => now()->toDateString(),
         ])->assertStatus(422)->assertJsonValidationErrors('wastage_type');
     }
 
@@ -175,15 +175,15 @@ class WastageTest extends TestCase
             $this->makeInventory($product, 10);
 
             $this->postJson('/api/v1/wastage', [
-                'product_id'     => $product->product_id,
-                'wastage_type'   => $type,
-                'quantity'       => 1,
+                'product_id' => $product->product_id,
+                'wastage_type' => $type,
+                'quantity' => 1,
                 'estimated_loss' => 10,
-                'date_recorded'  => now()->toDateString(),
+                'date_recorded' => now()->toDateString(),
             ])->assertCreated();
 
             $this->assertDatabaseHas('Wastage_Record', [
-                'product_id'   => $product->product_id,
+                'product_id' => $product->product_id,
                 'wastage_type' => $type,
             ]);
         }
@@ -196,11 +196,11 @@ class WastageTest extends TestCase
         $this->makeInventory($product, 10);
 
         $this->postJson('/api/v1/wastage', [
-            'product_id'     => $product->product_id,
-            'wastage_type'   => 'Expired',
-            'quantity'       => 0,
+            'product_id' => $product->product_id,
+            'wastage_type' => 'Expired',
+            'quantity' => 0,
             'estimated_loss' => 10,
-            'date_recorded'  => now()->toDateString(),
+            'date_recorded' => now()->toDateString(),
         ])->assertStatus(422)->assertJsonValidationErrors('quantity');
     }
 
@@ -214,12 +214,12 @@ class WastageTest extends TestCase
 
         foreach (['Expired' => 3, 'Damaged' => 2] as $type => $daysAgo) {
             WastageRecord::create([
-                'product_id'     => $product->product_id,
-                'user_id'        => $this->makeInventoryUser('Inventory')->User_id,
-                'wastage_type'   => $type,
-                'quantity'       => 1,
+                'product_id' => $product->product_id,
+                'user_id' => $this->makeInventoryUser('Inventory')->User_id,
+                'wastage_type' => $type,
+                'quantity' => 1,
                 'estimated_loss' => 10,
-                'date_recorded'  => now()->subDays($daysAgo),
+                'date_recorded' => now()->subDays($daysAgo),
             ]);
         }
 
@@ -242,9 +242,9 @@ class WastageTest extends TestCase
 
         $this->postJson('/api/v1/wastage-flags', [
             'product_id' => $product->product_id,
-            'quantity'   => 4,
-            'reason'     => 'damaged',
-            'notes'      => 'Crushed in the shelf.',
+            'quantity' => 4,
+            'reason' => 'damaged',
+            'notes' => 'Crushed in the shelf.',
         ])->assertCreated()->assertJsonPath('message', 'Wastage flagged for review.');
 
         $flag = WastageFlag::firstOrFail();
@@ -265,8 +265,8 @@ class WastageTest extends TestCase
 
         $this->postJson('/api/v1/wastage-flags', [
             'product_id' => $product->product_id,
-            'quantity'   => 1,
-            'reason'     => 'melted',
+            'quantity' => 1,
+            'reason' => 'melted',
         ])->assertStatus(422)->assertJsonValidationErrors('reason');
     }
 
@@ -281,8 +281,8 @@ class WastageTest extends TestCase
 
         $this->postJson('/api/v1/wastage-flags', [
             'product_id' => $product->product_id,
-            'quantity'   => 1,
-            'reason'     => 'damaged',
+            'quantity' => 1,
+            'reason' => 'damaged',
         ])->assertCreated();
 
         $this->assertNull(WastageFlag::firstOrFail()->business_id);
@@ -306,17 +306,17 @@ class WastageTest extends TestCase
         $this->assertSame('confirmed', $flag->fresh()->status);
 
         $this->assertDatabaseHas('Wastage_Record', [
-            'product_id'   => $product->product_id,
+            'product_id' => $product->product_id,
             'wastage_type' => 'Expired',
-            'quantity'     => 3,
+            'quantity' => 3,
             // 3 units at the product's 12.00 cost price.
             'estimated_loss' => 36,
         ]);
 
         $this->assertDatabaseHas('Stock_Movement', [
-            'product_id'    => $product->product_id,
+            'product_id' => $product->product_id,
             'movement_type' => 'Wastage',
-            'quantity'      => 3,
+            'quantity' => 3,
         ]);
     }
 
@@ -333,7 +333,7 @@ class WastageTest extends TestCase
         $this->postJson("/api/v1/wastage-flags/{$flag->flag_id}/confirm")->assertOk();
 
         $this->assertDatabaseHas('Wastage_Record', [
-            'product_id'   => $product->product_id,
+            'product_id' => $product->product_id,
             'wastage_type' => 'Recalled',
         ]);
         $this->assertSame('recall', WastageRecord::firstOrFail()->getClassification());
@@ -464,12 +464,12 @@ class WastageTest extends TestCase
     public function test_get_classification_maps_every_wastage_type(): void
     {
         $expected = [
-            'Expired'  => 'expiry',
-            'Damaged'  => 'physical',
-            'Spoiled'  => 'quality',
-            'Lost'     => 'shrinkage',
+            'Expired' => 'expiry',
+            'Damaged' => 'physical',
+            'Spoiled' => 'quality',
+            'Lost' => 'shrinkage',
             'Recalled' => 'recall',
-            'Other'    => 'other',
+            'Other' => 'other',
         ];
 
         foreach ($expected as $type => $classification) {
@@ -489,12 +489,12 @@ class WastageTest extends TestCase
     {
         return WastageFlag::create([
             'business_id' => $this->makeBusiness()->id,
-            'branch_id'   => $this->makeBranch()->id,
-            'product_id'  => $product->product_id,
-            'quantity'    => $quantity,
-            'reason'      => $reason,
-            'flagged_by'  => $this->makeInventoryUser('Cashier')->User_id,
-            'status'      => 'pending',
+            'branch_id' => $this->makeBranch()->id,
+            'product_id' => $product->product_id,
+            'quantity' => $quantity,
+            'reason' => $reason,
+            'flagged_by' => $this->makeInventoryUser('Cashier')->User_id,
+            'status' => 'pending',
         ]);
     }
 }

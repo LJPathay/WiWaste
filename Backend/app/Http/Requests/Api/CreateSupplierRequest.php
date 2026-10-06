@@ -21,29 +21,29 @@ class CreateSupplierRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'supplier_name'    => 'required|string|max:150',
-            'contact_person'   => 'required|string|max:100',
-            'contact_number'   => ['required', 'string', 'regex:/^\d{11}$/'],
-            'email'            => 'required|email|max:150',
-            'address'          => 'required|string|max:255',
-            'business_id'      => 'sometimes|integer|exists:businesses,id',
-            'fda_lto_number'   => 'nullable|string|max:50',
-            'fda_lto_expiry'   => 'nullable|date',
-            'fda_cpr_number'   => 'nullable|string|max:50',
-            'fda_cpr_expiry'   => 'nullable|date',
+            'supplier_name' => 'required|string|max:150',
+            'contact_person' => 'required|string|max:100',
+            'contact_number' => ['required', 'string', 'regex:/^\d{11}$/'],
+            'email' => 'required|email|max:150',
+            'address' => 'required|string|max:255',
+            'business_id' => 'sometimes|integer|exists:businesses,id',
+            'fda_lto_number' => 'nullable|string|max:50',
+            'fda_lto_expiry' => 'nullable|date',
+            'fda_cpr_number' => 'nullable|string|max:50',
+            'fda_cpr_expiry' => 'nullable|date',
         ];
     }
 
     public function messages(): array
     {
         return [
-            'supplier_name.required'     => 'Supplier name is required.',
-            'contact_person.required'    => 'Contact person is required.',
-            'contact_number.required'    => 'Contact number is required.',
-            'contact_number.regex'       => 'Contact number must be exactly 11 digits, numbers only.',
-            'email.required'             => 'Email address is required.',
-            'email.email'                => 'Email address must be a valid email address.',
-            'address.required'           => 'Address is required.',
+            'supplier_name.required' => 'Supplier name is required.',
+            'contact_person.required' => 'Contact person is required.',
+            'contact_number.required' => 'Contact number is required.',
+            'contact_number.regex' => 'Contact number must be exactly 11 digits, numbers only.',
+            'email.required' => 'Email address is required.',
+            'email.email' => 'Email address must be a valid email address.',
+            'address.required' => 'Address is required.',
         ];
     }
 }

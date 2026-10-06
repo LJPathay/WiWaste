@@ -33,28 +33,28 @@ class CreateUserRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'first_name'     => 'required|string|max:50',
-            'middle_name'    => 'nullable|string|max:50',
-            'surname'        => 'required|string|max:50',
+            'first_name' => 'required|string|max:50',
+            'middle_name' => 'nullable|string|max:50',
+            'surname' => 'required|string|max:50',
             // QA: contact number, 11 digits, numeric only.
             'contact_number' => ['nullable', 'string', 'max:20', 'regex:/^[0-9+\-\s()]{7,20}$/'],
-            'username'       => 'required|string|max:50|unique:User,username',
-            'password'       => 'required|string|min:8|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).+$/',
-            'email'          => 'required|email|max:100|unique:User,email',
-            'role'           => ['required', Rule::enum(Role::class)],
-            'status'         => ['required', Rule::enum(UserStatus::class)->except([UserStatus::Archived])],
+            'username' => 'required|string|max:50|unique:User,username',
+            'password' => 'required|string|min:8|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).+$/',
+            'email' => 'required|email|max:100|unique:User,email',
+            'role' => ['required', Rule::enum(Role::class)],
+            'status' => ['required', Rule::enum(UserStatus::class)->except([UserStatus::Archived])],
         ];
     }
 
     public function messages(): array
     {
         return [
-            'username.unique'        => 'This username is already taken.',
-            'email.required'         => 'Email address is required.',
-            'email.unique'           => 'This email address is already registered.',
-            'password.regex'         => 'Password must contain uppercase, lowercase, number, and special character.',
-            'password.min'           => 'Password must be at least 8 characters long.',
-            'contact_number.regex'   => 'Contact number must be 7 to 20 digits.',
+            'username.unique' => 'This username is already taken.',
+            'email.required' => 'Email address is required.',
+            'email.unique' => 'This email address is already registered.',
+            'password.regex' => 'Password must contain uppercase, lowercase, number, and special character.',
+            'password.min' => 'Password must be at least 8 characters long.',
+            'contact_number.regex' => 'Contact number must be 7 to 20 digits.',
         ];
     }
 }

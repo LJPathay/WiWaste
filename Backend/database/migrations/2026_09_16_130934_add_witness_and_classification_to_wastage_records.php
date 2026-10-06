@@ -9,13 +9,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('Wastage_Record', function (Blueprint $table) {
-            if (!Schema::hasColumn('Wastage_Record', 'witnessed_by')) {
+            if (! Schema::hasColumn('Wastage_Record', 'witnessed_by')) {
                 $table->integer('witnessed_by')->nullable();
             } else {
                 $table->integer('witnessed_by')->nullable()->change();
             }
 
-            if (!Schema::hasColumn('Wastage_Record', 'witnessed_by')) {
+            if (! Schema::hasColumn('Wastage_Record', 'witnessed_by')) {
                 $table->foreign('witnessed_by')->references('User_id')->on('User')->onDelete('set null');
             }
 
@@ -49,7 +49,7 @@ return new class extends Migration
     protected function addMissingColumns(Blueprint $table, array $columns): void
     {
         foreach ($columns as $column => $definition) {
-            if (!Schema::hasColumn('Wastage_Record', $column)) {
+            if (! Schema::hasColumn('Wastage_Record', $column)) {
                 $definition($table);
             }
         }

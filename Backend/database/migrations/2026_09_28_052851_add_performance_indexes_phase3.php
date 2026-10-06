@@ -22,7 +22,7 @@ return new class extends Migration
                 $table->index('status');
                 $table->index('barcode');
             });
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // Indexes may already exist
         }
 
@@ -33,7 +33,7 @@ return new class extends Migration
                 $table->index(['stock_status', 'business_id']);
                 $table->index(['branch_id', 'product_id']);
             });
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // Indexes may already exist
         }
 
@@ -45,7 +45,7 @@ return new class extends Migration
                 $table->index(['user_id', 'transaction_date']);
                 $table->index('status');
             });
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // Indexes may already exist
         }
 
@@ -55,7 +55,7 @@ return new class extends Migration
                 $table->index(['transaction_id', 'product_id']);
                 $table->index('product_id');
             });
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // Indexes may already exist
         }
 
@@ -66,7 +66,7 @@ return new class extends Migration
                 $table->index(['branch_id', 'date_recorded']);
                 $table->index('product_id');
             });
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // Indexes may already exist
         }
 
@@ -78,7 +78,7 @@ return new class extends Migration
                 $table->index(['sales_item_id']);
                 $table->index('approval_status');
             });
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // Indexes may already exist
         }
 
@@ -89,7 +89,7 @@ return new class extends Migration
                 $table->index(['branch_id', 'movement_date']);
                 $table->index(['product_id', 'movement_date']);
             });
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // Indexes may already exist
         }
 
@@ -98,7 +98,7 @@ return new class extends Migration
             Schema::table('Inventory', function (Blueprint $table) {
                 $table->index('expiration_date');
             });
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // Indexes may already exist
         }
 
@@ -108,7 +108,7 @@ return new class extends Migration
                 $table->index(['product_id', 'expiry_date']);
                 $table->index(['business_id', 'status']);
             });
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // Indexes may already exist
         }
 
@@ -118,7 +118,7 @@ return new class extends Migration
                 $table->index(['business_id', 'status']);
                 $table->index(['branch_id', 'status']);
             });
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // Indexes may already exist
         }
 
@@ -129,7 +129,7 @@ return new class extends Migration
                 $table->index(['branch_id', 'status']);
                 $table->index(['supplier_id', 'status']);
             });
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // Indexes may already exist
         }
 
@@ -140,7 +140,7 @@ return new class extends Migration
                 $table->index(['user_id', 'created_at']);
                 $table->index(['business_id', 'created_at']);
             });
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // Indexes may already exist
         }
 
@@ -149,7 +149,7 @@ return new class extends Migration
             Schema::table('Category', function (Blueprint $table) {
                 $table->index('Category_name');
             });
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // Indexes may already exist
         }
 
@@ -159,7 +159,7 @@ return new class extends Migration
                 $table->index('supplier_name');
                 $table->index(['business_id', 'status']);
             });
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // Indexes may already exist
         }
     }

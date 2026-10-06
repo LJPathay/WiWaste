@@ -26,16 +26,16 @@ class UserFactory extends Factory
         $last = fake()->lastName();
 
         return [
-            'first_name'     => $first,
-            'middle_name'    => null,
-            'surname'        => $last,
+            'first_name' => $first,
+            'middle_name' => null,
+            'surname' => $last,
             'contact_number' => fake()->numerify('09#########'),
-            'username'       => Str::lower(Str::random(8)) . fake()->unique()->numberBetween(1, 999999),
-            'password'       => static::$password ??= Hash::make('password'),
-            'email'          => fake()->unique()->safeEmail(),
-            'role'           => 'Inventory',
-            'status'         => 'Active',
-            'Created_at'     => now(),
+            'username' => Str::lower(Str::random(8)).fake()->unique()->numberBetween(1, 999999),
+            'password' => static::$password ??= Hash::make('password'),
+            'email' => fake()->unique()->safeEmail(),
+            'role' => 'Inventory',
+            'status' => 'Active',
+            'Created_at' => now(),
         ];
     }
 

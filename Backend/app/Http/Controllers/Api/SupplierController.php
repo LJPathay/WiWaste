@@ -7,10 +7,9 @@ use App\Http\Requests\Api\CreateSupplierRequest;
 use App\Http\Requests\Api\UpdateSupplierRequest;
 use App\Http\Resources\SupplierResource;
 use App\Models\Supplier;
-use App\Models\Inventory;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
 
 class SupplierController extends BaseApiController
 {
@@ -28,9 +27,9 @@ class SupplierController extends BaseApiController
             $search = request()->get('search');
             $query->where(function ($q) use ($search) {
                 $q->where('supplier_name', 'like', "%{$search}%")
-                  ->orWhere('contact_person', 'like', "%{$search}%")
-                  ->orWhere('contact_number', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
+                    ->orWhere('contact_person', 'like', "%{$search}%")
+                    ->orWhere('contact_number', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
             });
         }
 
@@ -39,28 +38,28 @@ class SupplierController extends BaseApiController
         return $this->paginated($paginated->through(fn ($s) => (new SupplierResource($s))->resolve(request())));
     }
 
-    public function store(\App\Http\Requests\Api\CreateSupplierRequest $request)
+    public function store(CreateSupplierRequest $request)
     {
         $user = request()->user();
 
         $data = $request->validated();
 
         // Auto-assign business_id from user if not provided
-        if (!isset($data['business_id']) && $user && $user->business_id) {
+        if (! isset($data['business_id']) && $user && $user->business_id) {
             $data['business_id'] = $user->business_id;
         }
 
         $supplier = Supplier::create($data);
 
         return $this->created([
-            'id'             => $supplier->supplier_id,
-            'name'           => $supplier->supplier_name,
+            'id' => $supplier->supplier_id,
+            'name' => $supplier->supplier_name,
             'contact_person' => $supplier->contact_person,
             'contact_number' => $supplier->contact_number,
-            'email'          => $supplier->email,
-            'address'        => $supplier->address,
-            'product_count'  => 0,
-            'business_id'    => $supplier->business_id,
+            'email' => $supplier->email,
+            'address' => $supplier->address,
+            'product_count' => 0,
+            'business_id' => $supplier->business_id,
             'fda_lto_number' => $supplier->fda_lto_number,
             'fda_lto_expiry' => $supplier->fda_lto_expiry,
             'fda_cpr_number' => $supplier->fda_cpr_number,
@@ -89,24 +88,24 @@ class SupplierController extends BaseApiController
             ->get();
 
         return $this->success([
-            'id'              => $s->supplier_id,
-            'name'            => $s->supplier_name,
-            'contact_person'  => $s->contact_person,
-            'contact_number'  => $s->contact_number,
-            'email'           => $s->email,
-            'address'         => $s->address,
-            'product_count'   => $totalProducts,
+            'id' => $s->supplier_id,
+            'name' => $s->supplier_name,
+            'contact_person' => $s->contact_person,
+            'contact_number' => $s->contact_number,
+            'email' => $s->email,
+            'address' => $s->address,
+            'product_count' => $totalProducts,
             'low_stock_count' => $lowStockCount,
             'recent_products' => $recentProducts,
-            'business_id'     => $s->business_id,
-            'fda_lto_number'  => $s->fda_lto_number,
-            'fda_lto_expiry'  => $s->fda_lto_expiry,
-            'fda_cpr_number'  => $s->fda_cpr_number,
-            'fda_cpr_expiry'  => $s->fda_cpr_expiry,
+            'business_id' => $s->business_id,
+            'fda_lto_number' => $s->fda_lto_number,
+            'fda_lto_expiry' => $s->fda_lto_expiry,
+            'fda_cpr_number' => $s->fda_cpr_number,
+            'fda_cpr_expiry' => $s->fda_cpr_expiry,
         ]);
     }
 
-    public function update(\App\Http\Requests\Api\UpdateSupplierRequest $request, $id)
+    public function update(UpdateSupplierRequest $request, $id)
     {
         $query = Supplier::withCount('products');
         $query = $this->scopeForBusiness($query, request());
@@ -115,14 +114,14 @@ class SupplierController extends BaseApiController
         $supplier->update($request->validated());
 
         return $this->success([
-            'id'             => $supplier->supplier_id,
-            'name'           => $supplier->supplier_name,
+            'id' => $supplier->supplier_id,
+            'name' => $supplier->supplier_name,
             'contact_person' => $supplier->contact_person,
             'contact_number' => $supplier->contact_number,
-            'email'          => $supplier->email,
-            'address'        => $supplier->address,
-            'product_count'  => $supplier->products()->count(),
-            'business_id'    => $supplier->business_id,
+            'email' => $supplier->email,
+            'address' => $supplier->address,
+            'product_count' => $supplier->products()->count(),
+            'business_id' => $supplier->business_id,
             'fda_lto_number' => $supplier->fda_lto_number,
             'fda_lto_expiry' => $supplier->fda_lto_expiry,
             'fda_cpr_number' => $supplier->fda_cpr_number,
@@ -145,16 +144,16 @@ class SupplierController extends BaseApiController
         $query = $this->scopeForBusiness($query, request());
 
         $suppliers = $query->get()->map(fn ($s) => [
-            'id'             => $s->supplier_id,
-            'name'           => $s->supplier_name,
+            'id' => $s->supplier_id,
+            'name' => $s->supplier_name,
             'fda_lto_number' => $s->fda_lto_number,
             'fda_lto_expiry' => $s->fda_lto_expiry,
             'fda_cpr_number' => $s->fda_cpr_number,
             'fda_cpr_expiry' => $s->fda_cpr_expiry,
-            'lto_status'     => $this->getLicenseStatus($s->fda_lto_expiry),
-            'cpr_status'     => $this->getLicenseStatus($s->fda_cpr_expiry),
-            'days_until_lto_expiry' => $s->fda_lto_expiry ? \Carbon\Carbon::parse($s->fda_lto_expiry)->diffInDays(now(), false) : null,
-            'days_until_cpr_expiry' => $s->fda_cpr_expiry ? \Carbon\Carbon::parse($s->fda_cpr_expiry)->diffInDays(now(), false) : null,
+            'lto_status' => $this->getLicenseStatus($s->fda_lto_expiry),
+            'cpr_status' => $this->getLicenseStatus($s->fda_cpr_expiry),
+            'days_until_lto_expiry' => $s->fda_lto_expiry ? Carbon::parse($s->fda_lto_expiry)->diffInDays(now(), false) : null,
+            'days_until_cpr_expiry' => $s->fda_cpr_expiry ? Carbon::parse($s->fda_cpr_expiry)->diffInDays(now(), false) : null,
         ]);
 
         return $this->success([
@@ -163,12 +162,12 @@ class SupplierController extends BaseApiController
                 'total' => $suppliers->count(),
                 'lto_expiring_30' => $suppliers->filter(fn ($s) => $s['days_until_lto_expiry'] !== null && $s['days_until_lto_expiry'] <= 30 && $s['days_until_lto_expiry'] >= 0)->count(),
                 'lto_expiring_14' => $suppliers->filter(fn ($s) => $s['days_until_lto_expiry'] !== null && $s['days_until_lto_expiry'] <= 14 && $s['days_until_lto_expiry'] >= 0)->count(),
-                'lto_expiring_7'  => $suppliers->filter(fn ($s) => $s['days_until_lto_expiry'] !== null && $s['days_until_lto_expiry'] <= 7 && $s['days_until_lto_expiry'] >= 0)->count(),
-                'lto_expired'     => $suppliers->filter(fn ($s) => $s['days_until_lto_expiry'] !== null && $s['days_until_lto_expiry'] < 0)->count(),
+                'lto_expiring_7' => $suppliers->filter(fn ($s) => $s['days_until_lto_expiry'] !== null && $s['days_until_lto_expiry'] <= 7 && $s['days_until_lto_expiry'] >= 0)->count(),
+                'lto_expired' => $suppliers->filter(fn ($s) => $s['days_until_lto_expiry'] !== null && $s['days_until_lto_expiry'] < 0)->count(),
                 'cpr_expiring_30' => $suppliers->filter(fn ($s) => $s['days_until_cpr_expiry'] !== null && $s['days_until_cpr_expiry'] <= 30 && $s['days_until_cpr_expiry'] >= 0)->count(),
                 'cpr_expiring_14' => $suppliers->filter(fn ($s) => $s['days_until_cpr_expiry'] !== null && $s['days_until_cpr_expiry'] <= 14 && $s['days_until_cpr_expiry'] >= 0)->count(),
-                'cpr_expiring_7'  => $suppliers->filter(fn ($s) => $s['days_until_cpr_expiry'] !== null && $s['days_until_cpr_expiry'] <= 7 && $s['days_until_cpr_expiry'] >= 0)->count(),
-                'cpr_expired'     => $suppliers->filter(fn ($s) => $s['days_until_cpr_expiry'] !== null && $s['days_until_cpr_expiry'] < 0)->count(),
+                'cpr_expiring_7' => $suppliers->filter(fn ($s) => $s['days_until_cpr_expiry'] !== null && $s['days_until_cpr_expiry'] <= 7 && $s['days_until_cpr_expiry'] >= 0)->count(),
+                'cpr_expired' => $suppliers->filter(fn ($s) => $s['days_until_cpr_expiry'] !== null && $s['days_until_cpr_expiry'] < 0)->count(),
             ],
         ]);
     }
@@ -182,9 +181,9 @@ class SupplierController extends BaseApiController
 
         $expiring = $query->where(function ($q) use ($days) {
             $q->where('fda_lto_expiry', '<=', now()->addDays($days))
-              ->where('fda_lto_expiry', '>=', now())
-              ->orWhere('fda_cpr_expiry', '<=', now()->addDays($days))
-              ->where('fda_cpr_expiry', '>=', now());
+                ->where('fda_lto_expiry', '>=', now())
+                ->orWhere('fda_cpr_expiry', '<=', now()->addDays($days))
+                ->where('fda_cpr_expiry', '>=', now());
         })->get()->map(fn ($s) => [
             'id' => $s->supplier_id,
             'name' => $s->supplier_name,
@@ -192,8 +191,8 @@ class SupplierController extends BaseApiController
             'fda_lto_expiry' => $s->fda_lto_expiry,
             'fda_cpr_number' => $s->fda_cpr_number,
             'fda_cpr_expiry' => $s->fda_cpr_expiry,
-            'lto_days_remaining' => $s->fda_lto_expiry ? \Carbon\Carbon::parse($s->fda_lto_expiry)->diffInDays(now(), false) : null,
-            'cpr_days_remaining' => $s->fda_cpr_expiry ? \Carbon\Carbon::parse($s->fda_cpr_expiry)->diffInDays(now(), false) : null,
+            'lto_days_remaining' => $s->fda_lto_expiry ? Carbon::parse($s->fda_lto_expiry)->diffInDays(now(), false) : null,
+            'cpr_days_remaining' => $s->fda_cpr_expiry ? Carbon::parse($s->fda_cpr_expiry)->diffInDays(now(), false) : null,
         ]);
 
         return $this->success([
@@ -204,12 +203,23 @@ class SupplierController extends BaseApiController
 
     private function getLicenseStatus(?string $expiryDate): string
     {
-        if (!$expiryDate) return 'not_provided';
-        $days = \Carbon\Carbon::parse($expiryDate)->diffInDays(now(), false);
-        if ($days < 0) return 'expired';
-        if ($days <= 7) return 'critical';
-        if ($days <= 14) return 'expiring_soon';
-        if ($days <= 30) return 'expiring';
+        if (! $expiryDate) {
+            return 'not_provided';
+        }
+        $days = Carbon::parse($expiryDate)->diffInDays(now(), false);
+        if ($days < 0) {
+            return 'expired';
+        }
+        if ($days <= 7) {
+            return 'critical';
+        }
+        if ($days <= 14) {
+            return 'expiring_soon';
+        }
+        if ($days <= 30) {
+            return 'expiring';
+        }
+
         return 'valid';
     }
 }

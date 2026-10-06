@@ -15,7 +15,7 @@ return new class extends Migration
             $table->integer('predicted_demand');
             $table->enum('overstock_risk', ['Low', 'Medium', 'High']);
             $table->dateTime('generated_date');
-            
+
             $table->foreign('product_id')->references('product_id')->on('Product');
         });
     }

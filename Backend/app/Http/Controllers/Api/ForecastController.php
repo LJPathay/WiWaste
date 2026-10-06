@@ -12,9 +12,7 @@ use Illuminate\Support\Facades\Cache;
 
 class ForecastController extends Controller
 {
-    public function __construct(private readonly ForecastService $forecast)
-    {
-    }
+    public function __construct(private readonly ForecastService $forecast) {}
 
     public function overview(Request $request)
     {

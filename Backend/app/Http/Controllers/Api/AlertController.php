@@ -6,8 +6,8 @@ use App\Http\Controllers\Concerns\ScopesTenant;
 use App\Http\Controllers\Controller;
 use App\Models\FEFOBatch;
 use App\Models\Supplier;
-use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 
 class AlertController extends Controller
 {
@@ -120,28 +120,45 @@ class AlertController extends Controller
     private function getSeverity(string $expiryDate): string
     {
         $days = Carbon::parse($expiryDate)->diffInDays(now(), false);
-        if ($days <= 3) return 'critical';
-        if ($days <= 7) return 'high';
-        if ($days <= 14) return 'medium';
+        if ($days <= 3) {
+            return 'critical';
+        }
+        if ($days <= 7) {
+            return 'high';
+        }
+        if ($days <= 14) {
+            return 'medium';
+        }
+
         return 'low';
     }
 
     private function getSupplierSeverity(?string $ltoExpiry, ?string $cprExpiry): string
     {
         $severity = 'low';
-        
+
         if ($ltoExpiry) {
             $days = Carbon::parse($ltoExpiry)->diffInDays(now(), false);
-            if ($days <= 3) return 'critical';
-            if ($days <= 7) $severity = 'high';
-            else if ($days <= 14 && $severity !== 'high') $severity = 'medium';
+            if ($days <= 3) {
+                return 'critical';
+            }
+            if ($days <= 7) {
+                $severity = 'high';
+            } elseif ($days <= 14 && $severity !== 'high') {
+                $severity = 'medium';
+            }
         }
-        
+
         if ($cprExpiry) {
             $days = Carbon::parse($cprExpiry)->diffInDays(now(), false);
-            if ($days <= 3) return 'critical';
-            if ($days <= 7 && $severity !== 'critical') $severity = 'high';
-            else if ($days <= 14 && $severity !== 'high' && $severity !== 'critical') $severity = 'medium';
+            if ($days <= 3) {
+                return 'critical';
+            }
+            if ($days <= 7 && $severity !== 'critical') {
+                $severity = 'high';
+            } elseif ($days <= 14 && $severity !== 'high' && $severity !== 'critical') {
+                $severity = 'medium';
+            }
         }
 
         return $severity;

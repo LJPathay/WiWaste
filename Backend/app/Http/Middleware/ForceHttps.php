@@ -16,7 +16,7 @@ class ForceHttps
         }
 
         // Check if already HTTPS or forwarded via proxy
-        if (!$request->isSecure() && !$request->header('X-Forwarded-Proto')) {
+        if (! $request->isSecure() && ! $request->header('X-Forwarded-Proto')) {
             return redirect()->secure($request->getRequestUri(), 301);
         }
 

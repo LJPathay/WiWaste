@@ -4,8 +4,8 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\RateLimiter;
 use Symfony\Component\HttpFoundation\Response;
 
 class RateLimitMiddleware
@@ -109,9 +109,10 @@ class RateLimitMiddleware
     protected function resolveRequestSignature(Request $request): string
     {
         if ($user = $this->resolveUser($request)) {
-            return 'user:' . $user->User_id;
+            return 'user:'.$user->User_id;
         }
-        return 'ip:' . $request->ip();
+
+        return 'ip:'.$request->ip();
     }
 
     /**
@@ -140,6 +141,7 @@ class RateLimitMiddleware
     protected function rateLimitResponse(string $key, int $decayMinutes): Response
     {
         $retryAfter = RateLimiter::availableIn($key);
+
         return response()->json([
             'message' => 'Too many requests. Please try again later.',
             'retry_after' => $retryAfter,
@@ -148,13 +150,15 @@ class RateLimitMiddleware
 
     protected function addRateLimitHeaders(Response $response, string $key, string $role, bool $isApi, bool $isAuth, bool $isPassword, bool $isWrite): void
     {
-        if (!$isApi) return;
+        if (! $isApi) {
+            return;
+        }
 
-        $primaryKey = 'api:read:' . $key;
+        $primaryKey = 'api:read:'.$key;
         if ($isAuth || $isPassword) {
-            $primaryKey = 'auth:' . $key;
+            $primaryKey = 'auth:'.$key;
         } elseif ($isWrite) {
-            $primaryKey = 'api:write:' . $key;
+            $primaryKey = 'api:write:'.$key;
         }
 
         $limit = $this->getPrimaryLimit($role, $isApi, $isAuth, $isPassword, $isWrite);
@@ -173,9 +177,12 @@ class RateLimitMiddleware
             return $isPassword ? self::PASSWORD_LIMIT['max'] : self::AUTH_LIMIT['max'];
         }
 
-        if (!$isApi) return 200;
+        if (! $isApi) {
+            return 200;
+        }
 
         $limits = self::ROLE_LIMITS[$role] ?? self::ROLE_LIMITS['guest'];
+
         return $isWrite ? $limits['write'] : $limits['read'];
     }
 }

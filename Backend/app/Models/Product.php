@@ -3,12 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Str;
 
 class Product extends Model
 {
     protected $table = 'Product';
+
     protected $primaryKey = 'product_id';
+
     public $timestamps = false;
 
     protected $fillable = [
@@ -59,10 +60,10 @@ class Product extends Model
      */
     private static function generateUniqueSku(?int $categoryId): string
     {
-        $prefix = 'SKU-' . str_pad($categoryId ?? 0, 2, '0', STR_PAD_LEFT);
+        $prefix = 'SKU-'.str_pad($categoryId ?? 0, 2, '0', STR_PAD_LEFT);
 
         do {
-            $sku = $prefix . '-' . str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+            $sku = $prefix.'-'.str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
         } while (static::where('barcode', $sku)->exists());
 
         return $sku;

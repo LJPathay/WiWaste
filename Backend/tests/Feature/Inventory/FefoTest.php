@@ -2,11 +2,11 @@
 
 namespace Tests\Feature\Inventory;
 
-use App\Models\AuditLog;
 use App\Models\FEFOBatch;
 use App\Models\StockMovement;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Concerns\CreatesInventoryFixtures;
 use Tests\TestCase;
 
@@ -70,11 +70,11 @@ class FefoTest extends TestCase
         $batch = $this->makeBatch($product, 50, now()->addDays(45)->toDateString(), ['created_by' => $user->User_id]);
 
         StockMovement::create([
-            'product_id'    => $product->product_id,
-            'batch_id'      => $batch->batch_id,
-            'user_id'       => $user->User_id,
+            'product_id' => $product->product_id,
+            'batch_id' => $batch->batch_id,
+            'user_id' => $user->User_id,
             'movement_type' => 'Stock Out',
-            'quantity'      => 5,
+            'quantity' => 5,
             'movement_date' => now(),
         ]);
 
@@ -99,11 +99,11 @@ class FefoTest extends TestCase
         ]);
 
         StockMovement::create([
-            'product_id'    => $product->product_id,
-            'batch_id'      => $batch->batch_id,
-            'user_id'       => $user->User_id,
+            'product_id' => $product->product_id,
+            'batch_id' => $batch->batch_id,
+            'user_id' => $user->User_id,
             'movement_type' => 'Stock Out',
-            'quantity'      => 2,
+            'quantity' => 2,
             'movement_date' => now(),
         ]);
 
@@ -126,8 +126,8 @@ class FefoTest extends TestCase
         $batch = $this->makeBatch($product, 10, now()->addDays(4)->toDateString());
 
         $this->postJson('/api/v1/fefo/apply', [
-            'batch_id'        => $batch->batch_id,
-            'action'          => 'flag',
+            'batch_id' => $batch->batch_id,
+            'action' => 'flag',
             'directive_notes' => 'Cold chain broken on arrival.',
         ])->assertOk()->assertJsonPath('batch.status', 'flagged');
 
@@ -137,7 +137,7 @@ class FefoTest extends TestCase
         $this->assertSame('Cold chain broken on arrival.', $batch->directive_notes);
     }
 
-    #[\PHPUnit\Framework\Attributes\DataProvider('directiveStatusProvider')]
+    #[DataProvider('directiveStatusProvider')]
     public function test_each_directive_maps_to_its_own_status(string $action, string $expected): void
     {
         $this->actingAsInventory();
@@ -146,7 +146,7 @@ class FefoTest extends TestCase
 
         $this->postJson('/api/v1/fefo/apply', [
             'batch_id' => $batch->batch_id,
-            'action'   => $action,
+            'action' => $action,
         ])->assertOk();
 
         $this->assertSame($expected, $batch->fresh()->status);
@@ -155,8 +155,8 @@ class FefoTest extends TestCase
     public static function directiveStatusProvider(): array
     {
         return [
-            'flag'   => ['flag', 'flagged'],
-            'clear'  => ['clear', 'cleared'],
+            'flag' => ['flag', 'flagged'],
+            'clear' => ['clear', 'cleared'],
             'notify' => ['notify', 'active'],
         ];
     }
@@ -169,12 +169,12 @@ class FefoTest extends TestCase
 
         $this->postJson('/api/v1/fefo/apply', [
             'batch_id' => $batch->batch_id,
-            'action'   => 'flag',
+            'action' => 'flag',
         ])->assertOk();
 
         $this->assertDatabaseHas('Audit_Log', [
             'entity_type' => 'FEFO_Batch',
-            'entity_id'   => $batch->batch_id,
+            'entity_id' => $batch->batch_id,
         ]);
     }
 
@@ -186,7 +186,7 @@ class FefoTest extends TestCase
 
         $this->postJson('/api/v1/fefo/apply', [
             'batch_id' => $batch->batch_id,
-            'action'   => 'destroy',
+            'action' => 'destroy',
         ])->assertStatus(422)->assertJsonValidationErrors('action');
 
         $this->assertSame('active', $batch->fresh()->status);
@@ -198,7 +198,7 @@ class FefoTest extends TestCase
 
         $this->postJson('/api/v1/fefo/apply', [
             'batch_id' => 999999,
-            'action'   => 'flag',
+            'action' => 'flag',
         ])->assertStatus(422)->assertJsonValidationErrors('batch_id');
     }
 

@@ -15,7 +15,7 @@ class StorePurchaseOrderRequest extends FormRequest
     {
         return [
             'business_id' => 'sometimes|integer|exists:businesses,id',
-            'branch_id'   => 'sometimes|integer|exists:branches,id',
+            'branch_id' => 'sometimes|integer|exists:branches,id',
             'supplier_id' => 'required|integer|exists:Supplier,supplier_id',
             'notes' => 'nullable|string|max:1000',
             'items' => 'required|array|min:1',

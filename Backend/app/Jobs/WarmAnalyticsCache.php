@@ -2,14 +2,14 @@
 
 namespace App\Jobs;
 
+use App\Models\FEFOBatch;
 use App\Models\Inventory;
 use App\Models\Product;
-use App\Models\FEFOBatch;
-use App\Models\StockMovement;
-use App\Models\WastageRecord;
 use App\Models\SalesTransaction;
-use App\Models\User;
+use App\Models\StockMovement;
 use App\Models\Supplier;
+use App\Models\User;
+use App\Models\WastageRecord;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Cache;
@@ -102,14 +102,14 @@ class WarmAnalyticsCache implements ShouldQueue
     protected function buildDashboardSummary(): array
     {
         return [
-            'low_stock_count'       => Inventory::where('stock_status', 'Low Stock')->count(),
-            'expiring_soon_count'   => Product::whereNotNull('expiration_date')
+            'low_stock_count' => Inventory::where('stock_status', 'Low Stock')->count(),
+            'expiring_soon_count' => Product::whereNotNull('expiration_date')
                 ->where('expiration_date', '>=', now())
                 ->where('expiration_date', '<=', now()->addDays(30))
                 ->count(),
-            'today_movements'       => StockMovement::whereDate('movement_date', today())->count(),
+            'today_movements' => StockMovement::whereDate('movement_date', today())->count(),
             'pending_wastage_count' => WastageRecord::whereDate('date_recorded', today())->count(),
-            'critical_fefo_count'   => $this->countExpiringBatches(7),
+            'critical_fefo_count' => $this->countExpiringBatches(7),
         ];
     }
 
@@ -123,11 +123,12 @@ class WarmAnalyticsCache implements ShouldQueue
 
         $params = [$from];
         if ($to) {
-            $sql .= " AND st.transaction_date < ?";
+            $sql .= ' AND st.transaction_date < ?';
             $params[] = $to;
         }
 
         $result = DB::select($sql, $params);
+
         return (float) ($result[0]->total ?? 0);
     }
 

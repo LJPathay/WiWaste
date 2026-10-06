@@ -15,7 +15,7 @@ return new class extends Migration
             $table->integer('quantity');
             $table->decimal('unit_price', 10, 2);
             $table->decimal('subtotal', 10, 2);
-            
+
             $table->foreign('transaction_id')->references('transaction_id')->on('Sales_Transaction');
             $table->foreign('product_id')->references('product_id')->on('Product');
         });

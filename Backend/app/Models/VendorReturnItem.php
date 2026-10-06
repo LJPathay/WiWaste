@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 class VendorReturnItem extends Model
 {
     protected $table = 'Vendor_Return_Items';
+
     protected $primaryKey = 'vendor_return_item_id';
+
     public $timestamps = true;
 
     protected $fillable = [

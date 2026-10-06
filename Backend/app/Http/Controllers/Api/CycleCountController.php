@@ -4,12 +4,11 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Concerns\ScopesTenant;
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use App\Models\Inventory;
-use App\Models\FEFOBatch;
-use App\Models\StockMovement;
 use App\Http\Requests\Api\StoreCycleCountRequest;
+use App\Models\FEFOBatch;
+use App\Models\Inventory;
+use App\Models\StockMovement;
+use Illuminate\Support\Facades\DB;
 
 class CycleCountController extends Controller
 {
@@ -39,9 +38,9 @@ class CycleCountController extends Controller
             // Record stock movement if there's a difference
             if ($difference !== 0) {
                 $batchId = $validated['batch_id'] ?? null;
-                
+
                 // If no batch specified but difference exists, try to find active FEFO batch
-                if (!$batchId && $difference !== 0) {
+                if (! $batchId && $difference !== 0) {
                     $batch = FEFOBatch::where('product_id', $inventory->product_id)
                         ->where('business_id', $inventory->business_id)
                         ->where('branch_id', $inventory->branch_id)
@@ -79,9 +78,16 @@ class CycleCountController extends Controller
 
     private function calcStatus(int $stock): string
     {
-        if ($stock <= 0) return 'Out of Stock';
-        if ($stock < 10) return 'Low Stock';
-        if ($stock > 300) return 'Overstock';
+        if ($stock <= 0) {
+            return 'Out of Stock';
+        }
+        if ($stock < 10) {
+            return 'Low Stock';
+        }
+        if ($stock > 300) {
+            return 'Overstock';
+        }
+
         return 'Normal';
     }
 }

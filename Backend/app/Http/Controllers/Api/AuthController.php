@@ -2,14 +2,15 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Models\User;
-use App\Models\PasswordResetOtp;
-use App\Services\LoginAttemptService;
-use App\Http\Requests\Api\LoginRequest;
 use App\Http\Requests\Api\ForgotPasswordRequest;
+use App\Http\Requests\Api\LoginRequest;
 use App\Http\Requests\Api\ResetPasswordRequest;
 use App\Http\Requests\Api\VerifyOtpRequest;
 use App\Http\Resources\UserResource;
+use App\Mail\PasswordResetOtpMail;
+use App\Models\PasswordResetOtp;
+use App\Models\User;
+use App\Services\LoginAttemptService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
@@ -17,9 +18,7 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends BaseApiController
 {
-    public function __construct(private readonly LoginAttemptService $loginAttemptService)
-    {
-    }
+    public function __construct(private readonly LoginAttemptService $loginAttemptService) {}
 
     public function login(LoginRequest $request)
     {
@@ -32,6 +31,7 @@ class AuthController extends BaseApiController
         // Check if account is locked
         if ($this->loginAttemptService->isLocked($identifier)) {
             $remainingMinutes = $this->loginAttemptService->getRemainingLockoutMinutes($identifier);
+
             return $this->tooManyRequests("Account locked due to too many failed attempts. Try again in {$remainingMinutes} minutes.");
         }
 
@@ -46,6 +46,7 @@ class AuthController extends BaseApiController
             // Re-check if now locked after this attempt
             if ($this->loginAttemptService->isLocked($identifier)) {
                 $remainingMinutes = $this->loginAttemptService->getRemainingLockoutMinutes($identifier);
+
                 return $this->tooManyRequests("Account locked due to too many failed attempts. Try again in {$remainingMinutes} minutes.");
             }
 
@@ -83,14 +84,14 @@ class AuthController extends BaseApiController
 
         return $this->created([
             'access_token' => $accessToken,
-            'user'         => $userData,
+            'user' => $userData,
         ], 'Login successful')->withCookie($cookie);
     }
 
     public function logout(Request $request)
     {
         $request->user()->currentAccessToken()->delete();
-        
+
         // Clear refresh token cookie
         $cookie = cookie('refresh_token', '', -1, '/', null, true, true, false, 'lax');
 
@@ -100,6 +101,7 @@ class AuthController extends BaseApiController
     public function me(Request $request)
     {
         $user = $request->user();
+
         return $this->success((new UserResource($user))->resolve($request));
     }
 
@@ -122,6 +124,7 @@ class AuthController extends BaseApiController
         // Check if refresh token is expired
         if ($token->expires_at && $token->expires_at->isPast()) {
             $token->delete();
+
             return $this->unauthorized('Refresh token expired. Please log in again.');
         }
 
@@ -154,9 +157,10 @@ class AuthController extends BaseApiController
 
         // Send email (queue in production)
         try {
-            Mail::to($email)->send(new \App\Mail\PasswordResetOtpMail($user->full_name, $otp));
+            Mail::to($email)->send(new PasswordResetOtpMail($user->full_name, $otp));
         } catch (\Exception $e) {
-            \Log::error('Failed to send OTP email: ' . $e->getMessage());
+            \Log::error('Failed to send OTP email: '.$e->getMessage());
+
             return $this->error('Failed to send reset email. Please try again.', 500);
         }
 
@@ -171,7 +175,7 @@ class AuthController extends BaseApiController
 
         $valid = PasswordResetOtp::verifyOtp($email, $otp);
 
-        if (!$valid) {
+        if (! $valid) {
             return $this->error('Invalid or expired code.', 422);
         }
 
@@ -187,7 +191,7 @@ class AuthController extends BaseApiController
 
         $success = PasswordResetOtp::consumeOtp($email, $otp);
 
-        if (!$success) {
+        if (! $success) {
             return $this->error('Invalid or expired code.', 422);
         }
 

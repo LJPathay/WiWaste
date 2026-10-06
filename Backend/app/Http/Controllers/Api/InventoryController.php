@@ -4,15 +4,15 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Concerns\ScopesTenant;
 use App\Http\Controllers\Controller;
-use App\Models\Inventory;
-use App\Models\FEFOBatch;
-use App\Models\StockMovement;
-use App\Models\AuditLog;
-use App\Jobs\WarmAnalyticsCache;
-use App\Http\Resources\InventoryResource;
-use App\Http\Requests\Api\StockInRequest;
 use App\Http\Requests\Api\ReceiveStockRequest;
+use App\Http\Requests\Api\StockInRequest;
 use App\Http\Requests\Api\StockOutRequest;
+use App\Http\Resources\InventoryResource;
+use App\Jobs\WarmAnalyticsCache;
+use App\Models\AuditLog;
+use App\Models\FEFOBatch;
+use App\Models\Inventory;
+use App\Models\StockMovement;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -28,7 +28,7 @@ class InventoryController extends Controller
         if ($search = $request->input('search')) {
             $query->whereHas('product', function ($q) use ($search) {
                 $q->where('product_name', 'like', "%{$search}%")
-                  ->orWhere('barcode', 'like', "%{$search}%");
+                    ->orWhere('barcode', 'like', "%{$search}%");
             });
         }
 
@@ -37,6 +37,7 @@ class InventoryController extends Controller
         }
 
         $perPage = min((int) $request->input('per_page', 20), 100);
+
         return response()->json(
             $query->paginate($perPage)->through(fn ($i) => (new InventoryResource($i))->resolve($request))
         );
@@ -52,32 +53,32 @@ class InventoryController extends Controller
 
         return DB::transaction(function () use ($data, $request, $inventory) {
             $inventory->current_stock += $data['quantity'];
-            $inventory->stock_status   = Inventory::calcStatus($inventory->current_stock, $inventory->product?->reorder_level ?? 10);
-            $inventory->last_updated   = now();
+            $inventory->stock_status = Inventory::calcStatus($inventory->current_stock, $inventory->product?->reorder_level ?? 10);
+            $inventory->last_updated = now();
             $inventory->save();
 
             $user = $request->user();
             StockMovement::create([
-                'business_id'   => $user?->business_id,
-                'branch_id'     => $user?->branch_id,
-                'product_id'    => $data['product_id'],
-                'user_id'       => $user?->User_id ?? 1,
+                'business_id' => $user?->business_id,
+                'branch_id' => $user?->branch_id,
+                'product_id' => $data['product_id'],
+                'user_id' => $user?->User_id ?? 1,
                 'movement_type' => 'Stock In',
-                'quantity'      => $data['quantity'],
-                'remarks'       => $data['remarks'] ?? null,
+                'quantity' => $data['quantity'],
+                'remarks' => $data['remarks'] ?? null,
                 'movement_date' => now(),
             ]);
 
             AuditLog::create([
-                'user_id'       => $user?->User_id ?? 1,
-                'action'        => "Stock-in: {$data['quantity']} units of {$inventory->product?->product_name}",
-                'entity_type'   => 'Inventory',
-                'entity_id'     => $inventory->inventory_id,
-                'old_values'    => null,
-                'new_values'    => json_encode(['current_stock' => $inventory->current_stock]),
-                'created_at'    => now(),
-                'business_id'   => $user?->business_id,
-                'branch_id'     => $user?->branch_id,
+                'user_id' => $user?->User_id ?? 1,
+                'action' => "Stock-in: {$data['quantity']} units of {$inventory->product?->product_name}",
+                'entity_type' => 'Inventory',
+                'entity_id' => $inventory->inventory_id,
+                'old_values' => null,
+                'new_values' => json_encode(['current_stock' => $inventory->current_stock]),
+                'created_at' => now(),
+                'business_id' => $user?->business_id,
+                'branch_id' => $user?->branch_id,
             ]);
 
             WarmAnalyticsCache::dispatch();
@@ -104,7 +105,7 @@ class InventoryController extends Controller
                 ->where('branch_id', $user?->branch_id)
                 ->first();
 
-            if (!$batch) {
+            if (! $batch) {
                 $batch = FEFOBatch::create([
                     'business_id' => $user?->business_id,
                     'branch_id' => $user?->branch_id,
@@ -134,27 +135,27 @@ class InventoryController extends Controller
             $inventory->save();
 
             StockMovement::create([
-                'business_id'   => $user?->business_id,
-                'branch_id'     => $user?->branch_id,
-                'product_id'    => $data['product_id'],
-                'batch_id'      => $batch->batch_id,
-                'user_id'       => $user?->User_id ?? 1,
+                'business_id' => $user?->business_id,
+                'branch_id' => $user?->branch_id,
+                'product_id' => $data['product_id'],
+                'batch_id' => $batch->batch_id,
+                'user_id' => $user?->User_id ?? 1,
                 'movement_type' => 'Stock In',
-                'quantity'      => $data['quantity'],
-                'remarks'       => $data['remarks'] ?? 'Received: Batch ' . $data['batch_number'],
+                'quantity' => $data['quantity'],
+                'remarks' => $data['remarks'] ?? 'Received: Batch '.$data['batch_number'],
                 'movement_date' => now(),
             ]);
 
             AuditLog::create([
-                'user_id'       => $user?->User_id ?? 1,
-                'action'        => "Received {$data['quantity']} units of {$inventory->product?->product_name} (Batch: {$data['batch_number']}, Expiry: {$data['expiry_date']})",
-                'entity_type'   => 'Inventory',
-                'entity_id'     => $inventory->inventory_id,
-                'old_values'    => null,
-                'new_values'    => json_encode(['current_stock' => $inventory->current_stock, 'batch_number' => $data['batch_number'], 'expiry_date' => $data['expiry_date']]),
-                'created_at'    => now(),
-                'business_id'   => $user?->business_id,
-                'branch_id'     => $user?->branch_id,
+                'user_id' => $user?->User_id ?? 1,
+                'action' => "Received {$data['quantity']} units of {$inventory->product?->product_name} (Batch: {$data['batch_number']}, Expiry: {$data['expiry_date']})",
+                'entity_type' => 'Inventory',
+                'entity_id' => $inventory->inventory_id,
+                'old_values' => null,
+                'new_values' => json_encode(['current_stock' => $inventory->current_stock, 'batch_number' => $data['batch_number'], 'expiry_date' => $data['expiry_date']]),
+                'created_at' => now(),
+                'business_id' => $user?->business_id,
+                'branch_id' => $user?->branch_id,
             ]);
 
             WarmAnalyticsCache::dispatch();
@@ -214,10 +215,10 @@ class InventoryController extends Controller
 
             // If specific batch_id provided, use that batch
             if (isset($data['batch_id']) && $data['batch_id']) {
-                $batch = \App\Models\FEFOBatch::where('batch_id', $data['batch_id'])
+                $batch = FEFOBatch::where('batch_id', $data['batch_id'])
                     ->where('product_id', $data['product_id'])
                     ->firstOrFail();
-                
+
                 if ($batch->quantity < $remainingQty) {
                     return response()->json(['message' => 'Insufficient quantity in specified batch.'], 422);
                 }
@@ -238,14 +239,16 @@ class InventoryController extends Controller
                 $remainingQty = 0;
             } else {
                 // FEFO enforcement: auto-select earliest expiry batches
-                $batches = \App\Models\FEFOBatch::where('product_id', $data['product_id'])
+                $batches = FEFOBatch::where('product_id', $data['product_id'])
                     ->where('status', 'active')
                     ->where('quantity', '>', 0)
                     ->orderBy('expiry_date')
                     ->get();
 
                 foreach ($batches as $batch) {
-                    if ($remainingQty <= 0) break;
+                    if ($remainingQty <= 0) {
+                        break;
+                    }
 
                     $takeQty = min($batch->quantity, $remainingQty);
                     $batch->quantity -= $takeQty;
@@ -278,14 +281,14 @@ class InventoryController extends Controller
             // Create stock movements for each batch
             foreach ($movements as $movement) {
                 StockMovement::create([
-                    'business_id'   => $user?->business_id,
-                    'branch_id'     => $user?->branch_id,
-                    'product_id'    => $data['product_id'],
-                    'batch_id'      => $movement['batch_id'],
-                    'user_id'       => $user?->User_id ?? 1,
+                    'business_id' => $user?->business_id,
+                    'branch_id' => $user?->branch_id,
+                    'product_id' => $data['product_id'],
+                    'batch_id' => $movement['batch_id'],
+                    'user_id' => $user?->User_id ?? 1,
                     'movement_type' => 'Stock Out',
-                    'quantity'      => $movement['quantity'],
-                    'remarks'       => $data['remarks'] ?? null,
+                    'quantity' => $movement['quantity'],
+                    'remarks' => $data['remarks'] ?? null,
                     'movement_date' => now(),
                 ]);
             }
@@ -293,27 +296,27 @@ class InventoryController extends Controller
             // Log override if provided
             if (isset($data['override_reason']) && $data['override_reason']) {
                 AuditLog::create([
-                    'user_id'       => $user?->User_id ?? 1,
-                    'action'        => "FEFO Override: Stock-out with reason: {$data['override_reason']}",
-                    'entity_type'   => 'Inventory',
-                    'entity_id'     => $inventory->inventory_id,
-                    'new_values'    => json_encode(['override_reason' => $data['override_reason']]),
-                    'created_at'    => now(),
-                    'business_id'   => $user?->business_id,
-                    'branch_id'     => $user?->branch_id,
+                    'user_id' => $user?->User_id ?? 1,
+                    'action' => "FEFO Override: Stock-out with reason: {$data['override_reason']}",
+                    'entity_type' => 'Inventory',
+                    'entity_id' => $inventory->inventory_id,
+                    'new_values' => json_encode(['override_reason' => $data['override_reason']]),
+                    'created_at' => now(),
+                    'business_id' => $user?->business_id,
+                    'branch_id' => $user?->branch_id,
                 ]);
             }
 
             AuditLog::create([
-                'user_id'       => $user?->User_id ?? 1,
-                'action'        => "Stock-out (FEFO): {$data['quantity']} units of {$inventory->product?->product_name}",
-                'entity_type'   => 'Inventory',
-                'entity_id'     => $inventory->inventory_id,
-                'old_values'    => null,
-                'new_values'    => json_encode(['current_stock' => $inventory->current_stock, 'batches_used' => $movements]),
-                'created_at'    => now(),
-                'business_id'   => $user?->business_id,
-                'branch_id'     => $user?->branch_id,
+                'user_id' => $user?->User_id ?? 1,
+                'action' => "Stock-out (FEFO): {$data['quantity']} units of {$inventory->product?->product_name}",
+                'entity_type' => 'Inventory',
+                'entity_id' => $inventory->inventory_id,
+                'old_values' => null,
+                'new_values' => json_encode(['current_stock' => $inventory->current_stock, 'batches_used' => $movements]),
+                'created_at' => now(),
+                'business_id' => $user?->business_id,
+                'branch_id' => $user?->branch_id,
             ]);
 
             WarmAnalyticsCache::dispatch();
@@ -339,21 +342,21 @@ class InventoryController extends Controller
             ->get()
             ->map(fn ($m) => [
                 'movement_id' => $m->movement_id,
-                'type'        => $m->movement_type,
-                'quantity'    => $m->quantity,
-                'remarks'     => $m->remarks,
+                'type' => $m->movement_type,
+                'quantity' => $m->quantity,
+                'remarks' => $m->remarks,
                 'recorded_by' => $m->user?->Full_name ?? 'System',
-                'date'        => $m->movement_date,
+                'date' => $m->movement_date,
                 'business_id' => $m->business_id,
-                'branch_id'   => $m->branch_id,
-                'batch_id'    => $m->batch_id,
+                'branch_id' => $m->branch_id,
+                'batch_id' => $m->batch_id,
             ]);
 
         return response()->json([
-            'product_id'    => $inventory->product_id,
-            'product_name'  => $inventory->product?->product_name,
+            'product_id' => $inventory->product_id,
+            'product_name' => $inventory->product?->product_name,
             'current_stock' => $inventory->current_stock,
-            'movements'     => $movements,
+            'movements' => $movements,
         ]);
     }
 
@@ -365,7 +368,7 @@ class InventoryController extends Controller
         if ($search = $request->input('search')) {
             $query->whereHas('product', function ($q) use ($search) {
                 $q->where('product_name', 'like', "%{$search}%")
-                  ->orWhere('barcode', 'like', "%{$search}%");
+                    ->orWhere('barcode', 'like', "%{$search}%");
             });
         }
 
@@ -386,21 +389,22 @@ class InventoryController extends Controller
         }
 
         $perPage = min((int) $request->input('per_page', 20), 100);
+
         return response()->json(
             $query->orderByDesc('movement_date')->paginate($perPage)->through(fn ($m) => [
-                'movement_id'    => $m->movement_id,
-                'product_id'     => $m->product_id,
-                'product_name'   => $m->product?->product_name,
-                'sku'            => $m->product?->barcode,
-                'category'       => $m->product?->category?->Category_name ?? '',
-                'movement_type'  => $m->movement_type,
-                'quantity'       => $m->quantity,
-                'remarks'        => $m->remarks,
-                'recorded_by'    => $m->user?->Full_name ?? 'System',
-                'movement_date'  => $m->movement_date,
-                'business_id'    => $m->business_id,
-                'branch_id'      => $m->branch_id,
-                'batch_id'       => $m->batch_id,
+                'movement_id' => $m->movement_id,
+                'product_id' => $m->product_id,
+                'product_name' => $m->product?->product_name,
+                'sku' => $m->product?->barcode,
+                'category' => $m->product?->category?->Category_name ?? '',
+                'movement_type' => $m->movement_type,
+                'quantity' => $m->quantity,
+                'remarks' => $m->remarks,
+                'recorded_by' => $m->user?->Full_name ?? 'System',
+                'movement_date' => $m->movement_date,
+                'business_id' => $m->business_id,
+                'branch_id' => $m->branch_id,
+                'batch_id' => $m->batch_id,
             ])
         );
     }

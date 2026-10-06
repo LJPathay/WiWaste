@@ -4,14 +4,12 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Concerns\ScopesTenant;
 use App\Http\Controllers\Controller;
-use App\Models\FEFOBatch;
-use App\Models\StockMovement;
-use App\Models\StockReceiving;
-use App\Models\AuditLog;
 use App\Http\Requests\Api\ApplyFefoDirectiveRequest;
 use App\Http\Resources\FEFOBatchResource;
+use App\Models\AuditLog;
+use App\Models\FEFOBatch;
+use App\Models\StockMovement;
 use Illuminate\Http\Request;
-use Carbon\Carbon;
 
 class FEFOController extends Controller
 {
@@ -46,9 +44,9 @@ class FEFOController extends Controller
             ->count();
 
         return response()->json([
-            'batches'             => $batches,
-            'total_batches'       => $totalBatches,
-            'critical_count'      => $criticalCount,
+            'batches' => $batches,
+            'total_batches' => $totalBatches,
+            'critical_count' => $criticalCount,
             'expiring_soon_count' => $expiringSoonCount,
         ]);
     }
@@ -67,14 +65,14 @@ class FEFOController extends Controller
             ->get()
             ->map(fn ($m) => [
                 'movement_id' => $m->movement_id,
-                'type'        => $m->movement_type,
-                'quantity'    => $m->quantity,
-                'remarks'     => $m->remarks,
+                'type' => $m->movement_type,
+                'quantity' => $m->quantity,
+                'remarks' => $m->remarks,
                 'recorded_by' => $m->user?->Full_name ?? 'System',
-                'date'        => $m->movement_date,
+                'date' => $m->movement_date,
                 'business_id' => $m->business_id,
-                'branch_id'   => $m->branch_id,
-                'batch_id'    => $m->batch_id,
+                'branch_id' => $m->branch_id,
+                'batch_id' => $m->batch_id,
             ]);
 
         $data = (new FEFOBatchResource($batch))->resolve(request());
@@ -92,8 +90,8 @@ class FEFOController extends Controller
         $batch = $query->findOrFail($data['batch_id']);
 
         $statusMap = [
-            'flag'   => 'flagged',
-            'clear'  => 'cleared',
+            'flag' => 'flagged',
+            'clear' => 'cleared',
             'notify' => 'active',
         ];
 
@@ -106,20 +104,20 @@ class FEFOController extends Controller
         $userId = $request->user()?->User_id ?? 1;
 
         AuditLog::create([
-            'user_id'       => $userId,
-            'action'        => "FEFO {$data['action']}: Batch #{$batch->batch_id} ({$batch->product?->product_name})",
-            'entity_type'   => 'FEFO_Batch',
-            'entity_id'     => $batch->batch_id,
-            'old_values'    => null,
-            'new_values'    => json_encode(['status' => $batch->status, 'directive_notes' => $batch->directive_notes]),
-            'created_at'    => now(),
-            'business_id'   => $request->user()?->business_id,
-            'branch_id'     => $request->user()?->branch_id,
+            'user_id' => $userId,
+            'action' => "FEFO {$data['action']}: Batch #{$batch->batch_id} ({$batch->product?->product_name})",
+            'entity_type' => 'FEFO_Batch',
+            'entity_id' => $batch->batch_id,
+            'old_values' => null,
+            'new_values' => json_encode(['status' => $batch->status, 'directive_notes' => $batch->directive_notes]),
+            'created_at' => now(),
+            'business_id' => $request->user()?->business_id,
+            'branch_id' => $request->user()?->branch_id,
         ]);
 
         return response()->json(['message' => 'Directive applied.', 'batch' => [
             'batch_id' => $batch->batch_id,
-            'status'   => $batch->status,
+            'status' => $batch->status,
         ]]);
     }
 

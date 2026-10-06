@@ -27,12 +27,12 @@ class LossRiskTest extends TestCase
     private function makeUser(): User
     {
         return User::create([
-            'Full_name'  => 'Test Owner',
-            'username'   => 'loss-owner',
-            'password'   => Hash::make('password'),
-            'email'      => 'loss@test.com',
-            'role'       => 'Owner',
-            'status'     => 'Active',
+            'Full_name' => 'Test Owner',
+            'username' => 'loss-owner',
+            'password' => Hash::make('password'),
+            'email' => 'loss@test.com',
+            'role' => 'Owner',
+            'status' => 'Active',
             'Created_at' => now(),
         ]);
     }
@@ -45,29 +45,29 @@ class LossRiskTest extends TestCase
 
     private function makeProduct(array $overrides = []): Product
     {
-        $category = Category::create(['Category_name' => 'Loss Cat ' . random_int(1000, 9999)]);
+        $category = Category::create(['Category_name' => 'Loss Cat '.random_int(1000, 9999)]);
         $supplier = Supplier::create([
-            'supplier_name'  => 'Loss Supplier',
+            'supplier_name' => 'Loss Supplier',
             'contact_number' => '09171234567',
         ]);
 
         $product = Product::create(array_merge([
-            'category_id'     => $category->Category_id,
-            'supplier_id'     => $supplier->supplier_id,
-            'barcode'         => '480' . str_pad((string) random_int(0, 999999999), 9, '0', STR_PAD_LEFT),
-            'product_name'    => 'Loss Product ' . random_int(100, 999),
-            'cost_price'      => 10.00,
-            'selling_price'   => 15.00,
-            'reorder_level'   => 5,
+            'category_id' => $category->Category_id,
+            'supplier_id' => $supplier->supplier_id,
+            'barcode' => '480'.str_pad((string) random_int(0, 999999999), 9, '0', STR_PAD_LEFT),
+            'product_name' => 'Loss Product '.random_int(100, 999),
+            'cost_price' => 10.00,
+            'selling_price' => 15.00,
+            'reorder_level' => 5,
             'expiration_date' => now()->addDays(45),
-            'status'          => 'Active',
+            'status' => 'Active',
         ], $overrides));
 
         Inventory::create([
-            'product_id'    => $product->product_id,
+            'product_id' => $product->product_id,
             'current_stock' => 50,
-            'stock_status'  => 'Normal',
-            'last_updated'  => now(),
+            'stock_status' => 'Normal',
+            'last_updated' => now(),
         ]);
 
         return $product;
@@ -77,11 +77,11 @@ class LossRiskTest extends TestCase
     {
         for ($i = 0; $i < $count; $i++) {
             WastageRecord::create([
-                'product_id'    => $product->product_id,
-                'user_id'       => $this->user->User_id,
-                'wastage_type'  => 'Expired',
-                'quantity'      => 1,
-                'estimated_loss'=> 10.00,
+                'product_id' => $product->product_id,
+                'user_id' => $this->user->User_id,
+                'wastage_type' => 'Expired',
+                'quantity' => 1,
+                'estimated_loss' => 10.00,
                 'date_recorded' => now()->subDays($i),
             ]);
         }
@@ -90,32 +90,32 @@ class LossRiskTest extends TestCase
     private function recordSale(Product $product, int $quantity = 3): void
     {
         $transaction = SalesTransaction::create([
-            'user_id'           => $this->user->User_id,
-            'total_amount'      => $quantity * 5.00,
-            'transaction_date'  => now()->subDays(1),
-            'payment_method'    => 'Cash',
-            'amount_tendered'   => 100,
-            'change_due'        => 0,
-            'status'            => 'Completed',
+            'user_id' => $this->user->User_id,
+            'total_amount' => $quantity * 5.00,
+            'transaction_date' => now()->subDays(1),
+            'payment_method' => 'Cash',
+            'amount_tendered' => 100,
+            'change_due' => 0,
+            'status' => 'Completed',
         ]);
 
         SalesItem::create([
             'transaction_id' => $transaction->transaction_id,
-            'product_id'     => $product->product_id,
-            'quantity'       => $quantity,
-            'unit_price'     => 5.00,
-            'subtotal'       => $quantity * 5.00,
+            'product_id' => $product->product_id,
+            'quantity' => $quantity,
+            'unit_price' => 5.00,
+            'subtotal' => $quantity * 5.00,
         ]);
     }
 
     private function mlPayload(int $productId, float $probability, string $tier, float $expectedLoss): array
     {
         return ['engine' => 'xgboost', 'results' => [[
-            'product_id'        => $productId,
-            'loss_probability'  => $probability,
-            'expected_loss'     => $expectedLoss,
-            'risk_tier'         => $tier,
-            'feature_importance'=> ['days_to_expiry' => 0.4, 'wastage_count_90d' => 0.3],
+            'product_id' => $productId,
+            'loss_probability' => $probability,
+            'expected_loss' => $expectedLoss,
+            'risk_tier' => $tier,
+            'feature_importance' => ['days_to_expiry' => 0.4, 'wastage_count_90d' => 0.3],
         ]]];
     }
 
@@ -196,8 +196,8 @@ class LossRiskTest extends TestCase
 
         Cache::put('loss.risk.scores', [
             'generated_at' => now(),
-            'engine'       => 'xgboost',
-            'results'      => [
+            'engine' => 'xgboost',
+            'results' => [
                 ['product_id' => $product->product_id, 'product_name' => $product->product_name,
                     'sku' => $product->barcode, 'category' => 'Loss Cat', 'current_stock' => 50,
                     'unit_cost' => 10.0, 'days_to_expiry' => 45, 'loss_probability' => 0.8,
@@ -232,8 +232,8 @@ class LossRiskTest extends TestCase
 
         Cache::put('loss.risk.scores', [
             'generated_at' => now(),
-            'engine'       => 'xgboost',
-            'results'      => [
+            'engine' => 'xgboost',
+            'results' => [
                 ['product_id' => 1, 'risk_tier' => 'High', 'expected_loss' => 400.0],
                 ['product_id' => 2, 'risk_tier' => 'Medium', 'expected_loss' => 60.0],
                 ['product_id' => 3, 'risk_tier' => 'Low', 'expected_loss' => 5.0],

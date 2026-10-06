@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 class SalesItem extends Model
 {
     protected $table = 'Sales_Item';
+
     protected $primaryKey = 'sales_item_id';
+
     public $timestamps = false;
 
     protected $fillable = [

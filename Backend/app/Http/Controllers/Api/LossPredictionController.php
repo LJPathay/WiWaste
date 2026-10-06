@@ -9,9 +9,7 @@ use Illuminate\Http\Request;
 
 class LossPredictionController extends Controller
 {
-    public function __construct(private readonly LossPredictionService $lossPrediction)
-    {
-    }
+    public function __construct(private readonly LossPredictionService $lossPrediction) {}
 
     /**
      * Score all active products against the XGBoost model (live call) and
@@ -31,9 +29,9 @@ class LossPredictionController extends Controller
 
         return response()->json([
             'generated_at' => $payload['generated_at']?->toIso8601String(),
-            'engine'       => $payload['engine'],
-            'summary'      => $this->buildSummary($results),
-            'results'      => $results,
+            'engine' => $payload['engine'],
+            'summary' => $this->buildSummary($results),
+            'results' => $results,
         ]);
     }
 
@@ -52,14 +50,14 @@ class LossPredictionController extends Controller
 
         $results = (match ($request->query('sort')) {
             'probability' => $results->sortByDesc('loss_probability'),
-            default       => $results->sortByDesc('expected_loss'),
+            default => $results->sortByDesc('expected_loss'),
         })->values();
 
         return response()->json([
             'generated_at' => $payload['generated_at']?->toIso8601String(),
-            'engine'       => $payload['engine'],
-            'total'        => $results->count(),
-            'items'        => $results,
+            'engine' => $payload['engine'],
+            'total' => $results->count(),
+            'items' => $results,
         ]);
     }
 
@@ -69,8 +67,8 @@ class LossPredictionController extends Controller
 
         return response()->json([
             'generated_at' => $payload['generated_at']?->toIso8601String(),
-            'engine'       => $payload['engine'],
-            'summary'      => $this->buildSummary($payload['results']),
+            'engine' => $payload['engine'],
+            'summary' => $this->buildSummary($payload['results']),
         ]);
     }
 
@@ -83,10 +81,10 @@ class LossPredictionController extends Controller
         $results = collect($results);
 
         return [
-            'total_products'      => $results->count(),
-            'high_risk'           => $results->where('risk_tier', 'High')->count(),
-            'medium_risk'         => $results->where('risk_tier', 'Medium')->count(),
-            'low_risk'            => $results->where('risk_tier', 'Low')->count(),
+            'total_products' => $results->count(),
+            'high_risk' => $results->where('risk_tier', 'High')->count(),
+            'medium_risk' => $results->where('risk_tier', 'Medium')->count(),
+            'low_risk' => $results->where('risk_tier', 'Low')->count(),
             'total_expected_loss' => round((float) $results->sum('expected_loss'), 2),
         ];
     }

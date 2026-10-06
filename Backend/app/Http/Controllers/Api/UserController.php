@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Requests\Api\CreateUserRequest;
 use App\Http\Requests\Api\UpdateUserRequest;
 use App\Http\Resources\UserResource;
-use App\Models\User;
 use App\Models\AuditLog;
+use App\Models\User;
 
 class UserController extends BaseApiController
 {
@@ -38,10 +38,10 @@ class UserController extends BaseApiController
                 $like = "%{$term}%";
                 $q->where(function ($q) use ($like) {
                     $q->where('username', 'like', $like)
-                      ->orWhere('email', 'like', $like)
-                      ->orWhere('first_name', 'like', $like)
-                      ->orWhere('middle_name', 'like', $like)
-                      ->orWhere('surname', 'like', $like);
+                        ->orWhere('email', 'like', $like)
+                        ->orWhere('first_name', 'like', $like)
+                        ->orWhere('middle_name', 'like', $like)
+                        ->orWhere('surname', 'like', $like);
                 });
             }
         });
@@ -75,7 +75,7 @@ class UserController extends BaseApiController
         return $this->paginated($paginated->through(fn ($u) => (new UserResource($u))->resolve(request())));
     }
 
-    public function store(\App\Http\Requests\Api\CreateUserRequest $request)
+    public function store(CreateUserRequest $request)
     {
         $data = $request->validated();
 
@@ -89,6 +89,7 @@ class UserController extends BaseApiController
     public function show($id)
     {
         $u = User::findOrFail($id);
+
         return $this->success((new UserResource($u))->resolve(request()));
     }
 
@@ -123,13 +124,13 @@ class UserController extends BaseApiController
         }
 
         return $this->success([
-            'by_status'   => $byStatus,
-            'total'       => array_sum($byStatus),
+            'by_status' => $byStatus,
+            'total' => array_sum($byStatus),
             'not_archived' => $byStatus['Active'] + $byStatus['Inactive'] + $byStatus['Quarantined'],
         ]);
     }
 
-    public function update(\App\Http\Requests\Api\UpdateUserRequest $request, $id)
+    public function update(UpdateUserRequest $request, $id)
     {
         $user = User::findOrFail($id);
 
@@ -140,13 +141,13 @@ class UserController extends BaseApiController
             $oldStatus = $user->status;
             $newStatus = $data['status'];
             AuditLog::create([
-                'user_id'     => auth()->id() ?? null,
-                'action'      => "Status changed: {$oldStatus} -> {$newStatus}",
+                'user_id' => auth()->id() ?? null,
+                'action' => "Status changed: {$oldStatus} -> {$newStatus}",
                 'entity_type' => 'User',
-                'entity_id'   => $id,
-                'old_values'  => json_encode(['status' => $oldStatus]),
-                'new_values'  => json_encode(['status' => $newStatus]),
-                'created_at'  => now(),
+                'entity_id' => $id,
+                'old_values' => json_encode(['status' => $oldStatus]),
+                'new_values' => json_encode(['status' => $newStatus]),
+                'created_at' => now(),
             ]);
         }
 
@@ -162,6 +163,7 @@ class UserController extends BaseApiController
     public function destroy($id)
     {
         User::findOrFail($id)->delete();
+
         return $this->noContent('User deleted.');
     }
 
@@ -172,13 +174,13 @@ class UserController extends BaseApiController
         $user->update(['status' => 'Quarantined']);
 
         AuditLog::create([
-            'user_id'     => auth()->id() ?? null,
-            'action'      => "Status changed: {$oldStatus} -> Quarantined",
+            'user_id' => auth()->id() ?? null,
+            'action' => "Status changed: {$oldStatus} -> Quarantined",
             'entity_type' => 'User',
-            'entity_id'   => $id,
-            'old_values'  => json_encode(['status' => $oldStatus]),
-            'new_values'  => json_encode(['status' => 'Quarantined']),
-            'created_at'  => now(),
+            'entity_id' => $id,
+            'old_values' => json_encode(['status' => $oldStatus]),
+            'new_values' => json_encode(['status' => 'Quarantined']),
+            'created_at' => now(),
         ]);
 
         return $this->success(null, 'User quarantined.');
@@ -191,13 +193,13 @@ class UserController extends BaseApiController
         $user->update(['status' => 'Active']);
 
         AuditLog::create([
-            'user_id'     => auth()->id() ?? null,
-            'action'      => "Status changed: {$oldStatus} -> Active",
+            'user_id' => auth()->id() ?? null,
+            'action' => "Status changed: {$oldStatus} -> Active",
             'entity_type' => 'User',
-            'entity_id'   => $id,
-            'old_values'  => json_encode(['status' => $oldStatus]),
-            'new_values'  => json_encode(['status' => 'Active']),
-            'created_at'  => now(),
+            'entity_id' => $id,
+            'old_values' => json_encode(['status' => $oldStatus]),
+            'new_values' => json_encode(['status' => 'Active']),
+            'created_at' => now(),
         ]);
 
         return $this->success(null, 'User reactivated.');
@@ -210,13 +212,13 @@ class UserController extends BaseApiController
         $user->update(['status' => 'Archived']);
 
         AuditLog::create([
-            'user_id'     => auth()->id() ?? null,
-            'action'      => "Status changed: {$oldStatus} -> Archived",
+            'user_id' => auth()->id() ?? null,
+            'action' => "Status changed: {$oldStatus} -> Archived",
             'entity_type' => 'User',
-            'entity_id'   => $id,
-            'old_values'  => json_encode(['status' => $oldStatus]),
-            'new_values'  => json_encode(['status' => 'Archived']),
-            'created_at'  => now(),
+            'entity_id' => $id,
+            'old_values' => json_encode(['status' => $oldStatus]),
+            'new_values' => json_encode(['status' => 'Archived']),
+            'created_at' => now(),
         ]);
 
         return $this->success(null, 'User archived.');

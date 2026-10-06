@@ -4,7 +4,7 @@ namespace App\Services\Ml;
 
 use App\Models\ForecastResult;
 use App\Models\Product;
-use App\Models\SalesItem;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
@@ -12,9 +12,7 @@ class ForecastService
 {
     public const OVERVIEW_CACHE_KEY = 'forecast.overview.30';
 
-    public function __construct(private readonly MlServiceClient $ml)
-    {
-    }
+    public function __construct(private readonly MlServiceClient $ml) {}
 
     /**
      * Generate a 30-day forecast for every active product.
@@ -80,7 +78,7 @@ class ForecastService
     /**
      * Daily completed-sales quantities per product for the last 120 days.
      *
-     * @return \Illuminate\Support\Collection<int, object>
+     * @return Collection<int, object>
      */
     private function dailySalesSeries(Product $product)
     {

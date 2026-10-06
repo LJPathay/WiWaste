@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Models\AuditLog;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -45,8 +47,8 @@ class AuditService
             ->orderByDesc('log_id')
             ->first();
 
-        $chainData = $previous 
-            ? $previous->hash_chain . '|' . $this->computeLogHash($log)
+        $chainData = $previous
+            ? $previous->hash_chain.'|'.$this->computeLogHash($log)
             : $this->computeLogHash($log);
 
         $log->update(['hash_chain' => $chainData]);
@@ -76,10 +78,10 @@ class AuditService
     /**
      * Verify integrity of audit log chain
      */
-    public function verifyIntegrity(int $businessId = null): array
+    public function verifyIntegrity(?int $businessId = null): array
     {
         $query = AuditLog::orderBy('log_id');
-        
+
         if ($businessId) {
             $query->where('business_id', $businessId);
         }
@@ -90,9 +92,9 @@ class AuditService
 
         foreach ($logs as $log) {
             $computedHash = $this->computeLogHash($log);
-            
+
             if ($previousHash !== null) {
-                $expectedChain = $previousHash . '|' . $computedHash;
+                $expectedChain = $previousHash.'|'.$computedHash;
                 if ($log->hash_chain !== $expectedChain) {
                     $errors[] = [
                         'log_id' => $log->log_id,
@@ -102,7 +104,7 @@ class AuditService
                     ];
                 }
             }
-            
+
             $previousHash = $log->hash_chain;
         }
 
@@ -117,9 +119,9 @@ class AuditService
     /**
      * Query audit logs with filters
      */
-    public function query(array $filters = []): \Illuminate\Database\Eloquent\Builder
+    public function query(array $filters = []): Builder
     {
-        $query = \App\Models\AuditLog::query()
+        $query = AuditLog::query()
             ->with('user')
             ->orderByDesc('created_at');
 
@@ -144,7 +146,7 @@ class AuditService
         }
 
         if (isset($filters['action'])) {
-            $query->where('action', 'like', '%' . $filters['action'] . '%');
+            $query->where('action', 'like', '%'.$filters['action'].'%');
         }
 
         if (isset($filters['from_date'])) {
@@ -161,7 +163,7 @@ class AuditService
     /**
      * Get audit trail for a specific entity
      */
-    public function getEntityTrail(string $entityType, int $entityId): \Illuminate\Support\Collection
+    public function getEntityTrail(string $entityType, int $entityId): Collection
     {
         return AuditLog::where('entity_type', $entityType)
             ->where('entity_id', $entityId)

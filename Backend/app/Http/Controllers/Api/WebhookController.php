@@ -3,16 +3,15 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\WebhookRequest;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Validator;
 
 class WebhookController extends Controller
 {
     /**
      * Handle incoming webhook from external services
-     * 
+     *
      * Supported events:
      * - payment.completed
      * - payment.failed
@@ -20,18 +19,18 @@ class WebhookController extends Controller
      * - inventory.low_stock
      * - product.expired
      * - supplier.license_expiring
-     * 
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     *
+     * @return JsonResponse
      */
     public function handle(Request $request)
     {
         // Verify webhook signature
-        if (!$this->verifySignature($request)) {
+        if (! $this->verifySignature($request)) {
             Log::warning('Webhook signature verification failed', [
                 'ip' => $request->ip(),
                 'headers' => $request->headers->all(),
             ]);
+
             return response()->json(['message' => 'Invalid signature'], 401);
         }
 
@@ -45,7 +44,7 @@ class WebhookController extends Controller
 
         try {
             $this->handleEvent($event, $payload);
-            
+
             return response()->json(['status' => 'processed']);
         } catch (\Exception $e) {
             Log::error('Webhook processing failed', [
@@ -53,7 +52,7 @@ class WebhookController extends Controller
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
-            
+
             return response()->json(['message' => 'Processing failed'], 500);
         }
     }
@@ -63,8 +62,8 @@ class WebhookController extends Controller
      */
     protected function handleEvent(string $event, array $payload): void
     {
-        $handler = 'handle' . Str::studly($event);
-        
+        $handler = 'handle'.Str::studly($event);
+
         if (method_exists($this, $handler)) {
             $this->$handler($payload);
         } else {
@@ -79,14 +78,14 @@ class WebhookController extends Controller
     {
         $signature = $request->header('X-Webhook-Signature');
         $secret = config('services.webhook.secret');
-        
-        if (!$secret || !$signature) {
+
+        if (! $secret || ! $signature) {
             return false;
         }
 
         $payload = $request->getContent();
         $expectedSignature = hash_hmac('sha256', $payload, $secret);
-        
+
         return hash_equals($expectedSignature, $signature);
     }
 

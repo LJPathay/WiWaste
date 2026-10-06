@@ -22,7 +22,7 @@ class CreateCategoryRequest extends FormRequest
     {
         return [
             'Category_name.required' => 'Category name is required.',
-            'Category_name.unique'   => 'This category name is already taken.',
+            'Category_name.unique' => 'This category name is already taken.',
         ];
     }
 }

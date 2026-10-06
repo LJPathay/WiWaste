@@ -11,7 +11,7 @@ class ValidateApiInput
     public function handle(Request $request, Closure $next): Response
     {
         // Only apply to API routes
-        if (!$request->is('api/*')) {
+        if (! $request->is('api/*')) {
             return $next($request);
         }
 
@@ -24,11 +24,11 @@ class ValidateApiInput
         // Validate Content-Type for write operations
         if (in_array($request->method(), ['POST', 'PUT', 'PATCH'])) {
             $contentType = $request->header('Content-Type');
-            
+
             // Allow form data for file uploads, but require JSON for API calls
-            if ($contentType && !$this->isValidContentType($contentType)) {
+            if ($contentType && ! $this->isValidContentType($contentType)) {
                 return response()->json([
-                    'message' => 'Content-Type must be application/json for API write requests.'
+                    'message' => 'Content-Type must be application/json for API write requests.',
                 ], 415);
             }
         }
@@ -46,7 +46,7 @@ class ValidateApiInput
 
         // Extract MIME type (ignore charset etc.)
         $mimeType = explode(';', $contentType)[0];
-        
+
         return in_array(strtolower(trim($mimeType)), $validTypes);
     }
 }

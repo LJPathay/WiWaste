@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 class Recall extends Model
 {
     protected $table = 'Recalls';
+
     protected $primaryKey = 'recall_id';
+
     public $timestamps = true;
 
     protected $fillable = [
@@ -148,7 +150,7 @@ class Recall extends Model
     public function releaseQuarantine()
     {
         $affectedBatches = $this->affected_batches ?? [];
-        
+
         foreach ($affectedBatches as $batchData) {
             $batchId = $batchData['batch_id'] ?? null;
             if ($batchId) {

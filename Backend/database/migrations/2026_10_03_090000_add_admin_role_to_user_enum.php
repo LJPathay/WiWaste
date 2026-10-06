@@ -44,7 +44,7 @@ return new class extends Migration
         // truncated state this migration exists to prevent.
         $default = ($column->COLUMN_DEFAULT === null || $column->COLUMN_DEFAULT === '')
             ? ''
-            : " DEFAULT '" . $column->COLUMN_DEFAULT . "'";
+            : " DEFAULT '".$column->COLUMN_DEFAULT."'";
 
         DB::statement(
             "ALTER TABLE `User` MODIFY COLUMN `role` ENUM({$values}) {$nullable}{$default}"

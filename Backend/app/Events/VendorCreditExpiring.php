@@ -14,6 +14,5 @@ class VendorCreditExpiring
         public readonly float $creditAmount,
         public readonly string $deadline,
         public readonly int $daysRemaining,
-    ) {
-    }
+    ) {}
 }

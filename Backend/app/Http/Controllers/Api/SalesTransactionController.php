@@ -2,18 +2,18 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Requests\Api\StoreSaleTransactionRequest;
 use App\Http\Controllers\Concerns\ScopesTenant;
 use App\Http\Controllers\Controller;
-use App\Models\SalesTransaction;
-use App\Models\SalesItem;
-use App\Models\Inventory;
-use App\Models\FEFOBatch;
-use App\Models\StockMovement;
-use App\Models\AuditLog;
+use App\Http\Requests\Api\StoreSaleTransactionRequest;
 use App\Jobs\WarmAnalyticsCache;
-use Illuminate\Http\JsonResponse;
+use App\Models\AuditLog;
+use App\Models\FEFOBatch;
+use App\Models\Inventory;
+use App\Models\SalesItem;
+use App\Models\SalesTransaction;
+use App\Models\StockMovement;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class SalesTransactionController extends Controller
@@ -22,6 +22,7 @@ class SalesTransactionController extends Controller
 
     // Philippine VAT rate
     const VAT_RATE = 0.12;
+
     // Senior/PWD discount rate (RA 9994/10754)
     const SENIOR_PWD_DISCOUNT_RATE = 0.20;
 
@@ -29,10 +30,10 @@ class SalesTransactionController extends Controller
      * Get FEFO batches for a product ordered by earliest expiry first
      * Returns batches with available stock for the given business and branch
      */
-    protected function getFEFObatchesForProduct(int $productId, Request $request): \Illuminate\Support\Collection
+    protected function getFEFObatchesForProduct(int $productId, Request $request): Collection
     {
         $user = $request->user();
-        
+
         return FEFOBatch::where('product_id', $productId)
             ->where('business_id', $user?->business_id)
             ->where('branch_id', $user?->branch_id)
@@ -53,35 +54,35 @@ class SalesTransactionController extends Controller
     protected function deductStockFEFO(int $productId, int $quantity, Request $request): array
     {
         $batches = $this->getFEFObatchesForProduct($productId, $request);
-        
+
         // If no FEFO batches exist, fall back to legacy behavior (no batch tracking)
         if ($batches->isEmpty()) {
             return ['legacy' => $quantity];
         }
-        
+
         $totalAvailable = $batches->sum('quantity');
         if ($totalAvailable < $quantity) {
             throw new \InvalidArgumentException("Insufficient stock across all batches for product #{$productId}. Available: {$totalAvailable}, requested: {$quantity}");
         }
-        
+
         $deductions = [];
         $remainingQty = $quantity;
-        
+
         foreach ($batches as $batch) {
             if ($remainingQty <= 0) {
                 break;
             }
-            
+
             $deductQty = min($batch->quantity, $remainingQty);
             $batch->quantity -= $deductQty;
             $batch->stock_status = Inventory::calcStatus($batch->quantity, $batch->product?->reorder_level ?? 10);
             $batch->last_updated = now();
             $batch->save();
-            
+
             $deductions[$batch->batch_id] = $deductQty;
             $remainingQty -= $deductQty;
         }
-        
+
         return $deductions;
     }
 
@@ -99,6 +100,7 @@ class SalesTransactionController extends Controller
         // VAT-inclusive price: vatable_amount = subtotal / 1.12, vat = vatable * 0.12
         $vatableAmount = round($subtotal / 1.12, 2);
         $vatAmount = round($vatableAmount * self::VAT_RATE, 2);
+
         return [
             'vatable_amount' => $vatableAmount,
             'non_vatable_amount' => 0,
@@ -114,11 +116,12 @@ class SalesTransactionController extends Controller
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('transaction_id', 'like', "%{$search}%")
-                  ->orWhereHas('salesItems.product', fn ($p) => $p->where('product_name', 'like', "%{$search}%"));
+                    ->orWhereHas('salesItems.product', fn ($p) => $p->where('product_name', 'like', "%{$search}%"));
             });
         }
 
         $perPage = min((int) $request->input('per_page', 20), 100);
+
         return response()->json(
             $query->orderByDesc('transaction_date')->paginate($perPage)->through(fn ($t) => (new SaleResource($t))->resolve($request))
         );
@@ -149,10 +152,10 @@ class SalesTransactionController extends Controller
             WarmAnalyticsCache::dispatch();
 
             return response()->json([
-                'message'        => 'Transaction completed.',
+                'message' => 'Transaction completed.',
                 'transaction_id' => $transaction->transaction_id,
-                'total_amount'   => $totals['totalAmount'],
-                'vat_amount'     => round($totals['totalVat'], 2),
+                'total_amount' => $totals['totalAmount'],
+                'vat_amount' => round($totals['totalVat'], 2),
                 'vatable_amount' => round($totals['totalVatable'], 2),
                 'senior_pwd_discount' => round($totals['totalSeniorPWDiscount'], 2),
             ], 201);
@@ -173,7 +176,7 @@ class SalesTransactionController extends Controller
 
         foreach ($items as $item) {
             $inventory = $lockedInventories->get($item['product_id']);
-            if (!$inventory) {
+            if (! $inventory) {
                 return [null, response()->json([
                     'message' => "No inventory record for product #{$item['product_id']}.",
                 ], 422)];
@@ -184,6 +187,7 @@ class SalesTransactionController extends Controller
 
             if ($totalAvailable < $item['quantity']) {
                 $productName = $inventory->product?->product_name ?? "Product #{$item['product_id']}";
+
                 return [null, response()->json([
                     'message' => "Insufficient stock for {$productName}. Available: {$totalAvailable}, requested: {$item['quantity']}.",
                 ], 422)];
@@ -270,28 +274,28 @@ class SalesTransactionController extends Controller
         $totalAmount = $totals['totalAmount'];
 
         $transactionData = [
-            'user_id'                      => $userId,
-            'total_amount'                 => round($totalAmount, 2),
-            'vat_amount'                   => round($totals['totalVat'], 2),
-            'vatable_amount'               => round($totals['totalVatable'], 2),
-            'non_vatable_amount'           => round($totals['totalNonVatable'], 2),
-            'senior_pwd_discount_amount'   => round($totals['totalSeniorPWDiscount'], 2),
+            'user_id' => $userId,
+            'total_amount' => round($totalAmount, 2),
+            'vat_amount' => round($totals['totalVat'], 2),
+            'vatable_amount' => round($totals['totalVatable'], 2),
+            'non_vatable_amount' => round($totals['totalNonVatable'], 2),
+            'senior_pwd_discount_amount' => round($totals['totalSeniorPWDiscount'], 2),
             'senior_pwd_vat_exempt_amount' => round($totals['totalSeniorPWVatExempt'], 2),
-            'discount_amount'              => round($totals['totalDiscount'], 2),
-            'discount_breakdown'           => $totals['discountBreakdown'],
-            'transaction_date'             => now(),
-            'payment_method'               => $data['payment_method'],
-            'payment_reference'            => $data['payment_reference'] ?? null,
-            'payment_status'               => 'Paid',
-            'amount_tendered'              => $data['amount_tendered'] ?? null,
-            'change_due'                   => $data['change_due'] ?? null,
-            'senior_pwd_name'              => $data['senior_pwd_name'] ?? null,
-            'senior_pwd_id'                => $data['senior_pwd_id'] ?? null,
-            'senior_pwd_type'              => $data['senior_pwd_type'] ?? 'none',
-            'customer_name'                => $data['customer_name'] ?? null,
-            'customer_phone'               => $data['customer_phone'] ?? null,
-            'customer_email'               => $data['customer_email'] ?? null,
-            'status'                       => 'Completed',
+            'discount_amount' => round($totals['totalDiscount'], 2),
+            'discount_breakdown' => $totals['discountBreakdown'],
+            'transaction_date' => now(),
+            'payment_method' => $data['payment_method'],
+            'payment_reference' => $data['payment_reference'] ?? null,
+            'payment_status' => 'Paid',
+            'amount_tendered' => $data['amount_tendered'] ?? null,
+            'change_due' => $data['change_due'] ?? null,
+            'senior_pwd_name' => $data['senior_pwd_name'] ?? null,
+            'senior_pwd_id' => $data['senior_pwd_id'] ?? null,
+            'senior_pwd_type' => $data['senior_pwd_type'] ?? 'none',
+            'customer_name' => $data['customer_name'] ?? null,
+            'customer_phone' => $data['customer_phone'] ?? null,
+            'customer_email' => $data['customer_email'] ?? null,
+            'status' => 'Completed',
         ];
 
         if ($user && $user->business_id) {
@@ -313,18 +317,18 @@ class SalesTransactionController extends Controller
             $vatCalc = $this->calculateItemVat($sellingPrice, $item['quantity'], $discounts['isVatExempt']);
 
             $saleItem = SalesItem::create([
-                'transaction_id'       => $transaction->transaction_id,
-                'product_id'           => $item['product_id'],
-                'quantity'             => $item['quantity'],
-                'unit_price'           => $item['unit_price'],
-                'original_price'       => ($discounts['discountPct'] ?? 0) ? round($item['unit_price'] / (1 - $discounts['discountPct']), 2) : null,
-                'subtotal'             => round($discounts['subtotal'], 2),
-                'vat_amount'           => $vatCalc['vat_amount'],
-                'vatable_amount'       => $vatCalc['vatable_amount'],
-                'discount_amount'      => $discounts['discountAmt'] + $discounts['seniorPWDiscount'],
-                'discount_pct'         => $discounts['discountPct'] ?: null,
+                'transaction_id' => $transaction->transaction_id,
+                'product_id' => $item['product_id'],
+                'quantity' => $item['quantity'],
+                'unit_price' => $item['unit_price'],
+                'original_price' => ($discounts['discountPct'] ?? 0) ? round($item['unit_price'] / (1 - $discounts['discountPct']), 2) : null,
+                'subtotal' => round($discounts['subtotal'], 2),
+                'vat_amount' => $vatCalc['vat_amount'],
+                'vatable_amount' => $vatCalc['vatable_amount'],
+                'discount_amount' => $discounts['discountAmt'] + $discounts['seniorPWDiscount'],
+                'discount_pct' => $discounts['discountPct'] ?: null,
                 'is_senior_pwd_exempt' => $discounts['isSeniorPWDItem'],
-                'override_reason'      => $item['override_reason'] ?? null,
+                'override_reason' => $item['override_reason'] ?? null,
             ]);
 
             $batchDeductions = $this->deductStockFEFO($item['product_id'], $item['quantity'], $request);
@@ -344,16 +348,16 @@ class SalesTransactionController extends Controller
             }
 
             StockMovement::create([
-                'business_id'   => $user?->business_id,
-                'branch_id'     => $user?->branch_id,
-                'product_id'    => $item['product_id'],
-                'batch_id'      => $batchId === 'legacy' ? null : $batchId,
-                'user_id'       => $userId,
+                'business_id' => $user?->business_id,
+                'branch_id' => $user?->branch_id,
+                'product_id' => $item['product_id'],
+                'batch_id' => $batchId === 'legacy' ? null : $batchId,
+                'user_id' => $userId,
                 'movement_type' => $batchId === 'legacy' ? 'Stock Out' : 'Sale',
-                'quantity'      => $deductQty,
-                'remarks'       => 'Sale - Txn #' . $transaction->transaction_id,
+                'quantity' => $deductQty,
+                'remarks' => 'Sale - Txn #'.$transaction->transaction_id,
                 'movement_date' => now(),
-                'sale_item_id'  => $saleItem->sales_item_id,
+                'sale_item_id' => $saleItem->sales_item_id,
             ]);
         }
     }
@@ -361,20 +365,20 @@ class SalesTransactionController extends Controller
     protected function logSaleAudit(int $userId, SalesTransaction $transaction, array $data, array $totals, $user): void
     {
         AuditLog::create([
-            'user_id'     => $userId,
-            'action'      => "POS sale #{$transaction->transaction_id}: {$totals['totalAmount']} via {$data['payment_method']}",
+            'user_id' => $userId,
+            'action' => "POS sale #{$transaction->transaction_id}: {$totals['totalAmount']} via {$data['payment_method']}",
             'entity_type' => 'Sales',
-            'entity_id'   => $transaction->transaction_id,
-            'old_values'  => null,
-            'new_values'  => json_encode([
+            'entity_id' => $transaction->transaction_id,
+            'old_values' => null,
+            'new_values' => json_encode([
                 'total' => $totals['totalAmount'],
                 'items' => count($data['items']),
                 'vat' => $totals['totalVat'],
                 'senior_pwd_discount' => $totals['totalSeniorPWDiscount'],
             ]),
-            'created_at'  => now(),
+            'created_at' => now(),
             'business_id' => $user?->business_id,
-            'branch_id'   => $user?->branch_id,
+            'branch_id' => $user?->branch_id,
         ]);
     }
 
@@ -384,7 +388,7 @@ class SalesTransactionController extends Controller
         $query = $this->scopeForBusinessAndBranch($query, $request);
         $transaction = $query->find($id);
 
-        if (!$transaction) {
+        if (! $transaction) {
             return response()->json(['message' => 'Transaction not found.'], 404);
         }
 
@@ -397,7 +401,7 @@ class SalesTransactionController extends Controller
         $query = $this->scopeForBusinessAndBranch($query, $request);
         $transaction = $query->find($id);
 
-        if (!$transaction) {
+        if (! $transaction) {
             return response()->json(['message' => 'Transaction not found.'], 404);
         }
 
@@ -405,7 +409,7 @@ class SalesTransactionController extends Controller
         $branch = $transaction->branch;
 
         // Generate receipt serial number (ATP + date + sequence)
-        $receiptSerial = 'ATP-' . $transaction->transaction_id . '-' . now()->format('YmdHis');
+        $receiptSerial = 'ATP-'.$transaction->transaction_id.'-'.now()->format('YmdHis');
 
         return response()->json([
             'receipt' => [
@@ -414,34 +418,34 @@ class SalesTransactionController extends Controller
                 'atp_expiry' => $business?->atp_expiry ?? null,
                 'permit_number' => $business?->permit_number ?? null,
                 'receipt_serial' => $receiptSerial,
-                
+
                 // Business Information
                 'business_name' => $business?->name ?? 'WiWaste',
                 'business_trade_name' => $business?->trade_name ?? null,
                 'business_address' => $branch?->address ?? $business?->address ?? 'N/A',
                 'business_tin' => $business?->tin ?? 'N/A',
                 'business_vat_reg' => $business?->vat_registered ? 'VAT' : 'NON-VAT',
-                
+
                 // Branch Information
                 'branch_name' => $branch?->name ?? null,
                 'branch_address' => $branch?->address ?? null,
                 'branch_code' => $branch?->code ?? null,
-                
+
                 // Transaction Information
                 'transaction_id' => $transaction->transaction_id,
                 'transaction_date' => $transaction->transaction_date,
                 'transaction_time' => $transaction->transaction_date ? $transaction->transaction_date->format('H:i:s') : null,
-                
+
                 // Cashier
                 'cashier' => $transaction->user?->Full_name ?? 'Cashier',
                 'cashier_id' => $transaction->user_id,
-                
+
                 // Payment
                 'payment_method' => $transaction->payment_method,
                 'payment_reference' => $transaction->payment_reference,
                 'amount_tendered' => $transaction->amount_tendered,
                 'change_due' => $transaction->change_due,
-                
+
                 // Senior/PWD
                 'senior_pwd' => $transaction->senior_pwd_type !== 'none' ? [
                     'type' => $transaction->senior_pwd_type,
@@ -449,7 +453,7 @@ class SalesTransactionController extends Controller
                     'name' => $transaction->senior_pwd_name,
                     'discount' => $transaction->senior_pwd_discount_amount,
                 ] : null,
-                
+
                 // Items with VAT breakdown
                 'items' => $transaction->salesItems->map(fn ($item) => [
                     'product_name' => $item->product?->product_name,
@@ -464,7 +468,7 @@ class SalesTransactionController extends Controller
                     'discount_amount' => $item->discount_amount,
                     'is_senior_pwd_exempt' => $item->is_senior_pwd_exempt,
                 ]),
-                
+
                 // VAT Breakdown (BIR Compliant)
                 'vat_breakdown' => [
                     'vatable_sales' => $transaction->vatable_amount,
@@ -472,7 +476,7 @@ class SalesTransactionController extends Controller
                     'zero_rated_sales' => 0,
                     'vat_amount' => $transaction->vat_amount,
                 ],
-                
+
                 // Totals
                 'totals' => [
                     'gross_sales' => $transaction->total_amount + $transaction->discount_amount + $transaction->senior_pwd_discount_amount,
@@ -485,7 +489,7 @@ class SalesTransactionController extends Controller
                     'vat_amount' => $transaction->vat_amount,
                     'total' => $transaction->total_amount,
                 ],
-                
+
                 // Payment
                 'payment' => [
                     'method' => $transaction->payment_method,

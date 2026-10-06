@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
 use App\Http\Controllers\Api\Concerns\StandardApiResponse;
+use App\Http\Controllers\Controller;
 
 /**
  * Base API Controller

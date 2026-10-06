@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Api\Concerns;
 
 use Illuminate\Http\JsonResponse;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\AbstractPaginator;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 /**
  * Standard API Response Trait
@@ -20,8 +20,8 @@ trait StandardApiResponse
         return response()->json([
             'success' => true,
             'message' => $message,
-            'data'    => $data,
-            'meta'    => [],
+            'data' => $data,
+            'meta' => [],
         ], $status);
     }
 
@@ -33,14 +33,14 @@ trait StandardApiResponse
         return response()->json([
             'success' => true,
             'message' => $message,
-            'data'    => $paginator->items(),
-            'meta'    => [
+            'data' => $paginator->items(),
+            'meta' => [
                 'current_page' => $paginator->currentPage(),
-                'last_page'    => $paginator->lastPage(),
-                'per_page'     => $paginator->perPage(),
-                'total'        => $paginator->total(),
-                'from'         => $paginator->firstItem(),
-                'to'           => $paginator->lastItem(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+                'from' => $paginator->firstItem(),
+                'to' => $paginator->lastItem(),
             ],
         ], $status);
     }
@@ -61,8 +61,8 @@ trait StandardApiResponse
         return response()->json([
             'success' => true,
             'message' => $message,
-            'data'    => null,
-            'meta'    => [],
+            'data' => null,
+            'meta' => [],
         ], 204);
     }
 
@@ -74,8 +74,8 @@ trait StandardApiResponse
         return response()->json([
             'success' => false,
             'message' => $message,
-            'data'    => $data,
-            'meta'    => [],
+            'data' => $data,
+            'meta' => [],
         ], $status);
     }
 
@@ -87,8 +87,8 @@ trait StandardApiResponse
         return response()->json([
             'success' => false,
             'message' => $message,
-            'data'    => null,
-            'meta'    => [
+            'data' => null,
+            'meta' => [
                 'errors' => $errors,
             ],
         ], 422);

@@ -14,9 +14,9 @@ return new class extends Migration
         Schema::table('Audit_Log', function (Blueprint $table) {
             $table->foreignId('business_id')->nullable()->constrained()->onDelete('cascade');
             $table->foreignId('branch_id')->nullable()->constrained()->onDelete('cascade');
-            
+
             // Add foreign key for user_id if not already present (it should be from original migration)
-            if (!Schema::hasColumn('Audit_Log', 'user_id')) {
+            if (! Schema::hasColumn('Audit_Log', 'user_id')) {
                 $table->foreignId('user_id')->constrained('User', 'User_id')->onDelete('set null');
             }
         });

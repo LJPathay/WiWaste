@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 class WastageFlag extends Model
 {
     protected $table = 'wastage_flags';
+
     protected $primaryKey = 'flag_id';
+
     public $timestamps = false;
 
     protected $fillable = [

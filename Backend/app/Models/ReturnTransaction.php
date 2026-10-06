@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 class ReturnTransaction extends Model
 {
     protected $table = 'Return_Transaction';
+
     protected $primaryKey = 'return_id';
+
     public $timestamps = false;
 
     protected $fillable = [

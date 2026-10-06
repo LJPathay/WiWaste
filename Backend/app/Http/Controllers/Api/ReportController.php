@@ -3,14 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\WastageRecord;
-use App\Models\StockMovement;
-use App\Models\SalesTransaction;
-use App\Models\SalesItem;
 use App\Models\ReturnTransaction;
-use App\Models\Product;
-use App\Models\Inventory;
-use App\Models\Supplier;
+use App\Models\SalesTransaction;
+use App\Models\StockMovement;
+use App\Models\WastageRecord;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -20,7 +16,7 @@ class ReportController extends Controller
     public function wasteSummary(Request $request)
     {
         $from = $request->input('from', '');
-        $to   = $request->input('to', '');
+        $to = $request->input('to', '');
         $cacheKey = "reports.waste_summary.{$from}.{$to}";
 
         return response()->json(Cache::remember($cacheKey, 900, function () use ($from, $to) {
@@ -32,7 +28,7 @@ class ReportController extends Controller
                 $query->where('wr.date_recorded', '>=', $from);
             }
             if ($to) {
-                $query->where('wr.date_recorded', '<=', $to . ' 23:59:59');
+                $query->where('wr.date_recorded', '<=', $to.' 23:59:59');
             }
 
             $records = $query->get([
@@ -47,16 +43,16 @@ class ReportController extends Controller
             $grouped = $records->groupBy(fn ($r) => $r->category ?? 'Uncategorized');
 
             return $grouped->map(fn ($items, $category) => [
-                'category'       => $category,
+                'category' => $category,
                 'total_quantity' => $items->sum('quantity'),
-                'total_loss'     => (float) $items->sum('estimated_loss'),
-                'count'          => $items->count(),
-                'items'          => $items->map(fn ($r) => [
-                    'product'  => $r->product_name,
-                    'type'     => $r->wastage_type,
+                'total_loss' => (float) $items->sum('estimated_loss'),
+                'count' => $items->count(),
+                'items' => $items->map(fn ($r) => [
+                    'product' => $r->product_name,
+                    'type' => $r->wastage_type,
                     'quantity' => $r->quantity,
-                    'loss'     => (float) $r->estimated_loss,
-                    'date'     => $r->date_recorded,
+                    'loss' => (float) $r->estimated_loss,
+                    'date' => $r->date_recorded,
                 ])->values(),
             ])->values();
         }));
@@ -65,7 +61,7 @@ class ReportController extends Controller
     public function inventoryMovement(Request $request)
     {
         $from = $request->input('from', '');
-        $to   = $request->input('to', '');
+        $to = $request->input('to', '');
 
         $query = StockMovement::with('product');
 
@@ -73,17 +69,17 @@ class ReportController extends Controller
             $query->where('movement_date', '>=', $from);
         }
         if ($to) {
-            $query->where('movement_date', '<=', $to . ' 23:59:59');
+            $query->where('movement_date', '<=', $to.' 23:59:59');
         }
 
         return response()->json(
             $query->orderBy('movement_date', 'desc')->take(200)->get()->map(fn ($m) => [
-                'id'       => $m->movement_id,
-                'product'  => $m->product?->product_name,
-                'type'     => $m->movement_type,
+                'id' => $m->movement_id,
+                'product' => $m->product?->product_name,
+                'type' => $m->movement_type,
                 'quantity' => $m->quantity,
-                'remarks'  => $m->remarks,
-                'date'     => $m->movement_date,
+                'remarks' => $m->remarks,
+                'date' => $m->movement_date,
             ])
         );
     }
@@ -129,12 +125,12 @@ class ReportController extends Controller
                 )
                 ->get()
                 ->map(fn ($p) => [
-                    'id'               => $p->id,
-                    'name'             => $p->name,
-                    'sku'              => $p->sku,
-                    'category'         => $p->category,
-                    'stock'            => $p->stock,
-                    'expiration_date'  => $p->expiration_date,
+                    'id' => $p->id,
+                    'name' => $p->name,
+                    'sku' => $p->sku,
+                    'category' => $p->category,
+                    'stock' => $p->stock,
+                    'expiration_date' => $p->expiration_date,
                     'days_until_expiry' => now()->diffInDays($p->expiration_date, false),
                 ]);
         }));
@@ -162,18 +158,18 @@ class ReportController extends Controller
     public function costImpact()
     {
         return response()->json(Cache::remember('reports.cost_impact', 900, function () {
-            $totalWasteLoss  = (float) WastageRecord::sum('estimated_loss');
-            $totalSales      = (float) SalesTransaction::where('status', 'Completed')->sum('total_amount');
-            $totalReturns    = (float) ReturnTransaction::sum('refund_amount');
+            $totalWasteLoss = (float) WastageRecord::sum('estimated_loss');
+            $totalSales = (float) SalesTransaction::where('status', 'Completed')->sum('total_amount');
+            $totalReturns = (float) ReturnTransaction::sum('refund_amount');
             $totalStockValue = (float) DB::table('Product AS p')
                 ->join('Inventory AS i', 'p.product_id', '=', 'i.product_id')
                 ->sum(DB::raw('i.current_stock * p.cost_price'));
 
             return [
-                'total_waste_loss'    => $totalWasteLoss,
-                'total_sales'         => $totalSales,
-                'total_returns'       => $totalReturns,
-                'total_stock_value'   => $totalStockValue,
+                'total_waste_loss' => $totalWasteLoss,
+                'total_sales' => $totalSales,
+                'total_returns' => $totalReturns,
+                'total_stock_value' => $totalStockValue,
                 'waste_to_sales_ratio' => $totalSales > 0 ? round($totalWasteLoss / $totalSales * 100, 2) : 0,
             ];
         }));
@@ -182,11 +178,15 @@ class ReportController extends Controller
     public function salesVatSummary(Request $request)
     {
         $from = $request->input('from', '');
-        $to   = $request->input('to', '');
+        $to = $request->input('to', '');
 
         $query = SalesTransaction::where('status', 'Completed');
-        if ($from) $query->whereDate('transaction_date', '>=', $from);
-        if ($to)   $query->whereDate('transaction_date', '<=', $to);
+        if ($from) {
+            $query->whereDate('transaction_date', '>=', $from);
+        }
+        if ($to) {
+            $query->whereDate('transaction_date', '<=', $to);
+        }
 
         $totals = $query->selectRaw('
             SUM(total_amount) as total_sales,
@@ -224,11 +224,15 @@ class ReportController extends Controller
     public function discountSummary(Request $request)
     {
         $from = $request->input('from', '');
-        $to   = $request->input('to', '');
+        $to = $request->input('to', '');
 
         $query = SalesTransaction::where('status', 'Completed');
-        if ($from) $query->whereDate('transaction_date', '>=', $from);
-        if ($to)   $query->whereDate('transaction_date', '<=', $to);
+        if ($from) {
+            $query->whereDate('transaction_date', '>=', $from);
+        }
+        if ($to) {
+            $query->whereDate('transaction_date', '<=', $to);
+        }
 
         $totals = $query->selectRaw('
             SUM(discount_amount) as total_discount,
@@ -264,7 +268,7 @@ class ReportController extends Controller
     public function seniorPwdTransactionLog(Request $request)
     {
         $from = $request->input('from', '');
-        $to   = $request->input('to', '');
+        $to = $request->input('to', '');
 
         $transactions = SalesTransaction::where('status', 'Completed')
             ->where('senior_pwd_type', '!=', 'none')

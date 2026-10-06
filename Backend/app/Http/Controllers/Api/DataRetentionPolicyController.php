@@ -4,11 +4,11 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Concerns\ScopesTenant;
 use App\Http\Controllers\Controller;
-use App\Models\DataPurgeLog;
-use App\Models\DataRetentionPolicy;
 use App\Http\Requests\Api\StoreDataRetentionPolicyRequest;
 use App\Http\Requests\Api\UpdateDataRetentionPolicyRequest;
 use App\Http\Resources\DataRetentionPolicyResource;
+use App\Models\DataPurgeLog;
+use App\Models\DataRetentionPolicy;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;

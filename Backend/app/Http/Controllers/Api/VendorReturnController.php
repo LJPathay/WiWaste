@@ -9,6 +9,11 @@ use App\Models\VendorReturnItem;
 use App\Models\Inventory;
 use App\Models\FEFOBatch;
 use App\Models\AuditLog;
+use App\Http\Requests\Api\StoreVendorReturnRequest;
+use App\Http\Requests\Api\UpdateVendorReturnRequest;
+use App\Http\Requests\Api\RejectVendorReturnRequest;
+use App\Http\Requests\Api\ReceiveVendorReturnRequest;
+use App\Http\Resources\VendorReturnResource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -32,27 +37,16 @@ class VendorReturnController extends Controller
         $perPage = min((int) $request->input('per_page', 20), 100);
         return response()->json(
             $query->orderByDesc('created_at')->paginate($perPage)
+                ->through(fn ($vr) => (new VendorReturnResource($vr))->toArray($request))
         );
     }
 
-    public function store(Request $request)
+    public function store(StoreVendorReturnRequest $request)
     {
         $user = $request->user();
         $userId = $user?->User_id ?? 1;
 
-        $data = $request->validate([
-            'business_id' => 'sometimes|integer|exists:businesses,id',
-            'branch_id' => 'sometimes|integer|exists:branches,id',
-            'supplier_id' => 'required|integer|exists:Supplier,supplier_id',
-            'return_reason_code' => 'required|in:overstock,near_expiry,damaged,wrong_shipment,quality_issue,recall,expired,other',
-            'notes' => 'nullable|string|max:1000',
-            'items' => 'required|array|min:1',
-            'items.*.product_id' => 'required|integer|exists:Product,product_id',
-            'items.*.batch_id' => 'nullable|integer|exists:FEFO_Batch,batch_id',
-            'items.*.quantity' => 'required|integer|min:1',
-            'items.*.unit_cost' => 'required|numeric|min:0',
-            'items.*.reason' => 'nullable|string|max:500',
-        ]);
+        $data = $request->validated();
 
         // Auto-assign business_id and branch_id from user if not provided
         if (!isset($data['business_id']) && $user && $user->business_id) {
@@ -104,7 +98,7 @@ class VendorReturnController extends Controller
 
             return response()->json([
                 'message' => 'Vendor return request created.',
-                'vendor_return' => $vendorReturn,
+                'vendor_return' => (new VendorReturnResource($vendorReturn))->toArray($request),
             ], 201);
         });
     }
@@ -115,10 +109,10 @@ class VendorReturnController extends Controller
         $query = $this->scopeForBusinessAndBranch($query, request());
         $vendorReturn = $query->findOrFail($id);
 
-        return response()->json($vendorReturn);
+        return new VendorReturnResource($vendorReturn);
     }
 
-    public function update(Request $request, $id)
+    public function update(UpdateVendorReturnRequest $request, $id)
     {
         $user = $request->user();
 
@@ -130,17 +124,7 @@ class VendorReturnController extends Controller
             return response()->json(['message' => 'Cannot modify vendor return in current status.'], 422);
         }
 
-        $data = $request->validate([
-            'supplier_id' => 'sometimes|integer|exists:Supplier,supplier_id',
-            'return_reason_code' => 'sometimes|in:overstock,near_expiry,damaged,wrong_shipment,quality_issue,recall,expired,other',
-            'notes' => 'nullable|string|max:1000',
-            'items' => 'sometimes|array|min:1',
-            'items.*.product_id' => 'required|integer|exists:Product,product_id',
-            'items.*.batch_id' => 'nullable|integer|exists:FEFO_Batch,batch_id',
-            'items.*.quantity' => 'required|integer|min:1',
-            'items.*.unit_cost' => 'required|numeric|min:0',
-            'items.*.reason' => 'nullable|string|max:500',
-        ]);
+        $data = $request->validated();
 
         $vendorReturn->update($data);
 
@@ -178,7 +162,7 @@ class VendorReturnController extends Controller
 
         return response()->json([
             'message' => 'Vendor return updated.',
-            'vendor_return' => $vendorReturn,
+            'vendor_return' => (new VendorReturnResource($vendorReturn))->toArray($request),
         ]);
     }
 
@@ -209,11 +193,11 @@ class VendorReturnController extends Controller
 
         return response()->json([
             'message' => 'Vendor return approved.',
-            'vendor_return' => $vendorReturn->fresh()->load(['supplier', 'creator', 'approver', 'items.product']),
+            'vendor_return' => (new VendorReturnResource($vendorReturn->fresh()->load(['supplier', 'creator', 'approver', 'items.product'])))->toArray($request),
         ]);
     }
 
-    public function reject(Request $request, $id)
+    public function reject(RejectVendorReturnRequest $request, $id)
     {
         $user = $request->user();
 
@@ -225,9 +209,7 @@ class VendorReturnController extends Controller
             return response()->json(['message' => 'Only pending returns can be rejected.'], 422);
         }
 
-        $data = $request->validate([
-            'reason' => 'required|string|max:500',
-        ]);
+        $data = $request->validated();
 
         $vendorReturn->reject($user?->User_id ?? 1, $data['reason']);
 
@@ -244,7 +226,7 @@ class VendorReturnController extends Controller
 
         return response()->json([
             'message' => 'Vendor return rejected.',
-            'vendor_return' => $vendorReturn->fresh()->load(['supplier', 'creator', 'approver', 'items.product']),
+            'vendor_return' => (new VendorReturnResource($vendorReturn->fresh()->load(['supplier', 'creator', 'approver', 'items.product'])))->toArray($request),
         ]);
     }
 
@@ -275,11 +257,11 @@ class VendorReturnController extends Controller
 
         return response()->json([
             'message' => 'Vendor return marked as shipped.',
-            'vendor_return' => $vendorReturn->fresh(),
+            'vendor_return' => (new VendorReturnResource($vendorReturn->fresh()))->toArray($request),
         ]);
     }
 
-    public function receive(Request $request, $id)
+    public function receive(ReceiveVendorReturnRequest $request, $id)
     {
         $user = $request->user();
 
@@ -291,13 +273,7 @@ class VendorReturnController extends Controller
             return response()->json(['message' => 'Only shipped returns can be received.'], 422);
         }
 
-        $data = $request->validate([
-            'items' => 'sometimes|array',
-            'items.*.vendor_return_item_id' => 'required|integer|exists:Vendor_Return_Items,vendor_return_item_id',
-            'items.*.received_quantity' => 'required|integer|min:0',
-            'items.*.rejected_quantity' => 'nullable|integer|min:0',
-            'items.*.rejection_reason' => 'nullable|string|max:255',
-        ]);
+        $data = $request->validated();
 
         $vendorReturn->receive();
 
@@ -354,7 +330,7 @@ class VendorReturnController extends Controller
 
         return response()->json([
             'message' => 'Vendor return received with credit note.',
-            'vendor_return' => $vendorReturn->fresh()->load('items.product', 'items.batch'),
+            'vendor_return' => (new VendorReturnResource($vendorReturn->fresh()->load('items.product', 'items.batch')))->toArray($request),
             'credit_note' => [
                 'total_credit' => $totalCredit,
                 'items' => $receivedItems,
@@ -389,7 +365,7 @@ class VendorReturnController extends Controller
 
         return response()->json([
             'message' => 'Vendor return credited.',
-            'vendor_return' => $vendorReturn->fresh(),
+            'vendor_return' => (new VendorReturnResource($vendorReturn->fresh()))->toArray($request),
         ]);
     }
 

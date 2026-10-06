@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Api;
 use App\Models\User;
 use App\Models\PasswordResetOtp;
 use App\Services\LoginAttemptService;
+use App\Http\Requests\Api\LoginRequest;
 use App\Http\Requests\Api\ForgotPasswordRequest;
 use App\Http\Requests\Api\ResetPasswordRequest;
 use App\Http\Requests\Api\VerifyOtpRequest;
+use App\Http\Resources\UserResource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
@@ -22,14 +24,11 @@ class AuthController extends BaseApiController
         $this->loginAttemptService = $loginAttemptService;
     }
 
-    public function login(Request $request)
+    public function login(LoginRequest $request)
     {
-        $request->validate([
-            'username' => 'required|string',
-            'password' => 'required|string',
-        ]);
+        $validated = $request->validated();
 
-        $identifier = $request->username;
+        $identifier = $validated['username'];
         $ip = $request->ip();
         $userAgent = $request->userAgent();
 
@@ -43,7 +42,7 @@ class AuthController extends BaseApiController
             ->orWhere('email', $identifier)
             ->first();
 
-        if (! $user || ! Hash::check($request->password, $user->password)) {
+        if (! $user || ! Hash::check($validated['password'], $user->password)) {
             // Record failed attempt
             $this->loginAttemptService->recordFailedAttempt($identifier, $ip, $userAgent);
 
@@ -80,14 +79,7 @@ class AuthController extends BaseApiController
         // Create refresh token (long-lived: 7 days)
         $refreshToken = $user->createToken('wiwaste-refresh', ['refresh'], now()->addDays(7))->plainTextToken;
 
-        $userData = [
-            'id'       => $user->User_id,
-            'name'     => $user->full_name,
-            'username' => $user->username,
-            'email'    => $user->email,
-            'role'     => $user->role,
-            'status'   => $user->status,
-        ];
+        $userData = (new UserResource($user))->toArray($request);
 
         // Set refresh token as HttpOnly cookie (secure, same-site)
         $cookie = cookie('refresh_token', $refreshToken, 10080, '/', null, true, true, false, 'lax'); // 7 days = 10080 minutes
@@ -111,14 +103,7 @@ class AuthController extends BaseApiController
     public function me(Request $request)
     {
         $user = $request->user();
-        return $this->success([
-            'id'       => $user->User_id,
-            'name'     => $user->full_name,
-            'username' => $user->username,
-            'email'    => $user->email,
-            'role'     => $user->role,
-            'status'   => $user->status,
-        ]);
+        return $this->success((new UserResource($user))->toArray($request));
     }
 
     public function refresh(Request $request)

@@ -18,12 +18,4 @@ class LoginRequest extends FormRequest
             'password' => 'required|string',
         ];
     }
-
-    public function messages(): array
-    {
-        return [
-            'username.required' => 'Username or email is required.',
-            'password.required' => 'Password is required.',
-        ];
-    }
 }

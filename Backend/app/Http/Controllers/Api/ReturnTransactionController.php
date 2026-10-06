@@ -10,6 +10,9 @@ use App\Models\SalesTransaction;
 use App\Models\Inventory;
 use App\Models\StockMovement;
 use App\Models\AuditLog;
+use App\Http\Requests\Api\StoreReturnTransactionRequest;
+use App\Http\Requests\Api\RejectReturnTransactionRequest;
+use App\Http\Resources\ReturnTransactionResource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -41,41 +44,16 @@ class ReturnTransactionController extends Controller
 
         $perPage = min((int) $request->input('per_page', 20), 100);
         return response()->json(
-            $query->orderByDesc('return_date')->paginate($perPage)->through(fn ($r) => [
-                'id'                => $r->return_id,
-                'product_name'      => $r->salesItem?->product?->product_name,
-                'sku'               => $r->salesItem?->product?->barcode,
-                'returned_by'       => $r->user?->Full_name ?? 'System',
-                'quantity_returned' => $r->quantity_returned,
-                'reason'            => $r->reason,
-                'return_reason_code'=> $r->return_reason_code,
-                'refund_amount'     => $r->refund_amount,
-                'return_date'       => $r->return_date,
-                'approval_status'   => $r->approval_status,
-                'approved_by'       => $r->approver?->Full_name,
-                'approved_at'       => $r->approved_at,
-                'is_within_7_days'  => $r->is_within_7_days,
-                'business_id'       => $r->business_id,
-                'branch_id'         => $r->branch_id,
-            ])
+            $query->orderByDesc('return_date')->paginate($perPage)->through(fn ($r) => (new ReturnTransactionResource($r))->toArray($request))
         );
     }
 
-    public function store(Request $request)
+    public function store(StoreReturnTransactionRequest $request)
     {
         $user = $request->user();
         $userId = $user?->User_id ?? 1;
 
-        $data = $request->validate([
-            'sale_item_id'       => 'required|integer|exists:Sales_Item,sales_item_id',
-            'quantity_returned'  => 'required|integer|min:1',
-            'reason'             => 'nullable|string|max:255',
-            'return_reason_code' => 'required|in:defective,wrong_item,change_mind,damaged,expired,missing_parts,not_as_described,other',
-            'evidence_notes'     => 'nullable|string|max:1000',
-            'evidence_photos'    => 'nullable|array',
-            'refund_amount'      => 'required|numeric|min:0',
-            'return_date'        => 'required|date',
-        ]);
+        $data = $request->validated();
 
         $saleItem = SalesItem::with(['transaction', 'product'])->findOrFail($data['sale_item_id']);
 
@@ -213,7 +191,7 @@ class ReturnTransactionController extends Controller
         ]);
     }
 
-    public function reject(Request $request, $id)
+    public function reject(RejectReturnTransactionRequest $request, $id)
     {
         $user = $request->user();
 
@@ -225,9 +203,7 @@ class ReturnTransactionController extends Controller
             return response()->json(['message' => 'Return already rejected.'], 422);
         }
 
-        $data = $request->validate([
-            'rejection_reason' => 'required|string|max:500',
-        ]);
+        $data = $request->validated();
 
         $return->update([
             'approval_status' => 'rejected',
@@ -260,25 +236,6 @@ class ReturnTransactionController extends Controller
         $query = $this->scopeForBusinessAndBranch($query, request());
         $return = $query->findOrFail($id);
 
-        return response()->json([
-            'id'                => $return->return_id,
-            'product_name'      => $return->salesItem?->product?->product_name,
-            'sku'               => $return->salesItem?->product?->barcode,
-            'returned_by'       => $return->user?->Full_name ?? 'System',
-            'quantity_returned' => $return->quantity_returned,
-            'reason'            => $return->reason,
-            'return_reason_code'=> $return->return_reason_code,
-            'evidence_notes'    => $return->evidence_notes,
-            'evidence_photos'   => $return->evidence_photos,
-            'refund_amount'     => $return->refund_amount,
-            'return_date'       => $return->return_date,
-            'approval_status'   => $return->approval_status,
-            'approved_by'       => $return->approver?->Full_name,
-            'approved_at'       => $return->approved_at,
-            'rejection_reason'  => $return->rejection_reason,
-            'is_within_7_days'  => $return->is_within_7_days,
-            'business_id'       => $return->business_id,
-            'branch_id'         => $return->branch_id,
-        ]);
+        return (new ReturnTransactionResource($return))->toArray(request());
     }
 }

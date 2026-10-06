@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 use App\Models\Inventory;
 use App\Models\FEFOBatch;
 use App\Models\StockMovement;
+use App\Http\Requests\Api\StoreCycleCountRequest;
 
 class CycleCountController extends Controller
 {
@@ -18,14 +19,9 @@ class CycleCountController extends Controller
      * Record a cycle count for inventory reconciliation.
      * POST /api/inventory/cycle-count
      */
-    public function store(Request $request)
+    public function store(StoreCycleCountRequest $request)
     {
-        $validated = $request->validate([
-            'product_id' => 'required|integer|exists:inventory,product_id',
-            'counted_quantity' => 'required|integer|min:0',
-            'batch_id' => 'nullable|integer|exists:FEFO_Batch,batch_id',
-            'remarks' => 'nullable|string|max:500',
-        ]);
+        $validated = $request->validated();
 
         $query = Inventory::where('product_id', $validated['product_id']);
         $query = $this->scopeForBusinessAndBranch($query, $request);

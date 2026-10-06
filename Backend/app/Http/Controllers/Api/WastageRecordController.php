@@ -9,6 +9,8 @@ use App\Models\Inventory;
 use App\Models\StockMovement;
 use App\Models\AuditLog;
 use App\Jobs\WarmAnalyticsCache;
+use App\Http\Requests\Api\StoreWastageRecordRequest;
+use App\Http\Resources\WastageRecordResource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -23,38 +25,16 @@ class WastageRecordController extends Controller
 
         $perPage = min((int) $request->input('per_page', 20), 100);
         return response()->json(
-            $query->orderByDesc('date_recorded')->paginate($perPage)->through(fn ($w) => [
-                'id'             => $w->wastage_id,
-                'product_id'     => $w->product_id,
-                'product_name'   => $w->product?->product_name,
-                'sku'            => $w->product?->barcode,
-                'recorded_by'    => $w->user?->Full_name ?? 'System',
-                'wastage_type'   => $w->wastage_type,
-                'quantity'       => $w->quantity,
-                'estimated_loss' => $w->estimated_loss,
-                'date_recorded'  => $w->date_recorded,
-                'business_id'    => $w->business_id,
-                'branch_id'      => $w->branch_id,
-                'batch_id'       => $w->batch_id,
-            ])
+            $query->orderByDesc('date_recorded')->paginate($perPage)->through(fn ($w) => (new WastageRecordResource($w))->toArray($request))
         );
     }
 
-    public function store(Request $request)
+    public function store(StoreWastageRecordRequest $request)
     {
         $user = $request->user();
         $userId = $user?->User_id ?? 1;
 
-        $data = $request->validate([
-            'business_id'     => 'sometimes|integer|exists:businesses,id',
-            'branch_id'       => 'sometimes|integer|exists:branches,id',
-            'product_id'      => 'required|integer|exists:Product,product_id',
-            'batch_id'        => 'nullable|integer|exists:FEFO_Batch,batch_id',
-            'wastage_type'    => 'required|in:Expired,Damaged,Spoiled,Lost,Recalled,Other',
-            'quantity'        => 'required|integer|min:1',
-            'estimated_loss'  => 'required|numeric|min:0',
-            'date_recorded'   => 'required|date',
-        ]);
+        $data = $request->validated();
 
         // Auto-assign business_id and branch_id from user if not provided
         if (!isset($data['business_id']) && $user && $user->business_id) {

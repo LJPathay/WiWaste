@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\InventoryRecommendation;
 use App\Models\AuditLog;
+use App\Http\Requests\Api\RejectRecommendationRequest;
+use App\Http\Resources\InventoryRecommendationResource;
 use Illuminate\Http\Request;
 
 class RecommendationController extends Controller
@@ -20,22 +22,7 @@ class RecommendationController extends Controller
         $perPage = min((int) $request->input('per_page', 20), 100);
 
         return response()->json(
-            $query->orderByDesc('recommendation_id')->paginate($perPage)->through(fn ($r) => [
-                'recommendation_id'  => $r->recommendation_id,
-                'product_id'         => $r->product_id,
-                'product_name'       => $r->product?->product_name,
-                'sku'                => $r->product?->barcode,
-                'category'           => $r->product?->category?->Category_name ?? '',
-                'current_stock'      => $r->current_stock,
-                'recommended_stock'  => $r->recommended_stock,
-                'recommendation_type'=> $r->recommendation_type,
-                'confidence_score'   => (float) $r->confidence_score,
-                'status'             => $r->status ?? 'pending',
-                'rejection_reason'   => $r->rejection_reason,
-                'reviewed_by'        => $r->reviewer?->Full_name ?? null,
-                'created_at'         => $r->created_at,
-                'reviewed_at'        => $r->reviewed_at,
-            ])
+            $query->orderByDesc('recommendation_id')->paginate($perPage)->through(fn ($r) => (new InventoryRecommendationResource($r))->toArray($request))
         );
     }
 
@@ -43,22 +30,7 @@ class RecommendationController extends Controller
     {
         $r = InventoryRecommendation::with('product.category', 'reviewer')->findOrFail($id);
 
-        return response()->json([
-            'recommendation_id'  => $r->recommendation_id,
-            'product_id'         => $r->product_id,
-            'product_name'       => $r->product?->product_name,
-            'sku'                => $r->product?->barcode,
-            'category'           => $r->product?->category?->Category_name ?? '',
-            'current_stock'      => $r->current_stock,
-            'recommended_stock'  => $r->recommended_stock,
-            'recommendation_type'=> $r->recommendation_type,
-            'confidence_score'   => (float) $r->confidence_score,
-            'status'             => $r->status ?? 'pending',
-            'rejection_reason'   => $r->rejection_reason,
-            'reviewed_by'        => $r->reviewer?->Full_name ?? null,
-            'created_at'         => $r->created_at,
-            'reviewed_at'        => $r->reviewed_at,
-        ]);
+        return (new InventoryRecommendationResource($r))->toArray(request());
     }
 
     public function approve($id, Request $request)
@@ -83,11 +55,9 @@ class RecommendationController extends Controller
         return response()->json(['message' => 'Recommendation approved.']);
     }
 
-    public function reject($id, Request $request)
+    public function reject($id, RejectRecommendationRequest $request)
     {
-        $data = $request->validate([
-            'rejection_reason' => 'required|string|max:500',
-        ]);
+        $data = $request->validated();
 
         $recommendation = InventoryRecommendation::with('product')->findOrFail($id);
 

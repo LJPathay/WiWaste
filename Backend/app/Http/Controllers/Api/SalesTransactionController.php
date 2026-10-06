@@ -120,44 +120,7 @@ class SalesTransactionController extends Controller
 
         $perPage = min((int) $request->input('per_page', 20), 100);
         return response()->json(
-            $query->orderByDesc('transaction_date')->paginate($perPage)->through(fn ($t) => [
-                'id'               => $t->transaction_id,
-                'cashier'          => $t->user?->Full_name ?? 'Cashier',
-                'total_amount'     => $t->total_amount,
-                'vat_amount'       => $t->vat_amount,
-                'vatable_amount'   => $t->vatable_amount,
-                'non_vatable_amount' => $t->non_vatable_amount,
-                'senior_pwd_discount_amount' => $t->senior_pwd_discount_amount,
-                'senior_pwd_vat_exempt_amount' => $t->senior_pwd_vat_exempt_amount,
-                'discount_amount'  => $t->discount_amount,
-                'transaction_date' => $t->transaction_date,
-                'payment_method'   => $t->payment_method,
-                'payment_reference'=> $t->payment_reference,
-                'payment_status'   => $t->payment_status,
-                'amount_tendered'  => $t->amount_tendered,
-                'change_due'       => $t->change_due,
-                'status'           => $t->status,
-                'business_id'      => $t->business_id,
-                'branch_id'        => $t->branch_id,
-                'customer_name'    => $t->customer_name,
-                'customer_phone'   => $t->customer_phone,
-                'customer_email'   => $t->customer_email,
-                'senior_pwd_id'    => $t->senior_pwd_id,
-                'senior_pwd_type'  => $t->senior_pwd_type,
-                'items'            => $t->salesItems->map(fn ($item) => [
-                    'id'                 => $item->sales_item_id,
-                    'product_name'       => $item->product?->product_name,
-                    'sku'                => $item->product?->barcode,
-                    'quantity'           => $item->quantity,
-                    'unit_price'         => $item->unit_price,
-                    'subtotal'           => $item->subtotal,
-                    'vat_amount'         => $item->vat_amount,
-                    'vatable_amount'     => $item->vatable_amount,
-                    'discount_amount'    => $item->discount_amount,
-                    'discount_pct'       => $item->discount_pct,
-                    'is_senior_pwd_exempt' => $item->is_senior_pwd_exempt,
-                ]),
-            ])
+            $query->orderByDesc('transaction_date')->paginate($perPage)->through(fn ($t) => (new SaleResource($t))->toArray($request))
         );
     }
 

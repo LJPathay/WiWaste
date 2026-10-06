@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\InventoryRecommendation;
 use App\Services\Ml\MlServiceUnavailableException;
 use App\Services\Ml\OptimizationService;
+use App\Http\Requests\Api\ReplenishmentOptimizationRequest;
 use Illuminate\Http\Request;
 
 class OptimizationController extends Controller
@@ -18,16 +19,9 @@ class OptimizationController extends Controller
      * Run the GA replenishment optimizer and persist pending 'Reorder'
      * recommendations for every SKU the plan says to order.
      */
-    public function replenishment(Request $request)
+    public function replenishment(ReplenishmentOptimizationRequest $request)
     {
-        $data = $request->validate([
-            'budget'              => 'required|numeric|gt:0',
-            'horizon_days'        => 'sometimes|integer|min:1|max:365',
-            'include_product_ids' => 'sometimes|array',
-            'include_product_ids.*' => 'integer',
-            'persist'             => 'sometimes|boolean',
-            'seed'                => 'sometimes|integer',
-        ]);
+        $data = $request->validated();
 
         try {
             $result = $this->optimization->optimize(

@@ -10,6 +10,13 @@ use App\Models\StockReceiving;
 use App\Models\StockReceivingItem;
 use App\Models\FEFOBatch;
 use App\Models\AuditLog;
+use App\Http\Requests\Api\StoreStockReceivingRequest;
+use App\Http\Requests\Api\ReceiveStockReceivingRequest;
+use App\Http\Requests\Api\UpdateStockReceivingRequest;
+use App\Http\Requests\Api\VerifyStockReceivingRequest;
+use App\Http\Requests\Api\RejectStockReceivingRequest;
+use App\Http\Requests\Api\DiscardStockReceivingRequest;
+use App\Http\Resources\StockReceivingResource;
 use Illuminate\Http\Request;
 
 class StockReceivingController extends Controller
@@ -28,38 +35,15 @@ class StockReceivingController extends Controller
         $perPage = min((int) $request->input('per_page', 20), 100);
         return response()->json(
             $query->orderByDesc('received_at')->paginate($perPage)
+                ->through(fn ($r) => (new StockReceivingResource($r))->toArray($request))
         );
     }
 
-    public function store(Request $request)
+    public function store(StoreStockReceivingRequest $request)
     {
         $user = $request->user();
 
-        $data = $request->validate([
-            'business_id'       => 'sometimes|integer|exists:businesses,id',
-            'branch_id'         => 'sometimes|integer|exists:branches,id',
-            'supplier_id'       => 'required|integer|exists:Supplier,supplier_id',
-            'received_by'       => 'sometimes|integer|exists:User,User_id',
-            'received_at'       => 'nullable|date',
-            'temperature_at_receipt' => 'nullable|numeric',
-            'condition_check_passed' => 'nullable|boolean',
-            'sanitation_check_passed' => 'nullable|boolean',
-            'notes'             => 'nullable|string|max:500',
-            'status'            => 'nullable|in:pending,received,verified,rejected,partial',
-            'items'             => 'sometimes|array',
-            'items.*.product_id'      => 'required|integer|exists:Product,product_id',
-            'items.*.batch_id'        => 'nullable|integer|exists:FEFO_Batch,batch_id',
-            'items.*.po_item_id'      => 'nullable|integer|exists:Purchase_Order_Item,po_item_id',
-            'items.*.expected_quantity' => 'required|integer|min:1',
-            'items.*.received_quantity' => 'nullable|integer|min:0',
-            'items.*.rejected_quantity' => 'nullable|integer|min:0',
-            'items.*.unit_cost'       => 'nullable|numeric|min:0',
-            'items.*.temperature_at_receipt' => 'nullable|numeric',
-            'items.*.condition_check_passed' => 'nullable|boolean',
-            'items.*.sanitation_check_passed' => 'nullable|boolean',
-            'items.*.status'          => 'nullable|in:pending,received,partial,rejected',
-            'items.*.notes'           => 'nullable|string|max:500',
-        ]);
+        $data = $request->validated();
 
         $this->applyReceivingDefaults($data, $user);
         $receiving = StockReceiving::create($data);
@@ -70,11 +54,11 @@ class StockReceivingController extends Controller
 
         return response()->json([
             'message' => 'Stock receiving record created.',
-            'receiving' => $receiving,
+            'receiving' => (new StockReceivingResource($receiving))->toArray($request),
         ], 201);
     }
 
-    public function receive(Request $request, $id)
+    public function receive(ReceiveStockReceivingRequest $request, $id)
     {
         $user = $request->user();
 
@@ -86,21 +70,7 @@ class StockReceivingController extends Controller
             return response()->json(['message' => 'Cannot receive in current status.'], 422);
         }
 
-        $data = $request->validate([
-            'received_by' => 'sometimes|integer|exists:User,User_id',
-            'temperature_at_receipt' => 'nullable|numeric',
-            'condition_check_passed' => 'nullable|boolean',
-            'sanitation_check_passed' => 'nullable|boolean',
-            'notes' => 'nullable|string|max:500',
-            'items' => 'required|array|min:1',
-            'items.*.receiving_item_id' => 'required|integer|exists:stock_receiving_items,receiving_item_id',
-            'items.*.temperature_at_receipt' => 'nullable|numeric',
-            'items.*.condition_check_passed' => 'nullable|boolean',
-            'items.*.sanitation_check_passed' => 'nullable|boolean',
-            'items.*.received_quantity' => 'required|integer|min:1',
-            'items.*.rejected_quantity' => 'nullable|integer|min:0',
-            'items.*.notes' => 'nullable|string|max:500',
-        ]);
+        $data = $request->validated();
 
         $data['received_by'] = $data['received_by'] ?? $user?->User_id;
         $data['received_at'] = now();
@@ -117,7 +87,7 @@ class StockReceivingController extends Controller
 
         return response()->json([
             'message' => 'Stock received successfully.',
-            'receiving' => $receiving,
+            'receiving' => (new StockReceivingResource($receiving))->toArray($request),
             'temperature_warnings' => $warnings,
         ]);
     }
@@ -128,27 +98,16 @@ class StockReceivingController extends Controller
         $query = $this->scopeForBusinessAndBranch($query, request());
         $receiving = $query->findOrFail($id);
 
-        return response()->json($receiving);
+        return new StockReceivingResource($receiving);
     }
 
-    public function update(Request $request, $id)
+    public function update(UpdateStockReceivingRequest $request, $id)
     {
         $query = StockReceiving::with(['supplier', 'receiver', 'verifier', 'items.product', 'items.batch']);
         $query = $this->scopeForBusinessAndBranch($query, $request);
         $receiving = $query->findOrFail($id);
 
-        $data = $request->validate([
-            'supplier_id'       => 'sometimes|integer|exists:Supplier,supplier_id',
-            'received_by'       => 'sometimes|integer|exists:User,User_id',
-            'verified_by'       => 'nullable|integer|exists:User,User_id',
-            'received_at'       => 'sometimes|date',
-            'verified_at'       => 'nullable|date',
-            'temperature_at_receipt' => 'nullable|numeric',
-            'condition_check_passed' => 'nullable|boolean',
-            'sanitation_check_passed' => 'nullable|boolean',
-            'notes'             => 'nullable|string|max:500',
-            'status'            => 'sometimes|in:pending,received,verified,rejected,partial',
-        ]);
+        $data = $request->validated();
 
         $receiving->update($data);
 
@@ -158,11 +117,11 @@ class StockReceivingController extends Controller
 
         return response()->json([
             'message' => 'Stock receiving record updated.',
-            'receiving' => $receiving,
+            'receiving' => (new StockReceivingResource($receiving))->toArray($request),
         ]);
     }
 
-    public function verify(Request $request, $id)
+    public function verify(VerifyStockReceivingRequest $request, $id)
     {
         $user = $request->user();
 
@@ -170,19 +129,7 @@ class StockReceivingController extends Controller
         $query = $this->scopeForBusinessAndBranch($query, $request);
         $receiving = $query->findOrFail($id);
 
-        $data = $request->validate([
-            'verified_by' => 'sometimes|integer|exists:User,User_id',
-            'notes' => 'nullable|string|max:500',
-            'items' => 'sometimes|array',
-            'items.*.receiving_item_id' => 'required|integer|exists:stock_receiving_items,receiving_item_id',
-            'items.*.temperature_at_receipt' => 'nullable|numeric',
-            'items.*.condition_check_passed' => 'nullable|boolean',
-            'items.*.sanitation_check_passed' => 'nullable|boolean',
-            'items.*.received_quantity' => 'nullable|integer|min:0',
-            'items.*.rejected_quantity' => 'nullable|integer|min:0',
-            'items.*.status' => 'nullable|in:pending,received,partial,rejected',
-            'items.*.notes' => 'nullable|string|max:500',
-        ]);
+        $data = $request->validated();
 
         $data['verified_by'] = $data['verified_by'] ?? $user?->User_id;
         $data['verified_at'] = now();
@@ -198,12 +145,12 @@ class StockReceivingController extends Controller
 
         return response()->json([
             'message' => 'Stock receiving record verified.',
-            'receiving' => $receiving,
+            'receiving' => (new StockReceivingResource($receiving))->toArray($request),
             'temperature_warnings' => $warnings,
         ]);
     }
 
-    public function reject(Request $request, $id)
+    public function reject(RejectStockReceivingRequest $request, $id)
     {
         $user = $request->user();
 
@@ -211,9 +158,7 @@ class StockReceivingController extends Controller
         $query = $this->scopeForBusinessAndBranch($query, $request);
         $receiving = $query->findOrFail($id);
 
-        $data = $request->validate([
-            'reason' => 'required|string|max:255',
-        ]);
+        $data = $request->validated();
 
         $receiving->update([
             'status' => 'rejected',
@@ -225,7 +170,7 @@ class StockReceivingController extends Controller
         return response()->json(['message' => 'Order rejected.']);
     }
 
-    public function discard(Request $request, $id)
+    public function discard(DiscardStockReceivingRequest $request, $id)
     {
         $user = $request->user();
 
@@ -233,9 +178,7 @@ class StockReceivingController extends Controller
         $query = $this->scopeForBusinessAndBranch($query, $request);
         $receiving = $query->findOrFail($id);
 
-        $data = $request->validate([
-            'reason' => 'required|string|max:255',
-        ]);
+        $data = $request->validated();
 
         $receiving->update([
             'status' => 'rejected',

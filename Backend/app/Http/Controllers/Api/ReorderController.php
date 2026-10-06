@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Services\ReorderService;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
+use App\Http\Requests\Api\ApproveReorderRequest;
+use App\Http\Requests\Api\AutoApproveReorderRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -45,18 +47,11 @@ class ReorderController extends Controller
         return response()->json(['message' => 'Not implemented yet']);
     }
 
-    public function approve(Request $request)
+    public function approve(ApproveReorderRequest $request)
     {
         $user = $request->user();
-        
-        $data = $request->validate([
-            'suggestions' => 'required|array|min:1',
-            'suggestions.*.supplier_id' => 'required|integer|exists:Supplier,supplier_id',
-            'suggestions.*.items' => 'required|array|min:1',
-            'suggestions.*.items.*.product_id' => 'required|integer|exists:Product,product_id',
-            'suggestions.*.items.*.adjusted_quantity' => 'required|integer|min:1',
-            'suggestions.*.items.*.unit_cost' => 'required|numeric|min:0',
-        ]);
+
+        $data = $request->validated();
 
         $createdPOs = $this->reorderService->createDraftPOs($data['suggestions'], $user->User_id);
 
@@ -66,16 +61,12 @@ class ReorderController extends Controller
         ], 201);
     }
 
-    public function autoApprove(Request $request)
+    public function autoApprove(AutoApproveReorderRequest $request)
     {
         // Auto-approve suggestions based on criteria
         $user = $request->user();
-        
-        $data = $request->validate([
-            'criteria' => 'nullable|array',
-            'criteria.max_cost_per_po' => 'nullable|numeric|min:0',
-            'criteria.min_items_per_po' => 'nullable|integer|min:1',
-        ]);
+
+        $data = $request->validated();
 
         $suggestions = $this->reorderService->generateSuggestions(
             $user?->business_id,

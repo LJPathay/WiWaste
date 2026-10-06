@@ -9,6 +9,9 @@ use App\Models\Inventory;
 use App\Models\StockMovement;
 use App\Models\AuditLog;
 use App\Jobs\WarmAnalyticsCache;
+use App\Http\Requests\Api\StoreStockCountRequest;
+use App\Http\Requests\Api\RejectStockCountRequest;
+use App\Http\Resources\StockCountResource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -31,43 +34,17 @@ class StockCountController extends Controller
 
         $perPage = min((int) $request->input('per_page', 20), 100);
         return response()->json(
-            $query->orderByDesc('created_at')->paginate($perPage)->through(fn ($c) => [
-                'id'             => $c->count_id,
-                'product_id'     => $c->product_id,
-                'product_name'   => $c->product?->product_name,
-                'sku'            => $c->product?->barcode,
-                'batch_id'       => $c->batch_id,
-                'batch_number'   => $c->batch?->batch_number,
-                'counted_by'     => $c->counter?->Full_name ?? 'System',
-                'system_qty'     => $c->system_qty,
-                'counted_qty'    => $c->counted_qty,
-                'variance'       => $c->variance,
-                'notes'          => $c->notes,
-                'status'         => $c->status,
-                'created_at'     => $c->created_at,
-                'approved_by'    => $c->approver?->Full_name,
-                'approved_at'    => $c->approved_at,
-                'rejection_reason' => $c->rejection_reason,
-                'business_id'    => $c->business_id,
-                'branch_id'      => $c->branch_id,
-            ])
+            $query->orderByDesc('created_at')->paginate($perPage)->through(fn ($c) => (new StockCountResource($c))->toArray($request))
         );
     }
 
     // Record a stock count (Inventory Staff / Owner)
-    public function store(Request $request)
+    public function store(StoreStockCountRequest $request)
     {
         $user = $request->user();
         $userId = $user?->User_id ?? 1;
 
-        $data = $request->validate([
-            'business_id' => 'sometimes|integer|exists:businesses,id',
-            'branch_id'   => 'sometimes|integer|exists:branches,id',
-            'product_id'  => 'required|integer|exists:Product,product_id',
-            'batch_id'    => 'nullable|integer|exists:FEFO_Batch,batch_id',
-            'counted_qty' => 'required|integer|min:0',
-            'notes'       => 'nullable|string|max:500',
-        ]);
+        $data = $request->validated();
 
         // Auto-assign business_id and branch_id from user if not provided
         if (!isset($data['business_id']) && $user && $user->business_id) {
@@ -169,7 +146,7 @@ class StockCountController extends Controller
     }
 
     // Owner / Inventory: Reject count
-    public function reject(Request $request, $id)
+    public function reject(RejectStockCountRequest $request, $id)
     {
         $user = $request->user();
         $userId = $user?->User_id ?? 1;
@@ -182,9 +159,7 @@ class StockCountController extends Controller
             return response()->json(['message' => 'Count already processed.'], 422);
         }
 
-        $data = $request->validate([
-            'rejection_reason' => 'required|string|max:500',
-        ]);
+        $data = $request->validated();
 
         $count->update([
             'status'            => 'rejected',

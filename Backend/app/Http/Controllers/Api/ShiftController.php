@@ -12,12 +12,9 @@ class ShiftController extends Controller
      * Open a new shift.
      * POST /api/shifts/open
      */
-    public function open(Request $request)
+    public function open(\App\Http\Requests\Api\OpenShiftRequest $request)
     {
-        $validated = $request->validate([
-            'opening_cash' => 'required|numeric|min:0',
-            'cashier_name' => 'nullable|string|max:255',
-        ]);
+        $validated = $request->validated();
 
         // In a real system, this would create a shift record
         // For now, return success with shift details
@@ -36,13 +33,9 @@ class ShiftController extends Controller
      * Close the current shift.
      * POST /api/shifts/close
      */
-    public function close(Request $request)
+    public function close(\App\Http\Requests\Api\CloseShiftRequest $request)
     {
-        $validated = $request->validate([
-            'shift_id' => 'required|string',
-            'closing_cash' => 'required|numeric|min:0',
-            'remarks' => 'nullable|string|max:500',
-        ]);
+        $validated = $request->validated();
 
         // In a real system, this would update the shift record
         // and calculate any variance between expected and actual cash

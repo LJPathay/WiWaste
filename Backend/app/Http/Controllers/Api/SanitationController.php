@@ -6,6 +6,10 @@ use App\Http\Controllers\Concerns\ScopesTenant;
 use App\Http\Controllers\Controller;
 use App\Models\SanitationChecklist;
 use App\Models\AuditLog;
+use App\Http\Requests\Api\StoreSanitationChecklistRequest;
+use App\Http\Requests\Api\UpdateSanitationChecklistRequest;
+use App\Http\Requests\Api\VerifySanitationChecklistRequest;
+use App\Http\Resources\SanitationChecklistResource;
 use Illuminate\Http\Request;
 
 class SanitationController extends Controller
@@ -36,26 +40,15 @@ class SanitationController extends Controller
         $perPage = min((int) $request->input('per_page', 20), 100);
         return response()->json(
             $query->orderByDesc('checklist_date')->paginate($perPage)
+                ->through(fn ($c) => (new SanitationChecklistResource($c))->toArray($request))
         );
     }
 
-    public function store(Request $request)
+    public function store(StoreSanitationChecklistRequest $request)
     {
         $user = $request->user();
 
-        $data = $request->validate([
-            'business_id' => 'sometimes|integer|exists:businesses,id',
-            'branch_id'   => 'sometimes|integer|exists:branches,id',
-            'checklist_date' => 'required|date',
-            'frequency'   => 'required|in:daily,weekly,monthly',
-            'area'        => 'required|in:receiving,storage,preparation,dispensing,waste,general',
-            'checks'      => 'required|array|min:1',
-            'checks.*.item'       => 'required|string|max:255',
-            'checks.*.passed'     => 'required|boolean',
-            'checks.*.notes'      => 'nullable|string|max:500',
-            'checks.*.photo_url'  => 'nullable|string|max:500',
-            'notes' => 'nullable|string|max:1000',
-        ]);
+        $data = $request->validated();
 
         // Auto-assign business_id and branch_id from user if not provided
         if (!isset($data['business_id']) && $user && $user->business_id) {
@@ -88,7 +81,7 @@ class SanitationController extends Controller
 
         return response()->json([
             'message' => 'Sanitation checklist created.',
-            'checklist' => $checklist,
+            'checklist' => (new SanitationChecklistResource($checklist))->toArray($request),
         ], 201);
     }
 
@@ -98,10 +91,10 @@ class SanitationController extends Controller
         $query = $this->scopeForBusinessAndBranch($query, request());
         $checklist = $query->findOrFail($id);
 
-        return response()->json($checklist);
+        return new SanitationChecklistResource($checklist);
     }
 
-    public function update(Request $request, $id)
+    public function update(UpdateSanitationChecklistRequest $request, $id)
     {
         $user = $request->user();
 
@@ -109,17 +102,7 @@ class SanitationController extends Controller
         $query = $this->scopeForBusinessAndBranch($query, $request);
         $checklist = $query->findOrFail($id);
 
-        $data = $request->validate([
-            'checklist_date' => 'sometimes|date',
-            'frequency'      => 'sometimes|in:daily,weekly,monthly',
-            'area'           => 'sometimes|in:receiving,storage,preparation,dispensing,waste,general',
-            'checks'         => 'sometimes|array|min:1',
-            'checks.*.item'       => 'required|string|max:255',
-            'checks.*.passed'     => 'required|boolean',
-            'checks.*.notes'      => 'nullable|string|max:500',
-            'checks.*.photo_url'  => 'nullable|string|max:500',
-            'notes'          => 'nullable|string|max:1000',
-        ]);
+        $data = $request->validated();
 
         // Recalculate overall status if checks updated
         if (isset($data['checks'])) {
@@ -145,11 +128,11 @@ class SanitationController extends Controller
 
         return response()->json([
             'message' => 'Sanitation checklist updated.',
-            'checklist' => $checklist,
+            'checklist' => (new SanitationChecklistResource($checklist))->toArray($request),
         ]);
     }
 
-    public function verify(Request $request, $id)
+    public function verify(VerifySanitationChecklistRequest $request, $id)
     {
         $user = $request->user();
 
@@ -157,9 +140,7 @@ class SanitationController extends Controller
         $query = $this->scopeForBusinessAndBranch($query, $request);
         $checklist = $query->findOrFail($id);
 
-        $data = $request->validate([
-            'verified_by' => 'sometimes|integer|exists:User,User_id',
-        ]);
+        $data = $request->validated();
 
         if (!isset($data['verified_by']) && $user && $user->User_id) {
             $data['verified_by'] = $user->User_id;
@@ -184,7 +165,7 @@ class SanitationController extends Controller
 
         return response()->json([
             'message' => 'Sanitation checklist verified.',
-            'checklist' => $checklist,
+            'checklist' => (new SanitationChecklistResource($checklist))->toArray($request),
         ]);
     }
 

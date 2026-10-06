@@ -7,6 +7,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Recall;
 use App\Models\FEFOBatch;
 use App\Models\AuditLog;
+use App\Http\Requests\Api\StoreRecallRequest;
+use App\Http\Requests\Api\UpdateRecallRequest;
+use App\Http\Requests\Api\ResolveRecallRequest;
+use App\Http\Resources\RecallResource;
 use Illuminate\Http\Request;
 
 class RecallController extends Controller
@@ -33,26 +37,15 @@ class RecallController extends Controller
         $perPage = min((int) $request->input('per_page', 20), 100);
         return response()->json(
             $query->orderByDesc('created_at')->paginate($perPage)
+                ->through(fn ($r) => (new RecallResource($r))->toArray($request))
         );
     }
 
-    public function store(Request $request)
+    public function store(StoreRecallRequest $request)
     {
         $user = $request->user();
 
-        $data = $request->validate([
-            'business_id' => 'sometimes|integer|exists:businesses,id',
-            'branch_id'   => 'sometimes|integer|exists:branches,id',
-            'product_id'  => 'required|integer|exists:Product,product_id',
-            'batch_id'    => 'nullable|integer|exists:FEFO_Batch,batch_id',
-            'supplier_id' => 'nullable|integer|exists:Supplier,supplier_id',
-            'reason'      => 'required|string|max:1000',
-            'severity'    => 'required|in:low,medium,high,critical',
-            'affected_batches' => 'required|array|min:1',
-            'affected_batches.*.batch_id' => 'required|integer|exists:FEFO_Batch,batch_id',
-            'affected_batches.*.quantity' => 'required|integer|min:1',
-            'target_resolution_date' => 'nullable|date',
-        ]);
+        $data = $request->validated();
 
         // Auto-assign business_id and branch_id from user if not provided
         if (!isset($data['business_id']) && $user && $user->business_id) {
@@ -88,7 +81,7 @@ class RecallController extends Controller
 
         return response()->json([
             'message' => 'Recall created.',
-            'recall' => $recall,
+            'recall' => (new RecallResource($recall))->toArray($request),
         ], 201);
     }
 
@@ -98,10 +91,10 @@ class RecallController extends Controller
         $query = $this->scopeForBusinessAndBranch($query, request());
         $recall = $query->findOrFail($id);
 
-        return response()->json($recall);
+        return new RecallResource($recall);
     }
 
-    public function update(Request $request, $id)
+    public function update(UpdateRecallRequest $request, $id)
     {
         $user = $request->user();
 
@@ -109,15 +102,7 @@ class RecallController extends Controller
         $query = $this->scopeForBusinessAndBranch($query, $request);
         $recall = $query->findOrFail($id);
 
-        $data = $request->validate([
-            'reason'               => 'sometimes|string|max:1000',
-            'severity'             => 'sometimes|in:low,medium,high,critical',
-            'target_resolution_date' => 'nullable|date',
-            'affected_batches'     => 'sometimes|array|min:1',
-            'affected_batches.*.batch_id' => 'required|integer|exists:FEFO_Batch,batch_id',
-            'affected_batches.*.quantity' => 'required|integer|min:1',
-            'resolution_notes'     => 'nullable|string|max:1000',
-        ]);
+        $data = $request->validated();
 
         if (isset($data['affected_batches'])) {
             $data['total_quantity_affected'] = collect($data['affected_batches'])->sum('quantity');
@@ -141,7 +126,7 @@ class RecallController extends Controller
 
         return response()->json([
             'message' => 'Recall updated.',
-            'recall' => $recall,
+            'recall' => (new RecallResource($recall))->toArray($request),
         ]);
     }
 
@@ -174,7 +159,7 @@ class RecallController extends Controller
 
         return response()->json([
             'message' => 'Recall activated.',
-            'recall' => $recall,
+            'recall' => (new RecallResource($recall))->toArray($request),
         ]);
     }
 
@@ -207,7 +192,7 @@ class RecallController extends Controller
 
         return response()->json([
             'message' => "Quarantined {$quarantinedCount} affected batches.",
-            'recall' => $recall,
+            'recall' => (new RecallResource($recall))->toArray($request),
         ]);
     }
 
@@ -236,11 +221,11 @@ class RecallController extends Controller
 
         return response()->json([
             'message' => 'Notifications sent for recall.',
-            'recall' => $recall,
+            'recall' => (new RecallResource($recall))->toArray($request),
         ]);
     }
 
-    public function resolve(Request $request, $id)
+    public function resolve(ResolveRecallRequest $request, $id)
     {
         $user = $request->user();
 
@@ -248,10 +233,7 @@ class RecallController extends Controller
         $query = $this->scopeForBusinessAndBranch($query, $request);
         $recall = $query->findOrFail($id);
 
-        $data = $request->validate([
-            'resolution_notes' => 'required|string|max:1000',
-            'release_quarantine' => 'nullable|boolean',
-        ]);
+        $data = $request->validated();
 
         $recall->resolve($data);
 
@@ -270,7 +252,7 @@ class RecallController extends Controller
 
         return response()->json([
             'message' => 'Recall resolved.',
-            'recall' => $recall,
+            'recall' => (new RecallResource($recall))->toArray($request),
         ]);
     }
 

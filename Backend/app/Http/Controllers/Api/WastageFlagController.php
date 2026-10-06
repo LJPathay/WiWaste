@@ -10,6 +10,9 @@ use App\Models\Inventory;
 use App\Models\StockMovement;
 use App\Models\AuditLog;
 use App\Jobs\WarmAnalyticsCache;
+use App\Http\Requests\Api\StoreWastageFlagRequest;
+use App\Http\Requests\Api\RejectWastageFlagRequest;
+use App\Http\Resources\WastageFlagResource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -28,43 +31,17 @@ class WastageFlagController extends Controller
 
         $perPage = min((int) $request->input('per_page', 20), 100);
         return response()->json(
-            $query->orderByDesc('created_at')->paginate($perPage)->through(fn ($f) => [
-                'id'             => $f->flag_id,
-                'product_id'     => $f->product_id,
-                'product_name'   => $f->product?->product_name,
-                'sku'            => $f->product?->barcode,
-                'batch_id'       => $f->batch_id,
-                'batch_number'   => $f->batch?->batch_number,
-                'flagged_by'     => $f->flaggedBy?->Full_name ?? 'System',
-                'quantity'       => $f->quantity,
-                'reason'         => $f->reason,
-                'notes'          => $f->notes,
-                'status'         => $f->status,
-                'created_at'     => $f->created_at,
-                'reviewed_by'    => $f->reviewedBy?->Full_name,
-                'reviewed_at'    => $f->reviewed_at,
-                'rejection_reason' => $f->rejection_reason,
-                'business_id'    => $f->business_id,
-                'branch_id'      => $f->branch_id,
-            ])
+            $query->orderByDesc('created_at')->paginate($perPage)->through(fn ($f) => (new WastageFlagResource($f))->toArray($request))
         );
     }
 
     // Cashier: Flag an item for wastage
-    public function store(Request $request)
+    public function store(StoreWastageFlagRequest $request)
     {
         $user = $request->user();
         $userId = $user?->User_id ?? 1;
 
-        $data = $request->validate([
-            'business_id' => 'sometimes|integer|exists:businesses,id',
-            'branch_id'   => 'sometimes|integer|exists:branches,id',
-            'product_id'  => 'required|integer|exists:Product,product_id',
-            'batch_id'    => 'nullable|integer|exists:FEFO_Batch,batch_id',
-            'quantity'    => 'required|integer|min:1',
-            'reason'      => 'required|in:expired,damaged,recalled,spoiled,other',
-            'notes'       => 'nullable|string|max:500',
-        ]);
+        $data = $request->validated();
 
         // Auto-assign business_id and branch_id from user if not provided
         if (!isset($data['business_id']) && $user && $user->business_id) {
@@ -180,7 +157,7 @@ class WastageFlagController extends Controller
     }
 
     // Inventory Staff / Owner: Reject a flagged wastage
-    public function reject(Request $request, $id)
+    public function reject(RejectWastageFlagRequest $request, $id)
     {
         $user = $request->user();
         $userId = $user?->User_id ?? 1;
@@ -193,9 +170,7 @@ class WastageFlagController extends Controller
             return response()->json(['message' => 'Flag already processed.'], 422);
         }
 
-        $data = $request->validate([
-            'rejection_reason' => 'required|string|max:500',
-        ]);
+        $data = $request->validated();
 
         $flag->update([
             'status'            => 'rejected',

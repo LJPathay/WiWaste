@@ -8,6 +8,10 @@ use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
 use App\Models\Inventory;
 use App\Models\StockMovement;
+use App\Http\Requests\Api\StorePurchaseOrderRequest;
+use App\Http\Requests\Api\UpdatePurchaseOrderRequest;
+use App\Http\Requests\Api\ReceivePurchaseOrderRequest;
+use App\Http\Resources\PurchaseOrderResource;
 use Illuminate\Http\Request;
 
 class PurchaseOrderController extends Controller
@@ -33,45 +37,14 @@ class PurchaseOrderController extends Controller
         $perPage = min((int) $request->input('per_page', 20), 100);
         $orders = $query->orderBy('created_at', 'desc')->paginate($perPage);
 
-        return response()->json($orders->through(fn ($po) => [
-            'id' => $po->po_id,
-            'po_number' => $po->po_number,
-            'supplier_id' => $po->supplier_id,
-            'supplier' => $po->supplier?->supplier_name,
-            'user' => $po->user?->Full_name,
-            'status' => $po->status,
-            'total_amount' => (float) $po->total_amount,
-            'notes' => $po->notes,
-            'business_id' => $po->business_id,
-            'branch_id' => $po->branch_id,
-            'items' => $po->items->map(fn ($i) => [
-                'id' => $i->po_item_id,
-                'product_id' => $i->product_id,
-                'product' => $i->product?->product_name,
-                'quantity' => $i->quantity,
-                'unit_price' => (float) $i->unit_price,
-                'subtotal' => (float) $i->subtotal,
-                'received_qty' => $i->received_qty,
-            ]),
-            'created_at' => $po->created_at,
-            'updated_at' => $po->updated_at,
-        ]));
+        return response()->json($orders->through(fn ($po) => (new PurchaseOrderResource($po))->toArray($request)));
     }
 
-    public function store(Request $request)
+    public function store(StorePurchaseOrderRequest $request)
     {
         $user = $request->user();
 
-        $data = $request->validate([
-            'business_id' => 'sometimes|integer|exists:businesses,id',
-            'branch_id'   => 'sometimes|integer|exists:branches,id',
-            'supplier_id' => 'required|integer|exists:Supplier,supplier_id',
-            'notes' => 'nullable|string|max:1000',
-            'items' => 'required|array|min:1',
-            'items.*.product_id' => 'required|integer|exists:Product,product_id',
-            'items.*.quantity' => 'required|integer|min:1',
-            'items.*.unit_price' => 'required|numeric|min:0',
-        ]);
+        $data = $request->validated();
 
         // Auto-assign business_id and branch_id from user if not provided
         if (!isset($data['business_id']) && $user && $user->business_id) {
@@ -124,15 +97,13 @@ class PurchaseOrderController extends Controller
         ], 201);
     }
 
-    public function update(Request $request, $id)
+    public function update(UpdatePurchaseOrderRequest $request, $id)
     {
         $query = PurchaseOrder::with('supplier', 'user', 'items.product');
         $query = $this->scopeForBusinessAndBranch($query, $request);
         $po = $query->findOrFail($id);
 
-        $data = $request->validate([
-            'status' => 'sometimes|in:Draft,Ordered,Partially Received,Received,Cancelled',
-        ]);
+        $data = $request->validated();
 
         if (isset($data['status'])) {
             $allowedTransitions = [
@@ -154,7 +125,7 @@ class PurchaseOrderController extends Controller
         return response()->json(['message' => 'Purchase order updated.', 'status' => $po->status]);
     }
 
-    public function receive(Request $request, $id)
+    public function receive(ReceivePurchaseOrderRequest $request, $id)
     {
         $query = PurchaseOrder::with('items');
         $query = $this->scopeForBusinessAndBranch($query, $request);
@@ -164,11 +135,7 @@ class PurchaseOrderController extends Controller
             return response()->json(['message' => 'Only Ordered or Partially Received orders can receive stock.'], 422);
         }
 
-        $data = $request->validate([
-            'items' => 'required|array|min:1',
-            'items.*.po_item_id' => 'required|integer|exists:Purchase_Order_Item,po_item_id',
-            'items.*.received_qty' => 'required|integer|min:0',
-        ]);
+        $data = $request->validated();
 
         $allFullyReceived = true;
         $anyReceived = false;
@@ -247,28 +214,6 @@ class PurchaseOrderController extends Controller
         $query = $this->scopeForBusinessAndBranch($query, request());
         $po = $query->findOrFail($id);
 
-        return response()->json([
-            'id' => $po->po_id,
-            'po_number' => $po->po_number,
-            'supplier_id' => $po->supplier_id,
-            'supplier' => $po->supplier?->supplier_name,
-            'user' => $po->user?->Full_name,
-            'status' => $po->status,
-            'total_amount' => (float) $po->total_amount,
-            'notes' => $po->notes,
-            'business_id' => $po->business_id,
-            'branch_id' => $po->branch_id,
-            'items' => $po->items->map(fn ($i) => [
-                'id' => $i->po_item_id,
-                'product_id' => $i->product_id,
-                'product' => $i->product?->product_name,
-                'quantity' => $i->quantity,
-                'unit_price' => (float) $i->unit_price,
-                'subtotal' => (float) $i->subtotal,
-                'received_qty' => $i->received_qty,
-            ]),
-            'created_at' => $po->created_at,
-            'updated_at' => $po->updated_at,
-        ]);
+        return (new PurchaseOrderResource($po))->toArray(request());
     }
 }

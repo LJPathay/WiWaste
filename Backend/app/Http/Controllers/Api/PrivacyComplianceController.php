@@ -7,6 +7,11 @@ use App\Models\AuditLog;
 use App\Models\DataBreachIncident;
 use App\Models\DataSubjectRequest;
 use App\Models\PrivacyProcessingRecord;
+use App\Http\Requests\Api\CreateDataSubjectRequestRequest;
+use App\Http\Requests\Api\CreateDataBreachIncidentRequest;
+use App\Http\Requests\Api\ResolveDataBreachIncidentRequest;
+use App\Http\Resources\DataSubjectRequestResource;
+use App\Http\Resources\DataBreachIncidentResource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -55,13 +60,9 @@ class PrivacyComplianceController extends Controller
         ]);
     }
 
-    public function createRequest(Request $request)
+    public function createRequest(CreateDataSubjectRequestRequest $request)
     {
-        $data = $request->validate([
-            'request_type' => 'required|in:access,rectification,erasure,portability,restriction,objection',
-            'subject_identifier' => 'required|string|max:255',
-            'notes' => 'nullable|string|max:1000',
-        ]);
+        $data = $request->validated();
 
         $businessId = $request->user()?->business_id ?? DB::table('businesses')->value('id');
         if ($businessId === null) {
@@ -224,15 +225,9 @@ class PrivacyComplianceController extends Controller
         ]);
     }
 
-    public function createBreach(Request $request)
+    public function createBreach(CreateDataBreachIncidentRequest $request)
     {
-        $data = $request->validate([
-            'description' => 'required|string|max:1000',
-            'personal_data_affected' => 'required|string|max:1000',
-            'risk_assessment' => 'required|in:low,medium,high,critical',
-            'detected_at' => 'nullable|date',
-            'npc_notification_required' => 'nullable|boolean',
-        ]);
+        $data = $request->validated();
 
         $businessId = $request->user()?->business_id ?? DB::table('businesses')->value('id');
         if ($businessId === null) {
@@ -329,9 +324,9 @@ class PrivacyComplianceController extends Controller
         ]);
     }
 
-    public function resolveBreach(Request $request, int $id)
+    public function resolveBreach(ResolveDataBreachIncidentRequest $request, int $id)
     {
-        $data = $request->validate(['resolution_notes' => 'nullable|string|max:1000']);
+        $data = $request->validated();
         $breach = $this->findBreach($request, $id);
         $breach->update(['status' => 'resolved', 'resolved_at' => now()]);
 
@@ -396,32 +391,11 @@ class PrivacyComplianceController extends Controller
 
     private function requestPayload(DataSubjectRequest $row): array
     {
-        return [
-            'id' => $row->id,
-            'business_id' => $row->business_id,
-            'request_type' => $row->request_type,
-            'subject_identifier' => $row->subject_identifier,
-            'status' => $row->status,
-            'notes' => $row->notes,
-            'requested_at' => $row->requested_at?->toISOString(),
-            'completed_at' => $row->completed_at?->toISOString(),
-        ];
+        return (new DataSubjectRequestResource($row))->toArray(request());
     }
 
     private function breachPayload(DataBreachIncident $b): array
     {
-        return [
-            'id' => $b->id,
-            'business_id' => $b->business_id,
-            'detected_at' => $b->detected_at?->toISOString(),
-            'description' => $b->description,
-            'personal_data_affected' => $b->personal_data_affected,
-            'risk_assessment' => $b->risk_assessment,
-            'npc_notification_required' => (bool) $b->npc_notification_required,
-            'npc_notified_at' => $b->npc_notified_at?->toISOString(),
-            'subjects_notified_at' => $b->subjects_notified_at?->toISOString(),
-            'status' => $b->status,
-            'resolved_at' => $b->resolved_at?->toISOString(),
-        ];
+        return (new DataBreachIncidentResource($b))->toArray(request());
     }
 }

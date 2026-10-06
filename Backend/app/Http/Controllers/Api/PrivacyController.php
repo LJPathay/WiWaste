@@ -8,8 +8,9 @@ use App\Models\SalesTransaction;
 use App\Models\ReturnTransaction;
 use App\Models\AuditLog;
 use App\Models\Customer;
+use App\Http\Requests\Api\RectifyDataSubjectRequestRequest;
+use App\Http\Resources\DataSubjectRequestResource;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 
 class PrivacyController extends Controller
 {
@@ -35,21 +36,13 @@ class PrivacyController extends Controller
         return response()->json([
             'message' => 'Data erasure completed successfully.',
             'erased_summary' => $erasedCounts,
-            'request' => $request
+            'request' => (new DataSubjectRequestResource($request))->toArray(request())
         ], 200);
     }
 
-    public function rectify(Request $request, DataSubjectRequest $dataSubjectRequest)
+    public function rectify(RectifyDataSubjectRequestRequest $request, DataSubjectRequest $dataSubjectRequest)
     {
-        $validator = Validator::make($request->all(), [
-            'corrections' => 'required|array|min:1',
-            'corrections.*.field' => 'required|string',
-            'corrections.*.new_value' => 'required',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
+        $request->validated();
 
         $identifier = $dataSubjectRequest->subject_identifier;
         $businessId = $dataSubjectRequest->business_id;
@@ -89,7 +82,7 @@ class PrivacyController extends Controller
 
         return response()->json([
             'message' => 'Processing restriction applied. Data marked as restricted.',
-            'request' => $dataSubjectRequest,
+            'request' => (new DataSubjectRequestResource($dataSubjectRequest))->toArray(request()),
         ]);
     }
 
@@ -103,7 +96,7 @@ class PrivacyController extends Controller
 
         return response()->json([
             'message' => 'Objection recorded. Processing will be reviewed.',
-            'request' => $dataSubjectRequest,
+            'request' => (new DataSubjectRequestResource($dataSubjectRequest))->toArray(request()),
         ]);
     }
 

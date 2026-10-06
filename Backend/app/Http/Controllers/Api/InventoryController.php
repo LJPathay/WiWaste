@@ -9,6 +9,10 @@ use App\Models\FEFOBatch;
 use App\Models\StockMovement;
 use App\Models\AuditLog;
 use App\Jobs\WarmAnalyticsCache;
+use App\Http\Resources\InventoryResource;
+use App\Http\Requests\Api\StockInRequest;
+use App\Http\Requests\Api\ReceiveStockRequest;
+use App\Http\Requests\Api\StockOutRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -34,35 +38,13 @@ class InventoryController extends Controller
 
         $perPage = min((int) $request->input('per_page', 20), 100);
         return response()->json(
-            $query->paginate($perPage)->through(fn ($i) => [
-                'id'             => $i->inventory_id,
-                'product_id'     => $i->product_id,
-                'product_name'   => $i->product?->product_name,
-                'sku'            => $i->product?->barcode,
-                'category'       => $i->product?->category?->Category_name ?? '',
-                'category_id'    => $i->product?->category_id,
-                'cost_price'     => (float) ($i->product?->cost_price ?? 0),
-                'selling_price'  => (float) ($i->product?->selling_price ?? 0),
-                'supplier'       => $i->product?->supplier?->supplier_name ?? '',
-                'supplier_id'    => $i->product?->supplier_id,
-                'current_stock'  => $i->current_stock,
-                'stock_status'   => $i->stock_status,
-                'reorder_level'  => $i->product?->reorder_level,
-                'expiration_date'=> $i->product?->expiration_date,
-                'last_updated'   => $i->last_updated,
-                'business_id'    => $i->business_id,
-                'branch_id'      => $i->branch_id,
-            ])
+            $query->paginate($perPage)->through(fn ($i) => (new InventoryResource($i))->toArray($request))
         );
     }
 
-    public function stockIn(Request $request)
+    public function stockIn(StockInRequest $request)
     {
-        $data = $request->validate([
-            'product_id' => 'required|integer|exists:Product,product_id',
-            'quantity'   => 'required|integer|min:1',
-            'remarks'    => 'nullable|string|max:255',
-        ]);
+        $data = $request->validated();
 
         $query = Inventory::with('product')->where('product_id', $data['product_id']);
         $query = $this->scopeForBusinessAndBranch($query, $request);
@@ -104,15 +86,9 @@ class InventoryController extends Controller
         });
     }
 
-    public function receive(Request $request)
+    public function receive(ReceiveStockRequest $request)
     {
-        $data = $request->validate([
-            'product_id' => 'required|integer|exists:Product,product_id',
-            'quantity'   => 'required|integer|min:1',
-            'batch_number' => 'required|string|max:50',
-            'expiry_date' => 'required|date|after_or_equal:today',
-            'remarks'    => 'nullable|string|max:255',
-        ]);
+        $data = $request->validated();
 
         $query = Inventory::with('product')->where('product_id', $data['product_id']);
         $query = $this->scopeForBusinessAndBranch($query, $request);
@@ -220,15 +196,9 @@ class InventoryController extends Controller
         return response()->json($batches);
     }
 
-    public function stockOut(Request $request)
+    public function stockOut(StockOutRequest $request)
     {
-        $data = $request->validate([
-            'product_id' => 'required|integer|exists:Product,product_id',
-            'quantity'   => 'required|integer|min:1',
-            'remarks'    => 'nullable|string|max:255',
-            'override_reason' => 'nullable|string|max:255',
-            'batch_id' => 'nullable|integer|exists:FEFO_Batch,batch_id',
-        ]);
+        $data = $request->validated();
 
         $query = Inventory::with('product')->where('product_id', $data['product_id']);
         $query = $this->scopeForBusinessAndBranch($query, $request);

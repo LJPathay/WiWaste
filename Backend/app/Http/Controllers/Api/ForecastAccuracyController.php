@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\ForecastAccuracy;
+use App\Http\Requests\Api\StoreForecastAccuracyRequest;
+use App\Http\Resources\ForecastAccuracyResource;
 
 class ForecastAccuracyController extends Controller
 {
@@ -26,7 +28,7 @@ class ForecastAccuracyController extends Controller
             'product_id' => $product_id,
             'mape_7day' => $mape7,
             'mape_30day' => $mape30,
-            'records' => $records,
+            'records' => ForecastAccuracyResource::collection($records),
         ]);
     }
 
@@ -60,15 +62,9 @@ class ForecastAccuracyController extends Controller
      * Store a new forecast accuracy record.
      * POST /api/ml/accuracy
      */
-    public function store(Request $request)
+    public function store(StoreForecastAccuracyRequest $request)
     {
-        $validated = $request->validate([
-            'product_id' => 'required|integer',
-            'forecast_date' => 'required|date',
-            'predicted_value' => 'required|numeric|min:0',
-            'actual_value' => 'nullable|numeric|min:0',
-            'model_version' => 'nullable|string|max:50',
-        ]);
+        $validated = $request->validated();
 
         $mape = null;
         if ($validated['actual_value'] !== null && $validated['predicted_value'] > 0) {

@@ -4,22 +4,16 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\DataSubjectRequest;
+use App\Http\Requests\Api\StoreDataSubjectRequestRequest;
+use App\Http\Requests\Api\UpdateDataSubjectRequestRequest;
+use App\Http\Resources\DataSubjectRequestResource;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 
 class DataSubjectRequestController extends Controller
 {
-    public function store(Request $request)
+    public function store(StoreDataSubjectRequestRequest $request)
     {
-        $validator = Validator::make($request->all(), [
-            'business_id' => 'required|exists:businesses,id',
-            'request_type' => 'required|in:access,rectification,erasure,portability,restriction,objection',
-            'subject_identifier' => 'required|string|max:255',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
+        $request->validated();
 
         $existing = DataSubjectRequest::where('business_id', $request->business_id)
             ->where('subject_identifier', $request->subject_identifier)
@@ -30,7 +24,7 @@ class DataSubjectRequestController extends Controller
         if ($existing) {
             return response()->json([
                 'message' => 'A similar request is already pending or in progress.',
-                'request' => $existing
+                'request' => (new DataSubjectRequestResource($existing))->toArray($request)
             ], 409);
         }
 
@@ -43,27 +37,18 @@ class DataSubjectRequestController extends Controller
 
         return response()->json([
             'message' => 'Data subject request submitted successfully.',
-            'request' => $requestObj
+            'request' => (new DataSubjectRequestResource($requestObj))->toArray($request)
         ], 201);
     }
 
     public function show(DataSubjectRequest $request)
     {
-        return response()->json($request);
+        return new DataSubjectRequestResource($request);
     }
 
-    public function update(Request $request, DataSubjectRequest $dataSubjectRequest)
+    public function update(UpdateDataSubjectRequestRequest $request, DataSubjectRequest $dataSubjectRequest)
     {
-        $validator = Validator::make($request->all(), [
-            'status' => 'required|in:pending,in_progress,completed,rejected',
-            'notes' => 'nullable|string',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
-
-        $dataSubjectRequest->update($validator->validated());
+        $dataSubjectRequest->update($request->validated());
 
         if ($request->status === 'completed') {
             $dataSubjectRequest->update(['completed_at' => now()]);
@@ -71,7 +56,7 @@ class DataSubjectRequestController extends Controller
 
         return response()->json([
             'message' => 'Data subject request updated successfully.',
-            'request' => $dataSubjectRequest
+            'request' => (new DataSubjectRequestResource($dataSubjectRequest))->toArray($request)
         ]);
     }
 
@@ -94,6 +79,7 @@ class DataSubjectRequestController extends Controller
         $perPage = min((int) $request->input('per_page', 20), 100);
         return response()->json(
             $query->orderByDesc('requested_at')->paginate($perPage)
+                ->through(fn ($r) => (new DataSubjectRequestResource($r))->toArray($request))
         );
     }
 }

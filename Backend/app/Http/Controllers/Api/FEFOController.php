@@ -8,6 +8,8 @@ use App\Models\FEFOBatch;
 use App\Models\StockMovement;
 use App\Models\StockReceiving;
 use App\Models\AuditLog;
+use App\Http\Requests\Api\ApplyFefoDirectiveRequest;
+use App\Http\Resources\FEFOBatchResource;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
@@ -23,24 +25,7 @@ class FEFOController extends Controller
         $query = $this->scopeForBusinessAndBranch($query, $request);
         $batches = $query->orderBy('expiry_date')
             ->paginate($perPage)
-            ->through(fn ($b) => [
-                'batch_id'      => $b->batch_id,
-                'product_id'    => $b->product_id,
-                'product_name'  => $b->product?->product_name,
-                'sku'           => $b->product?->barcode,
-                'category'      => $b->product?->category?->Category_name ?? '',
-                'batch_number'  => $b->batch_number,
-                'quantity'      => $b->quantity,
-                'expiry_date'   => $b->expiry_date,
-                'days_left'     => now()->diffInDays(Carbon::parse($b->expiry_date), false),
-                'status'        => $b->status,
-                'directive_notes' => $b->directive_notes,
-                'business_id'   => $b->business_id,
-                'branch_id'     => $b->branch_id,
-                'received_date' => $b->received_date,
-                'received_temperature' => $b->received_temperature,
-                'supplier_batch_number' => $b->supplier_batch_number,
-            ]);
+            ->through(fn ($b) => (new FEFOBatchResource($b))->toArray($request));
 
         $queryTotal = FEFOBatch::query();
         $queryTotal = $this->scopeForBusinessAndBranch($queryTotal, $request);
@@ -92,36 +77,15 @@ class FEFOController extends Controller
                 'batch_id'    => $m->batch_id,
             ]);
 
-        return response()->json([
-            'batch_id'      => $batch->batch_id,
-            'product_id'    => $batch->product_id,
-            'product_name'  => $batch->product?->product_name,
-            'sku'           => $batch->product?->barcode,
-            'category'      => $batch->product?->category?->Category_name ?? '',
-            'batch_number'  => $batch->batch_number,
-            'quantity'      => $batch->quantity,
-            'expiry_date'   => $batch->expiry_date,
-            'days_left'     => now()->diffInDays(Carbon::parse($batch->expiry_date), false),
-            'status'        => $batch->status,
-            'directive_notes' => $batch->directive_notes,
-            'created_by'    => $batch->creator?->Full_name ?? 'System',
-            'created_at'    => $batch->created_at,
-            'business_id'   => $batch->business_id,
-            'branch_id'     => $batch->branch_id,
-            'received_date' => $batch->received_date,
-            'received_temperature' => $batch->received_temperature,
-            'supplier_batch_number' => $batch->supplier_batch_number,
-            'movements'     => $movements,
-        ]);
+        $data = (new FEFOBatchResource($batch))->toArray(request());
+        $data['movements'] = $movements;
+
+        return $data;
     }
 
-    public function apply(Request $request)
+    public function apply(ApplyFefoDirectiveRequest $request)
     {
-        $data = $request->validate([
-            'batch_id'       => 'required|integer|exists:FEFO_Batch,batch_id',
-            'action'         => 'required|in:flag,clear,notify',
-            'directive_notes'=> 'nullable|string|max:500',
-        ]);
+        $data = $request->validated();
 
         $query = FEFOBatch::query();
         $query = $this->scopeForBusinessAndBranch($query, $request);

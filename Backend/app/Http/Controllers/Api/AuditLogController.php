@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
+use App\Http\Resources\AuditLogResource;
 use Illuminate\Http\Request;
 
 class AuditLogController extends Controller
@@ -31,16 +32,6 @@ class AuditLogController extends Controller
         $perPage = min((int) $request->input('per_page', 50), 200);
         $logs = $query->orderBy('created_at', 'desc')->paginate($perPage);
 
-        return response()->json($logs->through(fn ($log) => [
-            'id' => $log->log_id,
-            'action' => $log->action,
-            'user' => $log->user?->Full_name ?? 'System',
-            'role' => $log->user?->role ?? 'N/A',
-            'entity_type' => $log->entity_type,
-            'entity_id' => $log->entity_id,
-            'old_values' => $log->old_values,
-            'new_values' => $log->new_values,
-            'timestamp' => $log->created_at,
-        ]));
+        return response()->json($logs->through(fn ($log) => (new AuditLogResource($log))->toArray($request)));
     }
 }

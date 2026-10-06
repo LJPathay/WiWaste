@@ -6,6 +6,9 @@ use App\Http\Controllers\Concerns\ScopesTenant;
 use App\Http\Controllers\Controller;
 use App\Models\DataPurgeLog;
 use App\Models\DataRetentionPolicy;
+use App\Http\Requests\Api\StoreDataRetentionPolicyRequest;
+use App\Http\Requests\Api\UpdateDataRetentionPolicyRequest;
+use App\Http\Resources\DataRetentionPolicyResource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -56,7 +59,7 @@ class DataRetentionPolicyController extends Controller
         $policies = $query->orderBy('entity_type')->get();
 
         return response()->json([
-            'data' => $policies->map(fn (DataRetentionPolicy $p) => $this->payload($p))->all(),
+            'data' => $policies->map(fn (DataRetentionPolicy $p) => (new DataRetentionPolicyResource($p))->toArray($request))->all(),
             'summary' => $this->retentionSummary($request)->getData(true),
         ]);
     }
@@ -89,16 +92,11 @@ class DataRetentionPolicyController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(StoreDataRetentionPolicyRequest $request)
     {
         $user = $request->user();
 
-        $data = $request->validate([
-            'entity_type' => 'required|string|max:100',
-            'retention_days' => 'required|integer|min:1',
-            'description' => 'nullable|string|max:500',
-            'enabled' => 'nullable|boolean',
-        ]);
+        $data = $request->validated();
 
         if (! isset(self::ENTITY_TABLES[$data['entity_type']])) {
             return response()->json([
@@ -126,7 +124,7 @@ class DataRetentionPolicyController extends Controller
 
             return response()->json([
                 'message' => 'Retention policy updated.',
-                'policy' => $this->payload($existing->fresh()),
+                'policy' => (new DataRetentionPolicyResource($existing->fresh()))->toArray($request),
             ]);
         }
 
@@ -145,25 +143,21 @@ class DataRetentionPolicyController extends Controller
 
         return response()->json([
             'message' => 'Retention policy created.',
-            'policy' => $this->payload($policy),
+            'policy' => (new DataRetentionPolicyResource($policy))->toArray($request),
         ], 201);
     }
 
     public function show($id)
     {
-        return response()->json($this->payload($this->findPolicy(request(), $id)));
+        return (new DataRetentionPolicyResource($this->findPolicy(request(), $id)))->toArray(request());
     }
 
     /** Policies are addressed by `entity_type` in the UI, not by numeric id. */
-    public function update(Request $request, $id)
+    public function update(UpdateDataRetentionPolicyRequest $request, $id)
     {
         $policy = $this->findPolicy($request, $id);
 
-        $data = $request->validate([
-            'retention_days' => 'sometimes|integer|min:1',
-            'description' => 'nullable|string|max:500',
-            'enabled' => 'sometimes|boolean',
-        ]);
+        $data = $request->validated();
 
         if (isset($data['retention_days'])) {
             $policy->retention_days = $data['retention_days'];
@@ -178,7 +172,7 @@ class DataRetentionPolicyController extends Controller
 
         return response()->json([
             'message' => 'Retention policy updated.',
-            'policy' => $this->payload($policy->fresh()),
+            'policy' => (new DataRetentionPolicyResource($policy->fresh()))->toArray($request),
         ]);
     }
 
@@ -365,20 +359,6 @@ class DataRetentionPolicyController extends Controller
     /** The shape `ApiRetentionPolicy` declares on the frontend. */
     private function payload(DataRetentionPolicy $p): array
     {
-        $lastLog = DataPurgeLog::where('policy_id', $p->policy_id)
-            ->orderByDesc('purged_at')
-            ->first();
-
-        return [
-            'id' => $p->policy_id,
-            'entity_type' => $p->entity_type,
-            'retention_days' => (int) $p->retention_days,
-            'description' => $p->description ?? '',
-            'enabled' => (bool) $p->is_active,
-            'last_purged' => $lastLog?->purged_at?->toISOString(),
-            'records_purged' => $lastLog
-                ? (int) ($lastLog->records_purged + $lastLog->records_anonymized + $lastLog->records_archived)
-                : 0,
-        ];
+        return (new DataRetentionPolicyResource($p))->toArray(request());
     }
 }

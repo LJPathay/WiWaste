@@ -249,6 +249,9 @@ export function DataTable<T>({
                       "group",
                       onRowClick && "cursor-pointer",
                       rowClassName?.(row),
+                      ((row as any).status === 'Discontinued' || (row as any).status === 'Expired' || (row as any).status === 'critical') && 'status-bar status-bar--critical',
+                      ((row as any).status === 'Active' || (row as any).status === 'ok' || (row as any).status === 'healthy') && 'status-bar status-bar--ok',
+                      ((row as any).status === 'Low Stock' || (row as any).status === 'warning') && 'status-bar status-bar--warning',
                     )}
                     onMouseEnter={() => setHoveredRow(key)}
                     onMouseLeave={() => setHoveredRow(null)}

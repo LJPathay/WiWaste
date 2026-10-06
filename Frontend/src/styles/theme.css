@@ -478,6 +478,16 @@ textarea:focus-visible {
   justify-content: center;
 }
 
+/* Status bar for table rows */
+.status-bar {
+  border-left-width: 4px;
+  border-left-style: solid;
+}
+.status-bar--ok { border-left-color: var(--ok); }
+.status-bar--warning { border-left-color: var(--warning); }
+.status-bar--critical { border-left-color: var(--critical); }
+.status-bar--info { border-left-color: var(--info); }
+
 /* High contrast mode support */
 @media (prefers-contrast: more) {
   :root {

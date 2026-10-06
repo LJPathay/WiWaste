@@ -279,7 +279,7 @@ export function DashboardOverview() {
                 </span>
               </div>
             </div>
-            <div className="h-52">
+            <div className="h-52" role="img" aria-label={`Leakage by category chart: ${leakageViewMode} view`}>
               <ResponsiveContainer width="100%" height="100%">
                 <LazyPieChart>
                   <LazyPie
@@ -403,7 +403,7 @@ export function DashboardOverview() {
                 <option value="90">3 months</option>
               </select>
             </div>
-            <div className="h-48">
+            <div className="h-48" role="img" aria-label="Sales and revenue trend chart">
               <ResponsiveContainer width="100%" height="100%">
                 <LazyAreaChart data={salesTrendData}>
                   <ChartGradients />
@@ -444,7 +444,7 @@ export function DashboardOverview() {
                 View Details <ChevronRight className="h-2.5 w-2.5" />
               </Link>
             </div>
-            <div className="h-48">
+            <div className="h-48" role="img" aria-label="Wastage trend chart">
               <ResponsiveContainer width="100%" height="100%">
                 <LazyAreaChart data={wastageTrendData}>
                   <ChartGradients />
@@ -522,7 +522,7 @@ export function DashboardOverview() {
               </span>
             </div>
             {paymentBreakdown.length > 0 ? (
-            <div className="h-40">
+            <div className="h-40" role="img" aria-label="Revenue by payment method chart">
               <ResponsiveContainer width="100%" height="100%">
                 <LazyBarChart data={paymentBreakdown} layout="vertical">
                   <LazyCartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F1F5F9" />

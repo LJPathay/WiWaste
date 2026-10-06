@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class SalesTransaction extends Model
 {
+    use HasFactory;
+
     protected $table = 'Sales_Transaction';
 
     protected $primaryKey = 'transaction_id';

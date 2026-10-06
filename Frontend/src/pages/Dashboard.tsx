@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { PageLoader } from '../components/ui/PageLoader';
+import { DashboardSkeleton } from '../components/ui/DashboardSkeleton';
 
 // All three dashboards are route-level heavyweights: the POS terminal alone pulls in
 // the whole cashier bundle. Loading them on demand keeps the initial dashboard chunk
@@ -29,5 +30,5 @@ export function Dashboard() {
       <DashboardOverview />
     );
 
-  return <Suspense fallback={<PageLoader />}>{view}</Suspense>;
+  return <Suspense fallback={<DashboardSkeleton />}>{view}</Suspense>;
 }

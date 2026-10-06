@@ -522,6 +522,7 @@ Replace `<StatusBadge>` usage with left-border rows. Keep badge for:
 
 ## 16. Notes
 
+- **Phase 9** (Pharmacy vernacular icons) is deferred as optional polish. After token migration, the existing Lucide icon set is acceptable; custom SVGs only if user feedback requests stronger domain identity.
 - **Backup**: Create `Frontend.backup` branch before Phase 1 token migration. All changes are mechanical; rollback is `git revert`.
 - **Code review**: Phase 1 is search-replace; other phases need careful review.
 - **New components**: Don't add new components for left-border status — extend `DataTable` and `TableRow` with a `status` prop.

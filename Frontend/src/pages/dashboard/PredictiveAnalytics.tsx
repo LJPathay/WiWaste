@@ -133,7 +133,7 @@ export function PredictiveAnalyticsPage() {
     <div className="space-y-4">
       {/* Page Header */}
       <div className="flex flex-wrap items-center gap-2">
-        <Link to="/dashboard?highlightKpi=0" className="inline-flex items-center justify-center h-7 w-7 rounded-lg border border-border dark:border-white/10 text-muted-fg hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-white/10 dark:hover:text-slate-200 transition-colors" aria-label="Back to Dashboard"><ArrowLeft className="h-3.5 w-3.5" /></Link>
+        <Link to="/dashboard?highlightKpi=0" className="touch-target inline-flex items-center justify-center h-7 w-7 rounded-lg border border-border dark:border-white/10 text-muted-fg hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-white/10 dark:hover:text-slate-200 transition-colors" aria-label="Back to Dashboard"><ArrowLeft className="h-3.5 w-3.5" /></Link>
         <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Predictive Analytics</h1>
         <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2.5 py-0.5 text-[9px] font-bold text-sky-700 dark:bg-sky-500/20 dark:text-sky-300">
           <Brain className="h-3 w-3" /> Model: ARIMA

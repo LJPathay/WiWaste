@@ -73,7 +73,7 @@ export function OverflowMenu({ items }: OverflowMenuProps) {
     <div ref={ref} className="relative inline-flex">
       <button
         onClick={(e) => { e.stopPropagation(); setOpen(!open); }}
-        className="inline-flex items-center justify-center h-7 w-7 rounded-lg text-muted-fg hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200 transition-colors"
+        className="touch-target inline-flex items-center justify-center h-7 w-7 rounded-lg text-muted-fg hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200 transition-colors"
         aria-label="More actions"
         aria-expanded={open}
       >

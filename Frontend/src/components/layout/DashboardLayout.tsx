@@ -208,7 +208,7 @@ const SidebarInner = memo(function SidebarInner({
             <button
               type="button"
               onClick={onToggleCollapse}
-              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-border dark:border-white/10 bg-white dark:bg-slate-800 text-muted-fg dark:text-muted-fg transition-colors hover:bg-gray-100 dark:hover:bg-slate-700"
+              className="touch-target inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-border dark:border-white/10 bg-white dark:bg-slate-800 text-muted-fg dark:text-muted-fg transition-colors hover:bg-gray-100 dark:hover:bg-slate-700"
               aria-label={compact ? 'Expand sidebar' : 'Collapse sidebar'}
             >
               {compact ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
@@ -218,7 +218,7 @@ const SidebarInner = memo(function SidebarInner({
             <button
               type="button"
               onClick={onClose}
-              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-border dark:border-white/10 bg-white dark:bg-slate-800 text-muted-fg dark:text-muted-fg hover:bg-gray-100 dark:hover:bg-slate-700"
+              className="touch-target inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-border dark:border-white/10 bg-white dark:bg-slate-800 text-muted-fg dark:text-muted-fg hover:bg-gray-100 dark:hover:bg-slate-700"
               aria-label="Close sidebar"
             >
               <X className="h-3.5 w-3.5" />
@@ -406,7 +406,7 @@ export function DashboardLayout() {
             <button
               type="button"
               onClick={() => setMobileOpen(true)}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border dark:border-white/10 text-muted-fg dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-white/10"
+              className="touch-target inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border dark:border-white/10 text-muted-fg dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-white/10"
               aria-label="Open sidebar"
             >
               <Menu className="h-5 w-5" />

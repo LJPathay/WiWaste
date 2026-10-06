@@ -59,7 +59,7 @@ export function FefoTrackingPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <Link to="/dashboard?highlightKpi=3" className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-border dark:border-white/10 text-muted-fg hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-white/10 dark:hover:text-slate-200 transition-colors" aria-label="Back to Dashboard"><ArrowLeft className="h-4 w-4" /></Link>
+        <Link to="/dashboard?highlightKpi=3" className="touch-target inline-flex items-center justify-center h-8 w-8 rounded-lg border border-border dark:border-white/10 text-muted-fg hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-white/10 dark:hover:text-slate-200 transition-colors" aria-label="Back to Dashboard"><ArrowLeft className="h-4 w-4" /></Link>
         <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">FEFO Batch Tracking</h1>
         <UITooltip>
           <TooltipTrigger asChild>

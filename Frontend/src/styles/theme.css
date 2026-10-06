@@ -462,6 +462,15 @@
   outline: none;
 }
 
+/* Minimum touch target for interactive icon buttons */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* High contrast mode support */
 @media (prefers-contrast: more) {
   :root {

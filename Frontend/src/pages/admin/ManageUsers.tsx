@@ -395,7 +395,7 @@ export function ManageUsers() {
                     type="button"
                     onClick={(e) => { e.stopPropagation(); setArchiveModalUser(row); }}
                     aria-label={`Archive ${row.name}`}
-                    className="h-7 w-7 rounded-lg bg-slate-100 dark:bg-slate-800 text-muted-fg dark:text-slate-300 hover:bg-rose-600 hover:text-white transition-all inline-flex items-center justify-center"
+                    className="touch-target h-7 w-7 rounded-lg bg-slate-100 dark:bg-slate-800 text-muted-fg dark:text-slate-300 hover:bg-rose-600 hover:text-white transition-all inline-flex items-center justify-center"
                   >
                     <UserX className="h-3.5 w-3.5" />
                   </button>
@@ -411,7 +411,7 @@ export function ManageUsers() {
                   type="button"
                   onClick={(e) => { e.stopPropagation(); setReactivateModalUser(row); }}
                   aria-label={`Reactivate ${row.name}`}
-                  className="h-7 w-7 rounded-lg bg-slate-100 dark:bg-slate-800 text-muted-fg dark:text-slate-300 hover:bg-emerald-600 hover:text-white transition-all inline-flex items-center justify-center"
+                  className="touch-target h-7 w-7 rounded-lg bg-slate-100 dark:bg-slate-800 text-muted-fg dark:text-slate-300 hover:bg-emerald-600 hover:text-white transition-all inline-flex items-center justify-center"
                 >
                   <RotateCcw className="h-3.5 w-3.5" />
                 </button>

@@ -34,6 +34,7 @@ function ToastItem({ toast, onDismiss }: { toast: ToastMessage; onDismiss: (id: 
   return (
     <div
       role="alert"
+      aria-live={toast.type === 'error' ? 'assertive' : 'polite'}
       className={`pointer-events-auto flex items-center gap-3 rounded-xl px-4 py-3 shadow-lg border text-sm font-medium min-w-[280px] max-w-sm animate-in slide-in-from-bottom-2 ${
         toast.type === 'success'
           ? 'bg-bg-elevated border-emerald-200 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300'

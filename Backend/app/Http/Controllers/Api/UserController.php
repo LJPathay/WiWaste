@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Requests\Api\CreateUserRequest;
 use App\Http\Requests\Api\UpdateUserRequest;
+use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Models\AuditLog;
 
@@ -71,19 +72,7 @@ class UserController extends BaseApiController
 
         $paginated = $query->paginate(min((int) request()->get('per_page', 15), 100), ['*'], 'page', (int) request()->get('page', 1));
 
-        return $this->paginated($paginated->through(fn ($u) => [
-            'id'             => $u->User_id,
-            'name'           => $u->full_name,
-            'first_name'     => $u->first_name,
-            'middle_name'    => $u->middle_name,
-            'surname'        => $u->surname,
-            'contact_number' => $u->contact_number,
-            'username'       => $u->username,
-            'email'          => $u->email,
-            'role'           => $u->role,
-            'status'         => $u->status,
-            'created_at'     => $u->Created_at,
-        ]));
+        return $this->paginated($paginated->through(fn ($u) => (new UserResource($u))->toArray(request())));
     }
 
     public function store(\App\Http\Requests\Api\CreateUserRequest $request)
@@ -94,36 +83,13 @@ class UserController extends BaseApiController
 
         $user = User::create($data);
 
-        return $this->created([
-            'id'             => $user->User_id,
-            'name'           => $user->full_name,
-            'first_name'     => $user->first_name,
-            'middle_name'    => $user->middle_name,
-            'surname'        => $user->surname,
-            'contact_number' => $user->contact_number,
-            'username'       => $user->username,
-            'email'          => $user->email,
-            'role'           => $user->role,
-            'status'         => $user->status,
-            'created_at'     => $user->Created_at,
-        ]);
+        return $this->created((new UserResource($user))->toArray($request));
     }
 
     public function show($id)
     {
         $u = User::findOrFail($id);
-        return $this->success([
-            'id'             => $u->User_id,
-            'name'           => $u->full_name,
-            'first_name'     => $u->first_name,
-            'middle_name'    => $u->middle_name,
-            'surname'        => $u->surname,
-            'contact_number' => $u->contact_number,
-            'username'       => $u->username,
-            'email'          => $u->email,
-            'role'           => $u->role,
-            'status'         => $u->status,
-        ]);
+        return $this->success((new UserResource($u))->toArray(request()));
     }
 
     /**

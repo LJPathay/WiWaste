@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Concerns\ScopesTenant;
 use App\Http\Requests\Api\CreateSupplierRequest;
 use App\Http\Requests\Api\UpdateSupplierRequest;
+use App\Http\Resources\SupplierResource;
 use App\Models\Supplier;
 use App\Models\Inventory;
 use Illuminate\Http\Request;
@@ -35,20 +36,7 @@ class SupplierController extends BaseApiController
 
         $paginated = $query->paginate(min((int) request()->get('per_page', 15), 100), ['*'], 'page', (int) request()->get('page', 1));
 
-        return $this->paginated($paginated->through(fn ($s) => [
-            'id'             => $s->supplier_id,
-            'name'           => $s->supplier_name,
-            'contact_person' => $s->contact_person,
-            'contact_number' => $s->contact_number,
-            'email'          => $s->email,
-            'address'        => $s->address,
-            'product_count'  => $s->products_count,
-            'business_id'    => $s->business_id,
-            'fda_lto_number' => $s->fda_lto_number,
-            'fda_lto_expiry' => $s->fda_lto_expiry,
-            'fda_cpr_number' => $s->fda_cpr_number,
-            'fda_cpr_expiry' => $s->fda_cpr_expiry,
-        ]));
+        return $this->paginated($paginated->through(fn ($s) => (new SupplierResource($s))->toArray(request())));
     }
 
     public function store(\App\Http\Requests\Api\CreateSupplierRequest $request)

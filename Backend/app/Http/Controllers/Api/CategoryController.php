@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Requests\Api\CreateCategoryRequest;
 use App\Http\Requests\Api\UpdateCategoryRequest;
+use App\Http\Resources\CategoryResource;
 use App\Models\AuditLog;
 use App\Models\Category;
 
@@ -11,12 +12,7 @@ class CategoryController extends BaseApiController
 {
     private function present(Category $c): array
     {
-        return [
-            'id'            => $c->Category_id,
-            'name'          => $c->Category_name,
-            'product_count' => $c->products_count ?? $c->products()->count(),
-            'status'        => $c->status,
-        ];
+        return (new CategoryResource($c))->toArray(request());
     }
 
     public function index()

@@ -558,9 +558,20 @@ return response()->json($resource)
 > stored, so no invalid status can reach the column.
 
 ### Phase 17
-- [ ] Pest tests cover: product create, sale create, auth, API resource shape
-- [ ] Coverage > 85%
-- [ ] `./vendor/bin/pint --test` passes
+- [x] Pest tests cover: product create, sale create, auth, API resource shape — `ProductApiTest`, `SalesApiTest`, `AuthGuardsTest`, `ModelFactoriesTest`; suite is 139 green tests (`php artisan test` now runs Pest)
+- [ ] Coverage > 85% — **blocked on tooling**: `php artisan test --coverage` reports *"Code coverage driver not available. Did you install Xdebug or PCOV?"*, so the number cannot be produced on this machine. Re-run once an extension is installed on the CI host.
+- [x] `./vendor/bin/pint --test` passes
+- [x] Factories exist for `Product`, `Sale`, `User`, `Supplier`, `Category` — plus `HasFactory` on the four models that were missing it
+
+> **The new tests found two real defects**, both fixed in the same pass:
+>
+> 1. `SalesTransactionController` used `SaleResource` without importing it, so
+>    `GET /api/sales` and `GET /api/sales/{id}` answered **500** (`Class
+>    "App\Http\Controllers\Api\SaleResource" not found`). No existing test touched
+>    those endpoints.
+> 2. `AuthServiceProvider` was never listed in `bootstrap/providers.php`, so every
+>    `Gate::define()` in it was unreachable — the role gates and the owner-tier
+>    `Gate::before` bypass existed only as dead code.
 
 ### Phase 18
 - [ ] `ManageUsers.tsx` does not re-render on every keystroke in search

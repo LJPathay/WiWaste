@@ -462,6 +462,13 @@
   outline: none;
 }
 
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
 /* Minimum touch target for interactive icon buttons */
 .touch-target {
   min-height: 44px;

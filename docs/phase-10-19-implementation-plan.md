@@ -574,9 +574,9 @@ return response()->json($resource)
 >    `Gate::before` bypass existed only as dead code.
 
 ### Phase 18
-- [ ] `ManageUsers.tsx` does not re-render on every keystroke in search
-- [ ] Derived booleans no longer use `useEffect`
-- [ ] `POSTerminal.tsx` cart filter uses `useDeferredValue`
+- [x] `ManageUsers.tsx` does not re-render on every keystroke in search — `search` is fed through `useDeferredValue`, both queries (rows + tab counts) key off the deferred value, `statusTabs`/`columns` are `useMemo`/`useCallback`-stable, and the `<DataTable>` element itself is memoised, so typing re-renders the toolbar and nothing else.
+- [x] Derived booleans no longer use `useEffect` — audited every `useState` pair and every `useEffect` body in `src` with a script. The only boolean still set inside an effect is `useReducedMotion()`, which is a subscription to `matchMedia` (an external store, not derived React state); everything else is a fetch result, a timer or a keyboard/modal handler. The one derived-*value* effect that did exist — `POSTerminal`'s pre-fill of `chargedAmount`/`amountPaid` from `grandTotal` — was replaced by an `openCheckout()` event handler.
+- [x] `POSTerminal.tsx` catalogue filter uses `useDeferredValue` (there is no client-side cart filter; `filteredProducts`, the grid the cart is filled from, is the deferred one), and `ManageProducts`' filter is now `useDeferredValue` + `useMemo` instead of re-running on every render.
 
 ### Phase 19
 - [ ] `php artisan config:cache` in deploy script

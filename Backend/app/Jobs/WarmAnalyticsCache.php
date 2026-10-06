@@ -19,6 +19,26 @@ class WarmAnalyticsCache implements ShouldQueue
 {
     use Queueable;
 
+    /**
+     * Three attempts is enough for a cache warm-up: it is a refresh of data the
+     * app can still read (cold) from the database, so a permanent failure should
+     * surface rather than burn retries forever.
+     */
+    public int $tries = 3;
+
+    /** Seconds to wait between attempts: 1min, 5min, 15min. */
+    public array $backoff = [60, 300, 900];
+
+    /** Hard ceiling for one run — longer than this and the job is killed. */
+    public int $timeout = 300;
+
+    public function failed(\Throwable $exception): void
+    {
+        // Routed through report() so it lands in the configured handler (log,
+        // Sentry, ...) instead of disappearing into the queue's own logs.
+        report($exception);
+    }
+
     public function handle(): void
     {
         Cache::forget('dashboard.overview');

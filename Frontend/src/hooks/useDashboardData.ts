@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   getStoredSession,
   inferRoleFromEmail,
@@ -10,17 +11,10 @@ import type { ApiDashboard, ApiOwnerAnalytics } from '../services/api';
 import type { DashboardData } from '../utils/mockAuthAndFeatures';
 
 export function useDashboardData(period = '30') {
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [overview, setOverview] = useState<ApiDashboard | null>(null);
-  const [ownerAnalytics, setOwnerAnalytics] = useState<ApiOwnerAnalytics | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let mounted = true;
-
-    async function load() {
+  const { data: result, isLoading } = useQuery({
+    queryKey: ['dashboard', period],
+    queryFn: async () => {
       try {
-        console.debug('[Dashboard] Loading data...');
         const [d, ov, analytics] = await Promise.all([
           (async () => {
             const session = getStoredSession();
@@ -28,19 +22,14 @@ export function useDashboardData(period = '30') {
             const role = session?.role ?? inferRoleFromEmail(email);
             return initializeDashboard(email, 'password', role);
           })(),
-          ownerDashboard.overview().then(r => { console.debug('[Dashboard] overview:', r); return r; }).catch(e => { console.error('[Dashboard] overview failed:', e); return null; }),
-          ownerDashboard.analytics({ period }).then(r => { console.debug('[Dashboard] analytics:', r); return r; }).catch(e => { console.error('[Dashboard] analytics failed:', e); return null; }),
+          ownerDashboard.overview().catch(() => null),
+          ownerDashboard.analytics({ period }).catch(() => null),
         ]);
-        if (mounted) {
-          setData(d);
-          setOverview(ov);
-          setOwnerAnalytics(analytics);
-        }
+        return { data: d, overview: ov, ownerAnalytics: analytics };
       } catch (e) {
-        console.error('[Dashboard] load failed:', e);
         const analyticsData = getPredictiveAnalytics();
-        if (mounted) {
-          setData({
+        return {
+          data: {
             user: { id: 'guest', email: 'guest@example.com', name: 'Guest User', company: 'Demo Co', role: 'inventory', loginTime: new Date() },
             predictiveAnalytics: analyticsData,
             prescriptiveDecisions: [],
@@ -48,18 +37,16 @@ export function useDashboardData(period = '30') {
             batchFEFO: [],
             vendorReturns: [],
             behavioralInsights: [],
-          });
-          setOverview(null);
-          setOwnerAnalytics(null);
-        }
-      } finally {
-        if (mounted) setLoading(false);
+          },
+          overview: null,
+          ownerAnalytics: null,
+        };
       }
-    }
+    },
+    staleTime: 30000,
+  });
 
-    load();
-    return () => { mounted = false; };
-  }, [period]);
+  const loading = isLoading;
 
-  return { data, overview, ownerAnalytics, loading };
+  return { data: result?.data ?? null, overview: result?.overview ?? null, ownerAnalytics: result?.ownerAnalytics ?? null, loading };
 }

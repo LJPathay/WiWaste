@@ -188,25 +188,25 @@ Route::middleware('throttle:5,1')->group(function () {
 
 ### 6.1 Choose Library
 
-Use **SWR** (recommended for this stack) or **TanStack Query**:
+Use **TanStack Query** (`@tanstack/react-query` is already installed) instead of SWR.
 
 ```bash
-cd Frontend && npm install swr
+# No install required - @tanstack/react-query is already present in package.json
 ```
 
 ### 6.2 Migrate `useDashboardData.ts`
 
 ```tsx
-import useSWR from 'swr';
+import { useQuery } from '@tanstack/react-query';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
 export function useDashboardData(period: string) {
-  const { data, error, isLoading } = useSWR(
-    `/api/v1/dashboard?period=${period}`,
-    fetcher,
-    { revalidateOnFocus: false }
-  );
+  const { data, error, isLoading } = useQuery({
+    queryKey: ['dashboard', period],
+    queryFn: () => fetcher(`/api/v1/dashboard?period=${period}`),
+    staleTime: 30000,
+  });
   return { data, loading: isLoading, error };
 }
 ```

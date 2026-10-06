@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Concerns\ScopesTenant;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreSaleTransactionRequest;
+use App\Http\Resources\SaleResource;
 use App\Jobs\WarmAnalyticsCache;
 use App\Models\AuditLog;
 use App\Models\FEFOBatch;

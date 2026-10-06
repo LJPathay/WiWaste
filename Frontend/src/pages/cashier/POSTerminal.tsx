@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, useEffect, useCallback } from 'react';
+import { useMemo, useRef, useState, useEffect, useCallback, useDeferredValue } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { 
   Barcode, Search, Trash2, CreditCard, Wallet, Banknote, Plus, Minus, 
@@ -49,6 +49,11 @@ export function POSTerminal() {
   const barcodeRef = useRef<HTMLInputElement | null>(null);
   
   const [search, setSearch] = useState('');
+  // The cashier types into the search box while the grid is being virtualised and the
+  // hotkey handler is subscribed to `filteredProducts`. Deferring the search keeps
+  // keystrokes interruptible: the filter (and the grid re-render it drives) runs on
+  // the settled value rather than on every character.
+  const deferredSearch = useDeferredValue(search);
   const [activeCategory, setActiveCategory] = useState('all');
   const [cart, setCart] = useState<CartLine[]>([]);
   const [paymentMethod, setPaymentMethod] = useState<PosPaymentMethod>('Cash');
@@ -161,13 +166,13 @@ export function POSTerminal() {
   }, [recordingAction, handleHotkeyRecord]);
 
   const filteredProducts = useMemo(() => {
-    const q = search.toLowerCase();
+    const q = deferredSearch.toLowerCase();
     return catalog.filter(p => {
       const matchCat = activeCategory === 'all' || p.category_id === activeCategory;
       const matchSearch = !q || p.product_name.toLowerCase().includes(q) || p.barcode.includes(q);
       return matchCat && matchSearch;
     });
-  }, [search, activeCategory, catalog]);
+  }, [deferredSearch, activeCategory, catalog]);
 
   // Ordered products (pinned first) for virtualized grid
   const orderedProducts = useMemo(() => {
@@ -263,6 +268,28 @@ export function POSTerminal() {
     setCart(prev => prev.filter(l => l.product.product_id !== productId));
   }, [setCart]);
 
+  // Totals are derived straight from the cart on every render — there is no state to
+  // keep in step, so no effect is needed for them.
+  const totalItems = cart.reduce((sum, l) => sum + l.quantity, 0);
+  const subtotal = cart.reduce((sum, l) => sum + l.product.selling_price * l.quantity, 0);
+  const discountAmount = cart.reduce((sum, l) => sum + (l.product.selling_price * l.quantity * (l.discountPct || 0)) + (l.discountAmount || 0), 0);
+  const tax = isVatRegistered ? (subtotal - discountAmount) * 0.12 : 0;
+  const grandTotal = (subtotal - discountAmount) + tax;
+  const tendered = Number(amountTendered || 0);
+  const changeDue = paymentMethod === 'Cash' ? Math.max(0, tendered - grandTotal) : 0;
+
+  // Opening checkout is the event that seeds the two amount inputs. This used to be a
+  // `useEffect` watching [showCheckout, paymentMethod, grandTotal], which meant the
+  // effect re-wrote whatever the cashier had typed every time the total moved, and
+  // ran an extra render for values the button handler below already sets. The inputs
+  // are now ordinary editable state seeded once, on open (and again on the payment
+  // method button, which pre-fills them too).
+  const openCheckout = useCallback(() => {
+    setChargedAmount(grandTotal.toFixed(2));
+    setAmountPaid(grandTotal.toFixed(2));
+    setShowCheckout(true);
+  }, [grandTotal]);
+
   // Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -287,7 +314,7 @@ export function POSTerminal() {
         if (idx > 0) setSelectedLineId(cart[idx - 1].product.product_id);
       } else if (e.key === hotkeys.checkout) {
         e.preventDefault();
-        if (cart.length > 0 && !showCheckout) setShowCheckout(true);
+        if (cart.length > 0 && !showCheckout) openCheckout();
       } else if (e.key === hotkeys.discount) {
         e.preventDefault();
         setShowDiscountModal(true);
@@ -357,7 +384,7 @@ export function POSTerminal() {
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [cart, showCheckout, hotkeys, showHotkeySettings, recordingAction, selectedLineId, hotkeysEnabled, addProduct, handlePluLookup, pluBuffer, updateQty, removeProduct, filteredProducts, pinnedOrder]);
+  }, [cart, showCheckout, hotkeys, showHotkeySettings, recordingAction, selectedLineId, hotkeysEnabled, addProduct, handlePluLookup, pluBuffer, updateQty, removeProduct, filteredProducts, pinnedOrder, openCheckout]);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -419,25 +446,6 @@ export function POSTerminal() {
     }, 300);
     return () => { if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current); };
   }, [search]);
-
-  const totalItems = cart.reduce((sum, l) => sum + l.quantity, 0);
-  const subtotal = cart.reduce((sum, l) => sum + l.product.selling_price * l.quantity, 0);
-  const discountAmount = cart.reduce((sum, l) => sum + (l.product.selling_price * l.quantity * (l.discountPct || 0)) + (l.discountAmount || 0), 0);
-  const tax = isVatRegistered ? (subtotal - discountAmount) * 0.12 : 0;
-  const grandTotal = (subtotal - discountAmount) + tax;
-  const tendered = Number(amountTendered || 0);
-  const changeDue = paymentMethod === 'Cash' ? Math.max(0, tendered - grandTotal) : 0;
-
-  // Sync charged/amount fields with grandTotal when modal opens or payment method changes
-  useEffect(() => {
-    if (showCheckout) {
-      if (paymentMethod === 'Card') {
-        setChargedAmount(grandTotal.toFixed(2));
-      } else if (paymentMethod === 'E-Wallet') {
-        setAmountPaid(grandTotal.toFixed(2));
-      }
-    }
-  }, [showCheckout, paymentMethod, grandTotal]);
 
   // Payment method configuration
   const paymentMethods = [
@@ -1001,7 +1009,7 @@ export function POSTerminal() {
             </div>
 
             <button 
-              onClick={() => setShowCheckout(true)}
+              onClick={openCheckout}
               disabled={cart.length === 0}
               className={`w-full py-4 rounded-xl text-lg font-bold text-white shadow-md transition-all flex items-center justify-center gap-2 relative
                 ${cart.length === 0 

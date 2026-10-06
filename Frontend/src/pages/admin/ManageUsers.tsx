@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, useDeferredValue } from 'react';
 import {
   Users, Search, Plus, Edit2, X, Info,
   AlertTriangle, Eye, EyeOff, ChevronDown, Check,
@@ -44,13 +44,22 @@ export function ManageUsers() {
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [unmaskedEmailIds, setUnmaskedEmailIds] = useState<Set<number>>(new Set());
-  const [isAllEmailsUnmasked] = useState(false);
+  // "Unmask every email at once" has no control yet, so this is a constant rather
+  // than state: it never changed, and keeping it in useState made every read of it
+  // look like something that could be stale.
+  const isAllEmailsUnmasked = false;
+
+  // Typing in the search box re-renders this component (the input is controlled),
+  // but nothing expensive follows it: both queries below key off the deferred value,
+  // so React drops the intermediate keystrokes and only fetches — and only re-renders
+  // the rows — once the browser is idle.
+  const deferredSearch = useDeferredValue(search);
 
   const { data: userList, loading, error: apiError, refetch } = useApi<PaginatedUsersResponse>(
     () => usersApi.list(
       currentPage,
       ITEMS_PER_PAGE,
-      search,
+      deferredSearch,
       roleFilter === 'all' ? '' : roleFilter,
       statusFilter === 'all' ? '' : statusFilter,
       // The default tab is "everything that is still in use", which is every status
@@ -58,15 +67,15 @@ export function ManageUsers() {
       // the tab's count badge disagreed with the rows underneath it.
       statusFilter === 'all' ? 'Archived' : '',
     ),
-    { dedupeKey: `users-${currentPage}-${search}-${roleFilter}-${statusFilter}` }
+    { dedupeKey: `users-${currentPage}-${deferredSearch}-${roleFilter}-${statusFilter}` }
   );
 
   // Tab totals come from the server. Deriving them from `userList.data` only ever saw
   // the current page of five rows, so the Archived tab showed "0" while archived
   // accounts existed on a later page.
   const { data: statusCounts, refetch: refetchCounts } = useApi<UserStatusCounts>(
-    () => usersApi.statusCounts(search, roleFilter === 'all' ? '' : roleFilter),
-    { dedupeKey: `user-status-counts-${search}-${roleFilter}` }
+    () => usersApi.statusCounts(deferredSearch, roleFilter === 'all' ? '' : roleFilter),
+    { dedupeKey: `user-status-counts-${deferredSearch}-${roleFilter}` }
   );
 
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -306,14 +315,16 @@ export function ManageUsers() {
     setPendingStatus(null);
   };
 
-  const toggleSingleEmailMask = (id: number) => {
+  // `useCallback` so the memoised column definitions below keep the same reference
+  // across keystrokes; the setter it calls is already stable.
+  const toggleSingleEmailMask = useCallback((id: number) => {
     setUnmaskedEmailIds(prev => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
-  };
+  }, []);
 
   const isFiltered = statusFilter !== 'all' || roleFilter !== 'all' || search !== '';
 
@@ -326,15 +337,15 @@ export function ManageUsers() {
   // the moment the endpoint started returning data. Every hop is optional-chained now.
   const counts = statusCounts?.data;
   const byStatus = counts?.by_status;
-  const statusTabs: Array<{ id: StatusFilter; label: string; count: number; Icon?: typeof Users }> = [
+  const statusTabs = useMemo<Array<{ id: StatusFilter; label: string; count: number; Icon?: typeof Users }>>(() => [
     { id: 'all', label: 'All Users', count: counts?.not_archived ?? 0 },
     { id: 'Active', label: 'Active', count: byStatus?.Active ?? 0, Icon: STATUS_CONFIG.Active.icon },
     { id: 'Inactive', label: 'Inactive', count: byStatus?.Inactive ?? 0, Icon: STATUS_CONFIG.Inactive.icon },
     { id: 'Quarantined', label: 'Quarantined', count: byStatus?.Quarantined ?? 0, Icon: STATUS_CONFIG.Quarantined.icon },
     { id: 'Archived', label: 'Archived', count: byStatus?.Archived ?? 0, Icon: STATUS_CONFIG.Archived.icon },
-  ];
+  ], [counts, byStatus]);
 
-  const columns: DataTableColumn<ApiUser>[] = [
+  const columns = useMemo<DataTableColumn<ApiUser>[]>(() => [
     {
       key: 'name', header: 'User', pinned: true, truncate: true, minWidth: '150px',
       render: (row) => (
@@ -422,7 +433,41 @@ export function ManageUsers() {
         </div>
       ),
     },
-  ];
+  ], [isAllEmailsUnmasked, unmaskedEmailIds, toggleSingleEmailMask]);
+
+  // The rows are rendered once and reused: while the administrator types, the only
+  // things that change are `search` and the toolbar above, so keeping this element
+  // behind a memo (same reference in, same element out) stops React from re-running
+  // DataTable — headers, cells, row actions and all — on every keystroke.
+  const usersTable = useMemo(() => (
+    <DataTable
+      data={paginatedUsers}
+      columns={columns}
+      rowKey={(row) => row.id}
+      emptyMessage="No users found"
+      // The row is the way into an account. The per-row Edit button was removed (the
+      // QA report asked for it), which left editing reachable only from a modal that
+      // nothing opened — so the row click opens the view dialog, whose footer carries
+      // Edit / Archive / Reactivate. The checkbox cell and the action buttons inside
+      // the row stop propagation, so they do not trip it.
+      onRowClick={(row) => setViewingUser(row)}
+      pagination={
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3.5">
+          <div className="text-xs text-muted-fg dark:text-muted-fg">
+            {paginatedUsers.length === 0 ? (
+              <span>No users match your filters</span>
+            ) : (
+              <span>Showing <strong className="font-semibold text-slate-700 dark:text-slate-200">{startIndex}</strong> to <strong className="font-semibold text-slate-700 dark:text-slate-200">{endIndex}</strong> of <strong className="font-semibold text-slate-700 dark:text-slate-200">{totalItems}</strong> Users</span>
+            )}
+          </div>
+          <Pagination page={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} totalItems={totalItems} perPage={ITEMS_PER_PAGE} label="Users" />
+        </div>
+      }
+      className="border-0"
+    />
+  // `paginatedUsers` is `users`, which is `userList?.data ?? []` — the reference only
+  // moves when a deferred fetch lands, which is exactly when a re-render is wanted.
+  ), [paginatedUsers, columns, startIndex, endIndex, totalItems, totalPages, currentPage]);
 
   if (loading) return (
     <div className="flex flex-col items-center justify-center h-56 gap-3">
@@ -534,31 +579,9 @@ export function ManageUsers() {
         </div>
       </div>
 
-      <DataTable
-        data={paginatedUsers}
-        columns={columns}
-        rowKey={(row) => row.id}
-        emptyMessage="No users found"
-        // The row is the way into an account. The per-row Edit button was removed (the
-        // QA report asked for it), which left editing reachable only from a modal that
-        // nothing opened — so the row click opens the view dialog, whose footer carries
-        // Edit / Archive / Reactivate. The checkbox cell and the action buttons inside
-        // the row stop propagation, so they do not trip it.
-        onRowClick={(row) => setViewingUser(row)}
-        pagination={
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3.5">
-            <div className="text-xs text-muted-fg dark:text-muted-fg">
-              {filteredUsers.length === 0 ? (
-                <span>No users match your filters</span>
-              ) : (
-                <span>Showing <strong className="font-semibold text-slate-700 dark:text-slate-200">{startIndex}</strong> to <strong className="font-semibold text-slate-700 dark:text-slate-200">{endIndex}</strong> of <strong className="font-semibold text-slate-700 dark:text-slate-200">{totalItems}</strong> Users</span>
-              )}
-            </div>
-            <Pagination page={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} totalItems={totalItems} perPage={ITEMS_PER_PAGE} label="Users" />
-          </div>
-        }
-        className="border-0"
-      />
+      {/* The rows live in a memoised element (see `usersTable`) so keystrokes in the
+          toolbar above do not re-render the table. */}
+      {usersTable}
 
       {/* ── ADD USER MODAL ── */}
       {isAddOpen && (

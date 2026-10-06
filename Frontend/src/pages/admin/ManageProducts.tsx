@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useDeferredValue } from 'react';
 import { Search, Plus, Info, Loader2, Package, AlertCircle, Printer, Download } from 'lucide-react';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { Tutorial } from '../../components/ui/Tutorial';
@@ -30,6 +30,10 @@ export function ManageProducts() {
   const { data: supplierList } = useOptimisticList(suppliersApi.list);
 
   const [search, setSearch] = useState('');
+  // The catalogue is filtered in the browser, so every keystroke used to re-run the
+  // whole predicate and re-render the table. Deferring the value lets React drop the
+  // intermediate keystrokes and keep the input responsive.
+  const deferredSearch = useDeferredValue(search);
   const [currentPage, setCurrentPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<'all' | 'Active' | 'Discontinued'>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
@@ -168,10 +172,11 @@ export function ManageProducts() {
     products.some(p => p.id !== selectedProduct.id && p.sku && p.sku.trim().toLowerCase() === editForm.barcode.trim().toLowerCase())
   );
 
-  const filteredProducts = products.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) ||
-                          (p.category?.toLowerCase() ?? '').includes(search.toLowerCase()) ||
-                          (p.sku?.toLowerCase() ?? '').includes(search.toLowerCase());
+  const filteredProducts = useMemo(() => products.filter(p => {
+    const q = deferredSearch.toLowerCase();
+    const matchesSearch = p.name.toLowerCase().includes(q) ||
+                          (p.category?.toLowerCase() ?? '').includes(q) ||
+                          (p.sku?.toLowerCase() ?? '').includes(q);
     const matchesCategory = categoryFilter === 'All' || String(p.category_id) === categoryFilter || p.category === categoryFilter;
     
     let matchesStatus = true;
@@ -182,7 +187,7 @@ export function ManageProducts() {
     }
 
     return matchesSearch && matchesCategory && matchesStatus;
-  });
+  }), [products, deferredSearch, categoryFilter, statusFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / ITEMS_PER_PAGE));
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -192,8 +197,11 @@ export function ManageProducts() {
     setSelectedIds(Array.from(keys) as number[]);
   };
 
-  const activeCount = products.filter(p => p.status !== 'Discontinued').length;
-  const discontinuedCount = products.filter(p => p.status === 'Discontinued').length;
+  // Three passes over the catalogue on every render — including each keystroke in
+  // the search box — so the numbers the tabs show are computed once per change of
+  // `products` instead.
+  const activeCount = useMemo(() => products.filter(p => p.status !== 'Discontinued').length, [products]);
+  const discontinuedCount = useMemo(() => products.filter(p => p.status === 'Discontinued').length, [products]);
   const allCount = products.length;
 
   const handleAddProduct = async (e: React.FormEvent) => {

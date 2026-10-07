@@ -579,9 +579,11 @@ return response()->json($resource)
 - [x] `POSTerminal.tsx` catalogue filter uses `useDeferredValue` (there is no client-side cart filter; `filteredProducts`, the grid the cart is filled from, is the deferred one), and `ManageProducts`' filter is now `useDeferredValue` + `useMemo` instead of re-running on every render.
 
 ### Phase 19
-- [ ] `php artisan config:cache` in deploy script
-- [ ] Category list cached via `Cache::rememberForever`
-- [ ] Product list response has `Cache-Control: public, max-age=60`
+- [x] `php artisan config:cache` in deploy script — `Backend/scripts/deploy-cache.sh` (equivalently `composer run deploy-cache`) runs `config:cache`, `route:cache`, `view:cache`.
+  - **Never run it on this machine**: `config:cache` bakes whatever `.env` says, which would override phpunit.xml's `DB_DATABASE=wiwaste_test` and point the suite at the development database. `composer test` clears the config cache first for the same reason.
+  - `route:cache` was failing outright — *"Unable to prepare route [api/users] for serialization. Another route has already been assigned name [users.index]"* — because `routes/api.php` mounts the same table twice (`/v1` plus the legacy unprefixed copy) and `Route::apiResource` hands both mounts the same names. The legacy mount now registers as `legacy.*`; nothing in the app calls `route('users.index')`, so only the internal names changed.
+- [x] Category list cached via `Cache::rememberForever` — `Category::CACHE_KEY` fills on the first read of `GET /api/categories`; search, status filtering and paging then run in memory over the cached collection (a few dozen rows), which turns what used to be a query per keystroke into a cache hit. `Category::booted()` drops the key on any category write, and `Product::boot()` does too because the cached rows carry `products_count`. Filter/pagination parity and both invalidation paths are covered by `tests/Feature/CacheStrategyTest.php`.
+- [x] Product list response has `Cache-Control: public, max-age=60` — plus `Vary: Authorization`: the rows are tenant-scoped, so a shared cache has to key on the token rather than the URL. `CompressResponse` now *appends* `Accept-Encoding` to `Vary` instead of overwriting whatever the endpoint set. The SPA's refetch-after-write path runs inside `withFreshResponse()` (`cache: 'reload'`), so the 60-second window can never hand a screen the list as it was before its own create/update.
 
 ---
 

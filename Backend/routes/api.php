@@ -36,4 +36,12 @@ $routes = require __DIR__.'/api_routes.php';
 Route::prefix('v1')->middleware($middleware)->group($routes);
 
 // Backward compatibility routes (without v1 prefix) for legacy tests/clients.
-Route::middleware($middleware)->group($routes);
+//
+// `->name('legacy.')` gives the second surface its own names. The table above is
+// deliberately registered twice, so `Route::apiResource('/users', ...)` would assign
+// `users.index` to both mounts — and `php artisan route:cache` refuses to serialise a
+// route collection with duplicate names ("Unable to prepare route [api/users] for
+// serialization"). Names are internal (nothing calls `route('users.index')`), so the
+// only observable change is that the legacy copies are now addressable as
+// `legacy.users.index` and the canonical name keeps pointing at the /v1 URL.
+Route::name('legacy.')->middleware($middleware)->group($routes);

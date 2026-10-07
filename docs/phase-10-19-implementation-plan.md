@@ -118,9 +118,9 @@ Never return `Product::all()` directly from API controllers without `::with()` o
 
 ### 4.3 Test
 
-- [ ] `php artisan test --coverage` passes
-- [ ] No N+1 queries in Telescope for `/api/v1/products` endpoint
-- [ ] Product response contains only expected fields (no `created_at`, `updated_at`, internal IDs)
+- [ ] `php artisan test --coverage` passes — **blocked on tooling**: this machine has no Xdebug/PCOV (`"Code coverage driver not available"`), the same gap Phase 17 records. The suite itself runs 143/143 green.
+- [ ] No N+1 queries in Telescope for `/api/v1/products` endpoint — **not verifiable here**: Telescope is not installed (it is not in `composer.json`). The audit was done in code instead: every product/sale/user list declares its relations up front with `::with([...])`, so each row set resolves in one query.
+- [x] Product response contains only expected fields (no `created_at`, `updated_at`, internal IDs) — pinned by `tests/Feature/ProductApiTest.php`, which asserts `created_at`, `updated_at`, `product_name` and `barcode` are all absent and that `id`/`sku`/`category`/`stock` are present.
 
 **Files touched**: All resource classes, all API controllers
 
@@ -609,16 +609,16 @@ return response()->json($resource)
 
 ## 17. Definition of Done
 
-- [ ] All 10 phases merged to `dev`
-- [ ] `php artisan test --coverage` > 85%
-- [ ] `./vendor/bin/pint --test` passes
-- [ ] `npm run build` bundle < 500KB initial
-- [ ] No N+1 queries in Laravel Telescope for key endpoints
-- [ ] No waterfall fetches in React DevTools Network tab
-- [ ] All API responses use Resource classes (no raw Eloquent)
-- [ ] All queue jobs have retry/backoff config
-- [ ] Horizon dashboard accessible and processing jobs
-- [ ] Cache headers on static reference endpoints
+- [x] All 10 phases merged to `dev` — Phases 10-19, one `feat:` commit each, pushed to `origin/dev`.
+- [ ] `php artisan test --coverage` > 85% — **blocked on tooling**: no coverage driver on this machine (see §4.3). `php artisan test` runs 143/143.
+- [x] `./vendor/bin/pint --test` passes
+- [x] `npm run build` bundle < 500KB initial — 311.95 kB entry (93.61 kB gzip).
+- [ ] No N+1 queries in Laravel Telescope for key endpoints — Telescope is not installed; see §4.3.
+- [ ] No waterfall fetches in React DevTools Network tab — needs a browser session to measure. Phase 14 removed the sequential waterfalls structurally (parallel fetch + Suspense fallbacks); not re-measured in a browser here.
+- [ ] All API responses use Resource classes (no raw Eloquent) — true for the Phase 10 scope (products, users, categories, suppliers, sales, inventory, wastage, stock counts, recommendations). Still serialising Eloquent directly: audit logs, recalls, purchase orders, sanitation, stock receiving, vendor returns, FEFO batches and the data-retention endpoints.
+- [x] All queue jobs have retry/backoff config — the only job, `WarmAnalyticsCache`, declares `tries = 3`, `backoff = [60, 300, 900]` and `failed()`.
+- [ ] Horizon dashboard accessible and processing jobs — **deferred**: `laravel/horizon` needs `ext-pcntl`/`ext-posix`, which cannot be satisfied on Windows (Phase 15 note); queue hardening was delivered without it.
+- [x] Cache headers on static reference endpoints — `GET /api/v1/products` answers `public, max-age=60` + `Vary: Authorization`, and the category list is served from `Cache::rememberForever`.
 
 ---
 

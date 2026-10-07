@@ -185,11 +185,33 @@ function getToken(): string | null {
   return localStorage.getItem('wiwaste_token');
 }
 
+/**
+ * Runs `run` while telling every request it makes to ignore the browser's HTTP cache
+ * and replace what it stored.
+ *
+ * Phase 19 gives list responses `Cache-Control: public, max-age=60`, which is exactly
+ * what a screen that just created or edited a row must *not* be handed: the refetch
+ * that follows a write would otherwise come back with the list as it was before the
+ * write, for up to a minute. `'reload'` (rather than `'no-store'`) both skips the
+ * stored copy and overwrites it, so the next plain read of the same URL is fresh too.
+ */
+let freshRequests = 0;
+
+export async function withFreshResponse<T>(run: () => Promise<T>): Promise<T> {
+  freshRequests++;
+  try {
+    return await run();
+  } finally {
+    freshRequests--;
+  }
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
   console.debug('[API] Request:', path, 'Token:', token?.substring(0, 20) + '...');
   const res = await fetch(`${BASE_URL}${path}`, {
     ...options,
+    cache: options.cache ?? (freshRequests > 0 ? 'reload' : 'default'),
     headers: {
       'Content-Type': 'application/json',
       Accept: 'application/json',

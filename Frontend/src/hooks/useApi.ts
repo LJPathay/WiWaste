@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
+import { withFreshResponse } from '../services/api';
 
 // Not generic: none of these options mention the fetched payload, so `UseApiOptions<T>`
 // declared a type parameter that could not be used and `noUnusedLocals` rightly objected.
@@ -69,7 +70,9 @@ export function useApi<T>(
         : 'Failed to load data'
       : null,
     refetch: async () => {
-      await refetch();
+      // A refetch runs after a write, so it must not be answered by the copy the
+      // browser stored while the list still had `max-age=60` on it.
+      await withFreshResponse(() => refetch());
     },
     invalidate: () => {
       void queryClient.invalidateQueries({ queryKey: ['useApi', key] });

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 
 class Product extends Model
 {
@@ -56,6 +57,12 @@ class Product extends Model
                 $product->barcode = static::generateUniqueSku($product->category_id);
             }
         });
+
+        // The cached category list (Phase 19) carries `products_count`, so a product
+        // coming or going has to drop it — otherwise a category picker would keep
+        // showing the count it had the first time it was read.
+        static::saved(fn () => Cache::forget(Category::CACHE_KEY));
+        static::deleted(fn () => Cache::forget(Category::CACHE_KEY));
     }
 
     /**

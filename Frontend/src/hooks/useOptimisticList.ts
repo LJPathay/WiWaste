@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { withFreshResponse } from '../services/api';
 
 export function useOptimisticList<T extends { id: number }>(
   fetcher: () => Promise<T[] | { data: T[] }>
@@ -29,6 +30,13 @@ export function useOptimisticList<T extends { id: number }>(
   }, [fetcher]);
 
   useEffect(() => { fetch(); }, [fetch]);
+
+  // The mount read above deliberately uses the plain path — a repeat visit inside the
+  // API's 60-second window may answer from the browser cache. A *refetch* is what a
+  // create/update/archive triggers, and that one has to reach the origin: see
+  // `withFreshResponse`, which also replaces the copy the browser would otherwise keep
+  // handing out.
+  const refetch = useCallback(() => withFreshResponse(() => fetch()), [fetch]);
 
   const addItem = useCallback((item: T) => {
     setData(prev => {
@@ -61,5 +69,5 @@ export function useOptimisticList<T extends { id: number }>(
     });
   }, []);
 
-  return { data, loading, error, refetch: fetch, addItem, updateItem, removeItem, setData };
+  return { data, loading, error, refetch, addItem, updateItem, removeItem, setData };
 }

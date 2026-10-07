@@ -45,9 +45,15 @@ class ProductController extends Controller
         // total as siblings). `ProductResource::collection()` would switch the shape
         // to {data, links, meta}, which the frontend's PaginatedResponse type does
         // not describe.
-        return response()->json(
-            $query->paginate($perPage)->through(fn ($p) => (new ProductResource($p))->resolve($request))
-        );
+        return response()
+            ->json($query->paginate($perPage)->through(fn ($p) => (new ProductResource($p))->resolve($request)))
+            // Phase 19: the catalogue changes far less often than it is read, so a
+            // client may reuse its copy for a minute. The rows are tenant-scoped, so
+            // `Vary: Authorization` stops any shared cache in front of the API from
+            // handing one account's list to the next — and CompressResponse appends
+            // `Accept-Encoding` to that same header rather than overwriting it.
+            ->header('Cache-Control', 'public, max-age=60')
+            ->header('Vary', 'Authorization');
     }
 
     public function store(CreateProductRequest $request)

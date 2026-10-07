@@ -28,7 +28,11 @@ class CompressResponse
 
         $response->setContent($compressed);
         $response->headers->set('Content-Encoding', 'gzip');
-        $response->headers->set('Vary', 'Accept-Encoding');
+        // Append rather than overwrite: an endpoint may already vary on something the
+        // cache needs (the product list varies on Authorization), and replacing it here
+        // would silently drop that.
+        $vary = trim($response->headers->get('Vary', ''));
+        $response->headers->set('Vary', trim(($vary !== '' ? $vary.', ' : '').'Accept-Encoding'));
         $response->headers->set('Content-Length', strlen((string) $compressed));
 
         return $response;

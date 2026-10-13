@@ -11,10 +11,17 @@ export interface ActionMenuItem {
 }
 
 interface ActionMenuProps {
-  items: ActionMenuItem[];
-  trigger?: React.ReactNode;
-  align?: 'left' | 'right';
+  readonly items: ActionMenuItem[];
+  readonly trigger?: React.ReactNode;
+  readonly align?: 'left' | 'right';
 }
+
+/** Per-variant label classes, keyed so no ternary chain is needed at the call site. */
+const VARIANT_CLASSES = {
+  danger: 'text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/20',
+  primary: 'text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-500/20',
+  default: 'text-slate-700 dark:text-slate-300 hover:bg-bg dark:hover:bg-white/5',
+} as const;
 
 export function ActionMenu({ items, trigger, align = 'right' }: ActionMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -76,11 +83,7 @@ export function ActionMenu({ items, trigger, align = 'right' }: ActionMenuProps)
               disabled={item.disabled}
               className={cn(
                 'w-full flex items-center gap-2 px-3 py-2 text-sm font-medium transition-colors',
-                item.variant === 'danger'
-                  ? 'text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/20'
-                  : item.variant === 'primary'
-                  ? 'text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-500/20'
-                  : 'text-slate-700 dark:text-slate-300 hover:bg-bg dark:hover:bg-white/5'
+                VARIANT_CLASSES[item.variant ?? 'default']
               )}
               role="menuitem"
             >

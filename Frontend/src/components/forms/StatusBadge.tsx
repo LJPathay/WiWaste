@@ -10,12 +10,11 @@ interface StatusBadgeProps {
   readonly status: string;
   readonly size?: BadgeSize;
   readonly showDot?: boolean;
-  readonly className?: string;
 }
 
-// `className` is part of the public prop type but was never folded into the class list, so
-// callers that pass it have always had it silently dropped. It stays off the destructuring
-// pattern rather than being wired up, to keep the rendered output identical.
+// `className` was once part of the public prop type but was never folded into the class
+// list, so callers that passed it had it silently dropped. No caller ever did, and the
+// prop is now gone rather than wired up, to keep the rendered output identical.
 export function StatusBadge({ status, size = 'md', showDot = true }: StatusBadgeProps) {
   const config = STATUS_COLORS[status as keyof typeof STATUS_COLORS] || STATUS_COLORS.Active;
   

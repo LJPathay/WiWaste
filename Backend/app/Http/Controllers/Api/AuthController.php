@@ -48,17 +48,35 @@ class AuthController extends BaseApiController
             ->first();
 
         if (! $user || ! Hash::check($validated['password'], $user->password)) {
-            // Record failed attempt
-            $this->loginAttemptService->recordFailedAttempt($identifier, $ip, $userAgent);
-
-            // Re-check if now locked after this attempt
-            if ($this->loginAttemptService->isLocked($identifier)) {
-                return $this->lockedResponse($identifier);
-            }
-
-            throw ValidationException::withMessages(['username' => ['Invalid credentials.']]);
+            return $this->rejectFailedLogin($identifier, $ip, $userAgent);
         }
 
+        return $this->issueSession($user, $request, $identifier, $ip, $userAgent);
+    }
+
+    /**
+     * Records the failed attempt, re-checks the lockout (this attempt may be the one
+     * that tripped it) and either returns the 429 or throws the validation error.
+     *
+     * @throws ValidationException
+     */
+    private function rejectFailedLogin(string $identifier, ?string $ip, ?string $userAgent)
+    {
+        $this->loginAttemptService->recordFailedAttempt($identifier, $ip, $userAgent);
+
+        if ($this->loginAttemptService->isLocked($identifier)) {
+            return $this->lockedResponse($identifier);
+        }
+
+        throw ValidationException::withMessages(['username' => ['Invalid credentials.']]);
+    }
+
+    /**
+     * mints the token pair for an authenticated caller, or refuses outright when the
+     * account status says it must never receive one.
+     */
+    private function issueSession(User $user, Request $request, string $identifier, ?string $ip, ?string $userAgent)
+    {
         // Account states that must never get a token. Anything else (Active, and
         // any future status) is allowed through.
         if ($blocked = self::BLOCKED_STATUS_MESSAGES[$user->status] ?? null) {

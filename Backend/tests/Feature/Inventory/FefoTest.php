@@ -14,6 +14,9 @@ class FefoTest extends TestCase
 {
     use CreatesInventoryFixtures, RefreshDatabase;
 
+    /** Endpoint under test for the FEFO application blocks below. */
+    private const APPLY_ENDPOINT = '/api/v1/fefo/apply';
+
     private function actingAsInventory(): void
     {
         Sanctum::actingAs($this->makeInventoryUser('Inventory'));
@@ -125,7 +128,7 @@ class FefoTest extends TestCase
         $product = $this->makeProduct();
         $batch = $this->makeBatch($product, 10, now()->addDays(4)->toDateString());
 
-        $this->postJson('/api/v1/fefo/apply', [
+        $this->postJson(self::APPLY_ENDPOINT, [
             'batch_id' => $batch->batch_id,
             'action' => 'flag',
             'directive_notes' => 'Cold chain broken on arrival.',
@@ -144,7 +147,7 @@ class FefoTest extends TestCase
         $product = $this->makeProduct();
         $batch = $this->makeBatch($product, 10, now()->addDays(20)->toDateString());
 
-        $this->postJson('/api/v1/fefo/apply', [
+        $this->postJson(self::APPLY_ENDPOINT, [
             'batch_id' => $batch->batch_id,
             'action' => $action,
         ])->assertOk();
@@ -167,7 +170,7 @@ class FefoTest extends TestCase
         $product = $this->makeProduct();
         $batch = $this->makeBatch($product, 10, now()->addDays(12)->toDateString());
 
-        $this->postJson('/api/v1/fefo/apply', [
+        $this->postJson(self::APPLY_ENDPOINT, [
             'batch_id' => $batch->batch_id,
             'action' => 'flag',
         ])->assertOk();
@@ -184,7 +187,7 @@ class FefoTest extends TestCase
         $product = $this->makeProduct();
         $batch = $this->makeBatch($product, 10, now()->addDays(12)->toDateString());
 
-        $this->postJson('/api/v1/fefo/apply', [
+        $this->postJson(self::APPLY_ENDPOINT, [
             'batch_id' => $batch->batch_id,
             'action' => 'destroy',
         ])->assertStatus(422)->assertJsonValidationErrors('action');
@@ -196,7 +199,7 @@ class FefoTest extends TestCase
     {
         $this->actingAsInventory();
 
-        $this->postJson('/api/v1/fefo/apply', [
+        $this->postJson(self::APPLY_ENDPOINT, [
             'batch_id' => 999999,
             'action' => 'flag',
         ])->assertStatus(422)->assertJsonValidationErrors('batch_id');

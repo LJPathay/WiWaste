@@ -85,7 +85,10 @@ function TruncatedCell({ children, className }: { children: React.ReactNode; cla
   );
 }
 
-function pinOf<T>(col: DataTableColumn<T>): 'start' | 'end' | null {
+/** Which sticky edge a column pins to; `null` means the column does not pin at all. */
+type PinEdge = 'start' | 'end' | null;
+
+function pinOf<T>(col: DataTableColumn<T>): PinEdge {
   return col.pin ?? (col.pinned ? 'start' : null);
 }
 
@@ -178,6 +181,10 @@ interface DataCellProps<T> {
  */
 function cellText(value: unknown): string {
   if (value === null || value === undefined) return '—';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
+    return value.toString();
+  }
   if (typeof value === 'object') {
     try {
       return JSON.stringify(value);
@@ -185,7 +192,8 @@ function cellText(value: unknown): string {
       return '[object]';
     }
   }
-  return String(value);
+  // Symbols and functions have no readable cell rendering.
+  return '[object]';
 }
 
 /** Kept out of `DataCell` so its `&&` chain does not count against that function's complexity. */

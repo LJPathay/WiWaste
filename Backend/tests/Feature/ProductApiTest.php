@@ -25,6 +25,9 @@ uses(RefreshDatabase::class);
 /** Every product test starts from this name; the assertions quote it too. */
 const PRODUCT_NAME = 'Ibuprofen 200mg';
 
+/** The collection endpoint every create/list test posts to. */
+const PRODUCTS_ENDPOINT = '/api/v1/products';
+
 beforeEach(function () {
     $this->owner = User::factory()->role('Owner')->create();
     $this->category = Category::create(['Category_name' => 'Analgesics '.uniqid()]);
@@ -54,7 +57,7 @@ function productPayload(array $overrides = []): array
 }
 
 it('creates a product and answers with the ProductResource whitelist', function () {
-    $response = $this->postJson('/api/v1/products', productPayload());
+    $response = $this->postJson(PRODUCTS_ENDPOINT, productPayload());
 
     $response->assertStatus(201);
 
@@ -89,7 +92,7 @@ it('creates a product and answers with the ProductResource whitelist', function 
 });
 
 it('rejects a product that omits required fields with a 422', function () {
-    $this->postJson('/api/v1/products', ['product_name' => 'No prices'])
+    $this->postJson(PRODUCTS_ENDPOINT, ['product_name' => 'No prices'])
         ->assertStatus(422)
         ->assertJsonValidationErrors([
             'category_id',
@@ -104,7 +107,7 @@ it('rejects a status that is not a ProductStatus case', function () {
     // The enum-backed rule is the only thing standing between the API and the
     // MySQL ENUM, where an unknown value is a silent "Data truncated" warning
     // rather than an error.
-    $this->postJson('/api/v1/products', productPayload(['status' => 'Retired']))
+    $this->postJson(PRODUCTS_ENDPOINT, productPayload(['status' => 'Retired']))
         ->assertStatus(422)
         ->assertJsonValidationErrors(['status']);
 });
@@ -112,7 +115,7 @@ it('rejects a status that is not a ProductStatus case', function () {
 it('lists products in the flat paginator envelope the frontend reads', function () {
     $product = Product::create(array_diff_key(productPayload(), ['initial_stock' => true]));
 
-    $response = $this->getJson('/api/v1/products');
+    $response = $this->getJson(PRODUCTS_ENDPOINT);
 
     $response
         ->assertOk()

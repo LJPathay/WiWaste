@@ -121,7 +121,6 @@ class BirIntegrationService
         $totalVat = $transactions->sum('vat_amount');
         $totalVatable = $transactions->sum('vatable_amount');
         $totalNonVatable = $transactions->sum('non_vatable_amount');
-        $totalDiscount = $transactions->sum('discount_amount');
         $totalSeniorPwdDiscount = $transactions->sum('senior_pwd_discount_amount');
         $totalSeniorPwdVatExempt = $transactions->sum('senior_pwd_vat_exempt_amount');
         $totalDiscount = $transactions->sum('discount_amount');

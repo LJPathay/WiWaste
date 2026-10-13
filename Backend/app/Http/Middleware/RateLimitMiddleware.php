@@ -53,7 +53,7 @@ class RateLimitMiddleware
 
         $response = $next($request);
 
-        $this->recordHits($key, $role, $isApi, $isAuth, $isPassword, $isWrite);
+        $this->recordHits($key, $isApi, $isAuth, $isPassword, $isWrite);
         $this->addRateLimitHeaders($response, $key, $role, $isApi, $isAuth, $isPassword, $isWrite);
 
         return $response;
@@ -88,7 +88,7 @@ class RateLimitMiddleware
      * Increments every counter that applies to this request, once the response
      * has been produced.
      */
-    private function recordHits(string $key, string $role, bool $isApi, bool $isAuth, bool $isPassword, bool $isWrite): void
+    private function recordHits(string $key, bool $isApi, bool $isAuth, bool $isPassword, bool $isWrite): void
     {
         if (! $isApi) {
             return;

@@ -2,10 +2,10 @@ import { useState, useRef, useEffect } from 'react';
 import { Calendar, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export interface DateRangePickerProps {
-  from: string;
-  to: string;
-  onChange: (value: { from: string; to: string }) => void;
-  className?: string;
+  readonly from: string;
+  readonly to: string;
+  readonly onChange: (value: { from: string; to: string }) => void;
+  readonly className?: string;
 }
 
 export function DateRangePicker({ from, to, onChange, className = '' }: DateRangePickerProps) {
@@ -124,13 +124,15 @@ export function DateRangePicker({ from, to, onChange, className = '' }: DateRang
           </div>
 
           <div className="grid grid-cols-7 gap-0.5">
-            {Array.from({ length: firstDayOfMonth(currentMonth) }).map((_, i) => (
-              <div key={`empty-${i}`} className="aspect-square" />
-            ))}
+            {/* One spacer spanning the weekday offset — N keyed empty divs would need
+                array-index keys. Its height comes from the day buttons sharing the row. */}
+            {firstDayOfMonth(currentMonth) > 0 && (
+              <div style={{ gridColumn: `span ${firstDayOfMonth(currentMonth)}` }} />
+            )}
             {Array.from({ length: daysInMonth(currentMonth) }).map((_, i) => {
               const day = i + 1;
               const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
-                            const selected = isDateSelected(date);
+              const selected = isDateSelected(date);
               const isStart = isStartDate(date);
               const isEnd = isEndDate(date);
               const isToday = date.toDateString() === today.toDateString();

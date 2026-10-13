@@ -261,23 +261,12 @@ class InventoryController extends Controller
      */
     protected function resolveStockOutBatches(array $data)
     {
+        if (isset($data['batch_id']) && $data['batch_id']) {
+            return $this->drainNamedBatch($data);
+        }
+
         $remainingQty = $data['quantity'];
         $movements = [];
-
-        if (isset($data['batch_id']) && $data['batch_id']) {
-            $batch = FEFOBatch::where('batch_id', $data['batch_id'])
-                ->where('product_id', $data['product_id'])
-                ->firstOrFail();
-
-            if ($batch->quantity < $remainingQty) {
-                return response()->json(['message' => 'Insufficient quantity in specified batch.'], 422);
-            }
-
-            $batch->quantity -= $remainingQty;
-            $this->clearConsumedBatch($batch);
-
-            return [['batch_id' => $batch->batch_id, 'quantity' => $remainingQty]];
-        }
 
         // FEFO enforcement: auto-select earliest expiry batches
         $batches = FEFOBatch::where('product_id', $data['product_id'])
@@ -308,6 +297,27 @@ class InventoryController extends Controller
         }
 
         return $movements;
+    }
+
+    /**
+     * Drains a caller-specified batch instead of walking FEFO order.
+     *
+     * @return array<int, array{batch_id: int, quantity: int|float}>|Response
+     */
+    private function drainNamedBatch(array $data)
+    {
+        $batch = FEFOBatch::where('batch_id', $data['batch_id'])
+            ->where('product_id', $data['product_id'])
+            ->firstOrFail();
+
+        if ($batch->quantity < $data['quantity']) {
+            return response()->json(['message' => 'Insufficient quantity in specified batch.'], 422);
+        }
+
+        $batch->quantity -= $data['quantity'];
+        $this->clearConsumedBatch($batch);
+
+        return [['batch_id' => $batch->batch_id, 'quantity' => $data['quantity']]];
     }
 
     /**

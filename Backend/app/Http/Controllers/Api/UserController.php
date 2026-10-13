@@ -69,7 +69,7 @@ class UserController extends BaseApiController
             $query->where('status', request()->get('status'));
         }
 
-        $paginated = $query->paginate(min((int) request()->get('per_page', 15), 100), ['*'], 'page', (int) request()->get('page', 1));
+        $paginated = $query->paginate($perPage, ['*'], 'page', (int) request()->get('page', 1));
 
         return $this->paginated($paginated->through(fn ($u) => (new UserResource($u))->resolve(request())));
     }

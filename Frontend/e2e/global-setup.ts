@@ -29,7 +29,7 @@ export default function globalSetup(): void {
   const SYSTEM_PATH =
     process.platform === 'win32'
       ? [
-          process.env.SystemRoot ? `${process.env.SystemRoot}\\System32` : String.raw`C:\Windows\System32`,
+          process.env.SystemRoot ? path.join(process.env.SystemRoot, 'System32') : String.raw`C:\Windows\System32`,
           process.env.SystemRoot ?? String.raw`C:\Windows`,
         ]
       : ['/usr/local/bin', '/usr/bin', '/bin'];

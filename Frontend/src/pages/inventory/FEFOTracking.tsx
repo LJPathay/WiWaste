@@ -232,8 +232,7 @@ export function FEFOTracking() {
       <div className="bg-bg-elevated rounded-xl border border-[#E5E7EB] dark:border-white/10 shadow-sm overflow-hidden">
         <div className="px-4 py-3 border-b border-[#F1F5F9] dark:border-white/10 flex items-center justify-between gap-3">
           <span className="text-sm font-bold text-[#0F172A] dark:text-slate-100">
-            Batch Register
-            <span className="ml-2 text-[9px] font-normal text-[#64748B] dark:text-muted-fg">({filteredAll.length} batches)</span>
+            Batch Register <span className="ml-2 text-[9px] font-normal text-[#64748B] dark:text-muted-fg">({filteredAll.length} batches)</span>
           </span>
           <div className="relative w-52">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#64748B] pointer-events-none" />

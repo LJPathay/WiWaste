@@ -24,6 +24,9 @@ uses(RefreshDatabase::class);
 /** The product every sale test transacts against; assertions quote it too. */
 const SALE_PRODUCT_NAME = 'Bottled Water 500ml';
 
+/** The collection endpoint every sale test posts to or reads from. */
+const SALES_ENDPOINT = '/api/v1/sales';
+
 beforeEach(function () {
     $this->cashier = User::factory()->role('Cashier')->create();
     $this->category = Category::create(['Category_name' => 'Beverages '.uniqid()]);
@@ -55,7 +58,7 @@ beforeEach(function () {
 it('records a sale and answers with the totals the receipt needs', function () {
     Bus::fake([WarmAnalyticsCache::class]);
 
-    $response = $this->postJson('/api/v1/sales', [
+    $response = $this->postJson(SALES_ENDPOINT, [
         'payment_method' => 'Cash',
         'amount_tendered' => 100,
         'change_due' => 55,
@@ -82,7 +85,7 @@ it('records a sale and answers with the totals the receipt needs', function () {
 });
 
 it('lists sales in the flat paginator envelope with resource fields', function () {
-    $this->postJson('/api/v1/sales', [
+    $this->postJson(SALES_ENDPOINT, [
         'payment_method' => 'Cash',
         'amount_tendered' => 100,
         'change_due' => 85,
@@ -91,7 +94,7 @@ it('lists sales in the flat paginator envelope with resource fields', function (
         ],
     ])->assertStatus(201);
 
-    $response = $this->getJson('/api/v1/sales');
+    $response = $this->getJson(SALES_ENDPOINT);
 
     $response
         ->assertOk()
@@ -120,7 +123,7 @@ it('lists sales in the flat paginator envelope with resource fields', function (
 });
 
 it('answers a single sale with the SaleResource object, not a wrapped one', function () {
-    $transactionId = $this->postJson('/api/v1/sales', [
+    $transactionId = $this->postJson(SALES_ENDPOINT, [
         'payment_method' => 'E-wallet',
         'amount_tendered' => 15,
         'change_due' => 0,

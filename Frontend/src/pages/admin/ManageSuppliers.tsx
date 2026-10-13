@@ -375,7 +375,7 @@ export function ManageSuppliers() {
 
 
   if (fetchError) {
-    const errorCode = fetchError.match(/\((\d+)\)/)?.[1] || 'Unknown';
+    const errorCode = /\((\d+)\)/.exec(fetchError)?.[1] || 'Unknown';
     const errorMessage = errorCode === '2002' ? "There's no connection (2002)" : `Connection error (${errorCode})`;
     return (
       <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800/40 flex items-center justify-between gap-3">

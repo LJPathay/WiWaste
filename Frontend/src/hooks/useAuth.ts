@@ -88,7 +88,7 @@ export function useAuth() {
       console.error('[Auth] verifyToken failed:', err);
       // Don't clear user if we have a valid session from login (persisted in localStorage)
       const storedUser = getStoredUser();
-      if (storedUser && storedUser.role) {
+      if (storedUser?.role) {
         console.debug('[Auth] verifyToken failed but using stored user:', storedUser.role);
         if (mountedRef.current) {
           setUser(storedUser);

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { CheckCircle2, XCircle, X } from 'lucide-react';
 import { cn } from './utils';
 
@@ -130,10 +130,6 @@ export function Modal({
   const previousActiveElement = useRef<HTMLElement | null>(null);
   useFocusTrap(modalRef, true);
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') onClose();
-  }, [onClose]);
-
   const sizeClasses = { sm: 'max-w-md', md: 'max-w-lg', lg: 'max-w-2xl', xl: 'max-w-4xl' };
 
   useEffect(() => {
@@ -152,14 +148,16 @@ export function Modal({
       open
       aria-labelledby="modal-title"
       className="fixed inset-0 z-50 flex items-center justify-center p-4 m-0 w-screen h-screen max-w-none max-h-none border-0 bg-transparent backdrop:bg-black/40"
-      onKeyDown={handleKeyDown}
-      onClick={onClose}
     >
+      {/* Click-away surface. It and the panel below are roleless containers: a <dialog>
+          carries a non-interactive role and must not take pointer or key handlers. */}
+      <div className="absolute inset-0" onClick={onClose} aria-hidden="true" />
       <div
         ref={modalRef}
         tabIndex={-1}
+        onKeyDown={e => { if (e.key === 'Escape') onClose(); }}
         className={cn(
-          'bg-bg-elevated rounded-xl border border-border dark:border-white/10 w-full shadow-xl relative focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2',
+          'relative bg-bg-elevated rounded-xl border border-border dark:border-white/10 w-full shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2',
           sizeClasses[size],
           className,
         )}
@@ -180,16 +178,16 @@ export function Modal({
 }
 
 interface ConfirmProps {
-  message: string;
-  onConfirm: () => void;
+  readonly message: string;
+  readonly onConfirm: () => void;
   /** Dismiss handler. `onClose` is accepted as an alias -- most call sites use that name. */
-  onCancel?: () => void;
-  onClose?: () => void;
+  readonly onCancel?: () => void;
+  readonly onClose?: () => void;
   /** Optional heading, rendered above the message when given. */
-  title?: string;
-  isOpen?: boolean;
-  confirmLabel?: string;
-  danger?: boolean;
+  readonly title?: string;
+  readonly isOpen?: boolean;
+  readonly confirmLabel?: string;
+  readonly danger?: boolean;
 }
 
 export function ConfirmDialog({
@@ -207,10 +205,6 @@ export function ConfirmDialog({
   const previousActiveElement = useRef<HTMLElement | null>(null);
   useFocusTrap(dialogRef, true);
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') dismiss?.();
-  }, [dismiss]);
-
   useEffect(() => {
     previousActiveElement.current = document.activeElement as HTMLElement;
     dialogRef.current?.focus();
@@ -227,13 +221,15 @@ export function ConfirmDialog({
       open
       aria-labelledby={title ? 'confirm-title' : 'confirm-message'}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 m-0 w-screen h-screen max-w-none max-h-none border-0 bg-transparent backdrop:bg-black/40"
-      onKeyDown={handleKeyDown}
-      onClick={dismiss}
     >
+      {/* Roleless containers again: a <dialog> is non-interactive and cannot hold
+          pointer or key handlers directly. */}
+      <div className="absolute inset-0" onClick={dismiss} aria-hidden="true" />
       <div
         ref={dialogRef}
         tabIndex={-1}
-        className="bg-bg-elevated rounded-xl border border-border dark:border-white/10 w-full max-w-sm shadow-xl p-6 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
+        onKeyDown={e => { if (e.key === 'Escape') dismiss?.(); }}
+        className="relative bg-bg-elevated rounded-xl border border-border dark:border-white/10 w-full max-w-sm shadow-xl p-6 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
         onClick={e => e.stopPropagation()}
       >
         {title && (

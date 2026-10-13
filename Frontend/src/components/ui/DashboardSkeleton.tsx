@@ -7,9 +7,8 @@
  */
 export function DashboardSkeleton() {
   return (
-    <div
-      className="animate-pulse space-y-6"
-      role="status"
+    <output
+      className="block animate-pulse space-y-6"
       aria-label="Loading dashboard"
       aria-busy="true"
     >
@@ -41,6 +40,6 @@ export function DashboardSkeleton() {
       </div>
 
       <span className="sr-only">Loading dashboard…</span>
-    </div>
+    </output>
   );
 }

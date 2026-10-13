@@ -20,6 +20,9 @@ class PasswordResetOtpTest extends TestCase
     /** `POST /api/v1/password/verify-otp` — checks the code the email delivered. */
     private const VERIFY_OTP_ENDPOINT = '/api/v1/password/verify-otp';
 
+    /** `POST /api/v1/password/forgot` — starts the reset flow. */
+    private const FORGOT_ENDPOINT = '/api/v1/password/forgot';
+
     /** `POST /api/v1/password/reset` — consumes the OTP and sets the new password. */
     private const RESET_ENDPOINT = '/api/v1/password/reset';
 
@@ -70,7 +73,7 @@ class PasswordResetOtpTest extends TestCase
         $user = $this->user();
         Mail::fake();
 
-        $this->postJson('/api/v1/password/forgot', ['email' => $user->email])
+        $this->postJson(self::FORGOT_ENDPOINT, ['email' => $user->email])
             ->assertOk()
             ->assertJsonPath('success', true);
 
@@ -84,7 +87,7 @@ class PasswordResetOtpTest extends TestCase
         $user = $this->user();
         Mail::fake();
 
-        $this->postJson('/api/v1/password/forgot', ['email' => $user->email])->assertOk();
+        $this->postJson(self::FORGOT_ENDPOINT, ['email' => $user->email])->assertOk();
 
         $sentOtp = null;
         Mail::assertSent(PasswordResetOtpMail::class, function (PasswordResetOtpMail $mail) use (&$sentOtp) {
@@ -104,14 +107,14 @@ class PasswordResetOtpTest extends TestCase
     {
         Mail::fake();
 
-        $this->postJson('/api/v1/password/forgot', ['email' => self::NOBODY_EMAIL])
+        $this->postJson(self::FORGOT_ENDPOINT, ['email' => self::NOBODY_EMAIL])
             ->assertStatus(422)
             ->assertJsonValidationErrors('email');
     }
 
     public function test_forgot_password_rejects_a_malformed_email(): void
     {
-        $this->postJson('/api/v1/password/forgot', ['email' => 'not-an-email'])
+        $this->postJson(self::FORGOT_ENDPOINT, ['email' => 'not-an-email'])
             ->assertStatus(422)
             ->assertJsonValidationErrors('email');
     }
@@ -278,10 +281,10 @@ class PasswordResetOtpTest extends TestCase
             $email = "{$prefix}example.com";
             $this->user($email);
 
-            $this->postJson('/api/v1/password/forgot', ['email' => $email])->assertOk();
+            $this->postJson(self::FORGOT_ENDPOINT, ['email' => $email])->assertOk();
         }
 
-        $this->postJson('/api/v1/password/forgot', ['email' => 'd@example.com'])
+        $this->postJson(self::FORGOT_ENDPOINT, ['email' => 'd@example.com'])
             ->assertStatus(429)
             ->assertJsonPath('message', 'Too many requests. Please try again later.');
     }

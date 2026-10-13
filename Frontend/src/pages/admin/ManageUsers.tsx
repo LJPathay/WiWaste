@@ -450,21 +450,19 @@ export function ManageUsers() {
       render: (row) => (
         <div className="flex items-center justify-center gap-1">
           {row.status !== 'Archived' && (
-            <>
-              <UITooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); setArchiveModalUser(row); }}
-                    aria-label={`Archive ${row.name}`}
-                    className="touch-target h-7 w-7 rounded-lg bg-slate-100 dark:bg-slate-800 text-muted-fg dark:text-slate-300 hover:bg-rose-600 hover:text-white transition-all inline-flex items-center justify-center"
-                  >
-                    <UserX className="h-3.5 w-3.5" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900">Archive user</TooltipContent>
-              </UITooltip>
-            </>
+            <UITooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setArchiveModalUser(row); }}
+                  aria-label={`Archive ${row.name}`}
+                  className="touch-target h-7 w-7 rounded-lg bg-slate-100 dark:bg-slate-800 text-muted-fg dark:text-slate-300 hover:bg-rose-600 hover:text-white transition-all inline-flex items-center justify-center"
+                >
+                  <UserX className="h-3.5 w-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900">Archive user</TooltipContent>
+            </UITooltip>
           )}
           {row.status !== 'Active' && (
             <UITooltip>

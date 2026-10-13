@@ -324,7 +324,10 @@ export function BreachIncidents() {
       <ConfirmDialog
         isOpen={!!confirmAction}
         onClose={() => setConfirmAction(null)}
-        onConfirm={() => { if (confirmAction) void handleAction(confirmAction.id, confirmAction.action); setConfirmAction(null); }}
+        onConfirm={() => {
+          if (confirmAction) void handleAction(confirmAction.id, confirmAction.action);
+          setConfirmAction(null);
+        }}
         title={confirmAction
           ? `${confirmAction.action.charAt(0).toUpperCase()}${confirmAction.action.slice(1).replace('_', ' ')}`
           : undefined}

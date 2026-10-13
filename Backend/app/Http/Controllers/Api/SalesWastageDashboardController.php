@@ -88,7 +88,9 @@ class SalesWastageDashboardController extends Controller
     public function overview(Request $request)
     {
         $user = $request->user();
-        [$sales, $wastage] = $this->fetchSalesAndWastage($request);
+        // All four are needed: `$from`/`$to` are echoed back in the 'period' field
+        // below, so destructuring only the first two left them undefined.
+        [$sales, $wastage, $from, $to] = $this->fetchSalesAndWastage($request);
 
         $unitsSold = $sales->sum(fn ($s) => $s->salesItems->sum('quantity'));
         $unitsWasted = $wastage->sum('quantity');

@@ -2,12 +2,17 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 
 class StockMovement extends Model
 {
+    use BelongsToTenant;
+
     protected $table = 'Stock_Movement';
+
     protected $primaryKey = 'movement_id';
+
     public $timestamps = false;
 
     protected $fillable = [
@@ -28,16 +33,6 @@ class StockMovement extends Model
         'quantity' => 'integer',
         'movement_date' => 'datetime',
     ];
-
-    public function business()
-    {
-        return $this->belongsTo(Business::class, 'business_id', 'id');
-    }
-
-    public function branch()
-    {
-        return $this->belongsTo(Branch::class, 'branch_id', 'id');
-    }
 
     public function product()
     {
@@ -62,16 +57,5 @@ class StockMovement extends Model
     public function wastageRecord()
     {
         return $this->belongsTo(WastageRecord::class, 'wastage_id', 'wastage_id');
-    }
-
-    // Scopes
-    public function scopeForBusiness($query, $businessId)
-    {
-        return $query->where('business_id', $businessId);
-    }
-
-    public function scopeForBranch($query, $branchId)
-    {
-        return $query->where('branch_id', $branchId);
     }
 }

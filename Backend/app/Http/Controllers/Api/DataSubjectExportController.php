@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Business;
 use App\Models\DataSubjectRequest;
+use Illuminate\Http\JsonResponse;
 
 class DataSubjectExportController extends Controller
 {
@@ -14,7 +15,7 @@ class DataSubjectExportController extends Controller
     {
         $business = Business::find($request->business_id);
 
-        if (!in_array($request->request_type, ['access', 'portability'])) {
+        if (! in_array($request->request_type, ['access', 'portability'])) {
             return response()->json([
                 'message' => 'Export is only available for access and portability requests.',
             ], 422);
@@ -37,7 +38,7 @@ class DataSubjectExportController extends Controller
 
         $exportData = $this->gatherSubjectData($request->business_id, $request->subject_identifier);
 
-        $filename = "portability_export_{$request->subject_identifier}_" . now()->format('Ymd_His') . ".csv";
+        $filename = "portability_export_{$request->subject_identifier}_".now()->format('Ymd_His').'.csv';
 
         $callback = function () use ($exportData) {
             $handle = fopen('php://output', 'w');
@@ -56,7 +57,7 @@ class DataSubjectExportController extends Controller
         ]);
     }
 
-    protected function formatForAccess(array $data, DataSubjectRequest $request): \Illuminate\Http\JsonResponse
+    protected function formatForAccess(array $data, DataSubjectRequest $request): JsonResponse
     {
         return response()->json([
             'request_info' => [
@@ -77,7 +78,7 @@ class DataSubjectExportController extends Controller
         ])->header('Content-Type', 'application/json');
     }
 
-    protected function formatForPortability(array $data, DataSubjectRequest $request): \Illuminate\Http\JsonResponse
+    protected function formatForPortability(array $data, DataSubjectRequest $request): JsonResponse
     {
         return response()->json([
             'request_info' => [
@@ -90,12 +91,12 @@ class DataSubjectExportController extends Controller
             'version' => '1.0',
             'data' => $data,
         ])->header('Content-Type', 'application/json')
-          ->header('Content-Disposition', 'attachment; filename="portability_export_' . now()->format('Ymd_His') . '.json"');
+            ->header('Content-Disposition', 'attachment; filename="portability_export_'.now()->format('Ymd_His').'.json"');
     }
 
     protected function writeCustomerCsv($handle, array $exportData): void
     {
-        if (!isset($exportData['customer_pii'])) {
+        if (! isset($exportData['customer_pii'])) {
             return;
         }
 

@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { auth } from '../services/api';
-import { setStoredSession, type UserRole } from '../utils/mockAuthAndFeatures';
+import { useAuth } from '../hooks/useAuth';
 
 export function Login() {
   const navigate = useNavigate();
-  const [username, setUsername] = useState('');
+  const { login } = useAuth();
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -13,50 +13,27 @@ export function Login() {
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
-    if (!username || !password) {
-      setError('Please enter username and password');
+    if (!email || !password) {
+      setError('Please enter email and password');
       return;
     }
     setLoading(true);
     setError(null);
 
-    const companyMap: Record<UserRole, string> = {
-      owner: 'WiWaste Owner Administration',
-      inventory: 'WiWaste Inventory Floor',
-      cashier: 'Ipharma Mart POS',
-    };
-
     try {
-      const result = await auth.login(username, password);
-      localStorage.setItem('wiwaste_token', result.token);
-      localStorage.setItem('wiwaste_user', JSON.stringify(result.user));
-
-      let uiRole: UserRole = 'cashier';
-      if (result.user.role === 'Admin' || result.user.role === 'Owner') {
-        uiRole = 'owner';
-      } else if (result.user.role === 'Inventory') {
-        uiRole = 'inventory';
-      }
-
-      setStoredSession({
-        id: String(result.user.id ?? result.user.email ?? username),
-        email: result.user.email || `${username}@ipharmamart.com`,
-        name: result.user.name,
-        company: companyMap[uiRole],
-        role: uiRole,
-      });
-
-      navigate(uiRole === 'cashier' ? '/cashier/pos' : '/dashboard');
-    } catch {
-      setError('Invalid username or password');
+      const user = await login(email, password);
+      navigate(user.role === 'cashier' ? '/cashier/pos' : '/dashboard');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Invalid username or password';
+      setError(message);
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="min-h-full flex flex-col lg:flex-row bg-slate-50 dark:bg-slate-950">
-      <style jsx>{`
+    <div className="min-h-full flex flex-col lg:flex-row bg-bg dark:bg-slate-950">
+      <style>{`
         .bg-grid-pattern {
           background-image: radial-gradient(rgba(16, 185, 129, 0.08) 1px, transparent 1px);
           background-size: 24px 24px;
@@ -74,7 +51,7 @@ export function Login() {
       `}</style>
 
       {/* ==================== LEFT COLUMN: VISUAL BRAND SHOWCASE ==================== */}
-      <aside className="relative hidden lg:flex lg:w-[50%] xl:w-[52%] overflow-hidden flex-col justify-between p-8 xl:p-12 selection:bg-emerald-400 selection:text-slate-900 bg-slate-50 dark:bg-slate-900" data-purpose="brand-showcase">
+      <aside className="relative hidden lg:flex lg:w-[50%] xl:w-[52%] overflow-hidden flex-col justify-between p-8 xl:p-12 selection:bg-emerald-400 selection:text-slate-900 bg-bg dark:bg-slate-900" data-purpose="brand-showcase">
         {/* Background Image with Clean High-end Treatment */}
         <img
           alt="Modern smart pharmacy inventory and warehouse management technology"
@@ -106,24 +83,24 @@ export function Login() {
           <h1 className="text-3xl xl:text-4xl 2xl:text-5xl font-bold tracking-tight text-slate-900 dark:text-white leading-[1.15]">
             Next-Gen Pharmacy POS & Inventory Intelligence
           </h1>
-          <p className="text-sm xl:text-base text-slate-600 dark:text-slate-400 max-w-lg leading-relaxed font-normal">
+          <p className="text-sm xl:text-base text-muted-fg dark:text-muted-fg max-w-lg leading-relaxed font-normal">
             Empowering dispensary workflows with precision expiry tracking, zero-waste algorithms, and point-of-sale synchronicity across your pharmacy branches.
           </p>
           {/* High-end Crisp Badges */}
           <div className="flex flex-wrap gap-2.5 pt-2">
-            <div className="flex items-center space-x-2 px-3.5 py-2 rounded-xl bg-white/90 backdrop-blur-md border border-slate-200/80 text-xs font-medium text-slate-700 shadow-sm hover:bg-white transition dark:bg-slate-800/90 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800">
+            <div className="flex items-center space-x-2 px-3.5 py-2 rounded-xl bg-white/90 backdrop-blur-md border border-border/80 text-xs font-medium text-slate-700 shadow-sm hover:bg-white transition dark:bg-slate-800/90 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800">
               <svg className="w-4 h-4 text-brand-600 dark:text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path>
               </svg>
               <span>Real-time Stock Tracking</span>
             </div>
-            <div className="flex items-center space-x-2 px-3.5 py-2 rounded-xl bg-white/90 backdrop-blur-md border border-slate-200/80 text-xs font-medium text-slate-700 shadow-sm hover:bg-white transition dark:bg-slate-800/90 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800">
+            <div className="flex items-center space-x-2 px-3.5 py-2 rounded-xl bg-white/90 backdrop-blur-md border border-border/80 text-xs font-medium text-slate-700 shadow-sm hover:bg-white transition dark:bg-slate-800/90 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800">
               <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path>
               </svg>
               <span>Batch & Expiry Alerts</span>
             </div>
-            <div className="flex items-center space-x-2 px-3.5 py-2 rounded-xl bg-white/90 backdrop-blur-md border border-slate-200/80 text-xs font-medium text-slate-700 shadow-sm hover:bg-white transition dark:bg-slate-800/90 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800">
+            <div className="flex items-center space-x-2 px-3.5 py-2 rounded-xl bg-white/90 backdrop-blur-md border border-border/80 text-xs font-medium text-slate-700 shadow-sm hover:bg-white transition dark:bg-slate-800/90 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800">
               <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path>
               </svg>
@@ -131,72 +108,71 @@ export function Login() {
             </div>
           </div>
           {/* Left Bottom Footnote */}
-          <div className="relative z-10 pt-4 border-t border-slate-200/80 flex items-center justify-between text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
+          <div className="relative z-10 pt-4 border-t border-border/80 flex items-center justify-between text-xs text-muted-fg dark:border-slate-800 dark:text-muted-fg">
             <span>Protected by HIPAA & Good Distribution Practice standards</span>
-            <span className="font-medium text-slate-600 dark:text-slate-400">© WiWaste Systems</span>
+            <span className="font-medium text-muted-fg dark:text-muted-fg">© WiWaste Systems</span>
           </div>
         </div>
       </aside>
 
       {/* ==================== RIGHT COLUMN: AUTHENTICATION PORTAL ==================== */}
-      <main className="flex-1 flex flex-col justify-between bg-slate-50/70 dark:bg-slate-950 bg-grid-pattern relative min-h-screen">
+      <main className="flex-1 flex flex-col justify-between bg-bg/70 dark:bg-slate-950 bg-grid-pattern relative min-h-screen">
         {/* Center Wrapper for Login Card */}
         <div className="flex-1 flex flex-col items-center justify-center px-4 py-6 sm:px-8">
           {/* Authentication Card */}
-          <div className="w-full bg-white dark:bg-slate-900 rounded-2xl shadow-card border border-slate-200/80 dark:border-slate-800 overflow-hidden max-w-lg" data-purpose="login-card">
+          <div className="w-full bg-bg-elevated rounded-2xl shadow-card border border-border/80 dark:border-slate-800 overflow-hidden max-w-lg" data-purpose="login-card">
             <div className="p-8 sm:p-12 space-y-6">
               {/* Login Form Fields */}
-              <form action="#" className="space-y-6" data-purpose="login-form" method="POST" onSubmit={(e) => {
-                e.preventDefault();
-                handleLogin(e as React.FormEvent);
-              }}>
+              <form className="space-y-6" data-purpose="login-form" onSubmit={handleLogin}>
                 {error && (
                   <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg dark:bg-red-900/20 dark:border-red-800 dark:text-red-400" role="alert">
                     {error}
                   </div>
                 )}
-                {/* Username Field */}
+                {/* Email Field */}
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300" htmlFor="username">
-                    Username
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-slate-300" htmlFor="email">
+                    Username or Email
                   </label>
                   <div className="relative rounded-lg shadow-sm">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-muted-fg">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path>
                       </svg>
                     </div>
                     <input
-                      className="block w-full pl-10 pr-3.5 py-3.5 text-sm bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-colors"
-                      id="username"
-                      name="username"
-                      placeholder="Enter username"
+                      className="block w-full pl-10 pr-3.5 py-3.5 text-sm bg-white dark:bg-slate-800/80 border border-border dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-colors"
+                      id="email"
+                      name="email"
+                      placeholder="Username or email"
                       required
+                      autoComplete="username"
+                      spellCheck={false}
+                      autoCapitalize="none"
+                      // Must stay "text": the API accepts a username OR an email, and
+                      // type="email" would make constraint validation silently block
+                      // submission for username logins.
                       type="text"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
+                      inputMode="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       disabled={loading}
                     />
                   </div>
                 </div>
                 {/* Password Field */}
                 <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300" htmlFor="password">
-                      Password
-                    </label>
-                    <a className="text-xs font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 hover:underline transition" href="#forgot">
-                      Forgot password?
-                    </a>
-                  </div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-slate-300" htmlFor="password">
+                    Password
+                  </label>
                   <div className="relative rounded-lg shadow-sm">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-muted-fg">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path>
                       </svg>
                     </div>
                     <input
-                      className="block w-full pl-10 pr-10 py-3.5 text-sm bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 placeholder-slate-400 tracking-wider focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-colors"
+                      className="block w-full pl-10 pr-10 py-3.5 text-sm bg-white dark:bg-slate-800/80 border border-border dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 placeholder-slate-400 tracking-wider focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-colors"
                       id="password"
                       name="password"
                       placeholder="••••••••"
@@ -209,7 +185,7 @@ export function Login() {
                     {/* Toggle Password Visibility */}
                     <button
                       aria-label="Toggle password view"
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none"
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-muted-fg hover:text-muted-fg dark:hover:text-slate-200 focus:outline-none"
                       id="toggle-password-btn"
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
@@ -229,6 +205,9 @@ export function Login() {
                       </svg>
                     </button>
                   </div>
+                  <a className="block text-right text-xs font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 hover:underline transition" href="/forgot-password">
+                    Forgot password?
+                  </a>
                 </div>
                 {/* Primary Submit CTA */}
                 <div className="pt-2">
@@ -246,15 +225,15 @@ export function Login() {
               </form>
             </div>
             {/* Card Inner Footer Note */}
-            <div className="px-8 py-4 bg-slate-50/70 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800/80 text-center">
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+            <div className="px-8 py-4 bg-bg/70 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800/80 text-center">
+              <p className="text-xs text-muted-fg dark:text-muted-fg">
                 Access is provisioned by your Store Owner/Administrator.
               </p>
             </div>
           </div>
         </div>
         {/* Right Column Discreet Footer */}
-        <footer className="w-full px-6 py-3 text-center text-xs text-slate-400 dark:text-slate-600">
+        <footer className="w-full px-6 py-3 text-center text-xs text-muted-fg dark:text-muted-fg">
           WiWaste Pharmacy OS • Secure Gateway
         </footer>
       </main>

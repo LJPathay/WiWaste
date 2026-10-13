@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 class PurchaseOrderItem extends Model
 {
     protected $table = 'Purchase_Order_Item';
+
     protected $primaryKey = 'po_item_id';
+
     public $timestamps = false;
 
     protected $fillable = [

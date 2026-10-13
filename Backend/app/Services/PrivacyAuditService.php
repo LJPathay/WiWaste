@@ -3,22 +3,22 @@
 namespace App\Services;
 
 use App\Models\AuditLog;
-use App\Models\PrivacyProcessingRecord;
-use App\Models\DataSubjectRequest;
 use App\Models\DataBreachIncident;
+use App\Models\DataSubjectRequest;
+use App\Models\PrivacyProcessingRecord;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
-use Carbon\Carbon;
 
 class PrivacyAuditService
 {
     /**
      * Log a privacy-related audit event
      */
-    public function logPrivacyEvent(array $data): \App\Models\AuditLog
+    public function logPrivacyEvent(array $data): AuditLog
     {
         return DB::transaction(function () use ($data) {
-            $auditLog = \App\Models\AuditLog::create([
+            $auditLog = AuditLog::create([
                 'user_id' => $data['user_id'] ?? auth()->id() ?? 1,
                 'action' => $data['action'],
                 'entity_type' => $data['entity_type'],
@@ -64,7 +64,7 @@ class PrivacyAuditService
     /**
      * Log data subject request
      */
-    public function logDataSubjectRequest(\App\Models\DataSubjectRequest $request, string $action): void
+    public function logDataSubjectRequest(DataSubjectRequest $request, string $action): void
     {
         $this->logPrivacyEvent([
             'action' => "Data Subject Request {$action}",
@@ -86,7 +86,7 @@ class PrivacyAuditService
     /**
      * Log data breach incident
      */
-    public function logBreachIncident(\App\Models\DataBreachIncident $incident, string $action): void
+    public function logBreachIncident(DataBreachIncident $incident, string $action): void
     {
         $this->logPrivacyEvent([
             'action' => "Data Breach {$action}",
@@ -179,9 +179,9 @@ class PrivacyAuditService
     /**
      * Get privacy audit trail for a business
      */
-    public function getPrivacyAuditTrail(int $businessId, array $filters = []): \Illuminate\Database\Eloquent\Builder
+    public function getPrivacyAuditTrail(int $businessId, array $filters = []): Builder
     {
-        $query = \App\Models\AuditLog::query()
+        $query = AuditLog::query()
             ->where('business_id', $businessId)
             ->whereIn('entity_type', [
                 'DataSubjectRequest',
@@ -204,7 +204,7 @@ class PrivacyAuditService
             $query->where('entity_type', $filters['entity_type']);
         }
         if (isset($filters['action'])) {
-            $query->where('action', 'like', '%' . $filters['action'] . '%');
+            $query->where('action', 'like', '%'.$filters['action'].'%');
         }
 
         return $query;
@@ -215,15 +215,15 @@ class PrivacyAuditService
      */
     public function generateComplianceReport(int $businessId, string $from, string $to): array
     {
-        $requests = \App\Models\DataSubjectRequest::where('business_id', $businessId)
+        $requests = DataSubjectRequest::where('business_id', $businessId)
             ->whereBetween('requested_at', [$from, $to])
             ->get();
 
-        $breaches = \App\Models\DataBreachIncident::where('business_id', $businessId)
+        $breaches = DataBreachIncident::where('business_id', $businessId)
             ->whereBetween('detected_at', [$from, $to])
             ->get();
 
-        $processingRecords = \App\Models\PrivacyProcessingRecord::where('business_id', $businessId)
+        $processingRecords = PrivacyProcessingRecord::where('business_id', $businessId)
             ->where('status', 'active')
             ->get();
 
@@ -234,7 +234,7 @@ class PrivacyAuditService
                 'by_type' => $requests->groupBy('request_type')->map->count(),
                 'by_status' => $requests->groupBy('status')->map->count(),
                 'avg_resolution_days' => $requests->where('status', 'completed')
-                    ->avg(fn($r) => $r->requested_at->diffInDays($r->completed_at)),
+                    ->avg(fn ($r) => $r->requested_at->diffInDays($r->completed_at)),
             ],
             'breach_incidents' => [
                 'total' => $breaches->count(),

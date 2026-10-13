@@ -20,7 +20,7 @@ export function Home() {
                 <span className="text-[#006a61]">into Net Profit.</span>
               </h1>
 
-              <p className="text-base lg:text-lg text-[#475569] dark:text-slate-400 mb-8 max-w-xl leading-relaxed mx-auto lg:mx-0">
+              <p className="text-base lg:text-lg text-[#475569] dark:text-muted-fg mb-8 max-w-xl leading-relaxed mx-auto lg:mx-0">
                 The precision inventory intelligence platform built for Philippine minimarts and groceries. Detect anomalies, track wastage, and reclaim margins before they disappear.
               </p>
 
@@ -28,7 +28,7 @@ export function Home() {
                 <Link to="/pricing" className="inline-flex items-center justify-center gap-2 bg-[#006a61] hover:bg-[#00524b] text-white px-7 py-3.5 rounded-xl font-semibold text-sm tracking-wide transition-all shadow-sm hover:shadow-md">
                   Start Free Trial <ArrowRight className="w-4 h-4" />
                 </Link>
-                <Link to="/pricing" className="inline-flex items-center justify-center bg-transparent border border-[#E2E8F0] dark:border-white/20 hover:bg-slate-50 dark:hover:bg-white/5 text-[#0F172A] dark:text-slate-100 px-7 py-3.5 rounded-xl font-semibold text-sm tracking-wide transition-all">
+                <Link to="/pricing" className="inline-flex items-center justify-center bg-transparent border border-[#E2E8F0] dark:border-white/20 hover:bg-bg dark:hover:bg-white/5 text-[#0F172A] dark:text-slate-100 px-7 py-3.5 rounded-xl font-semibold text-sm tracking-wide transition-all">
                   View Pricing
                 </Link>
               </div>
@@ -39,7 +39,7 @@ export function Home() {
                   <div className="w-8 h-8 rounded-full bg-teal-100 dark:bg-teal-900/30 border-2 border-white dark:border-slate-900 flex items-center justify-center text-xs font-medium text-teal-700 dark:text-teal-300">MS</div>
                   <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/30 border-2 border-white dark:border-slate-900 flex items-center justify-center text-xs font-medium text-amber-700 dark:text-amber-300">AR</div>
                 </div>
-                <div className="text-sm text-[#475569] dark:text-slate-400">
+                <div className="text-sm text-[#475569] dark:text-muted-fg">
                   <span className="font-semibold text-[#0F172A] dark:text-slate-100">500+</span> retailers trust WiWaste
                 </div>
               </div>
@@ -55,36 +55,36 @@ export function Home() {
                       <div className="w-3 h-3 rounded-full bg-amber-400"></div>
                       <div className="w-3 h-3 rounded-full bg-green-400"></div>
                     </div>
-                    <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">inventory-dashboard.wiwaste.ph</span>
+                    <span className="text-xs text-muted-fg dark:text-muted-fg font-medium">inventory-dashboard.wiwaste.ph</span>
                   </div>
                   <div className="flex-1 grid grid-cols-2 gap-4">
-                    <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200/50 dark:border-white/5">
+                    <div className="bg-bg dark:bg-slate-800/50 rounded-xl p-4 border border-border/50 dark:border-white/5">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Recovered Value</span>
+                        <span className="text-xs font-semibold text-muted-fg dark:text-muted-fg">Recovered Value</span>
                         <Zap className="w-4 h-4 text-[#006a61]"></Zap>
                       </div>
                       <div className="text-2xl font-bold text-[#0F172A] dark:text-slate-50">₱2.4M</div>
                       <div className="text-xs text-green-600 dark:text-green-400 mt-1">+18% vs last month</div>
                     </div>
-                    <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200/50 dark:border-white/5">
+                    <div className="bg-bg dark:bg-slate-800/50 rounded-xl p-4 border border-border/50 dark:border-white/5">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Wastage Prevented</span>
+                        <span className="text-xs font-semibold text-muted-fg dark:text-muted-fg">Wastage Prevented</span>
                         <ShieldCheck className="w-4 h-4 text-green-500"></ShieldCheck>
                       </div>
                       <div className="text-2xl font-bold text-[#0F172A] dark:text-slate-50">1,234</div>
                       <div className="text-xs text-green-600 dark:text-green-400 mt-1">items saved this quarter</div>
                     </div>
-                    <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200/50 dark:border-white/5">
+                    <div className="bg-bg dark:bg-slate-800/50 rounded-xl p-4 border border-border/50 dark:border-white/5">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Active SKUs</span>
+                        <span className="text-xs font-semibold text-muted-fg dark:text-muted-fg">Active SKUs</span>
                         <Package className="w-4 h-4 text-[#006a61]"></Package>
                       </div>
                       <div className="text-2xl font-bold text-[#0F172A] dark:text-slate-50">8,542</div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">across 12 locations</div>
+                      <div className="text-xs text-muted-fg dark:text-muted-fg mt-1">across 12 locations</div>
                     </div>
-                    <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200/50 dark:border-white/5">
+                    <div className="bg-bg dark:bg-slate-800/50 rounded-xl p-4 border border-border/50 dark:border-white/5">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Forecast Accuracy</span>
+                        <span className="text-xs font-semibold text-muted-fg dark:text-muted-fg">Forecast Accuracy</span>
                         <BarChart3 className="w-4 h-4 text-[#006a61]"></BarChart3>
                       </div>
                       <div className="text-2xl font-bold text-[#0F172A] dark:text-slate-50">94.2%</div>
@@ -99,9 +99,9 @@ export function Home() {
       </section>
 
       {/* Trust/Logos Section */}
-      <section className="bg-white dark:bg-slate-900 border-y border-[#E2E8F0] dark:border-white/10 py-12">
+      <section className="bg-bg-elevated border-y border-[#E2E8F0] dark:border-white/10 py-12">
         <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
-          <p className="text-center text-xs font-semibold tracking-[1.2px] text-[#64748B] dark:text-slate-500 uppercase mb-8">
+          <p className="text-center text-xs font-semibold tracking-[1.2px] text-[#64748B] dark:text-muted-fg uppercase mb-8">
             Trusted by retail leaders across the Philippines
           </p>
           <div className="flex flex-wrap justify-center gap-8 md:gap-16 lg:gap-24 items-center opacity-60 hover:opacity-100 transition-opacity">
@@ -126,24 +126,24 @@ export function Home() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-24 bg-white dark:bg-slate-900">
+      <section id="features" className="py-24 bg-bg-elevated">
         <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-3xl lg:text-4xl font-bold text-[#0F172A] dark:text-slate-50 mb-6">Precision Tools for Loss Prevention</h2>
-            <p className="text-lg text-[#475569] dark:text-slate-400">
+            <p className="text-lg text-[#475569] dark:text-muted-fg">
               Ditch the spreadsheets. Our platform provides a single source of truth for your inventory lifecycle, highlighting discrepancies instantly.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Feature 1 - Full width on mobile, 2/3 on desktop */}
-            <div className="md:col-span-2 rounded-2xl border border-[#E2E8F0] dark:border-white/10 bg-slate-50 dark:bg-slate-800/50 p-6 lg:p-8 flex flex-col lg:flex-row gap-8 overflow-hidden relative hover:border-[#006a61]/30 dark:hover:border-teal-500/30 transition-all duration-300">
+            <div className="md:col-span-2 rounded-2xl border border-[#E2E8F0] dark:border-white/10 bg-bg dark:bg-slate-800/50 p-6 lg:p-8 flex flex-col lg:flex-row gap-8 overflow-hidden relative hover:border-[#006a61]/30 dark:hover:border-teal-500/30 transition-all duration-300">
               <div className="flex-1 z-10">
                 <div className="w-12 h-12 rounded-xl bg-[#006a61] flex items-center justify-center mb-6 text-white">
                   <BarChart3 className="w-6 h-6" />
                 </div>
                 <h3 className="text-xl lg:text-2xl font-bold text-[#0F172A] dark:text-slate-50 mb-4">Real-Time Inventory Ledger</h3>
-                <p className="text-[#475569] dark:text-slate-400 mb-6">
+                <p className="text-[#475569] dark:text-muted-fg mb-6">
                   Continuous synchronization across all retail nodes. Instantly verify theoretical stock versus actual counts without manual reconciliation.
                 </p>
                 <ul className="space-y-3">
@@ -166,10 +166,10 @@ export function Home() {
                   <div className="w-12 h-12 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 flex items-center justify-center font-bold">
                     <AlertTriangle className="w-6 h-6" />
                   </div>
-                  <span className="text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded uppercase tracking-wider text-slate-500 dark:text-slate-400">Automated</span>
+                  <span className="text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded uppercase tracking-wider text-muted-fg dark:text-muted-fg">Automated</span>
                 </div>
                 <h3 className="text-lg font-bold text-[#0F172A] dark:text-slate-50 mb-2">Wastage Log & Categorization</h3>
-                <p className="text-sm text-[#475569] dark:text-slate-400">
+                <p className="text-sm text-[#475569] dark:text-muted-fg">
                   Categorize and quantify unavoidable losses from weather-based spoilage or power outages instantly to maintain accurate margin calculations.
                 </p>
               </div>
@@ -179,7 +179,7 @@ export function Home() {
                   <Search className="w-6 h-6" />
                 </div>
                 <h3 className="text-lg font-bold text-[#0F172A] dark:text-slate-50 mb-2">Predictive Analytics & Forecasting</h3>
-                <p className="text-sm text-[#475569] dark:text-slate-400">
+                <p className="text-sm text-[#475569] dark:text-muted-fg">
                   Identify seasonal and typhoon-driven shrink patterns and proactive reordering signals before they impact the bottom line.
                 </p>
               </div>
@@ -189,11 +189,11 @@ export function Home() {
       </section>
 
       {/* Additional Features Row */}
-      <section className="py-24 bg-slate-50 dark:bg-slate-900/50 border-y border-[#E2E8F0] dark:border-white/10">
+      <section className="py-24 bg-bg dark:bg-slate-900/50 border-y border-[#E2E8F0] dark:border-white/10">
         <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-3xl lg:text-4xl font-bold text-[#0F172A] dark:text-slate-50 mb-6">Built for Philippine Retail Reality</h2>
-            <p className="text-lg text-[#475569] dark:text-slate-400">
+            <p className="text-lg text-[#475569] dark:text-muted-fg">
               Features designed specifically for the challenges of local minimart and grocery operations.
             </p>
           </div>
@@ -210,7 +210,7 @@ export function Home() {
                   <feature.icon className="w-6 h-6" />
                 </div>
                 <h3 className="text-lg font-bold text-[#0F172A] dark:text-slate-50 mb-2">{feature.title}</h3>
-                <p className="text-sm text-[#475569] dark:text-slate-400">{feature.desc}</p>
+                <p className="text-sm text-[#475569] dark:text-muted-fg">{feature.desc}</p>
               </div>
             ))}
           </div>
@@ -234,15 +234,15 @@ export function Home() {
               <div className="space-y-6">
                 <div className="pl-4 border-l-2 border-[#006a61]">
                   <h4 className="text-lg font-semibold text-white mb-2">Vendor Reconciliation</h4>
-                  <p className="text-sm text-slate-400">Automatically flag discrepancies between ASN (Advance Shipping Notice) and actual received quantities.</p>
+                  <p className="text-sm text-muted-fg">Automatically flag discrepancies between ASN (Advance Shipping Notice) and actual received quantities.</p>
                 </div>
                 <div className="pl-4 border-l-2 border-slate-700">
                   <h4 className="text-lg font-semibold text-white mb-2">Transfer Shrink Monitoring</h4>
-                  <p className="text-sm text-slate-400">Monitor stock integrity during inter-store transfers with geo-fenced status updates.</p>
+                  <p className="text-sm text-muted-fg">Monitor stock integrity during inter-store transfers with geo-fenced status updates.</p>
                 </div>
                 <div className="pl-4 border-l-2 border-slate-700">
                   <h4 className="text-lg font-semibold text-white mb-2">Weather-Aware Forecasting</h4>
-                  <p className="text-sm text-slate-400">Typhoon and seasonal demand models trained on Philippine retail patterns.</p>
+                  <p className="text-sm text-muted-fg">Typhoon and seasonal demand models trained on Philippine retail patterns.</p>
                 </div>
               </div>
             </div>
@@ -250,7 +250,7 @@ export function Home() {
             <div>
               <div className="bg-slate-900/80 backdrop-blur-md rounded-2xl border border-slate-700 p-6 shadow-2xl">
                 <div className="flex justify-between items-center mb-6">
-                  <h5 className="text-xs font-semibold tracking-wider text-slate-400 uppercase">Anomaly Investigation: SKU-PH-8472</h5>
+                  <h5 className="text-xs font-semibold tracking-wider text-muted-fg uppercase">Anomaly Investigation: SKU-PH-8472</h5>
                   <span className="bg-red-900/50 text-red-400 text-[10px] font-bold px-2 py-1 rounded">High Priority</span>
                 </div>
 
@@ -296,7 +296,7 @@ export function Home() {
       </section>
 
       {/* Stats Bar */}
-      <section className="py-16 bg-white dark:bg-slate-900 border-y border-[#E2E8F0] dark:border-white/10">
+      <section className="py-16 bg-bg-elevated border-y border-[#E2E8F0] dark:border-white/10">
         <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 text-center">
             {[
@@ -310,7 +310,7 @@ export function Home() {
                   <stat.icon className="w-7 h-7" />
                 </div>
                 <div className="text-3xl lg:text-4xl font-bold text-[#0F172A] dark:text-slate-50">{stat.value}</div>
-                <div className="text-sm text-[#475569] dark:text-slate-400 mt-1">{stat.label}</div>
+                <div className="text-sm text-[#475569] dark:text-muted-fg mt-1">{stat.label}</div>
               </div>
             ))}
           </div>
@@ -318,10 +318,10 @@ export function Home() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-24 bg-white dark:bg-slate-900 text-center">
+      <section className="py-24 bg-bg-elevated text-center">
         <div className="max-w-3xl mx-auto px-4">
           <h2 className="text-3xl lg:text-4xl font-bold text-[#0F172A] dark:text-slate-50 mb-6">Ready to secure your margins?</h2>
-          <p className="text-lg text-[#475569] dark:text-slate-400 mb-10">
+          <p className="text-lg text-[#475569] dark:text-muted-fg mb-10">
             Join hundreds of retail operators using WiWaste to turn inventory visibility into a competitive advantage.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -336,9 +336,9 @@ export function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-slate-50 dark:bg-slate-950 border-t border-[#E2E8F0] dark:border-white/10 py-12">
+      <footer className="bg-bg dark:bg-slate-950 border-t border-[#E2E8F0] dark:border-white/10 py-12">
         <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p className="text-sm text-[#64748B] dark:text-slate-500">
+          <p className="text-sm text-[#64748B] dark:text-muted-fg">
             © 2026 WiWaste. Built for Philippine retail. All rights reserved.
           </p>
         </div>

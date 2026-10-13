@@ -19,7 +19,7 @@ return new class extends Migration
             $table->integer('reorder_level');
             $table->date('expiration_date')->nullable();
             $table->enum('status', ['Active', 'Discontinued'])->default('Active');
-            
+
             $table->foreign('category_id')->references('Category_id')->on('Category');
             $table->foreign('supplier_id')->references('supplier_id')->on('Supplier');
         });

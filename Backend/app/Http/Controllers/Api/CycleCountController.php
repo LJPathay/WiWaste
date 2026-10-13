@@ -2,39 +2,25 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Concerns\ScopesTenant;
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use App\Models\Inventory;
+use App\Http\Requests\Api\StoreCycleCountRequest;
 use App\Models\FEFOBatch;
+use App\Models\Inventory;
 use App\Models\StockMovement;
+use Illuminate\Support\Facades\DB;
 
 class CycleCountController extends Controller
 {
-    protected function scopeForBusinessAndBranch($query, Request $request)
-    {
-        $user = $request->user();
-        if ($user && $user->business_id) {
-            $query->where('business_id', $user->business_id);
-        }
-        if ($user && $user->branch_id) {
-            $query->where('branch_id', $user->branch_id);
-        }
-        return $query;
-    }
+    use ScopesTenant;
 
     /**
      * Record a cycle count for inventory reconciliation.
      * POST /api/inventory/cycle-count
      */
-    public function store(Request $request)
+    public function store(StoreCycleCountRequest $request)
     {
-        $validated = $request->validate([
-            'product_id' => 'required|integer|exists:inventory,product_id',
-            'counted_quantity' => 'required|integer|min:0',
-            'batch_id' => 'nullable|integer|exists:FEFO_Batch,batch_id',
-            'remarks' => 'nullable|string|max:500',
-        ]);
+        $validated = $request->validated();
 
         $query = Inventory::where('product_id', $validated['product_id']);
         $query = $this->scopeForBusinessAndBranch($query, $request);
@@ -52,9 +38,9 @@ class CycleCountController extends Controller
             // Record stock movement if there's a difference
             if ($difference !== 0) {
                 $batchId = $validated['batch_id'] ?? null;
-                
+
                 // If no batch specified but difference exists, try to find active FEFO batch
-                if (!$batchId && $difference !== 0) {
+                if (! $batchId && $difference !== 0) {
                     $batch = FEFOBatch::where('product_id', $inventory->product_id)
                         ->where('business_id', $inventory->business_id)
                         ->where('branch_id', $inventory->branch_id)
@@ -92,9 +78,16 @@ class CycleCountController extends Controller
 
     private function calcStatus(int $stock): string
     {
-        if ($stock <= 0) return 'Out of Stock';
-        if ($stock < 10) return 'Low Stock';
-        if ($stock > 300) return 'Overstock';
+        if ($stock <= 0) {
+            return 'Out of Stock';
+        }
+        if ($stock < 10) {
+            return 'Low Stock';
+        }
+        if ($stock > 300) {
+            return 'Overstock';
+        }
+
         return 'Normal';
     }
 }

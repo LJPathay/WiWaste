@@ -14,6 +14,8 @@ import { useState } from 'react';
 import { AlertTriangle, ArrowLeft, Clock3, Info, Package, PackageSearch, RotateCcw, Tag } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
+import { ChartGradients, ChartTooltipStyle } from '../../components/charts/ChartGradients';
+import { CHART_DEFAULTS, CHART_COLORS, useChartAnimation } from '../../components/charts/ChartConfig';
 
 const currencyFormatter = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 });
 
@@ -35,6 +37,7 @@ function getRisk(daysToExpiry: number) {
 export function FefoTrackingPage() {
   const [batchFEFO] = useState(MOCK_BATCHES);
 
+  const { isAnimationActive, animationDuration, animationEasing } = useChartAnimation();
   const fefoChart = batchFEFO.map((item) => ({
     name: item.batchId,
     daysToExpiry: item.daysToExpiry,
@@ -47,7 +50,7 @@ export function FefoTrackingPage() {
   const nearestBatch = [...batchFEFO].sort((a, b) => a.daysToExpiry - b.daysToExpiry)[0];
 
   const statCards = [
-    { label: 'Total Batches', value: batchFEFO.length, icon: Package, color: 'text-slate-700 dark:text-slate-200', bg: 'bg-slate-50 dark:bg-slate-800', border: 'border-slate-200 dark:border-white/10' },
+    { label: 'Total Batches', value: batchFEFO.length, icon: Package, color: 'text-slate-700 dark:text-slate-200', bg: 'bg-bg dark:bg-slate-800', border: 'border-border dark:border-white/10' },
     { label: 'Critical', value: criticalBatches.length, icon: AlertTriangle, color: 'text-rose-700 dark:text-rose-300', bg: 'bg-rose-50 dark:bg-rose-500/10', border: 'border-rose-100 dark:border-rose-500/20' },
     { label: 'High Risk', value: highRiskBatches.length, icon: Clock3, color: 'text-amber-700 dark:text-amber-300', bg: 'bg-amber-50 dark:bg-amber-500/10', border: 'border-amber-100 dark:border-amber-500/20' },
     { label: 'Stable', value: stableBatches.length, icon: Package, color: 'text-teal-700 dark:text-teal-300', bg: 'bg-teal-50 dark:bg-teal-500/10', border: 'border-teal-100 dark:border-teal-500/20' },
@@ -56,11 +59,11 @@ export function FefoTrackingPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <Link to="/dashboard?highlightKpi=3" className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-slate-200 dark:border-white/10 text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-white/10 dark:hover:text-slate-200 transition-colors" aria-label="Back to Dashboard"><ArrowLeft className="h-4 w-4" /></Link>
+        <Link to="/dashboard?highlightKpi=3" className="touch-target inline-flex items-center justify-center h-8 w-8 rounded-lg border border-border dark:border-white/10 text-muted-fg hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-white/10 dark:hover:text-slate-200 transition-colors" aria-label="Back to Dashboard"><ArrowLeft className="h-4 w-4" /></Link>
         <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">FEFO Batch Tracking</h1>
         <UITooltip>
           <TooltipTrigger asChild>
-            <Info className="h-4 w-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
+            <Info className="h-4 w-4 text-muted-fg hover:text-muted-fg dark:hover:text-slate-300 cursor-help" />
           </TooltipTrigger>
           <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs text-xs">
             Monitor batches by expiration date. Trigger rotation or promotional pricing before stock becomes unsellable.
@@ -83,13 +86,13 @@ export function FefoTrackingPage() {
         })}
       </div>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-slate-900">
+      <section className="rounded-xl border border-border bg-white p-4 shadow-sm dark:border-white/10 dark:bg-slate-900">
         <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
           <div className="flex items-center gap-2">
             <h2 className="text-sm font-bold text-[#0b1c30] dark:text-slate-100">Days to Expiry by Batch</h2>
             <UITooltip>
               <TooltipTrigger asChild>
-                <Info className="h-3.5 w-3.5 text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 cursor-help" />
+                <Info className="h-3.5 w-3.5 text-muted-fg hover:text-amber-600 dark:hover:text-amber-400 cursor-help" />
               </TooltipTrigger>
               <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs text-xs">
                 Color-coded risk with recommended price drop %
@@ -105,18 +108,39 @@ export function FefoTrackingPage() {
         <div className="h-72 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={fefoChart}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e8edf5" />
-              <XAxis dataKey="name" tick={{ fontSize: 12 }} stroke="#94a3b8" />
-              <YAxis yAxisId="days" tick={{ fontSize: 12 }} stroke="#94a3b8" label={{ value: 'Days to Expiry', angle: -90, position: 'insideLeft', style: { fill: '#94a3b8', fontSize: 12 } }} />
-              <YAxis yAxisId="drop" orientation="right" tick={{ fontSize: 12 }} stroke="#94a3b8" label={{ value: 'Price Drop %', angle: 90, position: 'insideRight', style: { fill: '#94a3b8', fontSize: 12 } }} />
-              <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 24px rgba(0,0,0,0.08)' }} />
-              <ReferenceLine yAxisId="days" y={7} stroke="#f59e0b" strokeDasharray="4 4" label={{ value: '7-day risk', fontSize: 11, fill: '#f59e0b' }} />
-              <Bar yAxisId="days" dataKey="daysToExpiry" name="Days to expiry" radius={[12, 12, 0, 0]}>
+              <ChartGradients />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_COLORS.grid} />
+              <XAxis dataKey="name" tick={{ fontSize: 12, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} />
+              <YAxis yAxisId="days" tick={{ fontSize: 12, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} label={{ value: 'Days to Expiry', angle: -90, position: 'insideLeft', style: { fill: CHART_COLORS.text, fontSize: 12 } }} />
+              <YAxis yAxisId="drop" orientation="right" tick={{ fontSize: 12, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} label={{ value: 'Price Drop %', angle: 90, position: 'insideRight', style: { fill: CHART_COLORS.text, fontSize: 12 } }} />
+              <Tooltip contentStyle={ChartTooltipStyle()} />
+              <ReferenceLine yAxisId="days" y={7} stroke={CHART_COLORS.warning} strokeDasharray="4 4" label={{ value: '7-day risk', fontSize: 11, fill: CHART_COLORS.warning }} />
+              <Bar
+                yAxisId="days"
+                dataKey="daysToExpiry"
+                name="Days to expiry"
+                radius={[12, 12, 0, 0]}
+                isAnimationActive={isAnimationActive}
+                animationDuration={animationDuration}
+                animationEasing={animationEasing}
+                animationBegin={CHART_DEFAULTS.animationBegin}
+              >
                 {fefoChart.map((item) => (
                   <Cell key={item.name} fill={item.risk.color} />
                 ))}
               </Bar>
-              <Line yAxisId="drop" type="linear" dataKey="priceDrop" name="Recommended price drop %" stroke="#0ea5e9" strokeWidth={3} />
+              <Line
+                yAxisId="drop"
+                type="linear"
+                dataKey="priceDrop"
+                name="Recommended price drop %"
+                stroke={CHART_COLORS.info}
+                strokeWidth={3}
+                isAnimationActive={isAnimationActive}
+                animationDuration={animationDuration}
+                animationEasing={animationEasing}
+                animationBegin={CHART_DEFAULTS.animationBegin}
+              />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
@@ -141,21 +165,21 @@ export function FefoTrackingPage() {
         </div>
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-slate-900 overflow-hidden">
-        <div className="p-4 border-b border-slate-200 dark:border-white/10">
+      <section className="rounded-xl border border-border bg-white shadow-sm dark:border-white/10 dark:bg-slate-900 overflow-hidden">
+        <div className="p-4 border-b border-border dark:border-white/10">
           <h3 className="text-sm font-bold text-[#0b1c30] dark:text-slate-100">Batch Vulnerability Table</h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400">Full batch list with risk, pricing, and recommended action.</p>
+          <p className="text-xs text-muted-fg dark:text-muted-fg">Full batch list with risk, pricing, and recommended action.</p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[800px] text-xs">
-            <thead className="bg-slate-50 dark:bg-slate-800/50">
+            <thead className="bg-bg dark:bg-slate-800/50">
               <tr>
-                <th className="px-3 py-2 text-left text-[9px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Batch ID</th>
-                <th className="px-3 py-2 text-left text-[9px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Risk</th>
-                <th className="px-3 py-2 text-left text-[9px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Days Left</th>
-                <th className="px-3 py-2 text-left text-[9px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Current Price</th>
-                <th className="px-3 py-2 text-left text-[9px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Recommended</th>
-                <th className="px-3 py-2 text-left text-[9px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Action</th>
+                <th className="px-3 py-2 text-left text-[9px] font-bold uppercase tracking-widest text-muted-fg dark:text-muted-fg">Batch ID</th>
+                <th className="px-3 py-2 text-left text-[9px] font-bold uppercase tracking-widest text-muted-fg dark:text-muted-fg">Risk</th>
+                <th className="px-3 py-2 text-left text-[9px] font-bold uppercase tracking-widest text-muted-fg dark:text-muted-fg">Days Left</th>
+                <th className="px-3 py-2 text-left text-[9px] font-bold uppercase tracking-widest text-muted-fg dark:text-muted-fg">Current Price</th>
+                <th className="px-3 py-2 text-left text-[9px] font-bold uppercase tracking-widest text-muted-fg dark:text-muted-fg">Recommended</th>
+                <th className="px-3 py-2 text-left text-[9px] font-bold uppercase tracking-widest text-muted-fg dark:text-muted-fg">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -168,7 +192,7 @@ export function FefoTrackingPage() {
                   : { label: 'Monitor', icon: Package, color: 'text-teal-700 bg-teal-100 dark:bg-teal-500/20 dark:text-teal-300' };
                 const ActionIcon = action.icon;
                 return (
-                  <tr key={batch.batchId} className="border-t border-slate-100 dark:border-white/5 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                  <tr key={batch.batchId} className="border-t border-slate-100 dark:border-white/5 hover:bg-bg dark:hover:bg-slate-800/40 transition-colors">
                     <td className="px-3 py-2 font-bold text-[#0b1c30] dark:text-slate-100">{batch.batchId}</td>
                     <td className="px-3 py-2">
                       <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${risk.tone}`}>{risk.label}</span>
@@ -180,7 +204,7 @@ export function FefoTrackingPage() {
                         'text-teal-600 dark:text-teal-400'
                       }`}>{batch.daysToExpiry}d</span>
                     </td>
-                    <td className="px-3 py-2 text-slate-600 dark:text-slate-400 line-through">{currencyFormatter.format(batch.currentPrice)}</td>
+                    <td className="px-3 py-2 text-muted-fg dark:text-muted-fg line-through">{currencyFormatter.format(batch.currentPrice)}</td>
                     <td className="px-3 py-2 font-semibold text-emerald-700 dark:text-emerald-400">{currencyFormatter.format(batch.recommendedPrice)}</td>
                     <td className="px-3 py-2">
                       <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[9px] font-bold ${action.color}`}>

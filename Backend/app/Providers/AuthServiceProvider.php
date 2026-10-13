@@ -2,28 +2,35 @@
 
 namespace App\Providers;
 
-use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
-use Illuminate\Support\Facades\Gate;
+use App\Enums\Role;
+use App\Models\Inventory;
+use App\Models\Product;
+use App\Models\PurchaseOrder;
+use App\Models\SalesTransaction;
 use App\Models\User;
+use App\Models\WastageRecord;
+use App\Policies\CashierPolicy;
+use App\Policies\FEFOPolicy;
 use App\Policies\InventoryPolicy;
 use App\Policies\ProductPolicy;
 use App\Policies\PurchaseOrderPolicy;
-use App\Policies\SalesPolicy;
-use App\Policies\WastagePolicy;
-use App\Policies\UserPolicy;
 use App\Policies\ReportPolicy;
+use App\Policies\SalesPolicy;
 use App\Policies\SettingsPolicy;
-use App\Policies\FEFOPolicy;
+use App\Policies\UserPolicy;
+use App\Policies\WastagePolicy;
+use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
+use Illuminate\Support\Facades\Gate;
 
 class AuthServiceProvider extends ServiceProvider
 {
     protected $policies = [
-        \App\Models\Inventory::class => InventoryPolicy::class,
-        \App\Models\Product::class => ProductPolicy::class,
-        \App\Models\PurchaseOrder::class => PurchaseOrderPolicy::class,
-        \App\Models\SalesTransaction::class => SalesPolicy::class,
-        \App\Models\WastageRecord::class => WastagePolicy::class,
-        \App\Models\User::class => UserPolicy::class,
+        Inventory::class => InventoryPolicy::class,
+        Product::class => ProductPolicy::class,
+        PurchaseOrder::class => PurchaseOrderPolicy::class,
+        SalesTransaction::class => SalesPolicy::class,
+        WastageRecord::class => WastagePolicy::class,
+        User::class => UserPolicy::class,
         \App\Models\FEFOPolicy::class => FEFOPolicy::class,
     ];
 
@@ -67,6 +74,16 @@ class AuthServiceProvider extends ServiceProvider
         Gate::define('wastage.view', [WastagePolicy::class, 'view']);
         Gate::define('wastage.create', [WastagePolicy::class, 'create']);
         Gate::define('wastage.approve', [WastagePolicy::class, 'approve']);
+        Gate::define('wastage.flag', [WastagePolicy::class, 'flag']);
+        Gate::define('wastage.confirm', [WastagePolicy::class, 'confirm']);
+        Gate::define('wastage.edit', [WastagePolicy::class, 'edit']);
+        Gate::define('wastage.delete', [WastagePolicy::class, 'delete']);
+
+        // ── Cashier gates ──
+        Gate::define('pos.access', [CashierPolicy::class, 'posAccess']);
+        Gate::define('sale.create', [CashierPolicy::class, 'saleCreate']);
+        Gate::define('sale.viewOwn', [CashierPolicy::class, 'saleViewOwn']);
+        Gate::define('receipt.print', [CashierPolicy::class, 'receiptPrint']);
 
         // ── User gates ──
         Gate::define('user.viewAny', [UserPolicy::class, 'viewAny']);
@@ -94,7 +111,7 @@ class AuthServiceProvider extends ServiceProvider
 
         // ── Super-admin bypass ──
         Gate::before(function (User $user) {
-            if ($user->role === 'Admin') {
+            if (Role::isOwnerTier($user->role)) {
                 return true;
             }
         });

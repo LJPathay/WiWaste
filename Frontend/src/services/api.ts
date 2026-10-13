@@ -1,8 +1,90 @@
 // Central API service — all backend calls go through here
+
+// The shapes this module's calls resolve to. The `export type` block below re-exports
+// the same names for consumers of `services/api`, but a re-export does not bring a name
+// into scope, so they have to be imported as well. Without this every type annotation
+// below was an unresolved name (TS2304) and quietly degraded to `any`.
+import type {
+  ApiAlertSummary,
+  ApiAuditLog,
+  ApiBreachStatistics,
+  ApiCategory,
+  ApiDashboard,
+  ApiDashboardSummary,
+  ApiDataBreachIncident,
+  ApiDataSubjectRequest,
+  ApiDeadStockResponse,
+  ApiDiscountSummary,
+  ApiExpiringResponse,
+  ApiFefoBatchDetail,
+  ApiFefoList,
+  ApiFlagsSummary,
+  ApiForecastOverview,
+  ApiForecastProduct,
+  ApiInventory,
+  ApiInventoryMovements,
+  ApiLossRiskItemsResponse,
+  ApiLossRiskSummary,
+  ApiLossRiskSummaryResponse,
+  ApiOptimizationPlan,
+  ApiOverstockResponse,
+  ApiOwnerAnalytics,
+  ApiPrivacyComplianceReport,
+  ApiProduct,
+  ApiProfitLossCategory,
+  ApiProfitLossOverview,
+  ApiProfitLossTrend,
+  ApiPurchaseOrder,
+  ApiRecall,
+  ApiRecallSummary,
+  ApiReceiptResponse,
+  ApiRecommendation,
+  ApiRecommendationDetail,
+  ApiReorderSuggestion,
+  ApiReorderSuggestionsResponse,
+  ApiReport,
+  ApiRetentionSummary,
+  ApiReturn,
+  ApiSalesTransaction,
+  ApiSalesVatSummary,
+  ApiSalesWastageOverview,
+  ApiSalesWastageTimeSeries,
+  ApiSanitationChecklist,
+  ApiSanitationSummary,
+  ApiSeniorPwdTransaction,
+  ApiStockCount,
+  ApiStockMovement,
+  ApiStockReceiving,
+  ApiSupplier,
+  ApiSupplierAlertResponse,
+  ApiSupplierComplianceResponse,
+  ApiSupplierDetail,
+  ApiTraceResponse,
+  ApiTurnoverResponse,
+  ApiUser,
+  ApiWastage,
+  ApiWastageFlag,
+  CreateProductPayload,
+  CreatePurchaseOrderPayload,
+  CreateReturnPayload,
+  CreateSalePayload,
+  CreateStockCountPayload,
+  CreateStockReceivingPayload,
+  CreateSupplierPayload,
+  CreateUserPayload,
+  CreateWastagePayload,
+  PaginatedResponse,
+  PaginatedResponseWithMeta,
+  RetentionPoliciesResponse,
+  RiskTier,
+  UserStatusCounts,
+} from '../types/api';
+
 export type {
   PaginatedResponse,
   ApiUser,
   CreateUserPayload,
+  UserStatusCounts,
   ApiCategory,
   ApiSupplier,
   ApiSupplierDetail,
@@ -18,7 +100,10 @@ export type {
   ApiInventoryMovements,
   ApiStockMovement,
   ApiWastage,
+  ApiWastageFlag,
+  ApiStockCount,
   CreateWastagePayload,
+  CreateStockCountPayload,
   ApiSalesTransaction,
   ApiSalesItem,
   CreateSalePayload,
@@ -66,6 +151,12 @@ export type {
   ApiLossRiskSummary,
   ApiLossRiskItemsResponse,
   ApiLossRiskSummaryResponse,
+  ApiSalesWastageOverview,
+  ApiSalesWastageCategoryBreakdown,
+  ApiTopWastedProduct,
+  ApiSlowMover,
+  ApiSalesWastageTimeSeries,
+  ApiFlagsSummary,
   ApiAlertBatch,
   ApiAlertSupplier,
   ApiExpiringResponse,
@@ -79,6 +170,7 @@ export type {
   ApiReorderSuggestionItem,
   ApiReorderSuggestion,
   ApiReorderSummary,
+  ApiReorderSuggestionsResponse,
   ApiDataSubjectRequest,
   ApiDataBreachIncident,
   ApiBreachStatistics,
@@ -87,16 +179,39 @@ export type {
   ApiRetentionSummary,
 } from '../types/api';
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api';
+const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api/v1';
 
 function getToken(): string | null {
   return localStorage.getItem('wiwaste_token');
 }
 
+/**
+ * Runs `run` while telling every request it makes to ignore the browser's HTTP cache
+ * and replace what it stored.
+ *
+ * Phase 19 gives list responses `Cache-Control: public, max-age=60`, which is exactly
+ * what a screen that just created or edited a row must *not* be handed: the refetch
+ * that follows a write would otherwise come back with the list as it was before the
+ * write, for up to a minute. `'reload'` (rather than `'no-store'`) both skips the
+ * stored copy and overwrites it, so the next plain read of the same URL is fresh too.
+ */
+let freshRequests = 0;
+
+export async function withFreshResponse<T>(run: () => Promise<T>): Promise<T> {
+  freshRequests++;
+  try {
+    return await run();
+  } finally {
+    freshRequests--;
+  }
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
+  console.debug('[API] Request:', path, 'Token:', token?.substring(0, 20) + '...');
   const res = await fetch(`${BASE_URL}${path}`, {
     ...options,
+    cache: options.cache ?? (freshRequests > 0 ? 'reload' : 'default'),
     headers: {
       'Content-Type': 'application/json',
       Accept: 'application/json',
@@ -104,12 +219,21 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
       ...((options.headers as Record<string, string>) ?? {}),
     },
   });
+  console.debug('[API] Response:', path, 'Status:', res.status);
   if (!res.ok) {
     if (res.status === 401) {
-      localStorage.removeItem('wiwaste_token');
-      localStorage.removeItem('wiwaste_user');
-      localStorage.removeItem('wiwaste-session');
-      window.location.href = '/login';
+      // Only tear down the session if this 401 belongs to the token we actually sent.
+      // Otherwise a slow in-flight /me that started before login resolves *after* the
+      // fresh token was stored and would wipe the brand-new session (see the race in
+      // useAuth: the mount-time verifyToken can resolve after login()).
+      if (token && getToken() === token) {
+        localStorage.removeItem('wiwaste_token');
+        localStorage.removeItem('wiwaste_user');
+        localStorage.removeItem('wiwaste-session');
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
+      }
       throw new Error('Session expired. Please log in again.');
     }
     const err = await res.json().catch(() => ({ message: 'Unknown error' }));
@@ -119,19 +243,76 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 }
 
 // ─── Auth ───────────────────────────────────────────────
+export interface LoginResponse {
+  access_token: string;
+  user: ApiUser;
+}
+
 export const auth = {
   login: (username: string, password: string) =>
-    request<{ token: string; user: ApiUser }>('/login', {
+    request<{ data: LoginResponse }>('/login', {
       method: 'POST',
       body: JSON.stringify({ username, password }),
     }),
   logout: () => request('/logout', { method: 'POST' }),
-  me: () => request<ApiUser>('/me'),
+  me: () => request<{ data: ApiUser }>('/me'),
+  refresh: () => request('/refresh', { method: 'POST' }),
+
+  /** Step 1 — request a 6-digit reset code for an account. */
+  forgotPassword: (email: string) =>
+    request<null>('/password/forgot', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+
+  /** Step 2 — verify the emailed code before allowing a reset. */
+  verifyOtp: (email: string, otp: string) =>
+    request<{ verified: boolean }>('/password/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email, otp }),
+    }),
+
+  /** Step 3 — consume the code and set the new password. */
+  resetPassword: (email: string, otp: string, password: string, passwordConfirmation: string) =>
+    request<null>('/password/reset', {
+      method: 'POST',
+      body: JSON.stringify({
+        email,
+        otp,
+        password,
+        password_confirmation: passwordConfirmation,
+      }),
+    }),
 };
 
 // ─── Users ──────────────────────────────────────────────
+export interface PaginatedUsersResponse {
+  data: ApiUser[];
+  meta: {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+  };
+}
+
 export const users = {
-  list: (page = 1) => request<ApiUser[]>(`/users?page=${page}`),
+  list: (page = 1, perPage = 15, search = '', role = '', status = '', excludeStatus = '') => {
+    const params = new URLSearchParams();
+    params.set('page', page.toString());
+    params.set('per_page', perPage.toString());
+    if (search) params.set('search', search);
+    if (role) params.set('role', role);
+    if (status) params.set('status', status);
+    if (excludeStatus) params.set('exclude_status', excludeStatus);
+    return request<PaginatedUsersResponse>(`/users?${params.toString()}`);
+  },
+  statusCounts: (search = '', role = '') => {
+    const params = new URLSearchParams();
+    if (search) params.set('search', search);
+    if (role) params.set('role', role);
+    return request<UserStatusCounts>(`/users/status-counts?${params.toString()}`);
+  },
   create: (data: CreateUserPayload) =>
     request('/users', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: number, data: Partial<CreateUserPayload>) =>
@@ -139,21 +320,57 @@ export const users = {
   delete: (id: number) => request(`/users/${id}`, { method: 'DELETE' }),
   quarantine: (id: number) => request(`/users/${id}/quarantine`, { method: 'POST' }),
   reactivate: (id: number) => request(`/users/${id}/reactivate`, { method: 'POST' }),
+  archive: (id: number) => request(`/users/${id}/archive`, { method: 'POST' }),
 };
 
 // ─── Categories ─────────────────────────────────────────
+export interface PaginatedCategoriesResponse {
+  data: ApiCategory[];
+  meta: {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+  };
+}
+
 export const categories = {
-  list: () => request<ApiCategory[]>('/categories'),
+  list: (page = 1, perPage = 15, search = '', excludeStatus = '', status = '') => {
+    const params = new URLSearchParams();
+    params.set('page', page.toString());
+    params.set('per_page', perPage.toString());
+    if (search) params.set('search', search);
+    if (excludeStatus) params.set('exclude_status', excludeStatus);
+    if (status) params.set('status', status);
+    return request<PaginatedCategoriesResponse>(`/categories?${params.toString()}`);
+  },
   create: (name: string) =>
     request('/categories', { method: 'POST', body: JSON.stringify({ Category_name: name }) }),
   update: (id: number, name: string) =>
     request(`/categories/${id}`, { method: 'PUT', body: JSON.stringify({ Category_name: name }) }),
-  delete: (id: number) => request(`/categories/${id}`, { method: 'DELETE' }),
+  /** Archives an active category; calling it again on an archived one restores it. */
+  archive: (id: number) => request(`/categories/${id}`, { method: 'DELETE' }),
 };
 
 // ─── Suppliers ──────────────────────────────────────────
+export interface PaginatedSuppliersResponse {
+  data: ApiSupplier[];
+  meta: {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+  };
+}
+
 export const suppliers = {
-  list: () => request<ApiSupplier[]>('/suppliers'),
+  list: (page = 1, perPage = 15, search = '') => {
+    const params = new URLSearchParams();
+    params.set('page', page.toString());
+    params.set('per_page', perPage.toString());
+    if (search) params.set('search', search);
+    return request<PaginatedSuppliersResponse>(`/suppliers?${params.toString()}`);
+  },
   show: (id: number) => request<ApiSupplierDetail>(`/suppliers/${id}`),
   create: (data: CreateSupplierPayload) =>
     request('/suppliers', { method: 'POST', body: JSON.stringify(data) }),
@@ -181,6 +398,10 @@ export const products = {
   update: (id: number, data: Partial<CreateProductPayload>) =>
     request(`/products/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: number) => request(`/products/${id}`, { method: 'DELETE' }),
+  label: (id: number, format: 'png' | 'svg' = 'png') =>
+    fetch(`${BASE_URL}/products/${id}/label?format=${format}`, {
+      headers: { Authorization: `Bearer ${getToken()}` },
+    }).then((res) => res.blob()),
 };
 
 // ─── Inventory ──────────────────────────────────────────
@@ -197,6 +418,9 @@ export const inventory = {
     request('/inventory/stock-in', { method: 'POST', body: JSON.stringify(data) }),
   stockOut: (data: { product_id: number; quantity: number; remarks?: string }) =>
     request('/inventory/stock-out', { method: 'POST', body: JSON.stringify(data) }),
+  receive: (data: { product_id: number; quantity: number; batch_number: string; expiry_date: string; remarks?: string }) =>
+    request('/inventory/receive', { method: 'POST', body: JSON.stringify(data) }),
+  nearExpiry: (days = 90) => request(`/inventory/near-expiry?days=${days}`),
   movements: (id: number) =>
     request<ApiInventoryMovements>(`/inventory/${id}/movements`),
   allMovements: (params?: {
@@ -228,6 +452,39 @@ export const wastage = {
     request('/wastage', { method: 'POST', body: JSON.stringify(data) }),
 };
 
+// ─── Wastage Flags ────────────────────────────────────────
+export const wastageFlags = {
+  list: (params?: { status?: string; page?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.status) qs.set('status', params.status);
+    if (params?.page) qs.set('page', String(params.page));
+    const q = qs.toString();
+    return request<PaginatedResponse<ApiWastageFlag>>(`/wastage-flags${q ? '?' + q : ''}`);
+  },
+  flag: (data: { product_id: number; batch_id?: number; quantity: number; reason: string; notes?: string }) =>
+    request('/wastage-flags', { method: 'POST', body: JSON.stringify(data) }),
+  confirm: (id: number) => request(`/wastage-flags/${id}/confirm`, { method: 'POST' }),
+  reject: (id: number, rejection_reason: string) =>
+    request(`/wastage-flags/${id}/reject`, { method: 'POST', body: JSON.stringify({ rejection_reason }) }),
+};
+
+// ─── Stock Counts ──────────────────────────────────────────
+export const stockCounts = {
+  list: (params?: { status?: string; product_id?: number; page?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.status) qs.set('status', params.status);
+    if (params?.product_id) qs.set('product_id', String(params.product_id));
+    if (params?.page) qs.set('page', String(params.page));
+    const q = qs.toString();
+    return request<PaginatedResponse<ApiStockCount>>(`/stock-counts${q ? '?' + q : ''}`);
+  },
+  create: (data: CreateStockCountPayload) =>
+    request('/stock-counts', { method: 'POST', body: JSON.stringify(data) }),
+  approve: (id: number) => request(`/stock-counts/${id}/approve`, { method: 'POST' }),
+  reject: (id: number, rejection_reason: string) =>
+    request(`/stock-counts/${id}/reject`, { method: 'POST', body: JSON.stringify({ rejection_reason }) }),
+};
+
 // ─── Stock Receiving ────────────────────────────────────
 export const stockReceiving = {
   list: (params?: { status?: string; page?: number }) => {
@@ -239,7 +496,9 @@ export const stockReceiving = {
   },
   create: (data: CreateStockReceivingPayload) =>
     request('/stock-receiving', { method: 'POST', body: JSON.stringify(data) }),
-  receive: (id: number, items: { product_id: number; quantity: number; unit_cost: number; batch_number?: string; expiration_date?: string }[]) =>
+  // Matches `StockReceivingController::receive()`, which keys each line by
+  // `receiving_item_id` and requires a `received_quantity` of at least 1.
+  receive: (id: number, items: { receiving_item_id: number; received_quantity: number; rejected_quantity?: number; notes?: string }[]) =>
     request(`/stock-receiving/${id}/receive`, { method: 'POST', body: JSON.stringify({ items }) }),
   reject: (id: number, reason: string) =>
     request(`/stock-receiving/${id}/reject`, { method: 'POST', body: JSON.stringify({ reason }) }),
@@ -324,6 +583,34 @@ export const reports = {
     const q = qs.toString();
     return request<ApiSeniorPwdTransaction[]>(`/reports/senior-pwd-log${q ? '?' + q : ''}`);
   },
+};
+
+// ─── Sales vs Wastage Dashboard ────────────────────────────
+export const salesWastage = {
+  overview: (params?: { from?: string; to?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.from) qs.set('from', params.from);
+    if (params?.to) qs.set('to', params.to);
+    const q = qs.toString();
+    return request<ApiSalesWastageOverview>(`/sales-wastage/overview${q ? '?' + q : ''}`);
+  },
+  timeSeries: (params?: { from?: string; to?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.from) qs.set('from', params.from);
+    if (params?.to) qs.set('to', params.to);
+    const q = qs.toString();
+    return request<ApiSalesWastageTimeSeries[]>(`/sales-wastage/time-series${q ? '?' + q : ''}`);
+  },
+  exportCsv: (params?: { from?: string; to?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.from) qs.set('from', params.from);
+    if (params?.to) qs.set('to', params.to);
+    const q = qs.toString();
+    return fetch(`${BASE_URL}/sales-wastage/export${q ? '?' + q : ''}`, {
+      headers: { Authorization: `Bearer ${getToken()}` },
+    }).then((res) => res.blob());
+  },
+  flagsSummary: () => request<ApiFlagsSummary>('/sales-wastage/flags-summary'),
 };
 
 // ─── Settings ───────────────────────────────────────────
@@ -477,7 +764,7 @@ export const recall = {
     if (params?.severity) qs.set('severity', params.severity);
     if (params?.page) qs.set('page', String(params.page));
     const q = qs.toString();
-    return request<ApiRecall[]>(`/recalls${q ? '?' + q : ''}`);
+    return request<PaginatedResponse<ApiRecall>>(`/recalls${q ? '?' + q : ''}`);
   },
   show: (id: number) => request<ApiRecall>(`/recalls/${id}`),
   create: (data: { product_id: number; batch_id?: number; supplier_id?: number; reason: string; severity: string; affected_batches: Array<{ batch_id: number; quantity: number }>; target_resolution_date?: string }) =>
@@ -502,7 +789,7 @@ export const sanitation = {
     if (params?.date) qs.set('date', params.date);
     if (params?.page) qs.set('page', String(params.page));
     const q = qs.toString();
-    return request<ApiSanitationChecklist[]>(`/sanitation${q ? '?' + q : ''}`);
+    return request<PaginatedResponse<ApiSanitationChecklist>>(`/sanitation${q ? '?' + q : ''}`);
   },
   show: (id: number) => request<ApiSanitationChecklist>(`/sanitation/${id}`),
   create: (data: { checklist_date: string; frequency: string; area: string; checks: Array<{ item: string; passed: boolean; notes?: string; photo_url?: string }>; notes?: string }) =>
@@ -524,7 +811,7 @@ export const reorder = {
     const qs = new URLSearchParams();
     if (params?.safety_stock_multiplier) qs.set('safety_stock_multiplier', String(params.safety_stock_multiplier));
     const q = qs.toString();
-    return request<ApiReorderSuggestion[]>(`/reorder/suggestions${q ? '?' + q : ''}`);
+    return request<ApiReorderSuggestionsResponse>(`/reorder/suggestions${q ? '?' + q : ''}`);
   },
   approve: (data: { suggestions: ApiReorderSuggestion[] }) =>
     request('/reorder/approve', { method: 'POST', body: JSON.stringify(data) }),
@@ -540,7 +827,7 @@ export const privacy = {
     if (params?.status) qs.set('status', params.status);
     if (params?.page) qs.set('page', String(params.page));
     const q = qs.toString();
-    return request<ApiDataSubjectRequest[]>(`/privacy/requests${q ? '?' + q : ''}`);
+    return request<PaginatedResponseWithMeta<ApiDataSubjectRequest>>(`/privacy/requests${q ? '?' + q : ''}`);
   },
   createRequest: (data: { request_type: string; subject_identifier: string; notes?: string }) =>
     request('/privacy/requests', { method: 'POST', body: JSON.stringify(data) }),
@@ -561,7 +848,7 @@ export const privacy = {
     if (params?.risk) qs.set('risk', params.risk);
     if (params?.page) qs.set('page', String(params.page));
     const q = qs.toString();
-    return request<ApiDataBreachIncident[]>(`/privacy/breaches${q ? '?' + q : ''}`);
+    return request<PaginatedResponseWithMeta<ApiDataBreachIncident>>(`/privacy/breaches${q ? '?' + q : ''}`);
   },
   breachStatistics: () => request<ApiBreachStatistics>('/privacy/breaches/statistics'),
   escalateBreach: (id: number) => request(`/privacy/breaches/${id}/escalate`, { method: 'POST' }),
@@ -571,7 +858,7 @@ containBreach: (id: number, data: { actions: string[] }) =>
     request(`/privacy/breaches/${id}/contain`, { method: 'POST', body: JSON.stringify(data) }),
   resolveBreach: (id: number, data: { resolution_notes: string }) =>
     request(`/privacy/breaches/${id}/resolve`, { method: 'POST', body: JSON.stringify(data) }),
-  retentionPolicies: () => request<ApiRetentionPolicy[]>(`/privacy/retention-policies`),
+  retentionPolicies: () => request<RetentionPoliciesResponse>(`/privacy/retention-policies`),
   createRetentionPolicy: (data: { entity_type: string; retention_days: number; description?: string; enabled?: boolean }) =>
     request('/privacy/retention-policies', { method: 'POST', body: JSON.stringify(data) }),
   updateRetentionPolicy: (entityType: string, data: Partial<{ retention_days: number; description: string; enabled: boolean }>) =>

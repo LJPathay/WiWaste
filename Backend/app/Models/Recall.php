@@ -2,12 +2,17 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 
 class Recall extends Model
 {
+    use BelongsToTenant;
+
     protected $table = 'Recalls';
+
     protected $primaryKey = 'recall_id';
+
     public $timestamps = true;
 
     protected $fillable = [
@@ -41,16 +46,6 @@ class Recall extends Model
         'approved_by' => 'integer',
     ];
 
-    public function business()
-    {
-        return $this->belongsTo(Business::class, 'business_id', 'id');
-    }
-
-    public function branch()
-    {
-        return $this->belongsTo(Branch::class, 'branch_id', 'id');
-    }
-
     public function product()
     {
         return $this->belongsTo(Product::class, 'product_id', 'product_id');
@@ -77,16 +72,6 @@ class Recall extends Model
     }
 
     // Scopes
-    public function scopeForBusiness($query, $businessId)
-    {
-        return $query->where('business_id', $businessId);
-    }
-
-    public function scopeForBranch($query, $branchId)
-    {
-        return $query->where('branch_id', $branchId);
-    }
-
     public function scopeActive($query)
     {
         return $query->whereIn('status', ['active', 'quarantined', 'notified']);
@@ -148,7 +133,7 @@ class Recall extends Model
     public function releaseQuarantine()
     {
         $affectedBatches = $this->affected_batches ?? [];
-        
+
         foreach ($affectedBatches as $batchData) {
             $batchId = $batchData['batch_id'] ?? null;
             if ($batchId) {

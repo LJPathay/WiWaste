@@ -1,20 +1,17 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import {
-  Search, Filter, Package, Truck, RotateCcw, ShieldCheck, Bell, X, Plus,
-  Calendar, Eye, Flag, Archive, Download, FileText, Zap
+  Package,
+  RotateCcw,
+  Zap,
 } from 'lucide-react';
-import { Toast, useToast, ConfirmDialog, Modal, FormField, inputCls } from '../../components/ui/Toast';
+import { Toast, useToast, ConfirmDialog } from '../../components/ui/Toast';
 import { formatCurrency } from '../../utils/cashierData';
 import { reorder as reorderApi, type ApiReorderSuggestion, type ApiReorderSummary } from '../../services/api';
-import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
-import { Pagination } from '../../components/ui/pagination';
 
 export function ReorderDashboard() {
   const { toasts, dismiss, success, error: showError } = useToast();
   const [loading, setLoading] = useState(false);
-  const [page, setPage] = useState(1);
-  const pageSize = 10;
-  const [safetyMultiplier, setSafetyMultiplier] = useState(1.5);
+      const [safetyMultiplier, setSafetyMultiplier] = useState(1.5);
   const [autoApprove, setAutoApprove] = useState(false);
   const [maxCost, setMaxCost] = useState('');
   const [suggestions, setSuggestions] = useState<ApiReorderSuggestion[]>([]);
@@ -65,16 +62,9 @@ export function ReorderDashboard() {
 
   const handleConfirmApprove = () => {
     if (confirmApprove) {
-      handleApprove(confirmApprove);
+      void handleApprove(confirmApprove);
       setConfirmApprove(null);
     }
-  };
-
-  const getSeverityBadge = (days: number) => {
-    if (days <= 3) return { cls: 'bg-red-50 text-red-700 border-red-100', label: 'Critical' };
-    if (days <= 7) return { cls: 'bg-amber-50 text-amber-700 border border-amber-100', label: 'Urgent' };
-    if (days <= 14) return { cls: 'bg-blue-50 text-blue-700 border border-blue-100', label: 'Soon' };
-    return { cls: 'bg-green-50 text-green-700 border border-green-100', label: 'Normal' };
   };
 
   const filteredSuggestions = useMemo(() => suggestions, [suggestions]);
@@ -84,7 +74,7 @@ export function ReorderDashboard() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Reorder Suggestions</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-sm text-muted-fg dark:text-muted-fg mt-1">
             Auto-generated purchase order drafts based on stock levels, sales velocity, and expiry awareness
           </p>
         </div>
@@ -107,8 +97,9 @@ export function ReorderDashboard() {
             )}
           </button>
           <div className="flex items-center gap-2">
-            <label className="text-sm text-slate-600 dark:text-slate-400">Safety Multiplier:</label>
+            <label htmlFor="safety-multiplier" className="text-sm text-muted-fg dark:text-muted-fg">Safety Multiplier:</label>
             <select
+              id="safety-multiplier"
               value={safetyMultiplier}
               onChange={(e) => setSafetyMultiplier(parseFloat(e.target.value))}
               className="w-full sm:w-auto px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-colors"
@@ -125,27 +116,27 @@ export function ReorderDashboard() {
       {/* Summary Cards */}
       {summary && (
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-sm text-slate-500 dark:text-slate-400">Total Products Analyzed</div>
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-border dark:border-slate-700">
+            <div className="text-sm text-muted-fg dark:text-muted-fg">Total Products Analyzed</div>
             <div className="text-2xl font-bold text-slate-900 dark:text-white">{summary.total_products_analyzed}</div>
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-sm text-slate-500 dark:text-slate-400">Products Needing Reorder</div>
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-border dark:border-slate-700">
+            <div className="text-sm text-muted-fg dark:text-muted-fg">Products Needing Reorder</div>
             <div className="text-2xl font-bold text-amber-600">{summary.products_needing_reorder}</div>
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-sm text-slate-500 dark:text-slate-400">Suppliers Involved</div>
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-border dark:border-slate-700">
+            <div className="text-sm text-muted-fg dark:text-muted-fg">Suppliers Involved</div>
             <div className="text-2xl font-bold text-blue-600">{summary.suppliers_involved}</div>
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-sm text-slate-500 dark:text-slate-400">Est. Total Cost</div>
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-border dark:border-slate-700">
+            <div className="text-sm text-muted-fg dark:text-muted-fg">Est. Total Cost</div>
             <div className="text-2xl font-bold text-brand-600 dark:text-brand-400">{formatCurrency(summary.estimated_total_cost)}</div>
           </div>
         </div>
       )}
 
       {/* Filters */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row gap-4">
+      <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-border dark:border-slate-700 flex flex-col sm:flex-row gap-4">
         <div className="flex items-center gap-2">
           <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Auto-approve threshold:</label>
           <input
@@ -189,15 +180,15 @@ export function ReorderDashboard() {
       </div>
 
       {/* Supplier Grouped Suggestions */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-border dark:border-slate-700 overflow-hidden">
         {suggestions.length === 0 ? (
           <div className="p-12 text-center">
-            <Package className="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600 mb-4" />
-            <p className="text-slate-500 dark:text-slate-400">No reorder suggestions at this time</p>
-            <p className="text-sm text-slate-400 dark:text-slate-500 mt-1">All products are above their reorder levels</p>
+            <Package className="w-12 h-12 mx-auto text-slate-300 dark:text-muted-fg mb-4" />
+            <p className="text-muted-fg dark:text-muted-fg">No reorder suggestions at this time</p>
+            <p className="text-sm text-muted-fg dark:text-muted-fg mt-1">All products are above their reorder levels</p>
           </div>
         ) : (
-          <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex flex-wrap gap-4 items-center">
+          <div className="p-4 border-b border-border dark:border-slate-700 flex flex-wrap gap-4 items-center">
             <h3 className="font-semibold text-slate-900 dark:text-white">
               {suggestions.length} supplier{filteredSuggestions.length !== 1 ? 's' : ''} with reorder suggestions
             </h3>
@@ -206,28 +197,28 @@ export function ReorderDashboard() {
         {suggestions.length > 0 && (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
+              <thead className="bg-bg dark:bg-slate-800/50 border-b border-border dark:border-slate-700">
                 <tr>
-                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Supplier</th>
-                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Items</th>
-                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Est. Cost</th>
-                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Lead Time</th>
-                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Expiry Adj.</th>
-                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Action</th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg">Supplier</th>
+                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-muted-fg">Items</th>
+                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-muted-fg">Est. Cost</th>
+                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-muted-fg">Lead Time</th>
+                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-muted-fg">Expiry Adj.</th>
+                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-muted-fg">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                 {suggestions.map((supplier) => {
                   const hasExpiryAdjustments = supplier.items.some((i: any) => (i.expiry_adjustment ?? 0) > 0);
                   return (
-                    <tr key={supplier.supplier_id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                    <tr key={supplier.supplier_id} className="hover:bg-bg dark:hover:bg-slate-700/50">
                       <td className="px-3 py-3">
                         <div className="font-medium text-slate-900 dark:text-white">{supplier.supplier_name}</div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400">ID: {supplier.supplier_id}</div>
+                        <div className="text-xs text-muted-fg dark:text-muted-fg">ID: {supplier.supplier_id}</div>
                       </td>
                       <td className="px-3 py-3 text-right text-sm">{supplier.total_items}</td>
                       <td className="px-3 py-3 text-right text-sm font-medium text-brand-600 dark:text-brand-400">{formatCurrency(supplier.estimated_total_cost)}</td>
-                      <td className="px-3 py-3 text-right text-sm text-slate-500 dark:text-slate-400">{supplier.lead_time_days} days</td>
+                      <td className="px-3 py-3 text-right text-sm text-muted-fg dark:text-muted-fg">{supplier.lead_time_days} days</td>
                       <td className="px-3 py-3 text-right">
                         {hasExpiryAdjustments && (
                           <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border border-amber-100 dark:border-amber-800">

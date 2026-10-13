@@ -42,7 +42,7 @@ export function Breadcrumb() {
 
   return (
     <nav aria-label="Breadcrumb" className="mb-4">
-      <ol className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
+      <ol className="flex items-center gap-1 text-xs text-muted-fg dark:text-muted-fg">
         <li>
           <Link to="/dashboard" className="hover:text-[#006a61] transition-colors" aria-label="Home">
             <Home className="h-3.5 w-3.5" />

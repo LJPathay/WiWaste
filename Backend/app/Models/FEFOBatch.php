@@ -2,12 +2,17 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 
 class FEFOBatch extends Model
 {
+    use BelongsToTenant;
+
     protected $table = 'FEFO_Batch';
+
     protected $primaryKey = 'batch_id';
+
     public $timestamps = false;
 
     protected $fillable = [
@@ -34,16 +39,6 @@ class FEFOBatch extends Model
         'created_at' => 'datetime',
     ];
 
-    public function business()
-    {
-        return $this->belongsTo(Business::class, 'business_id', 'id');
-    }
-
-    public function branch()
-    {
-        return $this->belongsTo(Branch::class, 'branch_id', 'id');
-    }
-
     public function product()
     {
         return $this->belongsTo(Product::class, 'product_id', 'product_id');
@@ -65,16 +60,6 @@ class FEFOBatch extends Model
     }
 
     // Scopes
-    public function scopeForBusiness($query, $businessId)
-    {
-        return $query->where('business_id', $businessId);
-    }
-
-    public function scopeForBranch($query, $branchId)
-    {
-        return $query->where('branch_id', $branchId);
-    }
-
     public function scopeExpiringSoon($query, $days = 30)
     {
         return $query->where('expiry_date', '<=', now()->addDays($days))
@@ -101,11 +86,13 @@ class FEFOBatch extends Model
     {
         // One-up: Supplier → This batch
         $trace = [];
-        
-        // Get the stock receiving record that created this batch
-        $receiving = StockReceiving::whereHas('supplier', function ($q) {
-            $q->where('supplier_id', $this->product->supplier_id ?? 0);
-        })->where('supplier_batch_number', $this->supplier_batch_number)->first();
+
+        // Get the stock receiving record that created this batch.
+        // The link lives on stock_receiving_items.batch_id — Stock_Receiving
+        // itself has no supplier_batch_number column.
+        $receiving = StockReceiving::whereHas('items', function ($q) {
+            $q->where('batch_id', $this->batch_id);
+        })->first();
 
         if ($receiving) {
             $trace[] = [

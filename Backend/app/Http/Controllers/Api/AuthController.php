@@ -2,62 +2,229 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\ForgotPasswordRequest;
+use App\Http\Requests\Api\LoginRequest;
+use App\Http\Requests\Api\ResetPasswordRequest;
+use App\Http\Requests\Api\VerifyOtpRequest;
+use App\Http\Resources\UserResource;
+use App\Mail\PasswordResetOtpMail;
+use App\Models\PasswordResetOtp;
 use App\Models\User;
+use App\Services\LoginAttemptService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 
-class AuthController extends Controller
+class AuthController extends BaseApiController
 {
-    public function login(Request $request)
+    public function __construct(private readonly LoginAttemptService $loginAttemptService) {}
+
+    /**
+     * Account states that must never receive a token, and what to tell the caller.
+     * A status missing from this map just signs in.
+     */
+    private const BLOCKED_STATUS_MESSAGES = [
+        'Inactive' => 'Your account has been deactivated.',
+        'Quarantined' => 'Your account has been quarantined. Contact an administrator.',
+        'Archived' => 'Your account has been archived.',
+    ];
+
+    public function login(LoginRequest $request)
     {
-        $request->validate([
-            'username' => 'required|string',
-            'password' => 'required|string',
-        ]);
+        $validated = $request->validated();
 
-        $user = User::where('username', $request->username)->first();
+        $identifier = $validated['username'];
+        $ip = $request->ip();
+        $userAgent = $request->userAgent();
 
-        if (! $user || ! Hash::check($request->password, $user->password)) {
-            throw ValidationException::withMessages(['username' => ['Invalid credentials.']]);
+        // Check if account is locked
+        if ($this->loginAttemptService->isLocked($identifier)) {
+            return $this->lockedResponse($identifier);
         }
 
-        if ($user->status === 'Inactive') {
-            return response()->json(['message' => 'Your account has been deactivated.'], 403);
+        $user = User::where('username', $identifier)
+            ->orWhere('email', $identifier)
+            ->first();
+
+        if (! $user || ! Hash::check($validated['password'], $user->password)) {
+            return $this->rejectFailedLogin($identifier, $ip, $userAgent);
         }
 
-        $token = $user->createToken('wiwaste-token')->plainTextToken;
+        return $this->issueSession($user, $request, $identifier, $ip, $userAgent);
+    }
 
-        return response()->json([
-            'token' => $token,
-            'user'  => [
-                'id'       => $user->User_id,
-                'name'     => $user->Full_name,
-                'username' => $user->username,
-                'email'    => $user->email,
-                'role'     => $user->role,
-                'status'   => $user->status,
-            ],
-        ]);
+    /**
+     * Records the failed attempt, re-checks the lockout (this attempt may be the one
+     * that tripped it) and either returns the 429 or throws the validation error.
+     *
+     * @throws ValidationException
+     */
+    private function rejectFailedLogin(string $identifier, ?string $ip, ?string $userAgent)
+    {
+        $this->loginAttemptService->recordFailedAttempt($identifier, $ip, $userAgent);
+
+        if ($this->loginAttemptService->isLocked($identifier)) {
+            return $this->lockedResponse($identifier);
+        }
+
+        throw ValidationException::withMessages(['username' => ['Invalid credentials.']]);
+    }
+
+    /**
+     * mints the token pair for an authenticated caller, or refuses outright when the
+     * account status says it must never receive one.
+     */
+    private function issueSession(User $user, Request $request, string $identifier, ?string $ip, ?string $userAgent)
+    {
+        // Account states that must never get a token. Anything else (Active, and
+        // any future status) is allowed through.
+        if ($blocked = self::BLOCKED_STATUS_MESSAGES[$user->status] ?? null) {
+            return $this->forbidden($blocked);
+        }
+
+        // Clear failed attempts on successful login
+        $this->loginAttemptService->clearAttempts($identifier);
+
+        // Record successful login
+        $this->loginAttemptService->recordSuccessfulAttempt($user, $ip, $userAgent);
+
+        // Create access token (short-lived: 15 minutes)
+        $accessToken = $user->createToken('wiwaste-access', ['access'], now()->addMinutes(15))->plainTextToken;
+
+        // Create refresh token (long-lived: 7 days)
+        $refreshToken = $user->createToken('wiwaste-refresh', ['refresh'], now()->addDays(7))->plainTextToken;
+
+        $userData = (new UserResource($user))->resolve($request);
+
+        // Set refresh token as HttpOnly cookie (secure, same-site)
+        $cookie = cookie('refresh_token', $refreshToken, 10080, '/', null, true, true, false, 'lax'); // 7 days = 10080 minutes
+
+        return $this->created([
+            'access_token' => $accessToken,
+            'user' => $userData,
+        ], 'Login successful')->withCookie($cookie);
+    }
+
+    /**
+     * Shared 429 for both "already locked" checks in login().
+     */
+    private function lockedResponse(string $identifier)
+    {
+        $remainingMinutes = $this->loginAttemptService->getRemainingLockoutMinutes($identifier);
+
+        return $this->tooManyRequests("Account locked due to too many failed attempts. Try again in {$remainingMinutes} minutes.");
     }
 
     public function logout(Request $request)
     {
         $request->user()->currentAccessToken()->delete();
-        return response()->json(['message' => 'Logged out successfully.']);
+
+        // Clear refresh token cookie
+        $cookie = cookie('refresh_token', '', -1, '/', null, true, true, false, 'lax');
+
+        return $this->success(null, 'Logged out successfully.')->withCookie($cookie);
     }
 
     public function me(Request $request)
     {
         $user = $request->user();
-        return response()->json([
-            'id'       => $user->User_id,
-            'name'     => $user->Full_name,
-            'username' => $user->username,
-            'email'    => $user->email,
-            'role'     => $user->role,
-            'status'   => $user->status,
-        ]);
+
+        return $this->success((new UserResource($user))->resolve($request));
+    }
+
+    public function refresh(Request $request)
+    {
+        // Get refresh token from HttpOnly cookie
+        $refreshToken = $request->cookie('refresh_token');
+
+        // Find the token in database
+        $token = $refreshToken
+            ? $request->user()->tokens()->where('token', hash('sha256', $refreshToken))->first()
+            : null;
+
+        if (! $refreshToken || ! $token || ! $token->abilities->contains('refresh')) {
+            return $this->unauthorized($refreshToken ? 'Invalid refresh token.' : 'Refresh token not found.');
+        }
+
+        // Check if refresh token is expired
+        if ($token->expires_at && $token->expires_at->isPast()) {
+            $token->delete();
+
+            return $this->unauthorized('Refresh token expired. Please log in again.');
+        }
+
+        // Revoke old refresh token
+        $token->delete();
+
+        // Create new access token (15 minutes)
+        $accessToken = $request->user()->createToken('wiwaste-access', ['access'], now()->addMinutes(15))->plainTextToken;
+
+        // Create new refresh token (7 days)
+        $newRefreshToken = $request->user()->createToken('wiwaste-refresh', ['refresh'], now()->addDays(7))->plainTextToken;
+
+        $cookie = cookie('refresh_token', $newRefreshToken, 10080, '/', null, true, true, false, 'lax');
+
+        return $this->success([
+            'access_token' => $accessToken,
+        ], 'Token refreshed successfully')->withCookie($cookie);
+    }
+
+    // POST /api/v1/password/forgot
+    public function forgotPassword(ForgotPasswordRequest $request)
+    {
+        $email = $request->validated('email');
+        $user = User::where('email', $email)->firstOrFail();
+
+        // Generate and store OTP
+        $otp = PasswordResetOtp::createOtp($email);
+
+        // Send email (queue in production)
+        try {
+            Mail::to($email)->send(new PasswordResetOtpMail($user->full_name, $otp));
+        } catch (\Exception $e) {
+            \Log::error('Failed to send OTP email: '.$e->getMessage());
+
+            return $this->error('Failed to send reset email. Please try again.', 500);
+        }
+
+        return $this->success(null, 'Password reset code sent to your email.');
+    }
+
+    // POST /api/v1/password/verify-otp
+    public function verifyOtp(VerifyOtpRequest $request)
+    {
+        $email = $request->validated('email');
+        $otp = $request->validated('otp');
+
+        $valid = PasswordResetOtp::verifyOtp($email, $otp);
+
+        if (! $valid) {
+            return $this->error('Invalid or expired code.', 422);
+        }
+
+        return $this->success(['verified' => true], 'Code verified. You may now reset your password.');
+    }
+
+    // POST /api/v1/password/reset
+    public function resetPassword(ResetPasswordRequest $request)
+    {
+        $email = $request->validated('email');
+        $otp = $request->validated('otp');
+        $password = $request->validated('password');
+
+        $success = PasswordResetOtp::consumeOtp($email, $otp);
+
+        if (! $success) {
+            return $this->error('Invalid or expired code.', 422);
+        }
+
+        $user = User::where('email', $email)->firstOrFail();
+        $user->update(['password' => Hash::make($password)]);
+
+        // Revoke all user tokens (force re-login)
+        $user->tokens()->delete();
+
+        return $this->success(null, 'Password reset successful. Please log in with your new password.');
     }
 }

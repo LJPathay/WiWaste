@@ -2,12 +2,17 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 
 class VendorReturn extends Model
 {
+    use BelongsToTenant;
+
     protected $table = 'Vendor_Returns';
+
     protected $primaryKey = 'vendor_return_id';
+
     public $timestamps = true;
 
     protected $fillable = [
@@ -37,16 +42,6 @@ class VendorReturn extends Model
         'credited_date' => 'date',
     ];
 
-    public function business()
-    {
-        return $this->belongsTo(Business::class, 'business_id', 'id');
-    }
-
-    public function branch()
-    {
-        return $this->belongsTo(Branch::class, 'branch_id', 'id');
-    }
-
     public function supplier()
     {
         return $this->belongsTo(Supplier::class, 'supplier_id', 'supplier_id');
@@ -68,16 +63,6 @@ class VendorReturn extends Model
     }
 
     // Scopes
-    public function scopeForBusiness($query, $businessId)
-    {
-        return $query->where('business_id', $businessId);
-    }
-
-    public function scopeForBranch($query, $branchId)
-    {
-        return $query->where('branch_id', $branchId);
-    }
-
     public function scopePending($query)
     {
         return $query->where('status', 'pending_approval');
@@ -108,7 +93,7 @@ class VendorReturn extends Model
         $this->update([
             'status' => 'rejected',
             'approved_by' => $approverId,
-            'notes' => ($this->notes ? $this->notes . "\n" : '') . "Rejected: {$reason}",
+            'notes' => ($this->notes ? $this->notes."\n" : '')."Rejected: {$reason}",
         ]);
     }
 

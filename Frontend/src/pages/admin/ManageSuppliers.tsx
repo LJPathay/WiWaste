@@ -10,8 +10,8 @@ import {
   FormField,
   inputCls,
 } from '../../components/ui/Toast';
-import { useOptimisticList } from '../../hooks/useOptimisticList';
-import { suppliers as suppliersApi, type ApiSupplier } from '../../services/api';
+import { useApi } from '../../hooks/useApi';
+import { suppliers as suppliersApi, type ApiSupplier, type PaginatedSuppliersResponse } from '../../services/api';
 import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
 import { ActionButton } from '../../components/shared/DataTableActions';
 import { Pagination } from '../../components/ui/pagination';
@@ -20,10 +20,33 @@ const EMPTY_FORM = {
   supplier_name: '',
   contact_person: '',
   contact_number: '',
+  email: '',
   address: '',
 };
 
 const ITEMS_PER_PAGE = 5;
+
+/**
+ * QA requires an 11-digit, numeric-only contact number.
+ *
+ * `maxLength` stops more than 11 characters being typed and the input mode nudges
+ * mobile keyboards to digits, but neither stops letters or symbols being pasted in,
+ * so the value is also checked before the form is allowed to submit.
+ */
+const CONTACT_NUMBER_LENGTH = 11;
+
+function contactNumberError(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return 'Phone number is required.';
+  if (!/^\d+$/.test(trimmed)) return 'Phone number must contain digits only.';
+  if (trimmed.length !== CONTACT_NUMBER_LENGTH) return `Phone number must be exactly ${CONTACT_NUMBER_LENGTH} digits.`;
+  return null;
+}
+
+/** Strips anything that is not a digit and caps the length as the user types. */
+function sanitizeContactNumber(value: string): string {
+  return value.replace(/\D/g, '').slice(0, CONTACT_NUMBER_LENGTH);
+}
 
 const columns: DataTableColumn<ApiSupplier & Record<string, unknown>>[] = [
   {
@@ -44,7 +67,7 @@ const columns: DataTableColumn<ApiSupplier & Record<string, unknown>>[] = [
     truncate: true,
     minWidth: '120px',
     render: (row) => (
-      <span className="text-slate-600 dark:text-slate-400">
+      <span className="text-muted-fg dark:text-muted-fg">
         {row.contact_person ?? '—'}
       </span>
     ),
@@ -54,8 +77,19 @@ const columns: DataTableColumn<ApiSupplier & Record<string, unknown>>[] = [
     header: 'Phone',
     minWidth: '100px',
     render: (row) => (
-      <span className="text-slate-600 dark:text-slate-400 font-mono">
+      <span className="text-muted-fg dark:text-muted-fg font-mono">
         {row.contact_number}
+      </span>
+    ),
+  },
+  {
+    key: 'email',
+    header: 'Email',
+    truncate: true,
+    minWidth: '160px',
+    render: (row) => (
+      <span className="text-muted-fg dark:text-muted-fg">
+        {row.email ?? '—'}
       </span>
     ),
   },
@@ -65,7 +99,7 @@ const columns: DataTableColumn<ApiSupplier & Record<string, unknown>>[] = [
     truncate: true,
     minWidth: '150px',
     render: (row) => (
-      <span className="text-slate-600 dark:text-slate-400">
+      <span className="text-muted-fg dark:text-muted-fg">
         {row.address ?? '—'}
       </span>
     ),
@@ -76,7 +110,7 @@ const columns: DataTableColumn<ApiSupplier & Record<string, unknown>>[] = [
     numeric: true,
     minWidth: '80px',
     render: (row) => (
-      <span className="text-slate-600 dark:text-slate-400 font-medium tabular-nums">
+      <span className="text-muted-fg dark:text-muted-fg font-medium tabular-nums">
         {row.product_count ?? 0} items
       </span>
     ),
@@ -84,9 +118,7 @@ const columns: DataTableColumn<ApiSupplier & Record<string, unknown>>[] = [
 ];
 
 export function ManageSuppliers() {
-  const { data: supplierList, loading, error: fetchError, addItem, updateItem, removeItem, refetch: refetchSuppliers } = useOptimisticList(suppliersApi.list);
   const { toasts, dismiss, success, error } = useToast();
-
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<'name-asc' | 'name-desc' | 'products-desc' | 'products-asc' | 'id-desc'>('name-asc');
   const [currentPage, setCurrentPage] = useState(1);
@@ -96,6 +128,11 @@ export function ManageSuppliers() {
   const [showEmptyNotification, setShowEmptyNotification] = useState(false);
   const [notificationCountdown, setNotificationCountdown] = useState(20);
   const [showTutorial, setShowTutorial] = useState(false);
+
+  const { data: supplierList, loading, error: fetchError, refetch: refetchSuppliers } = useApi<PaginatedSuppliersResponse>(
+    () => suppliersApi.list(currentPage, ITEMS_PER_PAGE, search),
+    { dedupeKey: `suppliers-${currentPage}-${search}` }
+  );
 
   const tutorialSteps = [
     {
@@ -149,7 +186,7 @@ export function ManageSuppliers() {
   const [archivingSupplier, setArchivingSupplier] = useState<ApiSupplier | null>(null);
   const [archiveLoading, setArchiveLoading] = useState(false);
 
-  const suppliers = supplierList ?? [];
+  const suppliers = supplierList?.data ?? [];
 
   useEffect(() => {
     if (suppliers.length === 0 && search === '' && !loading && !fetchError) {
@@ -188,54 +225,26 @@ export function ManageSuppliers() {
     suppliers.some(s => s?.id !== editingSupplier.id && s?.contact_number && typeof s.contact_number === 'string' && s.contact_number.trim() === editForm.contact_number.trim())
   );
 
-  const filtered = [...suppliers]
-    .filter(s =>
-      s && s.name && typeof s.name === 'string' && (
-        s.name.toLowerCase().includes((search || '').toLowerCase()) ||
-        (s.contact_person?.toLowerCase() ?? '').includes((search || '').toLowerCase()) ||
-        (s.contact_number ?? '').includes(search)
-      )
-    )
-    .sort((a, b) => {
-      if (sortBy === 'name-asc') return (a.name || '').localeCompare(b.name || '');
-      if (sortBy === 'name-desc') return (b.name || '').localeCompare(a.name || '');
-      if (sortBy === 'products-desc') return (b.product_count ?? 0) - (a.product_count ?? 0);
-      if (sortBy === 'products-asc') return (a.product_count ?? 0) - (b.product_count ?? 0);
-      if (sortBy === 'id-desc') return (b.id ?? 0) - (a.id ?? 0);
-      return 0;
-    });
+  // An empty field is left to the native `required` attribute, so the message only
+  // appears once something has actually been typed.
+  const addPhoneError = addForm.contact_number ? contactNumberError(addForm.contact_number) : null;
+  const editPhoneError = editForm.contact_number ? contactNumberError(editForm.contact_number) : null;
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, filtered.length);
-  const paginatedSuppliers = filtered.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  // Server-side filtering, so no client-side filtering needed
+  const filtered = suppliers;
+  const paginatedSuppliers = filtered;
 
-  const isAllSelected = paginatedSuppliers.length > 0 && paginatedSuppliers.every(s => selectedIds.includes(s.id));
-
-  const toggleSelectAll = () => {
-    if (isAllSelected) {
-      const pageIds = new Set(paginatedSuppliers.map(s => s.id));
-      setSelectedIds(prev => prev.filter(id => !pageIds.has(id)));
-    } else {
-      const pageIds = paginatedSuppliers.map(s => s.id);
-      setSelectedIds(prev => Array.from(new Set([...prev, ...pageIds])));
-    }
-  };
-
-  const toggleSelectRow = (id: number) => {
-    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
-  };
-
+  const totalPages = supplierList?.meta?.last_page ?? 1;
+  const totalItems = supplierList?.meta?.total ?? 0;
   const handleBulkDelete = async () => {
     if (selectedIds.length === 0) return;
     setIsBulkDeleting(true);
     try {
       await Promise.all(selectedIds.map(id => suppliersApi.delete(id)));
-      selectedIds.forEach(id => removeItem(id));
-      success(`Successfully deleted ${selectedIds.length} suppliers.`);
       setSelectedIds([]);
       setShowBulkDeleteConfirm(false);
-      refetchSuppliers();
+      await refetchSuppliers();
+      success(`Successfully deleted ${selectedIds.length} suppliers.`);
     } catch (err) {
       error(err instanceof Error ? err.message : 'Failed to delete selected suppliers.');
     } finally {
@@ -250,8 +259,14 @@ export function ManageSuppliers() {
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!addForm.supplier_name.trim() || !addForm.contact_number.trim()) {
-      error('Please fill in all required fields.');
+    if (!addForm.supplier_name.trim() || !addForm.contact_person.trim() || !addForm.contact_number.trim()
+      || !addForm.email.trim() || !addForm.address.trim()) {
+      error('Supplier name, contact person, phone number, email address and address are all required.');
+      return;
+    }
+
+    if (addPhoneError) {
+      error(addPhoneError);
       return;
     }
 
@@ -267,19 +282,10 @@ export function ManageSuppliers() {
 
     setAddLoading(true);
     try {
-      const created = (await suppliersApi.create(addForm)) as ApiSupplier;
+      await suppliersApi.create(addForm);
       setIsAddOpen(false);
-      const newItem: ApiSupplier = {
-        id: created.id,
-        name: created.name ?? addForm.supplier_name.trim(),
-        contact_person: created.contact_person ?? (addForm.contact_person.trim() || null),
-        contact_number: created.contact_number ?? addForm.contact_number.trim(),
-        address: created.address ?? (addForm.address.trim() || null),
-        product_count: created.product_count ?? 0,
-      };
-      addItem(newItem);
       await refetchSuppliers();
-      success(`Supplier "${newItem.name}" added successfully.`);
+      success(`Supplier added successfully.`);
     } catch (err) {
       error(err instanceof Error ? err.message : 'Failed to add supplier');
     } finally {
@@ -293,6 +299,7 @@ export function ManageSuppliers() {
       supplier_name: s.name,
       contact_person: s.contact_person ?? '',
       contact_number: s.contact_number,
+      email: s.email ?? '',
       address: s.address ?? '',
     });
   };
@@ -300,8 +307,14 @@ export function ManageSuppliers() {
   const handleEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingSupplier) return;
-    if (!editForm.supplier_name.trim() || !editForm.contact_number.trim()) {
-      error('Please fill in all required fields.');
+    if (!editForm.supplier_name.trim() || !editForm.contact_person.trim() || !editForm.contact_number.trim()
+      || !editForm.email.trim() || !editForm.address.trim()) {
+      error('Supplier name, contact person, phone number, email address and address are all required.');
+      return;
+    }
+
+    if (editPhoneError) {
+      error(editPhoneError);
       return;
     }
 
@@ -317,11 +330,10 @@ export function ManageSuppliers() {
 
     setEditLoading(true);
     try {
-      const updated = await suppliersApi.update(editingSupplier.id, editForm) as ApiSupplier;
-      updateItem(editingSupplier.id, updated);
+      await suppliersApi.update(editingSupplier.id, editForm);
       setEditingSupplier(null);
       await refetchSuppliers();
-      success(`Supplier "${editForm.supplier_name}" updated successfully.`);
+      success(`Supplier updated successfully.`);
     } catch (err) {
       error(err instanceof Error ? err.message : 'Failed to update supplier');
     } finally {
@@ -335,7 +347,6 @@ export function ManageSuppliers() {
     try {
       await suppliersApi.delete(archivingSupplier.id);
       const name = archivingSupplier.name;
-      removeItem(archivingSupplier.id);
       setArchivingSupplier(null);
       await refetchSuppliers();
       success(`Supplier "${name}" has been deleted.`);
@@ -349,22 +360,22 @@ export function ManageSuppliers() {
   if (loading) return (
     <div className="flex flex-col items-center justify-center h-48 gap-3">
       <div className="relative w-12 h-12">
-        <div className="absolute inset-0 rounded-full border-3 border-slate-200 dark:border-slate-800"></div>
+        <div className="absolute inset-0 rounded-full border-3 border-border dark:border-slate-800"></div>
         <div className="absolute inset-0 rounded-full border-3 border-transparent border-t-[#006a61] border-r-[#006a61] animate-spin"></div>
         <div className="absolute inset-1.5 flex items-center justify-center">
           <Briefcase className="h-6 w-6 text-[#006a61] dark:text-[#7ef0cf] animate-pulse" />
         </div>
       </div>
       <div className="text-center">
-        <p className="text-slate-600 dark:text-slate-400 font-semibold text-sm">Loading suppliers...</p>
-        <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Fetching supplier list</p>
+        <p className="text-muted-fg dark:text-muted-fg font-semibold text-sm">Loading suppliers...</p>
+        <p className="text-xs text-muted-fg dark:text-muted-fg mt-0.5">Fetching supplier list</p>
       </div>
     </div>
   );
 
 
   if (fetchError) {
-    const errorCode = fetchError.match(/\((\d+)\)/)?.[1] || 'Unknown';
+    const errorCode = /\((\d+)\)/.exec(fetchError)?.[1] || 'Unknown';
     const errorMessage = errorCode === '2002' ? "There's no connection (2002)" : `Connection error (${errorCode})`;
     return (
       <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800/40 flex items-center justify-between gap-3">
@@ -394,7 +405,7 @@ export function ManageSuppliers() {
             <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Manage Suppliers</h1>
             <UITooltip>
               <TooltipTrigger asChild>
-                <Info className="h-4 w-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
+                <Info className="h-4 w-4 text-muted-fg hover:text-muted-fg dark:hover:text-slate-300 cursor-help" />
               </TooltipTrigger>
               <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
                 View and manage your product suppliers.
@@ -412,7 +423,7 @@ export function ManageSuppliers() {
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div className="bg-white dark:bg-slate-950 rounded-xl border border-border dark:border-white/10 shadow-sm p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-2">
           <span className="px-2.5 py-0.5 bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-lg">
             All Suppliers ({suppliers.length})
@@ -423,7 +434,7 @@ export function ManageSuppliers() {
           <select
             value={sortBy}
             onChange={e => setSortBy(e.target.value as 'name-asc' | 'name-desc' | 'products-desc' | 'products-asc' | 'id-desc')}
-            className="w-full sm:w-auto h-8 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-xs font-medium rounded-lg px-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#006a61]"
+            className="w-full sm:w-auto h-8 bg-bg dark:bg-slate-900 border border-border dark:border-white/10 text-xs font-medium rounded-lg px-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#006a61]"
           >
             <option value="name-asc">Sort: A - Z</option>
             <option value="name-desc">Sort: Z - A</option>
@@ -433,13 +444,13 @@ export function ManageSuppliers() {
           </select>
 
           <div className="relative max-w-sm w-full sm:w-64">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-fg" />
             <input
               type="text"
               placeholder="Search by name, contact or phone…"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-full h-8 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-white/10 pl-8 pr-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-700 dark:text-slate-300"
+              className="w-full h-8 bg-bg dark:bg-slate-900/50 border border-border dark:border-white/10 pl-8 pr-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-700 dark:text-slate-300"
             />
           </div>
         </div>
@@ -458,7 +469,7 @@ export function ManageSuppliers() {
             <button
               type="button"
               onClick={() => setSelectedIds([])}
-              className="px-2 py-0.5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium hover:underline"
+              className="px-2 py-0.5 text-muted-fg dark:text-muted-fg hover:text-slate-900 dark:hover:text-slate-100 font-medium hover:underline"
             >
               Deselect All
             </button>
@@ -499,16 +510,16 @@ export function ManageSuppliers() {
             />
           </>
         )}
-        pagination={
-          <Pagination
-            page={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-            totalItems={filtered.length}
-            perPage={ITEMS_PER_PAGE}
-            label="Suppliers"
-          />
-        }
+pagination={
+            <Pagination
+              page={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              totalItems={totalItems}
+              perPage={ITEMS_PER_PAGE}
+              label="Suppliers"
+            />
+          }
       />
 
       {/* Empty State Notification */}
@@ -533,27 +544,36 @@ export function ManageSuppliers() {
 
       {/* Add Modal */}
       {isAddOpen && (
-        <Modal title="Add New Supplier" onClose={() => { if (!addLoading) setIsAddOpen(false); }} maxWidth="lg">
-          <form onSubmit={handleAdd} className="space-y-3 p-4">
+        <Modal title="Add New Supplier" onClose={() => { if (!addLoading) setIsAddOpen(false); }} size="lg">
+          <form onSubmit={handleAdd} className="space-y-3">
             <FormField label="Supplier Name">
               <input type="text" required placeholder="e.g. FreshPack Co." value={addForm.supplier_name}
                 onChange={e => setAddForm(f => ({ ...f, supplier_name: e.target.value }))} className={inputCls} />
               {isDuplicateAddName && <p className="text-red-500 text-[9px] mt-0.5">Supplier name already exists.</p>}
             </FormField>
             <FormField label="Contact Person">
-              <input type="text" placeholder="e.g. Ana Reyes" value={addForm.contact_person}
+              <input type="text" required placeholder="e.g. Ana Reyes" value={addForm.contact_person}
                 onChange={e => setAddForm(f => ({ ...f, contact_person: e.target.value }))} className={inputCls} />
             </FormField>
             <FormField label="Phone Number">
-              <input type="tel" required placeholder="09XXXXXXXXX" value={addForm.contact_number}
-                onChange={e => setAddForm(f => ({ ...f, contact_number: e.target.value }))} className={inputCls} />
+              <input type="tel" inputMode="numeric" pattern="\d{11}" required maxLength={CONTACT_NUMBER_LENGTH}
+                placeholder="09XXXXXXXXX" value={addForm.contact_number}
+                aria-describedby="add-phone-hint"
+                onChange={e => setAddForm(f => ({ ...f, contact_number: sanitizeContactNumber(e.target.value) }))}
+                className={inputCls} />
+              <p id="add-phone-hint" className="text-muted-fg text-[9px] mt-0.5">Exactly 11 digits, numbers only.</p>
+              {addPhoneError && <p className="text-red-500 text-[9px] mt-0.5">{addPhoneError}</p>}
               {isDuplicateAddPhone && <p className="text-red-500 text-[9px] mt-0.5">Phone number already exists.</p>}
             </FormField>
+            <FormField label="Email">
+              <input type="email" required placeholder="supplier@example.com" value={addForm.email}
+                onChange={e => setAddForm(f => ({ ...f, email: e.target.value }))} className={inputCls} />
+            </FormField>
             <FormField label="Address">
-              <input type="text" placeholder="Metro Manila, PH" value={addForm.address}
+              <input type="text" required placeholder="Metro Manila, PH" value={addForm.address}
                 onChange={e => setAddForm(f => ({ ...f, address: e.target.value }))} className={inputCls} />
             </FormField>
-            <button type="submit" disabled={addLoading || isDuplicateAddName || isDuplicateAddPhone}
+            <button type="submit" disabled={addLoading || isDuplicateAddName || isDuplicateAddPhone || Boolean(addPhoneError)}
               className="w-full inline-flex items-center justify-center gap-2 h-8 bg-[#006a61] hover:bg-[#00574f] text-white rounded-lg text-xs font-semibold transition-colors disabled:opacity-60">
               {addLoading ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Adding…</> : 'Add Supplier'}
             </button>
@@ -563,27 +583,36 @@ export function ManageSuppliers() {
 
       {/* Edit Modal */}
       {editingSupplier && (
-        <Modal title="Edit Supplier" onClose={() => { if (!editLoading) setEditingSupplier(null); }} maxWidth="lg">
-          <form onSubmit={handleEdit} className="space-y-3 p-4">
+        <Modal title="Edit Supplier" onClose={() => { if (!editLoading) setEditingSupplier(null); }} size="lg">
+          <form onSubmit={handleEdit} className="space-y-3">
             <FormField label="Supplier Name">
               <input type="text" required placeholder="e.g. FreshPack Co." value={editForm.supplier_name}
                 onChange={e => setEditForm(f => ({ ...f, supplier_name: e.target.value }))} className={inputCls} />
               {isDuplicateEditName && <p className="text-red-500 text-[9px] mt-0.5">Supplier name already exists.</p>}
             </FormField>
             <FormField label="Contact Person">
-              <input type="text" placeholder="e.g. Ana Reyes" value={editForm.contact_person}
+              <input type="text" required placeholder="e.g. Ana Reyes" value={editForm.contact_person}
                 onChange={e => setEditForm(f => ({ ...f, contact_person: e.target.value }))} className={inputCls} />
             </FormField>
             <FormField label="Phone Number">
-              <input type="tel" required placeholder="09XXXXXXXXX" value={editForm.contact_number}
-                onChange={e => setEditForm(f => ({ ...f, contact_number: e.target.value }))} className={inputCls} />
+              <input type="tel" inputMode="numeric" pattern="\d{11}" required maxLength={CONTACT_NUMBER_LENGTH}
+                placeholder="09XXXXXXXXX" value={editForm.contact_number}
+                aria-describedby="edit-phone-hint"
+                onChange={e => setEditForm(f => ({ ...f, contact_number: sanitizeContactNumber(e.target.value) }))}
+                className={inputCls} />
+              <p id="edit-phone-hint" className="text-muted-fg text-[9px] mt-0.5">Exactly 11 digits, numbers only.</p>
+              {editPhoneError && <p className="text-red-500 text-[9px] mt-0.5">{editPhoneError}</p>}
               {isDuplicateEditPhone && <p className="text-red-500 text-[9px] mt-0.5">Phone number already exists.</p>}
             </FormField>
+            <FormField label="Email">
+              <input type="email" required placeholder="supplier@example.com" value={editForm.email}
+                onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} className={inputCls} />
+            </FormField>
             <FormField label="Address">
-              <input type="text" placeholder="Metro Manila, PH" value={editForm.address}
+              <input type="text" required placeholder="Metro Manila, PH" value={editForm.address}
                 onChange={e => setEditForm(f => ({ ...f, address: e.target.value }))} className={inputCls} />
             </FormField>
-            <button type="submit" disabled={editLoading || isDuplicateEditName || isDuplicateEditPhone}
+            <button type="submit" disabled={editLoading || isDuplicateEditName || isDuplicateEditPhone || Boolean(editPhoneError)}
               className="w-full inline-flex items-center justify-center gap-2 h-8 bg-[#006a61] hover:bg-[#00574f] text-white rounded-lg text-xs font-semibold transition-colors disabled:opacity-60">
               {editLoading ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Saving…</> : 'Save Changes'}
             </button>

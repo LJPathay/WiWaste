@@ -1,11 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
-import { RotateCcw, Search, AlertCircle, Info, X, AlertTriangle, Clock, ShieldCheck, FileText } from 'lucide-react';
-import { FormField, inputCls, Toast, useToast, ConfirmDialog, Modal } from '../../components/ui/Toast';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { RotateCcw, Search, Info, X, Check } from 'lucide-react';
+import { inputCls, Toast, useToast } from '../../components/ui/Toast';
 import { formatCurrency } from '../../utils/cashierData';
 import { returns as returnsApi, sales as salesApi, type ApiReturn, type ApiSalesTransaction } from '../../services/api';
-import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
+import { type DataTableColumn } from '../../components/shared/DataTable';
 import { ActionButton } from '../../components/shared/DataTableActions';
-import { Pagination } from '../../components/ui/pagination';
 
 interface ReturnableItem {
   sale_item_id: number;
@@ -17,18 +16,17 @@ interface ReturnableItem {
   subtotal: number;
 }
 
-interface ReturnHistoryRow extends Record<string, unknown> {
-  id: number;
-  product_name: string;
-  sku: string;
-  quantity_returned: number;
-  refund_amount: number;
-  reason: string;
-  return_reason_code: string;
-  returned_by: string;
-  return_date: string;
-  approval_status: string;
-  is_within_7_days: boolean;
+/**
+ * The return-history table used to declare its own `ReturnHistoryRow` with four fields
+ * (`sku`, `return_reason_code`, `approval_status`, `is_within_7_days`) that the wire type
+ * did not have, so those columns always rendered blank. `ReturnTransactionController`
+ * actually returns all of them, so the row type is now `ApiReturn` itself and there is a
+ * single description of the payload.
+ */
+function cellValue(row: ApiReturn, key: string): unknown {
+  // `ApiReturn` is an `interface`, so it has no index signature. `DataTable` narrows the
+  // same dynamic lookup at its one call site; this is the equivalent for the local table.
+  return (row as unknown as Record<string, unknown>)[key];
 }
 
 function formatDate(value: string) {
@@ -48,7 +46,15 @@ const REASON_CODES = [
   { value: 'other', label: 'Other', requiresEvidence: false, within7DaysOnly: true },
 ] as const;
 
-const returnHistoryColumns: DataTableColumn<ReturnHistoryRow>[] = [
+/**
+ * `CreateReturnPayload.return_reason_code` is a literal union, but the state was declared
+ * as a bare `string`, so the submitted payload did not typecheck. The union is derived from
+ * `REASON_CODES` -- the very list the `<select>` renders its options from -- so the two
+ * cannot drift.
+ */
+type ReturnReasonCode = (typeof REASON_CODES)[number]['value'];
+
+const returnHistoryColumns: DataTableColumn<ApiReturn>[] = [
   { key: 'product_name', header: 'Product', pinned: true, truncate: true, minWidth: '150px' },
   { key: 'sku', header: 'SKU', truncate: true, minWidth: '100px' },
   { key: 'quantity_returned', header: 'Qty', numeric: true, minWidth: '80px' },
@@ -62,7 +68,10 @@ const returnHistoryColumns: DataTableColumn<ReturnHistoryRow>[] = [
   { key: 'return_reason_code', header: 'Reason Code', truncate: true, minWidth: '120px',
     render: (_row, value) => {
       const code = REASON_CODES.find(c => c.value === value);
-      return code ? code.label : value;
+      // `DataTableColumn.render` receives the cell value as `unknown`, so the fallback
+      // branch has to narrow it -- returning it raw made the render signature `unknown`,
+      // which is not assignable to `ReactNode`.
+      return code ? code.label : String(value);
     }
   },
   { key: 'returned_by', header: 'Returned By', truncate: true, minWidth: '100px' },
@@ -74,7 +83,8 @@ const returnHistoryColumns: DataTableColumn<ReturnHistoryRow>[] = [
         pending: { label: 'Pending', cls: 'bg-amber-50 text-amber-700 border border-amber-100' },
         rejected: { label: 'Rejected', cls: 'bg-red-50 text-red-700 border border-red-100' },
       };
-      const b = badges[value] ?? { label: value, cls: '' };
+      // The cell value arrives as `unknown` and cannot index a `Record` directly.
+      const b = badges[String(value)] ?? { label: String(value), cls: '' };
       return <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${b.cls}`}>{b.label}</span>;
     }
   },
@@ -98,11 +108,9 @@ export function ReturnsRefunds() {
   const [selectedItem, setSelectedItem] = useState<ReturnableItem | null>(null);
   const [quantity, setQuantity] = useState('1');
   const [reason, setReason] = useState('');
-  const [returnReasonCode, setReturnReasonCode] = useState('change_mind');
+  const [returnReasonCode, setReturnReasonCode] = useState<ReturnReasonCode>('change_mind');
   const [evidenceNotes, setEvidenceNotes] = useState('');
   const [evidencePhotos, setEvidencePhotos] = useState<string[]>([]);
-  const [overrideAmount, setOverrideAmount] = useState('');
-
   const loadSales = useCallback(async () => {
     setLoading(true);
     setSalesError(null);
@@ -134,7 +142,7 @@ export function ReturnsRefunds() {
     if (!query.trim()) return salesData;
     const q = query.toLowerCase();
     return salesData.filter(s =>
-      s.transaction_id.toString().includes(q) ||
+      s.id.toString().includes(q) ||
       s.items.some(item =>
         item.product_name.toLowerCase().includes(q) ||
         item.sku.toLowerCase().includes(q)
@@ -163,6 +171,9 @@ export function ReturnsRefunds() {
       await returnsApi.create({
         sale_item_id: selectedItem.sale_item_id,
         quantity_returned: qty,
+        // `refund_amount` is required by `ReturnTransactionController::store()` and was
+        // never sent, so every submission came back 422 and no return could be recorded.
+        refund_amount: Number((qty * selectedItem.unit_price).toFixed(2)),
         reason,
         return_reason_code: returnReasonCode,
         evidence_notes: evidenceNotes || undefined,
@@ -184,27 +195,12 @@ export function ReturnsRefunds() {
     }
   };
 
-  const returnableColumns = useMemo(() => [
-    { key: 'transaction_id', header: 'Transaction', pinned: true, truncate: true, minWidth: '120px' },
-    { key: 'product_name', header: 'Item', pinned: true, truncate: true, minWidth: '180px' },
-    { key: 'sku', header: 'SKU', minWidth: '100px' },
-    { key: 'quantity', header: 'Sold Qty', numeric: true, minWidth: '80px' },
-    {
-      key: 'unit_price',
-      header: 'Unit Price',
-      numeric: true,
-      minWidth: '100px',
-      render: (_row, value) => formatCurrency(Number(value)),
-    },
-    { key: 'subtotal', header: 'Line Total', numeric: true, minWidth: '100px', render: (_row, value) => formatCurrency(Number(value)) },
-  ] as const, []);
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Returns & Refunds</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-sm text-muted-fg dark:text-muted-fg mt-1">
             Process returns with 7-day cooling-off period (RA 7394). Auto-approved within 7 days for standard reasons.
           </p>
         </div>
@@ -227,7 +223,7 @@ export function ReturnsRefunds() {
       </div>
 
       {/* Create Return Form */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 space-y-6">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-border dark:border-slate-700 p-6 space-y-6">
         <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Create New Return</h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -236,7 +232,7 @@ export function ReturnsRefunds() {
               Search Transaction <span className="text-red-500">*</span>
             </label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-fg" />
               <input
                 type="text"
                 placeholder="Search by Transaction #, Product, or SKU..."
@@ -248,35 +244,35 @@ export function ReturnsRefunds() {
           </div>
         </div>
 
-        {loading && <div className="text-center py-4 text-slate-500">Loading transactions...</div>}
+        {loading && <div className="text-center py-4 text-muted-fg">Loading transactions...</div>}
         {salesError && <div className="text-red-600 text-sm">{salesError}</div>}
 
         {!loading && filteredSales.length === 0 && query && (
-          <div className="text-center py-4 text-slate-500">No transactions found matching "{query}"</div>
+          <div className="text-center py-4 text-muted-fg">No transactions found matching "{query}"</div>
         )}
 
         {!loading && filteredSales.length > 0 && (
-          <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
+          <div className="overflow-x-auto rounded-lg border border-border dark:border-slate-700">
             <table className="w-full">
-              <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
+              <thead className="bg-bg dark:bg-slate-800/50 border-b border-border dark:border-slate-700">
                 <tr>
-                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Transaction</th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Item</th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">SKU</th>
-                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Sold Qty</th>
-                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Unit Price</th>
-                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Line Total</th>
-                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Action</th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg">Transaction</th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg">Item</th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg">SKU</th>
+                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg">Sold Qty</th>
+                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg">Unit Price</th>
+                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg">Line Total</th>
+                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                 {filteredSales.flatMap(sale =>
                   sale.items.map((item, idx) => (
-                    <tr key={`${sale.transaction_id}-${idx}`} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer"
+                    <tr key={`${sale.id}-${idx}`} className="hover:bg-bg dark:hover:bg-slate-700/50 cursor-pointer"
                       onClick={() => {
                         setSelectedItem({
                           sale_item_id: item.id,
-                          transaction_id: sale.transaction_id,
+                          transaction_id: sale.id,
                           product_name: item.product_name,
                           sku: item.sku,
                           quantity: item.quantity,
@@ -285,21 +281,21 @@ export function ReturnsRefunds() {
                         });
                       }}
                     >
-                      <td className="px-3 py-2 text-sm font-mono text-slate-900 dark:text-white">{sale.transaction_id}</td>
+                      <td className="px-3 py-2 text-sm font-mono text-slate-900 dark:text-white">{sale.id}</td>
                       <td className="px-3 py-2 text-sm font-medium text-slate-900 dark:text-white">{item.product_name}</td>
-                      <td className="px-3 py-2 text-sm text-slate-500 font-mono">{item.sku}</td>
+                      <td className="px-3 py-2 text-sm text-muted-fg font-mono">{item.sku}</td>
                       <td className="px-3 py-2 text-sm text-right text-slate-900 dark:text-white">{item.quantity}</td>
-                      <td className="px-3 py-2 text-sm text-right text-slate-500 dark:text-slate-400">{formatCurrency(item.unit_price)}</td>
+                      <td className="px-3 py-2 text-sm text-right text-muted-fg dark:text-muted-fg">{formatCurrency(item.unit_price)}</td>
                       <td className="px-3 py-2 text-sm text-right font-medium text-slate-900 dark:text-white">{formatCurrency(item.subtotal)}</td>
                       <td className="px-3 py-2 text-right">
                         <ActionButton
+                          icon={<Check className="h-3.5 w-3.5" />}
                           label="Select"
-                          variant="primary"
-                          size="sm"
+                          variant="default"
                           onClick={() => {
                             setSelectedItem({
                               sale_item_id: item.id,
-                              transaction_id: sale.transaction_id,
+                              transaction_id: sale.id,
                               product_name: item.product_name,
                               sku: item.sku,
                               quantity: item.quantity,
@@ -321,7 +317,7 @@ export function ReturnsRefunds() {
           <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-slate-900 dark:text-white">Return Details: {selectedItem.product_name}</h3>
-              <button onClick={() => setSelectedItem(null)} className="text-slate-400 hover:text-slate-600">
+              <button onClick={() => setSelectedItem(null)} className="text-muted-fg hover:text-muted-fg">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -357,7 +353,12 @@ export function ReturnsRefunds() {
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Reason Code <span className="text-red-500">*</span></label>
                 <select
                   value={returnReasonCode}
-                  onChange={(e) => setReturnReasonCode(e.target.value)}
+                  onChange={(e) => {
+                    // Resolved through `REASON_CODES` rather than cast, so the select can
+                    // only ever put a valid code into the state.
+                    const next = REASON_CODES.find(c => c.value === e.target.value);
+                    if (next) setReturnReasonCode(next.value);
+                  }}
                   className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-colors"
                 >
                   {REASON_CODES.map(code => (
@@ -403,7 +404,7 @@ export function ReturnsRefunds() {
               <button
                 type="button"
                 onClick={() => setSelectedItem(null)}
-                className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
+                className="px-4 py-2 text-muted-fg dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
               >
                 Cancel
               </button>
@@ -423,39 +424,39 @@ export function ReturnsRefunds() {
       </div>
 
       {/* Returns History */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
-        <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-border dark:border-slate-700">
+        <div className="p-4 border-b border-border dark:border-slate-700 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Returns History</h2>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-500 dark:text-slate-400">{returnsHistory.length} returns</span>
+            <span className="text-xs text-muted-fg dark:text-muted-fg">{returnsHistory.length} returns</span>
           </div>
         </div>
 
         <div className="overflow-x-auto">
           {returnsHistory.length === 0 ? (
             <div className="p-12 text-center">
-              <RotateCcw className="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600 mb-4" />
-              <p className="text-slate-500 dark:text-slate-400">No returns recorded yet</p>
+              <RotateCcw className="w-12 h-12 mx-auto text-slate-300 dark:text-muted-fg mb-4" />
+              <p className="text-muted-fg dark:text-muted-fg">No returns recorded yet</p>
             </div>
           ) : (
             <>
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
+                  <thead className="bg-bg dark:bg-slate-800/50 border-b border-border dark:border-slate-700">
                     <tr>
                       {returnHistoryColumns.map(col => (
-                        <th key={col.key} className={`px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 ${col.pinned ? 'sticky left-0 bg-white dark:bg-slate-800 z-10' : ''}`}>
+                        <th key={col.key} className={`px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg ${col.pinned ? 'sticky left-0 bg-white dark:bg-slate-800 z-10' : ''}`}>
                           {col.header}
                         </th>
                       ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                    {returnsHistory.slice(0, 20).map((row, idx) => (
-                      <tr key={row.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                    {returnsHistory.slice(0, 20).map((row, _idx) => (
+                      <tr key={row.id} className="hover:bg-bg dark:hover:bg-slate-700/50">
                         {returnHistoryColumns.map(col => (
                           <td key={`${row.id}-${col.key}`} className="px-3 py-2 text-sm">
-                            {col.render ? col.render(row, (row as Record<string, unknown>)[col.key]) : (row as Record<string, unknown>)[col.key]?.toString() ?? ''}
+                            {col.render ? col.render(row, cellValue(row, col.key)) : cellValue(row, col.key)?.toString() ?? ''}
                           </td>
                         ))}
                       </tr>
@@ -464,7 +465,7 @@ export function ReturnsRefunds() {
                 </table>
               </div>
               {returnsHistory.length > 20 && (
-                <div className="p-4 border-t border-slate-200 dark:border-slate-700 text-center">
+                <div className="p-4 border-t border-border dark:border-slate-700 text-center">
                   <button className="text-sm text-brand-600 hover:text-brand-700 font-medium">
                     Load more returns ({returnsHistory.length} total)
                   </button>

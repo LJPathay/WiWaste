@@ -69,11 +69,15 @@ export function getStoredSession(): AuthSession | null {
     const session = JSON.parse(rawSession) as Partial<AuthSession>;
     if (!session.name || !session.role) return null;
 
+    // `AuthSession` is only partially known here -- the guard above proves `name` and `role`
+    // are present but says nothing about `email` or `company`, so both can be `undefined`.
+    // They are defaulted rather than passed through, because `undefined` reaching a
+    // controlled `<input value>` is a React warning while `''` is not.
     return {
       id: session.id ?? session.email ?? 'user-unknown',
-      email: session.email,
+      email: session.email ?? '',
       name: session.name,
-      company: session.company,
+      company: session.company ?? '',
       role: normalizeRole(session.role),
     };
   } catch {
@@ -238,13 +242,27 @@ export function getPredictiveAnalytics(role: UserRole = 'owner'): PredictiveAnal
     confidence: Math.min(0.98, point.confidence + (role === 'owner' ? 0.02 : role === 'inventory' ? -0.01 : 0)),
   }));
 
-  const seasonalTrendsByRole: Record<UserRole, string> = {
+  // `UserRole` includes 'manager' -- it is reachable through `normalizeRole` on line 52 and
+  // `profileByRole` above already gives it its own profile -- but the seven demo feature
+  // tables below were only ever written for owner / inventory / cashier. A manager logging in
+  // therefore indexed `undefined` into every one of them.
+  //
+  // Rather than invent a second set of demo narratives, a manager is given the operational
+  // (inventory-staff) view: a store manager supervises exactly those floor operations, and
+  // `ROLE_LIMITS` already ranks manager above inventory but below owner. Each table is
+  // written without 'manager' so the compiler proves the alias below cannot go stale when a
+  // role is added, and `satisfies` keeps the other keys checked against the value type.
+  const seasonalTrendsByRole = {
     owner: 'Corporate and store-level demand shows rising Q2 expiry risk, with recovery tied to governance checks, FEFO oversight, and supplier coordination.',
     inventory: 'Stockroom activity rises fastest before weekend closeouts, so FEFO rotation and shelf pulls need earlier cutoffs.',
     cashier: 'Checkout and returns patterns show near-expiry pharmacy items need careful receipt matching during shift operations.',
+  } satisfies Record<Exclude<UserRole, 'manager'>, string>;
+  const seasonalTrends: Record<UserRole, string> = {
+    ...seasonalTrendsByRole,
+    manager: seasonalTrendsByRole.inventory,
   };
 
-  const anomalyByRole: Record<UserRole, PredictiveAnalytics['anomalyDetection']> = {
+  const anomalyByRole = {
     owner: {
       detected: true,
       severity: 'high',
@@ -260,19 +278,23 @@ export function getPredictiveAnalytics(role: UserRole = 'owner'): PredictiveAnal
       severity: 'low',
       description: 'Refund corrections rose during the latest POS shift closeout.',
     },
+  } satisfies Record<Exclude<UserRole, 'manager'>, PredictiveAnalytics['anomalyDetection']>;
+  const anomalies: Record<UserRole, PredictiveAnalytics['anomalyDetection']> = {
+    ...anomalyByRole,
+    manager: anomalyByRole.inventory,
   };
 
   return {
     wasteVolumeForecast: roleForecast,
-    seasonalTrends: seasonalTrendsByRole[role],
-    anomalyDetection: anomalyByRole[role],
+    seasonalTrends: seasonalTrends[role],
+    anomalyDetection: anomalies[role],
   };
 }
 
 export function getPrescriptiveDecisions(role: UserRole = 'owner'): PrescriptiveDecision[] {
   console.log(`Running Prescriptive Decision Support Simulations for ${getRoleDisplayName(role)}...`);
 
-  const scenarios: Record<UserRole, PrescriptiveDecision[]> = {
+  const scenarios = {
     owner: [
       {
         scenario: 'Scenario A: Enforce branch-level FEFO compliance',
@@ -333,15 +355,15 @@ export function getPrescriptiveDecisions(role: UserRole = 'owner'): Prescriptive
         riskLevel: 'low',
       },
     ],
-  };
+  } satisfies Record<Exclude<UserRole, 'manager'>, PrescriptiveDecision[]>;
 
-  return scenarios[role];
+  return { ...scenarios, manager: scenarios.inventory }[role];
 }
 
 export function getProfitLeakage(role: UserRole = 'owner'): ProfitLeakage[] {
   console.log(`Detecting Profit Leakage for ${getRoleDisplayName(role)}...`);
 
-  const datasets: Record<UserRole, ProfitLeakage[]> = {
+  const datasets = {
     owner: [
       {
         category: 'Minimart Overstock',
@@ -408,9 +430,9 @@ export function getProfitLeakage(role: UserRole = 'owner'): ProfitLeakage[] {
         source: 'Non-cash confirmations need cashier verification before receipt release',
       },
     ],
-  };
+  } satisfies Record<Exclude<UserRole, 'manager'>, ProfitLeakage[]>;
 
-  return datasets[role];
+  return { ...datasets, manager: datasets.inventory }[role];
 }
 
 export function getBatchFEFOTracking(role: UserRole = 'owner'): BATCHTracking[] {
@@ -418,7 +440,7 @@ export function getBatchFEFOTracking(role: UserRole = 'owner'): BATCHTracking[] 
 
   const now = new Date();
 
-  const batchesByRole: Record<UserRole, BATCHTracking[]> = {
+  const batchesByRole = {
     owner: [
       {
         batchId: 'BATCH-001',
@@ -505,9 +527,9 @@ export function getBatchFEFOTracking(role: UserRole = 'owner'): BATCHTracking[] 
         daysToExpiry: 10,
       },
     ],
-  };
+  } satisfies Record<Exclude<UserRole, 'manager'>, BATCHTracking[]>;
 
-  return batchesByRole[role];
+  return { ...batchesByRole, manager: batchesByRole.inventory }[role];
 }
 
 export function getVendorReturns(role: UserRole = 'owner'): VendorReturn[] {
@@ -515,7 +537,7 @@ export function getVendorReturns(role: UserRole = 'owner'): VendorReturn[] {
 
   const now = new Date();
 
-  const vendorsByRole: Record<UserRole, VendorReturn[]> = {
+  const vendorsByRole = {
     owner: [
       {
         vendorId: 'VENDOR-A123',
@@ -594,15 +616,15 @@ export function getVendorReturns(role: UserRole = 'owner'): VendorReturn[] {
         status: 'pending',
       },
     ],
-  };
+  } satisfies Record<Exclude<UserRole, 'manager'>, VendorReturn[]>;
 
-  return vendorsByRole[role];
+  return { ...vendorsByRole, manager: vendorsByRole.inventory }[role];
 }
 
 export function getBehavioralLossIntelligence(role: UserRole = 'owner'): BehavioralInsight[] {
   console.log(`Analyzing Behavioral Loss Patterns for ${getRoleDisplayName(role)}...`);
 
-  const insightsByRole: Record<UserRole, BehavioralInsight[]> = {
+  const insightsByRole = {
     owner: [
       {
         patternId: 'PATTERN-001',
@@ -672,9 +694,9 @@ export function getBehavioralLossIntelligence(role: UserRole = 'owner'): Behavio
         recommendation: 'Confirm returned quantities against original sales items before restocking',
       },
     ],
-  };
+  } satisfies Record<Exclude<UserRole, 'manager'>, BehavioralInsight[]>;
 
-  return insightsByRole[role];
+  return { ...insightsByRole, manager: insightsByRole.inventory }[role];
 }
 
 export interface DashboardData {

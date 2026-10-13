@@ -15,27 +15,52 @@ export interface PaginatedResponse<T> {
 }
 
 // ─── Auth & Users ───────────────────────────────────────
+/** Account lifecycle states. Spelled once so `ApiUser`, `CreateUserPayload` and `UserStatusCounts` cannot drift apart. */
+export type UserAccountStatus = 'Active' | 'Inactive' | 'Quarantined' | 'Archived';
+
 export interface ApiUser {
   id: number;
   name: string;
+  first_name: string;
+  middle_name?: string;
+  surname: string;
+  contact_number?: string;
   username: string;
   email: string;
-  role: 'Admin' | 'Inventory' | 'Business Owner' | 'Owner' | 'Cashier' | 'Pharmacist';
-  status: 'Active' | 'Inactive' | 'Quarantined';
+  role: 'Owner' | 'Admin' | 'Inventory' | 'Cashier' | 'Pharmacist';
+  status: UserAccountStatus;
   created_at?: string;
   business_id?: number;
   branch_id?: number;
 }
 
 export interface CreateUserPayload {
-  Full_name: string;
+  first_name: string;
+  middle_name?: string;
+  surname: string;
+  contact_number?: string;
   username: string;
   password: string;
-  email?: string;
-  role: 'Admin' | 'Inventory' | 'Business Owner' | 'Owner' | 'Cashier' | 'Pharmacist';
-  status: 'Active' | 'Inactive' | 'Quarantined';
+  email: string;
+  role: 'Owner' | 'Admin' | 'Inventory' | 'Cashier' | 'Pharmacist';
+  status: UserAccountStatus;
   business_id?: number;
   branch_id?: number;
+}
+
+/**
+ * `GET /users/status-counts`.
+ *
+ * Shaped like the other response types in this file: `request()` resolves with the
+ * whole API envelope, so the payload sits under `data` — the same reason
+ * `PaginatedUsersResponse` has its own `data` and `meta` members.
+ */
+export interface UserStatusCounts {
+  data: {
+    by_status: Record<UserAccountStatus, number>;
+    total: number;
+    not_archived: number;
+  };
 }
 
 // ─── Categories ─────────────────────────────────────────
@@ -43,6 +68,7 @@ export interface ApiCategory {
   id: number;
   name: string;
   product_count: number;
+  status: 'Active' | 'Archived';
 }
 
 // ─── Suppliers ──────────────────────────────────────────
@@ -51,6 +77,7 @@ export interface ApiSupplier {
   name: string;
   contact_person: string | null;
   contact_number: string;
+  email: string | null;
   address: string | null;
   product_count: number;
   business_id?: number;
@@ -106,6 +133,7 @@ export interface CreateSupplierPayload {
   supplier_name: string;
   contact_person?: string;
   contact_number: string;
+  email?: string;
   address?: string;
   business_id?: number;
   fda_lto_number?: string;
@@ -216,13 +244,23 @@ export interface ApiStockMovement {
 }
 
 // ─── Wastage ────────────────────────────────────────────
+// Flag reasons a cashier can raise map 1:1 onto WastageType when the flag is
+// confirmed (the backend writes ucfirst(reason)).
+export type WastageType =
+  | 'Expired'
+  | 'Damaged'
+  | 'Spoiled'
+  | 'Lost'
+  | 'Recalled'
+  | 'Other';
+
 export interface ApiWastage {
   id: number;
   product_id: number;
   product_name: string;
   sku: string;
   recorded_by: string;
-  wastage_type: 'Expired' | 'Damaged' | 'Spoiled' | 'Lost';
+  wastage_type: WastageType;
   quantity: number;
   estimated_loss: number;
   date_recorded: string;
@@ -231,12 +269,63 @@ export interface ApiWastage {
   batch_id?: number | null;
 }
 
+export interface ApiWastageFlag {
+  id: number;
+  product_id: number;
+  product_name: string;
+  sku: string;
+  batch_id?: number | null;
+  batch_number?: string | null;
+  flagged_by: string;
+  quantity: number;
+  reason: 'expired' | 'damaged' | 'recalled' | 'spoiled' | 'other';
+  notes?: string | null;
+  status: 'pending' | 'confirmed' | 'rejected';
+  created_at: string;
+  reviewed_by?: string | null;
+  reviewed_at?: string | null;
+  rejection_reason?: string | null;
+  business_id?: number;
+  branch_id?: number;
+}
+
+// ─── Stock Counts ──────────────────────────────────────────
+export interface ApiStockCount {
+  id: number;
+  product_id: number;
+  product_name: string;
+  sku: string;
+  batch_id?: number | null;
+  batch_number?: string | null;
+  counted_by: string;
+  system_qty: number;
+  counted_qty: number;
+  variance: number;
+  notes?: string | null;
+  status: 'pending' | 'approved' | 'rejected';
+  created_at: string;
+  approved_by?: string | null;
+  approved_at?: string | null;
+  rejection_reason?: string | null;
+  business_id?: number;
+  branch_id?: number;
+}
+
+export interface CreateStockCountPayload {
+  business_id?: number;
+  branch_id?: number;
+  product_id: number;
+  batch_id?: number;
+  counted_qty: number;
+  notes?: string;
+}
+
 export interface CreateWastagePayload {
   business_id?: number;
   branch_id?: number;
   product_id: number;
   batch_id?: number;
-  wastage_type: 'Expired' | 'Damaged' | 'Spoiled' | 'Lost';
+  wastage_type: WastageType;
   quantity: number;
   estimated_loss: number;
   date_recorded: string;
@@ -360,14 +449,34 @@ export interface ApiReceiptResponse {
 }
 
 // ─── Returns ────────────────────────────────────────────
+/**
+ * `GET /returns` and `GET /returns/{id}`.
+ *
+ * Both actions share one payload built by `ReturnTransactionController`, so the two
+ * endpoints are described by a single type. The nullable members are genuinely nullable:
+ * `product_name` and `sku` come off `salesItem?->product?->...` and `approved_by` off
+ * `approver?->...`, any of which may be unlinked.
+ */
 export interface ApiReturn {
   id: number;
-  product_name: string;
+  product_name: string | null;
+  sku: string | null;
   returned_by: string;
   quantity_returned: number;
   reason: string | null;
+  return_reason_code: string | null;
   refund_amount: number;
   return_date: string;
+  approval_status: string;
+  approved_by: string | null;
+  approved_at: string | null;
+  is_within_7_days: boolean;
+  business_id: number;
+  branch_id: number | null;
+  /** Present only on `GET /returns/{id}`. */
+  evidence_notes?: string | null;
+  evidence_photos?: string[] | null;
+  rejection_reason?: string | null;
 }
 
 export interface CreateReturnPayload {
@@ -563,7 +672,6 @@ export interface ApiStockReceiving {
   business_id: number;
   branch_id: number;
   supplier_id: number;
-  supplier_name: string;
   received_by: number;
   verified_by: number | null;
   received_at: string;
@@ -575,9 +683,29 @@ export interface ApiStockReceiving {
   status: 'pending' | 'received' | 'verified' | 'rejected' | 'partial';
   created_at: string;
   updated_at: string;
-  supplier?: ApiSupplier;
+  /**
+   * `StockReceivingController::index` eager-loads the relation and returns it unrenamed,
+   * unlike `SupplierController::index`, which maps the column `supplier_name` to `name`.
+   * So this relation carries the raw column names and is deliberately *not* typed as
+   * `ApiSupplier`. There is also no flat `supplier_name` on `stock_receiving` -- the table
+   * has just `supplier_id` -- so this type used to describe a column that does not exist.
+   */
+  supplier?: { supplier_id: number; supplier_name: string } | null;
   receiver?: ApiUser;
   verifier?: ApiUser;
+  items?: ApiStockReceivingItem[];
+}
+
+export interface ApiStockReceivingItem {
+  receiving_item_id: number;
+  receiving_id: number;
+  product_id: number;
+  expected_quantity: number | null;
+  received_quantity: number | null;
+  rejected_quantity: number | null;
+  unit_cost: number | null;
+  status: string | null;
+  product?: ApiProduct;
 }
 
 export interface CreateStockReceivingPayload {
@@ -934,9 +1062,7 @@ export interface ApiRecall {
   recall_id: number;
   recall_number: string;
   product_id: number;
-  product_name?: string;
   batch_id?: number;
-  batch_number?: string;
   supplier_id?: number;
   reason: string;
   severity: ExpirySeverity;
@@ -950,6 +1076,15 @@ export interface ApiRecall {
   approved_by?: number;
   approved_at?: string;
   resolution_notes?: string;
+  /**
+   * `RecallController::index` eager-loads these relations, so each row carries them
+   * alongside its own columns. There is no `product_name` or `batch_number` column on the
+   * `recalls` table -- `product_id` and `batch_id` are plain foreign keys -- so those names
+   * come from the relations. This type previously listed them as flat optional columns,
+   * which do not exist on the wire.
+   */
+  product?: { product_name?: string | null } | null;
+  batch?: { batch_number?: string | null } | null;
 }
 
 export interface ApiRecallSummary {
@@ -1033,6 +1168,27 @@ export interface ApiReorderSummary {
   estimated_total_cost: number;
 }
 
+export interface ApiReorderMlInsights {
+  forecast_generated: number;
+  optimization_fitness: number | null;
+  optimization_generations: number | null;
+  optimization_confidence: number | null;
+}
+
+/**
+ * `GET /reorder/suggestions`.
+ *
+ * `ReorderService::generateSuggestions()` does not paginate -- it returns one entry per
+ * supplier, each holding that supplier's `items`, alongside aggregate counters. It is not
+ * a bare `ApiReorderSuggestion[]`, so `ReorderDashboard` reading `res.suggestions` and
+ * `res.summary` off the response was correct and the old declaration was not.
+ */
+export interface ApiReorderSuggestionsResponse {
+  suggestions: ApiReorderSuggestion[];
+  summary: ApiReorderSummary;
+  ml_insights: ApiReorderMlInsights;
+}
+
 // ─── Privacy ────────────────────────────────────────────
 export interface ApiDataSubjectRequest {
   id: number;
@@ -1097,9 +1253,86 @@ export interface ApiRetentionPolicy {
   records_purged: number;
 }
 
+/**
+ * `GET /privacy/retention-policies` returns the policy list and the aggregate summary in one
+ * payload, so callers get both without a second round trip.
+ */
+export interface RetentionPoliciesResponse {
+  data: ApiRetentionPolicy[];
+  summary: ApiRetentionSummary;
+}
+
+/**
+ * The privacy endpoints paginate by hand and nest the counters under `meta`:
+ *
+ *     { "data": [...], "meta": { "current_page", "per_page", "total", "last_page" } }
+ *
+ * `PaginatedResponse<T>` describes the flat shape Laravel's `paginate()` helper produces,
+ * with `current_page` and friends as siblings of `data`, so it does not apply here.
+ */
+export interface PaginatedResponseWithMeta<T> {
+  data: T[];
+  meta: {
+    current_page: number;
+    per_page: number;
+    total: number;
+    last_page: number;
+  };
+}
+
 export interface ApiRetentionSummary {
   total_policies: number;
   active_policies: number;
   total_records_purged: number;
   next_scheduled_purge: string | null;
+}
+
+// ─── Sales vs Wastage Dashboard ──────────────────────────────────
+export interface ApiSalesWastageOverview {
+  period: { from: string; to: string };
+  summary: {
+    units_sold: number;
+    units_wasted: number;
+    total_units: number;
+    wastage_rate_pct: number;
+    near_expiry_batches: number;
+  };
+  category_breakdown: ApiSalesWastageCategoryBreakdown[];
+  top_wasted_products: ApiTopWastedProduct[];
+  waste_by_reason: Record<string, number>;
+  slow_movers: ApiSlowMover[];
+}
+
+export interface ApiSalesWastageCategoryBreakdown {
+  category: string;
+  units_sold: number;
+  units_wasted: number;
+  wastage_rate: number;
+}
+
+export interface ApiTopWastedProduct {
+  product_id: number;
+  product_name: string;
+  sku: string;
+  units_wasted: number;
+  wastage_value: number;
+}
+
+export interface ApiSlowMover {
+  product_id: number;
+  product_name: string;
+  sku: string;
+  units_sold: number;
+  stock: number;
+}
+
+export interface ApiSalesWastageTimeSeries {
+  date: string;
+  units_sold: number;
+  units_wasted: number;
+}
+
+export interface ApiFlagsSummary {
+  pending_count: number;
+  by_reason: Record<string, number>;
 }

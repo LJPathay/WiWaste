@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 class StockReceiving extends Model
 {
     protected $table = 'Stock_Receiving';
+
     protected $primaryKey = 'receiving_id';
+
     public $timestamps = true;
 
     protected $fillable = [
@@ -32,6 +34,23 @@ class StockReceiving extends Model
         'condition_check_passed' => 'boolean',
         'sanitation_check_passed' => 'boolean',
     ];
+
+    /**
+     * The accessor below resolves on the model but is dropped from `toArray()` unless
+     * it is also listed here, so the JSON payload kept missing `id`.
+     */
+    protected $appends = ['id'];
+
+    /**
+     * The primary key is `receiving_id`, but every client reads `id` off the payload —
+     * the frontend's `ApiStockReceiving` declares `id`, and the row actions post to
+     * `/stock-receiving/{id}/…`. Without this alias the serialised record had no `id`
+     * at all, so every one of those URLs went out as `/stock-receiving//`.
+     */
+    public function getIdAttribute(): int
+    {
+        return (int) $this->receiving_id;
+    }
 
     public function business()
     {

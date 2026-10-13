@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState, useRef } from 'react';
 
 interface UseKeyboardNavigationOptions {
   onEscape?: () => void;
@@ -64,8 +64,7 @@ export function useKeyboardNavigation({
 export function useTableKeyboardNavigation({
   rowCount,
   onRowSelect,
-  onRowAction,
-  enabled = true,
+  enabled,
 }: {
   rowCount: number;
   onRowSelect?: (index: number) => void;

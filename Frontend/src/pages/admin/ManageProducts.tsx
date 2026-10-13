@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Search, Plus, Info, Loader2, Package, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useDeferredValue } from 'react';
+import { Search, Plus, Info, Loader2, Package, AlertCircle, Printer, Download } from 'lucide-react';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { Tutorial } from '../../components/ui/Tutorial';
-import { Modal, FormField, inputCls, useToast, Toast, ConfirmDialog } from '../../components/ui/Toast';
+import { Modal, FormField, useToast, Toast, ConfirmDialog } from '../../components/ui/Toast';
 import { useOptimisticList } from '../../hooks/useOptimisticList';
 import {
   products as productsApi,
@@ -23,6 +23,17 @@ const currencyFormatter = new Intl.NumberFormat('en-PH', {
 
 const ITEMS_PER_PAGE = 5;
 
+/**
+ * Barcode-label URLs interpolate `labelProduct.id` straight into the attribute.
+ * `id` is API data, so every segment goes through `encodeURIComponent` to keep
+ * it a single URL segment -- an id containing `/`, `?` or `#` would otherwise
+ * rewrite the path or the query string (CodeQL: DOM text reinterpreted as HTML).
+ */
+function productLabelUrl(id: ApiProduct['id'], format: string): string {
+  const base = import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api/v1';
+  return `${base}/products/${encodeURIComponent(String(id))}/label?format=${encodeURIComponent(format)}`;
+}
+
 export function ManageProducts() {
   const { toasts, dismiss, success, error: toastError } = useToast();
   const { data: productList, loading: pLoading, error: pError, addItem, updateItem, removeItem, refetch: refetchProducts } = useOptimisticList(productsApi.list);
@@ -30,12 +41,19 @@ export function ManageProducts() {
   const { data: supplierList } = useOptimisticList(suppliersApi.list);
 
   const [search, setSearch] = useState('');
+  // The catalogue is filtered in the browser, so every keystroke used to re-run the
+  // whole predicate and re-render the table. Deferring the value lets React drop the
+  // intermediate keystrokes and keep the input responsive.
+  const deferredSearch = useDeferredValue(search);
   const [currentPage, setCurrentPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<'all' | 'Active' | 'Discontinued'>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
   const [selectedProduct, setSelectedProduct] = useState<ApiProduct | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showLabelModal, setShowLabelModal] = useState(false);
+  const [labelProduct, setLabelProduct] = useState<ApiProduct | null>(null);
+  const [labelFormat, setLabelFormat] = useState<'png' | 'svg'>('png');
   const [showEmptyNotification, setShowEmptyNotification] = useState(false);
   const [notificationCountdown, setNotificationCountdown] = useState(20);
   const [showTutorial, setShowTutorial] = useState(false);
@@ -165,10 +183,11 @@ export function ManageProducts() {
     products.some(p => p.id !== selectedProduct.id && p.sku && p.sku.trim().toLowerCase() === editForm.barcode.trim().toLowerCase())
   );
 
-  const filteredProducts = products.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) ||
-                          (p.category?.toLowerCase() ?? '').includes(search.toLowerCase()) ||
-                          (p.sku?.toLowerCase() ?? '').includes(search.toLowerCase());
+  const filteredProducts = useMemo(() => products.filter(p => {
+    const q = deferredSearch.toLowerCase();
+    const matchesSearch = p.name.toLowerCase().includes(q) ||
+                          (p.category?.toLowerCase() ?? '').includes(q) ||
+                          (p.sku?.toLowerCase() ?? '').includes(q);
     const matchesCategory = categoryFilter === 'All' || String(p.category_id) === categoryFilter || p.category === categoryFilter;
     
     let matchesStatus = true;
@@ -179,19 +198,21 @@ export function ManageProducts() {
     }
 
     return matchesSearch && matchesCategory && matchesStatus;
-  });
+  }), [products, deferredSearch, categoryFilter, statusFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / ITEMS_PER_PAGE));
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, filteredProducts.length);
-  const paginatedProducts = filteredProducts.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+    const paginatedProducts = filteredProducts.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
   const toggleSelectAll = (keys: Set<string | number>) => {
     setSelectedIds(Array.from(keys) as number[]);
   };
 
-  const activeCount = products.filter(p => p.status !== 'Discontinued').length;
-  const discontinuedCount = products.filter(p => p.status === 'Discontinued').length;
+  // Three passes over the catalogue on every render — including each keystroke in
+  // the search box — so the numbers the tabs show are computed once per change of
+  // `products` instead.
+  const activeCount = useMemo(() => products.filter(p => p.status !== 'Discontinued').length, [products]);
+  const discontinuedCount = useMemo(() => products.filter(p => p.status === 'Discontinued').length, [products]);
   const allCount = products.length;
 
   const handleAddProduct = async (e: React.FormEvent) => {
@@ -386,7 +407,7 @@ export function ManageProducts() {
             return (
               <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
                 p.stock <= 0
-                  ? 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                  ? 'bg-slate-100 text-muted-fg dark:bg-slate-800 dark:text-muted-fg'
                   : p.stock <= p.reorder_level
                   ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
                   : 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200'
@@ -406,7 +427,7 @@ export function ManageProducts() {
             return (
               <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
                 p.status === 'Discontinued'
-                  ? 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-400'
+                  ? 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-muted-fg'
                   : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
               }`}>
                 {p.status ?? 'Active'}
@@ -421,15 +442,15 @@ export function ManageProducts() {
   if (pLoading) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3">
       <div className="relative w-12 h-12">
-        <div className="absolute inset-0 rounded-full border-3 border-slate-200 dark:border-slate-800"></div>
+        <div className="absolute inset-0 rounded-full border-3 border-border dark:border-slate-800"></div>
         <div className="absolute inset-0 rounded-full border-3 border-transparent border-t-[#006a61] border-r-[#006a61] animate-spin"></div>
         <div className="absolute inset-1.5 flex items-center justify-center">
           <Package className="h-6 w-6 text-[#006a61] dark:text-[#7ef0cf] animate-pulse" />
         </div>
       </div>
       <div className="text-center">
-        <p className="text-slate-600 dark:text-slate-400 font-semibold text-sm">Loading products...</p>
-        <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Fetching product catalogue</p>
+        <p className="text-muted-fg dark:text-muted-fg font-semibold text-sm">Loading products...</p>
+        <p className="text-xs text-muted-fg dark:text-muted-fg mt-0.5">Fetching product catalogue</p>
       </div>
     </div>
   );
@@ -465,7 +486,7 @@ export function ManageProducts() {
             <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Manage Products</h1>
             <UITooltip>
               <TooltipTrigger asChild>
-                <Info className="h-4 w-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
+                <Info className="h-4 w-4 text-muted-fg hover:text-muted-fg dark:hover:text-slate-300 cursor-help" />
               </TooltipTrigger>
               <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs text-xs">
                 Maintain product specifications, cost structures, and SKUs.
@@ -483,10 +504,10 @@ export function ManageProducts() {
       </div>
 
       <div className="space-y-2">
-        <div className="bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm p-3.5 space-y-3">
+        <div className="bg-white dark:bg-slate-950 rounded-xl border border-border dark:border-white/10 shadow-sm p-3.5 space-y-3">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-1">
-              <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 px-2 uppercase tracking-wider">Status:</span>
+              <span className="text-[9px] font-bold text-muted-fg dark:text-muted-fg px-2 uppercase tracking-wider">Status:</span>
               {[
                 { id: 'all', label: 'All Products', count: allCount },
                 { id: 'Active', label: 'Active', count: activeCount },
@@ -500,7 +521,7 @@ export function ManageProducts() {
                     className={`flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold rounded transition-all ${
                       isSelected
                         ? 'bg-white dark:bg-slate-950 text-[#006a61] dark:text-[#7ef0cf] shadow-sm'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                        : 'text-muted-fg dark:text-muted-fg hover:text-slate-900 dark:hover:text-slate-200'
                     }`}
                   >
                     <span>{tab.label}</span>
@@ -516,11 +537,11 @@ export function ManageProducts() {
 
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex items-center gap-1">
-                <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Category:</span>
+                <span className="text-[9px] font-bold text-muted-fg dark:text-muted-fg uppercase tracking-wider">Category:</span>
                 <select
                   value={categoryFilter}
                   onChange={e => setCategoryFilter(e.target.value)}
-                  className="h-8 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-xs font-medium rounded-lg px-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#006a61]"
+                  className="h-8 bg-bg dark:bg-slate-900 border border-border dark:border-white/10 text-xs font-medium rounded-lg px-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#006a61]"
                 >
                   <option value="All">All Categories</option>
                   {categories.map(c => (
@@ -530,20 +551,20 @@ export function ManageProducts() {
               </div>
 
               <div className="relative max-w-xs w-full sm:w-64">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-fg" />
                 <input
                   type="text"
                   placeholder="Search product name or SKU..."
                   value={search}
                   onChange={e => setSearch(e.target.value)}
-                  className="h-8 w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-white/10 pl-8 pr-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-700 dark:text-slate-200"
+                  className="h-8 w-full bg-bg dark:bg-slate-900/50 border border-border dark:border-white/10 pl-8 pr-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-700 dark:text-slate-200"
                 />
               </div>
 
               {(statusFilter !== 'all' || categoryFilter !== 'All' || search !== '') && (
                 <button
                   onClick={() => { setStatusFilter('all'); setCategoryFilter('All'); setSearch(''); }}
-                  className="text-[10px] text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 underline font-medium"
+                  className="text-[10px] text-muted-fg hover:text-slate-700 dark:hover:text-slate-300 underline font-medium"
                 >
                   Reset Filters
                 </button>
@@ -553,7 +574,7 @@ export function ManageProducts() {
         </div>
 
         {selectedIds.length > 0 && (
-          <div className="bg-[#006a61]/10 border-x border-slate-200 dark:border-white/10 px-4 py-2 flex items-center justify-between text-[10px] animate-fadeIn">
+          <div className="bg-[#006a61]/10 border-x border-border dark:border-white/10 px-4 py-2 flex items-center justify-between text-[10px] animate-fadeIn">
             <div className="flex items-center gap-1.5 text-[#006a61] dark:text-[#7ef0cf] font-semibold">
               <span className="px-1.5 py-0.5 rounded-full bg-[#006a61] text-white font-bold text-[9px]">
                 {selectedIds.length}
@@ -564,7 +585,7 @@ export function ManageProducts() {
               <button
                 type="button"
                 onClick={() => setSelectedIds([])}
-                className="px-2 py-1 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium hover:underline"
+                className="px-2 py-1 text-muted-fg dark:text-muted-fg hover:text-slate-900 dark:hover:text-slate-100 font-medium hover:underline"
               >
                 Deselect All
               </button>
@@ -581,8 +602,8 @@ export function ManageProducts() {
 
         <DataTable
           columns={columns}
-          data={paginatedProducts as Record<string, unknown>[]}
-          rowKey={(row) => row.id as number}
+          data={paginatedProducts}
+          rowKey={(row) => row.id}
           selectable
           selectedKeys={selectedKeys}
           onSelectionChange={toggleSelectAll}
@@ -599,6 +620,15 @@ export function ManageProducts() {
                   icon={<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>}
                   label="Edit"
                   onClick={() => openEdit(p)}
+                />
+                <ActionButton
+                  icon={<Printer className="h-3.5 w-3.5" />}
+                  label="Print Label"
+                  onClick={() => {
+                    setLabelProduct(p);
+                    setLabelFormat('png');
+                    setShowLabelModal(true);
+                  }}
                 />
                 <ActionButton
                   icon={<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>}
@@ -649,10 +679,23 @@ export function ManageProducts() {
                 onChange={e => setAddForm(f => ({ ...f, product_name: e.target.value }))} className="h-8 text-xs" />
               {isDuplicateAddName && <p className="text-red-500 text-[10px] mt-1">Product name already exists.</p>}
             </FormField>
-            <FormField label="SKU / Barcode (Leave blank for automatic SKU generation)">
-              <input type="text" placeholder="Auto-generated if empty" value={addForm.barcode}
-                onChange={e => setAddForm(f => ({ ...f, barcode: e.target.value }))} className="h-8 text-xs" />
+            <FormField label="SKU / Barcode (Scan or enter manually)">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Scan barcode — auto-generates SKU if empty"
+                  value={addForm.barcode}
+                  onChange={e => setAddForm(f => ({ ...f, barcode: e.target.value }))}
+                  onBlur={() => {
+                    // Debounced unique check could go here
+                  }}
+                  className="h-10 text-base font-mono bg-white dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-600 rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-transparent transition-all shadow-inner"
+                  inputMode="numeric"
+                  autoComplete="off"
+                />
+              </div>
               {isDuplicateAddBarcode && <p className="text-red-500 text-[10px] mt-1">SKU / Barcode already exists.</p>}
+              <p className="text-xs text-muted-fg dark:text-muted-fg mt-1">USB scanner acts as keyboard — just scan the product</p>
             </FormField>
             <div className="grid grid-cols-2 gap-2">
               <FormField label="Category">
@@ -714,9 +757,19 @@ export function ManageProducts() {
               {isDuplicateEditName && <p className="text-red-500 text-[10px] mt-1">Product name already exists.</p>}
             </FormField>
             <FormField label="SKU / Barcode">
-              <input type="text" placeholder="Barcode" value={editForm.barcode}
-                onChange={e => setEditForm(f => ({ ...f, barcode: e.target.value }))} className="h-8 text-xs" />
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Scan barcode"
+                  value={editForm.barcode}
+                  onChange={e => setEditForm(f => ({ ...f, barcode: e.target.value }))}
+                  className="h-10 text-base font-mono bg-white dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-600 rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-transparent transition-all shadow-inner"
+                  inputMode="numeric"
+                  autoComplete="off"
+                />
+              </div>
               {isDuplicateEditBarcode && <p className="text-red-500 text-[10px] mt-1">SKU / Barcode already exists.</p>}
+              <p className="text-xs text-muted-fg dark:text-muted-fg mt-1">USB scanner acts as keyboard — just scan the product</p>
             </FormField>
             <div className="grid grid-cols-2 gap-2">
               <FormField label="Category">
@@ -762,6 +815,98 @@ export function ManageProducts() {
               {processing ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Saving Changes…</> : 'Save Changes'}
             </button>
           </form>
+        </Modal>
+      )}
+
+      {/* Label Preview Modal */}
+      {showLabelModal && labelProduct && (
+        <Modal
+          title="Print Barcode Label"
+          onClose={() => { setShowLabelModal(false); setLabelProduct(null); }}
+          className="max-w-md"
+          contentClassName="p-4"
+          titleClassName="text-base"
+        >
+          <div className="space-y-4">
+            <div className="bg-white dark:bg-slate-800 rounded-lg border border-border dark:border-slate-700 p-6 text-center">
+              <div className="mb-4">
+                <p className="text-xs font-medium text-muted-fg dark:text-muted-fg uppercase tracking-wider">Product</p>
+                <p className="text-lg font-bold text-slate-900 dark:text-white truncate">{labelProduct.name}</p>
+                <p className="text-sm text-muted-fg dark:text-muted-fg mt-1">SKU: <span className="font-mono font-medium">{labelProduct.sku ?? labelProduct.id}</span></p>
+              </div>
+              <div className="relative inline-block bg-white p-4 rounded-lg border border-border dark:border-slate-700 dark:bg-slate-800">
+                <img
+                  src={productLabelUrl(labelProduct.id, labelFormat)}
+                  alt={`Barcode label for ${labelProduct.name}`}
+                  className="max-w-full h-auto"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = productLabelUrl(labelProduct.id, 'png');
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 p-3 bg-bg dark:bg-slate-800/50 rounded-lg">
+              <label htmlFor="label-format" className="text-xs font-medium text-slate-700 dark:text-slate-300">Format:</label>
+              <select
+                id="label-format"
+                value={labelFormat}
+                onChange={(e) => setLabelFormat(e.target.value as 'png' | 'svg')}
+                className="h-8 px-3 text-xs bg-white dark:bg-slate-700 border border-border dark:border-slate-600 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#006a61]"
+              >
+                <option value="png">PNG (Raster)</option>
+                <option value="svg">SVG (Vector)</option>
+              </select>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  const printWindow = window.open('', '_blank');
+                  if (printWindow) {
+                    // Built with DOM APIs rather than `document.write`, which is
+                    // deprecated and blocked in some browsers.
+                    const doc = printWindow.document;
+                    doc.title = `Print Label - ${labelProduct.name}`;
+
+                    const style = doc.createElement('style');
+                    style.textContent =
+                      '@media print { @page { margin: 0; size: auto; } body { margin: 0; padding: 20px; } img { max-width: 100%; height: auto; } }';
+                    doc.head.appendChild(style);
+
+                    const img = doc.createElement('img');
+                    img.src = productLabelUrl(labelProduct.id, 'png');
+                    // Print once the image is laid out, otherwise most browsers emit
+                    // a blank page.
+                    img.addEventListener('load', () => {
+                      printWindow.print();
+                      printWindow.close();
+                    });
+                    doc.body.appendChild(img);
+                  }
+                }}
+                className="flex-1 h-9 bg-[#006a61] hover:bg-[#00574f] text-white rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5"
+              >
+                <Printer className="h-3.5 w-3.5" />
+                Print
+              </button>
+              <button
+                onClick={() => {
+                  const link = document.createElement('a');
+                  link.href = productLabelUrl(labelProduct.id, labelFormat);
+                  link.download = `label-${labelProduct.sku ?? labelProduct.id}.${labelFormat}`;
+                  document.body.appendChild(link);
+                  link.click();
+                  link.remove();
+                }}
+                className="flex-1 h-9 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-900 dark:text-slate-100 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 border border-border dark:border-slate-600"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Download
+              </button>
+            </div>
+          </div>
         </Modal>
       )}
 

@@ -2,6 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Enums\Role;
+use App\Models\Business;
 use App\Models\User;
 use App\Services\ReorderService;
 use Illuminate\Console\Command;
@@ -19,12 +21,9 @@ class GenerateReorderSuggestions extends Command
 
     protected $description = 'Generate reorder suggestions and optionally create draft POs';
 
-    protected ReorderService $reorderService;
-
-    public function __construct(ReorderService $reorderService)
+    public function __construct(private readonly ReorderService $reorderService)
     {
         parent::__construct();
-        $this->reorderService = $reorderService;
     }
 
     public function handle(): int
@@ -50,38 +49,40 @@ class GenerateReorderSuggestions extends Command
         }
 
         $this->info('Reorder suggestion generation completed.');
-        
+
         return Command::SUCCESS;
     }
 
     protected function generateForBusiness(int $businessId, ?int $branchId, float $safetyMultiplier, bool $autoApprove, ?float $maxCost): void
     {
         $this->info("Generating suggestions for business #{$businessId}...");
-        
+
         // Get a system user for the command
-        $systemUser = User::where('role', 'Owner')->first();
-        if (!$systemUser) {
+        $systemUser = User::whereIn('role', Role::ownerTier())->first();
+        if (! $systemUser) {
             $this->error('No system user found to generate suggestions.');
+
             return;
         }
 
-        // We need to create a mock request or use the service directly
-        // For simplicity, we'll use the service directly
+        // This is a batch job, not a web request, so it can afford the full ML pass.
         $suggestions = $this->reorderService->generateSuggestions($businessId, null, [
             'safety_stock_multiplier' => $safetyMultiplier,
+            'refresh_forecasts' => true,
+            'run_optimization' => true,
         ]);
 
         $this->displayResults($suggestions);
 
-        if ($autoApprove && !empty($suggestions['suggestions'])) {
+        if ($autoApprove && ! empty($suggestions['suggestions'])) {
             $this->autoApproveSuggestions($suggestions, $maxCost);
         }
     }
 
     protected function generateForAllBusinesses(float $safetyMultiplier, bool $autoApprove, ?float $maxCost): void
     {
-        $businesses = \App\Models\Business::all();
-        
+        $businesses = Business::all();
+
         foreach ($businesses as $business) {
             $this->generateForBusiness($business->id, null, $safetyMultiplier, $autoApprove, $maxCost);
         }
@@ -90,28 +91,28 @@ class GenerateReorderSuggestions extends Command
     protected function displayResults(array $suggestions): void
     {
         $summary = $suggestions['summary'] ?? [];
-        
+
         $this->table(
             ['Metric', 'Value'],
             [
                 ['Total Products Analyzed', $summary['total_products_analyzed'] ?? 0],
                 ['Products Needing Reorder', $summary['products_needing_reorder'] ?? 0],
                 ['Suppliers Involved', $summary['suppliers_involved'] ?? 0],
-                ['Estimated Total Cost', '₱' . number_format($summary['estimated_total_cost'] ?? 0, 2)],
+                ['Estimated Total Cost', '₱'.number_format($summary['estimated_total_cost'] ?? 0, 2)],
             ]
         );
 
-        if (!empty($suggestions['suggestions'])) {
+        if (! empty($suggestions['suggestions'])) {
             $rows = [];
             foreach ($suggestions['suggestions'] as $supplier) {
                 $rows[] = [
                     $supplier['supplier_name'],
                     $supplier['total_items'],
-                    '₱' . number_format($supplier['estimated_total_cost'], 2),
-                    $supplier['lead_time_days'] . ' days',
+                    '₱'.number_format($supplier['estimated_total_cost'], 2),
+                    $supplier['lead_time_days'].' days',
                 ];
             }
-            
+
             $this->table(
                 ['Supplier', 'Items', 'Est. Cost', 'Lead Time'],
                 $rows
@@ -122,12 +123,13 @@ class GenerateReorderSuggestions extends Command
     protected function autoApproveSuggestions(array $suggestions, ?float $maxCost): void
     {
         $this->info('Auto-approving suggestions...');
-        
+
         // Filter suggestions by max cost if specified
         $approved = [];
         foreach ($suggestions['suggestions'] as $supplier) {
             if ($maxCost && $supplier['estimated_total_cost'] > $maxCost) {
                 $this->line("Skipping {$supplier['supplier_name']}: Cost ₱{$supplier['estimated_total_cost']} exceeds max ₱{$maxCost}");
+
                 continue;
             }
             $approved[] = $supplier;
@@ -135,15 +137,16 @@ class GenerateReorderSuggestions extends Command
 
         if (empty($approved)) {
             $this->warn('No suggestions meet the auto-approve criteria.');
+
             return;
         }
 
         // Note: In a real implementation, we'd need a user context
         // For now, we'll just log what would be created
-        $this->info(count($approved) . ' purchase orders would be created.');
-        
+        $this->info(count($approved).' purchase orders would be created.');
+
         foreach ($approved as $supplier) {
-            $this->line("  - {$supplier['supplier_name']}: {$supplier['total_items']} items, ₱" . number_format($supplier['estimated_total_cost'], 2));
+            $this->line("  - {$supplier['supplier_name']}: {$supplier['total_items']} items, ₱".number_format($supplier['estimated_total_cost'], 2));
         }
     }
 

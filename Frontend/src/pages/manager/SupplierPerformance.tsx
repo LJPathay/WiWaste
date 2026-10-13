@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Info } from 'lucide-react';
 import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, LineChart, Line, LabelList } from 'recharts';
 import { Toast, useToast, ConfirmDialog } from '../../components/ui/Toast';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
+import { ChartGradients, ChartTooltipStyle } from '../../components/charts/ChartGradients';
+import { CHART_DEFAULTS, CHART_COLORS, useChartAnimation } from '../../components/charts/ChartConfig';
 
 interface PerformanceMock {
   id: string;
@@ -54,6 +56,7 @@ export function SupplierPerformance() {
   const [suppliers, setSuppliers] = useState<PerformanceMock[]>(SUPPLIERS);
   const [confirm, setConfirm] = useState<{ open: boolean; supplierId: string; name: string } | null>(null);
 
+  const { isAnimationActive, animationDuration, animationEasing } = useChartAnimation();
   const chartData = suppliers.map((s) => ({
     name: s.name.split(' ')[0],
     'On-Time %': s.delivery,
@@ -73,7 +76,7 @@ export function SupplierPerformance() {
         <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Supplier Performance Audit</h1>
         <UITooltip>
           <TooltipTrigger asChild>
-            <Info className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
+            <Info className="h-3.5 w-3.5 text-muted-fg hover:text-muted-fg dark:hover:text-slate-300 cursor-help" />
           </TooltipTrigger>
           <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs text-xs">
             Delivery fulfillment rates, return statistics, and pending credits by distributor to evaluate supplier reliability.
@@ -98,8 +101,8 @@ export function SupplierPerformance() {
           { label: 'Avg Lead Time', value: `${(suppliers.reduce((s, x) => s + x.leadTime, 0) / suppliers.length).toFixed(1)} days` },
           { label: 'Active Suppliers', value: `${suppliers.length}` },
         ].map(card => (
-          <div key={card.label} className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 p-3 shadow-sm">
-            <div className="text-[9px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{card.label}</div>
+          <div key={card.label} className="bg-bg-elevated rounded-xl border border-border dark:border-white/10 p-3 shadow-sm">
+            <div className="text-[9px] font-semibold text-muted-fg dark:text-muted-fg uppercase tracking-wider">{card.label}</div>
             <div className="mt-1 text-sm font-black text-slate-900 dark:text-slate-100">{card.value}</div>
           </div>
         ))}
@@ -108,21 +111,38 @@ export function SupplierPerformance() {
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Bar chart */}
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 p-3.5 shadow-sm">
+        <div className="bg-bg-elevated rounded-xl border border-border dark:border-white/10 p-3.5 shadow-sm">
           <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-3">Delivery Rate vs Return Exposure</h3>
           <div className="h-56 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} layout="vertical" margin={{ left: 16, right: 40, top: 8, bottom: 8 }}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e8edf5" />
-                <XAxis type="number" tick={{ fontSize: 11 }} stroke="#94a3b8" />
-                <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 11 }} stroke="#94a3b8" />
-                <Tooltip />
+                <ChartGradients />
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={CHART_COLORS.grid} />
+                <XAxis type="number" tick={{ fontSize: 11, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} />
+                <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 11, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} />
+                <Tooltip contentStyle={ChartTooltipStyle()} />
                 <Legend />
-                <Bar dataKey="On-Time %" radius={[0, 4, 4, 0]} fill="#006a61">
-                  <LabelList dataKey="On-Time %" position="right" style={{ fill: '#64748b', fontSize: 10, fontWeight: 600 }} />
+                <Bar
+                  dataKey="On-Time %"
+                  radius={[0, 4, 4, 0]}
+                  fill={CHART_COLORS.primary}
+                  isAnimationActive={isAnimationActive}
+                  animationDuration={animationDuration}
+                  animationEasing={animationEasing}
+                  animationBegin={CHART_DEFAULTS.animationBegin}
+                >
+                  <LabelList dataKey="On-Time %" position="right" style={{ fill: CHART_COLORS.text, fontSize: 10, fontWeight: 600 }} />
                 </Bar>
-                <Bar dataKey="Return Rate" radius={[0, 4, 4, 0]} fill="#f87171">
-                  <LabelList dataKey="Return Rate" position="right" style={{ fill: '#64748b', fontSize: 10, fontWeight: 600 }} />
+                <Bar
+                  dataKey="Return Rate"
+                  radius={[0, 4, 4, 0]}
+                  fill={CHART_COLORS.danger}
+                  isAnimationActive={isAnimationActive}
+                  animationDuration={animationDuration}
+                  animationEasing={animationEasing}
+                  animationBegin={CHART_DEFAULTS.animationBegin}
+                >
+                  <LabelList dataKey="Return Rate" position="right" style={{ fill: CHART_COLORS.text, fontSize: 10, fontWeight: 600 }} />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -130,19 +150,53 @@ export function SupplierPerformance() {
         </div>
 
         {/* Line trend */}
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 p-3.5 shadow-sm">
+        <div className="bg-bg-elevated rounded-xl border border-border dark:border-white/10 p-3.5 shadow-sm">
           <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-3">Top 3 Supplier Delivery Trend (Full Year)</h3>
           <div className="h-56 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={TREND_DATA}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e8edf5" />
-                <XAxis dataKey="month" tick={{ fontSize: 11 }} stroke="#94a3b8" />
-                <YAxis domain={[85, 100]} tick={{ fontSize: 11 }} stroke="#94a3b8" />
-                <Tooltip />
+                <ChartGradients />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_COLORS.grid} />
+                <XAxis dataKey="month" tick={{ fontSize: 11, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} />
+                <YAxis domain={[85, 100]} tick={{ fontSize: 11, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} />
+                <Tooltip contentStyle={ChartTooltipStyle()} />
                 <Legend />
-                <Line type="linear" dataKey="unilab" name="Unilab" stroke="#006a61" strokeWidth={2} dot={false} />
-                <Line type="linear" dataKey="purefoods" name="Purefoods" stroke="#f59e0b" strokeWidth={2} dot={false} />
-                <Line type="linear" dataKey="urc" name="URC" stroke="#6366f1" strokeWidth={2} dot={false} />
+                <Line
+                  type="linear"
+                  dataKey="unilab"
+                  name="Unilab"
+                  stroke={CHART_COLORS.primary}
+                  strokeWidth={2}
+                  dot={false}
+                  isAnimationActive={isAnimationActive}
+                  animationDuration={animationDuration}
+                  animationEasing={animationEasing}
+                  animationBegin={CHART_DEFAULTS.animationBegin}
+                />
+                <Line
+                  type="linear"
+                  dataKey="purefoods"
+                  name="Purefoods"
+                  stroke={CHART_COLORS.warning}
+                  strokeWidth={2}
+                  dot={false}
+                  isAnimationActive={isAnimationActive}
+                  animationDuration={animationDuration}
+                  animationEasing={animationEasing}
+                  animationBegin={CHART_DEFAULTS.animationBegin}
+                />
+                <Line
+                  type="linear"
+                  dataKey="urc"
+                  name="URC"
+                  stroke={CHART_COLORS.secondary}
+                  strokeWidth={2}
+                  dot={false}
+                  isAnimationActive={isAnimationActive}
+                  animationDuration={animationDuration}
+                  animationEasing={animationEasing}
+                  animationBegin={CHART_DEFAULTS.animationBegin}
+                />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -165,14 +219,14 @@ export function SupplierPerformance() {
                 disabled={row.creditPending}
                 className={`h-8 text-xs font-semibold px-3 rounded-lg transition-colors ${
                   row.creditPending
-                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-400'
+                    ? 'bg-slate-100 dark:bg-slate-800 text-muted-fg'
                     : 'bg-[#006a61] hover:bg-[#00574f] text-white'
                 }`}
               >
                 {row.creditPending ? 'Requested' : 'Request Credits'}
               </button>
             ) : (
-              <span className="text-slate-300 dark:text-slate-600 text-xs">No credits</span>
+              <span className="text-slate-300 dark:text-muted-fg text-xs">No credits</span>
             )}
           </>
         )}

@@ -2,13 +2,18 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Cache;
 
 class Product extends Model
 {
+    use HasFactory;
+
     protected $table = 'Product';
+
     protected $primaryKey = 'product_id';
+
     public $timestamps = false;
 
     protected $fillable = [
@@ -52,6 +57,12 @@ class Product extends Model
                 $product->barcode = static::generateUniqueSku($product->category_id);
             }
         });
+
+        // The cached category list (Phase 19) carries `products_count`, so a product
+        // coming or going has to drop it — otherwise a category picker would keep
+        // showing the count it had the first time it was read.
+        static::saved(fn () => Cache::forget(Category::CACHE_KEY));
+        static::deleted(fn () => Cache::forget(Category::CACHE_KEY));
     }
 
     /**
@@ -59,10 +70,10 @@ class Product extends Model
      */
     private static function generateUniqueSku(?int $categoryId): string
     {
-        $prefix = 'SKU-' . str_pad($categoryId ?? 0, 2, '0', STR_PAD_LEFT);
+        $prefix = 'SKU-'.str_pad($categoryId ?? 0, 2, '0', STR_PAD_LEFT);
 
         do {
-            $sku = $prefix . '-' . str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+            $sku = $prefix.'-'.str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
         } while (static::where('barcode', $sku)->exists());
 
         return $sku;

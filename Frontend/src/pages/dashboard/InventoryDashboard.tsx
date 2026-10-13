@@ -1,8 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  AreaChart,
-  Area,
   CartesianGrid,
   LineChart,
   Line,
@@ -18,35 +16,16 @@ import {
   Clock,
   Info,
   Package,
-  TrendingDown,
-  TrendingUp,
 } from 'lucide-react';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { inventoryAnalytics, type ApiDashboardSummary } from '../../services/api';
+import { ChartGradients, ChartTooltipStyle } from '../../components/charts/ChartGradients';
+import { CHART_DEFAULTS, CHART_COLORS, useChartAnimation } from '../../components/charts/ChartConfig';
+import { StockMovementChart, StockMovementLegend } from '../../components/charts/StockMovementChart';
 
 const TODAY = new Date();
 
-function formatDate(d: string) {
-  return new Date(d).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
-}
 
-const movementTypeBadgeMap: Record<string, string> = {
-  'Stock In':   'bg-green-50 text-green-700 border border-green-100 dark:bg-green-950/30 dark:text-green-400',
-  'Stock Out':  'bg-red-50 text-red-700 border border-red-100 dark:bg-red-950/30 dark:text-red-400',
-  'Sale':       'bg-blue-50 text-blue-700 border border-blue-100 dark:bg-blue-950/30 dark:text-blue-400',
-  'Wastage':    'bg-orange-50 text-orange-700 border border-orange-100 dark:bg-orange-950/30 dark:text-orange-400',
-  'Return':     'bg-purple-50 text-purple-700 border border-purple-100 dark:bg-purple-950/30 dark:text-purple-400',
-  'Adjustment': 'bg-gray-50 text-gray-700 border border-gray-100 dark:bg-gray-950/30 dark:text-gray-400',
-  'Damaged':    'bg-red-50 text-red-700 border border-red-100 dark:bg-red-950/30 dark:text-red-400',
-  'Expired':    'bg-slate-50 text-slate-700 border border-slate-100 dark:bg-slate-950/30 dark:text-slate-400',
-};
-
-const chartTooltipStyle = {
-  borderRadius: '10px',
-  border: '1px solid #E5E7EB',
-  boxShadow: '0 4px 16px rgba(0,0,0,0.07)',
-  fontSize: '12px',
-};
 
 // Mock chart data — replace with real API when backend provides stock_movement_chart
 const mockMovementChart = [
@@ -72,13 +51,6 @@ const mockTopWasted = [
   { product_name: 'Yogurt Drink', total_loss: 950, quantity: 19 },
 ];
 
-const mockRecentMovements = [
-  { movement_id: 1, product_name: 'Paracetamol', type: 'Stock In', quantity: 50, recorded_by: 'Admin', date: '2026-09-10' },
-  { movement_id: 2, product_name: 'Fresh Milk', type: 'Sale', quantity: -3, recorded_by: 'Cashier', date: '2026-09-10' },
-  { movement_id: 3, product_name: 'Bread Loaf', type: 'Wastage', quantity: -2, recorded_by: 'Staff', date: '2026-09-10' },
-  { movement_id: 4, product_name: 'Ibuprofen', type: 'Stock Out', quantity: -10, recorded_by: 'Admin', date: '2026-09-09' },
-  { movement_id: 5, product_name: 'Yogurt Drink', type: 'Return', quantity: 1, recorded_by: 'Cashier', date: '2026-09-09' },
-];
 
 export function InventoryDashboard() {
   const [stats, setStats] = useState<ApiDashboardSummary | null>(null);
@@ -87,6 +59,7 @@ export function InventoryDashboard() {
   const [wastagePeriod, setWastagePeriod] = useState('30');
   const [wastageView, setWastageView] = useState<'value' | 'quantity'>('value');
 
+  const { isAnimationActive, animationDuration, animationEasing } = useChartAnimation();
   useEffect(() => {
     let cancelled = false;
     inventoryAnalytics.dashboardSummary()
@@ -184,14 +157,14 @@ export function InventoryDashboard() {
           </h1>
           <UITooltip>
             <TooltipTrigger asChild>
-              <Info className="h-4 w-4 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 cursor-help shrink-0" />
+              <Info className="h-4 w-4 text-muted-fg dark:text-muted-fg hover:text-muted-fg dark:hover:text-slate-300 cursor-help shrink-0" />
             </TooltipTrigger>
             <TooltipContent className="bg-slate-900 text-white max-w-xs">
               Real-time inventory overview for operational staff
             </TooltipContent>
           </UITooltip>
         </div>
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs font-medium text-[#64748B] dark:text-slate-400 shadow-sm">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated px-3 py-1.5 text-xs font-medium text-[#64748B] dark:text-muted-fg shadow-sm">
           <span className="h-1.5 w-1.5 rounded-full bg-[#0F766E]" />
           {todayLabel}
         </span>
@@ -204,7 +177,7 @@ export function InventoryDashboard() {
           return (
             <div
               key={card.label}
-              className="group relative flex flex-col justify-between rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 p-3.5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md hover:border-[#0F766E]"
+              className="group relative flex flex-col justify-between rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated p-3.5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md hover:border-[#0F766E]"
             >
               <div className="flex items-start justify-between gap-2">
                 <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${card.iconBg}`}>
@@ -222,7 +195,7 @@ export function InventoryDashboard() {
                   {card.value}
                 </div>
                 <div className="mt-0.5 text-xs font-semibold text-[#0F172A] dark:text-slate-100">{card.label}</div>
-                <div className="mt-0.5 text-[10px] text-[#64748B] dark:text-slate-400">{card.description}</div>
+                <div className="mt-0.5 text-[10px] text-[#64748B] dark:text-muted-fg">{card.description}</div>
               </div>
               <div className="mt-2 flex justify-end">
                 <Link
@@ -242,7 +215,7 @@ export function InventoryDashboard() {
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
 
         {/* Stock Movement Chart */}
-        <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 p-4 shadow-sm xl:col-span-2">
+        <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated p-4 shadow-sm xl:col-span-2">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-xs font-bold text-[#0F172A] dark:text-slate-100">
               Stock Movement
@@ -257,51 +230,14 @@ export function InventoryDashboard() {
               <option value="90">Last 3 months</option>
             </select>
           </div>
-          <div className="mb-2 flex items-center gap-3 text-[10px] text-[#64748B] dark:text-slate-400">
-            <span className="flex items-center gap-1">
-              <span className="inline-block h-2 w-2 rounded-sm bg-[#0F766E]" />
-              Stock In
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="inline-block h-2 w-2 rounded-sm bg-[#3B82F6]" />
-              Stock Out
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="inline-block h-2 w-2 rounded-sm bg-[#EF4444]" />
-              Wastage
-            </span>
-          </div>
+          <StockMovementLegend />
           <div className="h-52">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={mockMovementChart}>
-                <defs>
-                  <linearGradient id="stockInGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#0F766E" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#0F766E" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="stockOutGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="wastageGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#EF4444" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#EF4444" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
-                <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#94a3b8' }} stroke="#E5E7EB" />
-                <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} stroke="#E5E7EB" />
-                <Tooltip contentStyle={chartTooltipStyle} />
-                <Area type="monotone" dataKey="stock_in" name="Stock In" stroke="#0F766E" fill="url(#stockInGrad)" strokeWidth={2} />
-                <Area type="monotone" dataKey="stock_out" name="Stock Out" stroke="#3B82F6" fill="url(#stockOutGrad)" strokeWidth={2} />
-                <Area type="monotone" dataKey="wastage" name="Wastage" stroke="#EF4444" fill="url(#wastageGrad)" strokeWidth={2} />
-              </AreaChart>
-            </ResponsiveContainer>
+            <StockMovementChart data={mockMovementChart} />
           </div>
         </div>
 
         {/* Expiration Risk */}
-        <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 p-4 shadow-sm">
+        <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated p-4 shadow-sm">
           <h2 className="mb-3 text-xs font-bold text-[#0F172A] dark:text-slate-100">Expiration Risk</h2>
           <div className="space-y-1.5">
             {[
@@ -325,20 +261,20 @@ export function InventoryDashboard() {
           </div>
 
           <div className="mt-3 pt-3 border-t border-[#E5E7EB] dark:border-white/10">
-            <h3 className="text-[10px] font-bold text-[#64748B] dark:text-slate-400 uppercase tracking-wider mb-2">
+            <h3 className="text-[10px] font-bold text-[#64748B] dark:text-muted-fg uppercase tracking-wider mb-2">
               Today's Activity
             </h3>
             <div className="space-y-1.5 text-[11px]">
               <div className="flex justify-between">
-                <span className="text-[#64748B] dark:text-slate-400">Sales</span>
+                <span className="text-[#64748B] dark:text-muted-fg">Sales</span>
                 <span className="font-bold text-[#0F172A] dark:text-slate-100">{stats?.today_sales_count ?? 0}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#64748B] dark:text-slate-400">Wastage</span>
+                <span className="text-[#64748B] dark:text-muted-fg">Wastage</span>
                 <span className="font-bold text-[#0F172A] dark:text-slate-100">{stats?.today_wastage_count ?? 0}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#64748B] dark:text-slate-400">Returns</span>
+                <span className="text-[#64748B] dark:text-muted-fg">Returns</span>
                 <span className="font-bold text-[#0F172A] dark:text-slate-100">{stats?.today_returns_count ?? 0}</span>
               </div>
             </div>
@@ -350,7 +286,7 @@ export function InventoryDashboard() {
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
 
         {/* Wastage Trend */}
-        <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 p-4 shadow-sm">
+        <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated p-4 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-xs font-bold text-[#0F172A] dark:text-slate-100">Wastage Trend</h2>
             <select
@@ -366,18 +302,30 @@ export function InventoryDashboard() {
           <div className="h-40">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={mockWastageTrend}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
-                <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} stroke="#E5E7EB" />
-                <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} stroke="#E5E7EB" />
-                <Tooltip contentStyle={chartTooltipStyle} />
-                <Line type="monotone" dataKey="value" name="Wastage" stroke="#EF4444" strokeWidth={2} dot={false} />
+                <ChartGradients />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_COLORS.grid} />
+                <XAxis dataKey="date" tick={{ fontSize: 10, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} />
+                <YAxis tick={{ fontSize: 10, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} />
+                <Tooltip contentStyle={ChartTooltipStyle()} />
+                <Line
+                  type="monotone"
+                  dataKey="value"
+                  name="Wastage"
+                  stroke={CHART_COLORS.danger}
+                  strokeWidth={2}
+                  dot={false}
+                  isAnimationActive={isAnimationActive}
+                  animationDuration={animationDuration}
+                  animationEasing={animationEasing}
+                  animationBegin={CHART_DEFAULTS.animationBegin}
+                />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Top Wasted Products */}
-        <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 p-4 shadow-sm">
+        <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated p-4 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-xs font-bold text-[#0F172A] dark:text-slate-100">Top Wasted Products</h2>
             <div className="flex gap-0.5">
@@ -386,7 +334,7 @@ export function InventoryDashboard() {
                 className={`px-1.5 py-0.5 text-[9px] font-semibold rounded ${
                   wastageView === 'value'
                     ? 'bg-[#0F766E] text-white'
-                    : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+                    : 'bg-slate-100 text-muted-fg dark:bg-slate-800 dark:text-muted-fg'
                 }`}
               >
                 Value
@@ -396,7 +344,7 @@ export function InventoryDashboard() {
                 className={`px-2 py-1 text-[10px] font-semibold rounded ${
                   wastageView === 'quantity'
                     ? 'bg-[#0F766E] text-white'
-                    : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+                    : 'bg-slate-100 text-muted-fg dark:bg-slate-800 dark:text-muted-fg'
                 }`}
               >
                 Quantity
@@ -435,30 +383,30 @@ export function InventoryDashboard() {
 
       {/* ── Section 5: Low Stock Alerts ── */}
       {(stats?.low_stock_items?.length ?? 0) > 0 && (
-        <section className="rounded-2xl border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 p-6 shadow-sm">
+        <section className="rounded-2xl border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated p-6 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-base font-bold text-[#0F172A] dark:text-slate-100">Low Stock / Reorder Alerts</h2>
-            <span className="text-xs text-[#64748B] dark:text-slate-400">{stats?.low_stock_items?.length} products</span>
+            <span className="text-xs text-[#64748B] dark:text-muted-fg">{stats?.low_stock_items?.length} products</span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
                 <tr className="bg-[#F8FAFC] dark:bg-slate-800 border-b border-[#E5E7EB] dark:border-white/10">
-                  <th className="px-4 py-2.5 text-left font-semibold text-[10px] uppercase tracking-wider text-[#64748B] dark:text-slate-400">Product</th>
-                  <th className="px-4 py-2.5 text-left font-semibold text-[10px] uppercase tracking-wider text-[#64748B] dark:text-slate-400">Category</th>
-                  <th className="px-4 py-2.5 text-left font-semibold text-[10px] uppercase tracking-wider text-[#64748B] dark:text-slate-400">Current</th>
-                  <th className="px-4 py-2.5 text-left font-semibold text-[10px] uppercase tracking-wider text-[#64748B] dark:text-slate-400">Reorder</th>
-                  <th className="px-4 py-2.5 text-left font-semibold text-[10px] uppercase tracking-wider text-[#64748B] dark:text-slate-400">Status</th>
-                  <th className="px-4 py-2.5 text-right font-semibold text-[10px] uppercase tracking-wider text-[#64748B] dark:text-slate-400">Actions</th>
+                  <th className="px-4 py-2.5 text-left font-semibold text-[10px] uppercase tracking-wider text-[#64748B] dark:text-muted-fg">Product</th>
+                  <th className="px-4 py-2.5 text-left font-semibold text-[10px] uppercase tracking-wider text-[#64748B] dark:text-muted-fg">Category</th>
+                  <th className="px-4 py-2.5 text-left font-semibold text-[10px] uppercase tracking-wider text-[#64748B] dark:text-muted-fg">Current</th>
+                  <th className="px-4 py-2.5 text-left font-semibold text-[10px] uppercase tracking-wider text-[#64748B] dark:text-muted-fg">Reorder</th>
+                  <th className="px-4 py-2.5 text-left font-semibold text-[10px] uppercase tracking-wider text-[#64748B] dark:text-muted-fg">Status</th>
+                  <th className="px-4 py-2.5 text-right font-semibold text-[10px] uppercase tracking-wider text-[#64748B] dark:text-muted-fg">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#F1F5F9] dark:divide-white/5">
                 {stats?.low_stock_items?.map((product) => (
                   <tr key={product.product_id} className="hover:bg-[#F8FAFC] dark:hover:bg-slate-800/50">
                     <td className="px-4 py-3 font-semibold text-[#0F172A] dark:text-slate-100">{product.product_name}</td>
-                    <td className="px-4 py-3 text-[#64748B] dark:text-slate-400">{product.category}</td>
+                    <td className="px-4 py-3 text-[#64748B] dark:text-muted-fg">{product.category}</td>
                     <td className="px-4 py-3 font-bold text-red-600 dark:text-red-400">{product.current_stock}</td>
-                    <td className="px-4 py-3 text-[#64748B] dark:text-slate-400">{product.reorder_level}</td>
+                    <td className="px-4 py-3 text-[#64748B] dark:text-muted-fg">{product.reorder_level}</td>
                     <td className="px-4 py-3">
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400">
                         <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />

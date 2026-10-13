@@ -3,31 +3,22 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\ReplenishmentOptimizationRequest;
 use App\Models\InventoryRecommendation;
 use App\Services\Ml\MlServiceUnavailableException;
 use App\Services\Ml\OptimizationService;
-use Illuminate\Http\Request;
 
 class OptimizationController extends Controller
 {
-    public function __construct(private OptimizationService $optimization)
-    {
-    }
+    public function __construct(private readonly OptimizationService $optimization) {}
 
     /**
      * Run the GA replenishment optimizer and persist pending 'Reorder'
      * recommendations for every SKU the plan says to order.
      */
-    public function replenishment(Request $request)
+    public function replenishment(ReplenishmentOptimizationRequest $request)
     {
-        $data = $request->validate([
-            'budget'              => 'required|numeric|gt:0',
-            'horizon_days'        => 'sometimes|integer|min:1|max:365',
-            'include_product_ids' => 'sometimes|array',
-            'include_product_ids.*' => 'integer',
-            'persist'             => 'sometimes|boolean',
-            'seed'                => 'sometimes|integer',
-        ]);
+        $data = $request->validated();
 
         try {
             $result = $this->optimization->optimize(
@@ -50,7 +41,7 @@ class OptimizationController extends Controller
         }
 
         return response()->json(array_merge($result, [
-            'generated_at'           => now()->toDateTimeString(),
+            'generated_at' => now()->toDateTimeString(),
             'recommendations_written' => $recommendationsWritten,
         ]));
     }
@@ -78,13 +69,13 @@ class OptimizationController extends Controller
 
         foreach ($toOrder as $item) {
             InventoryRecommendation::create([
-                'product_id'         => $item['product_id'],
-                'current_stock'      => (int) round((float) $item['current_stock']),
-                'recommended_stock'  => (int) round((float) $item['current_stock'] + (float) $item['order_qty']),
-                'recommendation_type'=> 'Reorder',
-                'confidence_score'   => round($confidence, 2),
-                'status'             => 'pending',
-                'created_at'         => now(),
+                'product_id' => $item['product_id'],
+                'current_stock' => (int) round((float) $item['current_stock']),
+                'recommended_stock' => (int) round((float) $item['current_stock'] + (float) $item['order_qty']),
+                'recommendation_type' => 'Reorder',
+                'confidence_score' => round($confidence, 2),
+                'status' => 'pending',
+                'created_at' => now(),
             ]);
         }
 

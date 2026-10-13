@@ -1,6 +1,6 @@
 import { lazy, Suspense } from "react";
 import type { ComponentType } from "react";
-import { createBrowserRouter } from "react-router";
+import { createBrowserRouter, Navigate } from "react-router";
 import { MainLayout } from "./components/layout/MainLayout";
 import { AuthLayout } from "./components/layout/AuthLayout";
 import { DashboardLayout } from "./components/layout/DashboardLayout";
@@ -10,6 +10,7 @@ import { PageLoader } from "./components/ui/PageLoader";
 import PrivacyBanner from "./components/ui/PrivacyBanner";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
+import { NotFound } from "./pages/NotFound";
 
 function lazyPage(imp: () => Promise<Record<string, unknown>>, name: string) {
   const Comp = lazy(() => imp().then(m => ({ default: m[name] as ComponentType<unknown> })));
@@ -32,6 +33,7 @@ const PredictiveAnalyticsPage = lazyPage(() => import("./pages/dashboard/Predict
 const LeakageDetectionPage = lazyPage(() => import("./pages/dashboard/LeakageDetection"), "LeakageDetectionPage");
 const FefoTrackingPage = lazyPage(() => import("./pages/dashboard/FefoTracking"), "FefoTrackingPage");
 const VendorCreditsPage = lazyPage(() => import("./pages/dashboard/VendorCredits"), "VendorCreditsPage");
+const SalesWastageDashboard = lazyPage(() => import("./pages/dashboard/SalesWastageDashboard"), "SalesWastageDashboard");
 const ManageUsers = lazyPage(() => import("./pages/admin/ManageUsers"), "ManageUsers");
 const ManageProducts = lazyPage(() => import("./pages/admin/ManageProducts"), "ManageProducts");
 const ManageCategories = lazyPage(() => import("./pages/admin/ManageCategories"), "ManageCategories");
@@ -63,50 +65,59 @@ const PrivacyRequests = lazyPage(() => import("./pages/admin/PrivacyRequests"), 
 const BreachIncidents = lazyPage(() => import("./pages/admin/BreachIncidents"), "BreachIncidents");
 const DataRetentionConfig = lazyPage(() => import("./pages/admin/DataRetentionConfig"), "DataRetentionConfig");
 const ReorderDashboard = lazyPage(() => import("./pages/reorder/ReorderDashboard"), "ReorderDashboard");
+const ForgotPassword = lazyPage(() => import("./pages/ForgotPassword"), "ForgotPassword");
 
 export const router = createBrowserRouter([
-     // ── Public marketing site ──
-     {
-         path: "/",
-         element: (
-           <>
-             <PrivacyBanner />
-             <MainLayout />
-           </>
-         ),
-         children: [
-             { index: true, Component: Home },
-             { path: "pricing", Component: Pricing },
-             { path: "solutions", Component: Solutions },
-             { path: "privacy", Component: PrivacyPolicy },
-             { path: "terms", Component: TermsOfService },
-         ],
-     },
-
-     // ── Auth pages (login / register) ──
-     {
-         Component: AuthLayout,
-         children: [
-             { path: "login", Component: Login },
-         ],
-     },
-
-      // ── Authenticated dashboard (always shows sidebar) ──
+      // ── Public marketing site ──
       {
-          Component: DashboardLayout,
+          path: "/",
+          element: (
+            <>
+              <PrivacyBanner />
+              <MainLayout />
+            </>
+          ),
           children: [
-              // Dashboard overview — accessible to all authenticated users
-              { path: "dashboard", Component: Dashboard },
+              { index: true, Component: Home },
+              { path: "pricing", Component: Pricing },
+              { path: "solutions", Component: Solutions },
+              { path: "privacy", Component: PrivacyPolicy },
+              { path: "terms", Component: TermsOfService },
+          ],
+      },
+
+       // ── Auth pages (login / register) ──
+       {
+           Component: AuthLayout,
+           children: [
+               { path: "login", Component: Login },
+               { path: "forgot-password", Component: ForgotPassword },
+           ],
+       },
+
+       // ── Authenticated dashboard (always shows sidebar) ──
+{
+            Component: DashboardLayout,
+            children: [
+                // Dashboard overview — show role-appropriate dashboard
+                {
+                  element: <ProtectedRoute allowedRoles={['owner', 'inventory', 'cashier']} />,
+                  children: [
+                    { path: "dashboard", Component: Dashboard },
+                  ],
+                },
               { path: "dashboard/inventory", Component: InventoryDashboard },
               { path: "dashboard/predictive", Component: PredictiveAnalyticsPage },
               { path: "dashboard/leakage", Component: LeakageDetectionPage },
               { path: "dashboard/fefo", Component: FefoTrackingPage },
               { path: "dashboard/vendors", Component: VendorCreditsPage },
+              { path: "dashboard/sales-wastage", Component: SalesWastageDashboard },
 
               // ── Owner/Administrator routes ──
               {
                 element: <ProtectedRoute allowedRoles={['owner']} />,
                 children: [
+                  { index: true, element: <Navigate to="/owner/users" replace /> },
                   { path: "owner/users", Component: ManageUsers },
                   { path: "owner/products", Component: ManageProducts },
                   { path: "owner/categories", Component: ManageCategories },
@@ -182,4 +193,10 @@ export const router = createBrowserRouter([
               },
           ],
       },
- ]);
+
+      // Catch-all 404 route (MUST BE LAST)
+      {
+        path: "*",
+        Component: NotFound,
+      },
+  ]);

@@ -6,6 +6,12 @@ interface ActionButtonProps {
   icon: React.ReactNode;
   label: string;
   onClick: (e: React.MouseEvent) => void;
+  /**
+   * `'danger'` is the only value that changes anything -- everything else falls through to
+   * the neutral branch in `ActionButton`. `ReturnsRefunds` passed `variant="primary"`,
+   * which is not in this union and rendered identically to the default; it is now spelled
+   * out rather than adding a third variant that would behave the same.
+   */
   variant?: 'default' | 'danger';
   disabled?: boolean;
 }
@@ -20,8 +26,8 @@ export function ActionButton({ icon, label, onClick, variant = 'default', disabl
           className={cn(
             "inline-flex items-center justify-center h-7 w-7 rounded-lg transition-colors",
             variant === 'danger'
-              ? "text-slate-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10 dark:hover:text-rose-400"
-              : "text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200",
+              ? "text-muted-fg hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10 dark:hover:text-rose-400"
+              : "text-muted-fg hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200",
             disabled && "opacity-30 cursor-not-allowed",
           )}
           aria-label={label}
@@ -29,7 +35,12 @@ export function ActionButton({ icon, label, onClick, variant = 'default', disabl
           {icon}
         </button>
       </TooltipTrigger>
-      <TooltipContent side="top" className="text-xs">
+      {/* `TooltipContent` has no `side` prop -- it always places the bubble above the
+          trigger and flips below only when there is no room (see tooltip.tsx). `side` was
+          spreading into `...props` and landing on the portalled <div> as an invalid
+          `side="top"` attribute, so it is removed rather than implemented: honouring it
+          would move the tooltip. */}
+      <TooltipContent className="text-xs">
         {label}
       </TooltipContent>
     </Tooltip>
@@ -62,7 +73,7 @@ export function OverflowMenu({ items }: OverflowMenuProps) {
     <div ref={ref} className="relative inline-flex">
       <button
         onClick={(e) => { e.stopPropagation(); setOpen(!open); }}
-        className="inline-flex items-center justify-center h-7 w-7 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200 transition-colors"
+        className="touch-target inline-flex items-center justify-center h-7 w-7 rounded-lg text-muted-fg hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200 transition-colors"
         aria-label="More actions"
         aria-expanded={open}
       >
@@ -71,7 +82,7 @@ export function OverflowMenu({ items }: OverflowMenuProps) {
         </svg>
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-1 z-50 min-w-[160px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl shadow-lg py-1 animate-in fade-in slide-in-from-top-2 duration-150">
+        <div className="absolute right-0 top-full mt-1 z-50 min-w-[160px] bg-bg-elevated border border-border dark:border-white/10 rounded-xl shadow-lg py-1 animate-in fade-in slide-in-from-top-2 duration-150">
           {items.map((item, i) => (
             <button
               key={i}
@@ -81,7 +92,7 @@ export function OverflowMenu({ items }: OverflowMenuProps) {
                 "w-full flex items-center gap-2 px-3 py-2 text-xs font-medium transition-colors",
                 item.variant === 'danger'
                   ? "text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10"
-                  : "text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800",
+                  : "text-slate-700 hover:bg-bg dark:text-slate-300 dark:hover:bg-slate-800",
                 item.disabled && "opacity-30 cursor-not-allowed",
               )}
             >

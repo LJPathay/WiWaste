@@ -2,22 +2,18 @@
 
 namespace App\Services;
 
-use App\Models\SalesTransaction;
-use App\Models\SalesItem;
-use App\Models\Product;
-use App\Models\Business;
 use App\Models\Branch;
-use App\Models\User;
-use Illuminate\Support\Facades\DB;
+use App\Models\Business;
+use App\Models\SalesTransaction;
 use Carbon\Carbon;
 
 /**
  * BIR CAS (Computerized Accounting System) Integration Pathway
- * 
+ *
  * This service provides the interface for BIR CAS integration.
  * It does NOT implement a full fiscal printer integration - it provides
  * the data pathway and document formatting required for CAS integration.
- * 
+ *
  * Per BIR requirements (RR 5-2014, RR 9-2009):
  * - VAT-registered taxpayers must use CAS
  * - Receipts must show: TIN, Business Name, Address, Serial Number, Date, VAT breakdown
@@ -25,37 +21,39 @@ use Carbon\Carbon;
  */
 class BirIntegrationService
 {
+    /** Fallback TIN used when a business record has none. */
+    private const DEFAULT_TIN = '000-000-000-000';
+
     /**
      * Generate BIR-compliant receipt data for a transaction
-     * 
-     * @param SalesTransaction $transaction
+     *
      * @return array BIR-compliant receipt data
      */
     public function generateReceiptData(SalesTransaction $transaction): array
     {
         $transaction->load(['user', 'branch', 'branch.business', 'salesItems.product']);
-        
+
         $business = $transaction->branch?->business ?? $transaction->user?->business;
         $branch = $transaction->branch;
         $cashier = $transaction->user;
-        
+
         // Calculate VAT breakdown
         $vatableSales = $transaction->salesItems
             ->where('is_senior_pwd_exempt', false)
             ->sum(function ($item) {
                 return $item->vatable_amount ?? 0;
             });
-        
+
         $nonVatableSales = $transaction->salesItems
             ->where('is_senior_pwd_exempt', true)
             ->sum(function ($item) {
                 return $item->subtotal ?? 0;
             });
-        
+
         $vatAmount = $transaction->salesItems->sum('vat_amount');
         $seniorPwdDiscount = $transaction->senior_pwd_discount_amount ?? 0;
         $seniorPwdVatExempt = $transaction->senior_pwd_vat_exempt_amount ?? 0;
-        
+
         $items = $transaction->salesItems->map(function ($item) {
             return [
                 'product_name' => $item->product?->product_name,
@@ -72,7 +70,7 @@ class BirIntegrationService
         return [
             'receipt_header' => [
                 'business_name' => $business?->name ?? 'WiWaste',
-                'business_tin' => $business?->tin ?? '000-000-000-000',
+                'business_tin' => $business?->tin ?? self::DEFAULT_TIN,
                 'business_address' => $branch?->address ?? 'N/A',
                 'branch_name' => $branch?->name ?? 'Main Branch',
                 'receipt_number' => $transaction->transaction_id,
@@ -101,7 +99,7 @@ class BirIntegrationService
             ],
             'footer' => [
                 'footer_message' => 'THIS SERVES AS YOUR OFFICIAL RECEIPT',
-                'vat_reg_tin' => $business?->tin ?? '000-000-000-000',
+                'vat_reg_tin' => $business?->tin ?? self::DEFAULT_TIN,
                 'software_version' => 'WiWaste v1.0',
                 'cas_ready' => true, // Indicates CAS-ready format
             ],
@@ -110,11 +108,6 @@ class BirIntegrationService
 
     /**
      * Generate BIR sales summary report (Monthly/Quarterly)
-     * 
-     * @param int $businessId
-     * @param Carbon $fromDate
-     * @param Carbon $toDate
-     * @return array
      */
     public function generateSalesReport(int $businessId, Carbon $fromDate, Carbon $toDate): array
     {
@@ -128,7 +121,6 @@ class BirIntegrationService
         $totalVat = $transactions->sum('vat_amount');
         $totalVatable = $transactions->sum('vatable_amount');
         $totalNonVatable = $transactions->sum('non_vatable_amount');
-        $totalDiscount = $transactions->sum('discount_amount');
         $totalSeniorPwdDiscount = $transactions->sum('senior_pwd_discount_amount');
         $totalSeniorPwdVatExempt = $transactions->sum('senior_pwd_vat_exempt_amount');
         $totalDiscount = $transactions->sum('discount_amount');
@@ -186,11 +178,8 @@ class BirIntegrationService
 
     /**
      * Generate BIR VAT Summary (BIR Form 2550M/2550Q equivalent)
-     * 
-     * @param int $businessId
-     * @param string $periodType 'monthly'|'quarterly'
-     * @param Carbon $periodDate
-     * @return array
+     *
+     * @param  string  $periodType  'monthly'|'quarterly'
      */
     public function generateVatSummary(int $businessId, string $periodType, Carbon $periodDate): array
     {
@@ -203,13 +192,13 @@ class BirIntegrationService
         }
 
         $report = $this->generateSalesReport($businessId, $fromDate, $toDate);
-        
+
         return [
             'form_type' => $periodType === 'monthly' ? 'BIR Form 2550M' : 'BIR Form 2550Q',
-            'period' => $periodType === 'monthly' 
-                ? $periodDate->format('F Y') 
-                : 'Q' . $periodDate->quarter . ' ' . $periodDate->year,
-            'business_tin' => Business::find($businessId)?->tin ?? '000-000-000-000',
+            'period' => $periodType === 'monthly'
+                ? $periodDate->format('F Y')
+                : 'Q'.$periodDate->quarter.' '.$periodDate->year,
+            'business_tin' => Business::find($businessId)?->tin ?? self::DEFAULT_TIN,
             'business_name' => Business::find($businessId)?->name ?? 'WiWaste',
             'total_sales' => $report['summary']['total_sales'] ?? 0,
             'vatable_sales' => $report['summary']['total_vatable_sales'] ?? 0,
@@ -224,11 +213,6 @@ class BirIntegrationService
 
     /**
      * Export sales data for BIR e-submission (JSON format for CAS integration)
-     * 
-     * @param int $businessId
-     * @param Carbon $fromDate
-     * @param Carbon $toDate
-     * @return array
      */
     public function exportForCasSubmission(int $businessId, Carbon $fromDate, Carbon $toDate): array
     {
@@ -244,7 +228,7 @@ class BirIntegrationService
             $cashier = $transaction->user;
 
             return [
-                'tin' => $business?->tin ?? '000-000-000-000',
+                'tin' => $business?->tin ?? self::DEFAULT_TIN,
                 'branch_code' => $branch?->id,
                 'transaction_id' => $transaction->transaction_id,
                 'date' => $transaction->transaction_date->format('Y-m-d'),
@@ -260,7 +244,8 @@ class BirIntegrationService
                         'vatable_amount' => $item->vatable_amount,
                         'discount_amount' => $item->discount_amount,
                         'is_senior_pwd_exempt' => $item->is_senior_pwd_exempt,
-                    ])->toArray(),
+                    ];
+                })->toArray(),
                 'totals' => [
                     'total_amount' => $transaction->total_amount,
                     'vat_amount' => $transaction->vat_amount,
@@ -280,7 +265,7 @@ class BirIntegrationService
         })->toArray();
 
         return [
-            'business_tin' => Business::find($fromDate->month)?->tin ?? '000-000-000-000',
+            'business_tin' => Business::find($fromDate->month)?->tin ?? self::DEFAULT_TIN,
             'branch_code' => 'ALL',
             'period_from' => $fromDate->format('Y-m-d'),
             'period_to' => $toDate->format('Y-m-d'),
@@ -297,10 +282,7 @@ class BirIntegrationService
      */
     protected function generateSerialNumber(SalesTransaction $transaction): string
     {
-        $branch = $transaction->branch;
-        $date = $transaction->transaction_date;
-        
-        return 'SER-' . $transaction->transaction_id;
+        return 'SER-'.$transaction->transaction_id;
     }
 
     /**
@@ -308,7 +290,7 @@ class BirIntegrationService
      */
     protected function getPosSerial(?Branch $branch): string
     {
-        return $branch?->pos_serial ?? 'POS-' . ($branch?->id ?? '001');
+        return $branch?->pos_serial ?? 'POS-'.($branch?->id ?? '001');
     }
 
     /**
@@ -317,7 +299,7 @@ class BirIntegrationService
     protected function getCustomerInfo($transaction): array
     {
         $seniorPwd = $transaction->senior_pwd_type !== 'none';
-        
+
         return [
             'name' => $transaction->customer_name,
             'phone' => $transaction->customer_phone,

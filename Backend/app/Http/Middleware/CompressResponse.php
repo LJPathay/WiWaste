@@ -12,7 +12,7 @@ class CompressResponse
     {
         $response = $next($request);
 
-        if (!$this->shouldCompress($request, $response)) {
+        if (! $this->shouldCompress($request, $response)) {
             return $response;
         }
 
@@ -28,7 +28,11 @@ class CompressResponse
 
         $response->setContent($compressed);
         $response->headers->set('Content-Encoding', 'gzip');
-        $response->headers->set('Vary', 'Accept-Encoding');
+        // Append rather than overwrite: an endpoint may already vary on something the
+        // cache needs (the product list varies on Authorization), and replacing it here
+        // would silently drop that.
+        $vary = trim($response->headers->get('Vary', ''));
+        $response->headers->set('Vary', trim(($vary !== '' ? $vary.', ' : '').'Accept-Encoding'));
         $response->headers->set('Content-Length', strlen((string) $compressed));
 
         return $response;
@@ -41,12 +45,12 @@ class CompressResponse
         }
 
         $acceptEncoding = $request->headers->get('Accept-Encoding', '');
-        if (!str_contains($acceptEncoding, 'gzip')) {
+        if (! str_contains($acceptEncoding, 'gzip')) {
             return false;
         }
 
         $contentType = $response->headers->get('Content-Type', '');
-        if (!str_contains($contentType, 'json') && !str_contains($contentType, 'text') && !str_contains($contentType, 'javascript')) {
+        if (! str_contains($contentType, 'json') && ! str_contains($contentType, 'text') && ! str_contains($contentType, 'javascript')) {
             return false;
         }
 

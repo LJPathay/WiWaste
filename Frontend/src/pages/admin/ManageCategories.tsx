@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Search, Plus, Edit2, Archive, Info, Loader2,
+  Search, Plus, Edit2, Archive, Info, Loader2, RotateCcw,
   Check, Grid, Sparkles,
   CupSoda, Coffee, Utensils, Apple, Beef, Cookie,
   Pill, HeartPulse, Home, Recycle,
@@ -9,8 +9,8 @@ import {
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { Tutorial } from '../../components/ui/Tutorial';
 import { Toast, useToast, ConfirmDialog, Modal, FormField, inputCls } from '../../components/ui/Toast';
-import { useOptimisticList } from '../../hooks/useOptimisticList';
-import { categories as categoriesApi, type ApiCategory } from '../../services/api';
+import { useApi } from '../../hooks/useApi';
+import { categories as categoriesApi, type ApiCategory, type PaginatedCategoriesResponse } from '../../services/api';
 import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
 import { ActionButton } from '../../components/shared/DataTableActions';
 import { Pagination } from '../../components/ui/pagination';
@@ -81,22 +81,33 @@ const getCategoryIcon = (categoryName: string = '') => {
     return { icon: Flame, label: 'Chemicals & Fuel', color: 'text-red-600 bg-red-50 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800/50' };
   }
 
-  return { icon: Tag, label: 'General', color: 'text-slate-600 bg-slate-100 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700' };
+  return { icon: Tag, label: 'General', color: 'text-muted-fg bg-slate-100 dark:bg-slate-800 dark:text-muted-fg border-border dark:border-slate-700' };
 };
 
 export function ManageCategories() {
   const { toasts, dismiss, success, error } = useToast();
-  const { data: categoryList, loading, error: fetchError, addItem, updateItem, removeItem, refetch: refetchCategories } = useOptimisticList(categoriesApi.list);
-  
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<'name-asc' | 'name-desc' | 'products-desc' | 'products-asc' | 'id-desc'>('name-asc');
   const [currentPage, setCurrentPage] = useState(1);
+  /** 'all' lists only categories still in use; 'Archived' shows the retired ones. */
+  const [statusFilter, setStatusFilter] = useState<'all' | 'Archived'>('all');
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
-  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
-  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+  const [isBulkArchiving, setIsBulkArchiving] = useState(false);
+  const [showBulkArchiveConfirm, setShowBulkArchiveConfirm] = useState(false);
   const [showEmptyNotification, setShowEmptyNotification] = useState(false);
   const [notificationCountdown, setNotificationCountdown] = useState(20);
   const [showTutorial, setShowTutorial] = useState(false);
+
+  const { data: categoryList, loading, error: fetchError, refetch: refetchCategories } = useApi<PaginatedCategoriesResponse>(
+    () => categoriesApi.list(
+      currentPage,
+      ITEMS_PER_PAGE,
+      search,
+      statusFilter === 'all' ? 'Archived' : '',
+      statusFilter === 'Archived' ? 'Archived' : '',
+    ),
+    { dedupeKey: `categories-${currentPage}-${search}-${statusFilter}` }
+  );
 
   const tutorialSteps = [
     {
@@ -152,10 +163,11 @@ export function ManageCategories() {
   
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
-  const [deletingId, setDeletingId] = useState<number | null>(null);
-  const [deleteName, setDeleteName] = useState('');
+  const [archivingId, setArchivingId] = useState<number | null>(null);
+  const [archivingName, setArchivingName] = useState('');
+  const [archivingStatus, setArchivingStatus] = useState<'Active' | 'Archived'>('Active');
 
-  const categories = categoryList ?? [];
+  const categories = categoryList?.data ?? [];
 
   useEffect(() => {
     if (categories.length === 0 && search === '' && !loading && !fetchError) {
@@ -187,52 +199,27 @@ export function ManageCategories() {
     categories.some(c => c?.id !== editingCategory.id && c?.name && typeof c.name === 'string' && c.name.trim().toLowerCase() === editName.trim().toLowerCase())
   );
 
-  const filteredCategories = [...categories]
-    .filter(c => c && c.name && typeof c.name === 'string' && c.name.toLowerCase().includes((search || '').toLowerCase()))
-    .sort((a, b) => {
-      if (sortBy === 'name-asc') return (a.name || '').localeCompare(b.name || '');
-      if (sortBy === 'name-desc') return (b.name || '').localeCompare(a.name || '');
-      if (sortBy === 'products-desc') return (b.product_count ?? 0) - (a.product_count ?? 0);
-      if (sortBy === 'products-asc') return (a.product_count ?? 0) - (b.product_count ?? 0);
-      if (sortBy === 'id-desc') return (b.id ?? 0) - (a.id ?? 0);
-      return 0;
-    });
+  // Server-side filtering, so no client-side filtering needed
+  const filteredCategories = categories;
 
-  const totalPages = Math.max(1, Math.ceil(filteredCategories.length / ITEMS_PER_PAGE));
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, filteredCategories.length);
-  const paginatedCategories = filteredCategories.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  const totalPages = categoryList?.meta?.last_page ?? 1;
+  const totalItems = categoryList?.meta?.total ?? 0;
 
-  const isAllSelected = paginatedCategories.length > 0 && paginatedCategories.every(c => selectedIds.includes(c.id));
+  const paginatedCategories = filteredCategories;
 
-  const toggleSelectAll = () => {
-    if (isAllSelected) {
-      const pageIds = new Set(paginatedCategories.map(c => c.id));
-      setSelectedIds(prev => prev.filter(id => !pageIds.has(id)));
-    } else {
-      const pageIds = paginatedCategories.map(c => c.id);
-      setSelectedIds(prev => Array.from(new Set([...prev, ...pageIds])));
-    }
-  };
-
-  const toggleSelectRow = (id: number) => {
-    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
-  };
-
-  const handleBulkDelete = async () => {
+  const handleBulkArchive = async () => {
     if (selectedIds.length === 0) return;
-    setIsBulkDeleting(true);
+    setIsBulkArchiving(true);
     try {
-      await Promise.all(selectedIds.map(id => categoriesApi.delete(id)));
-      selectedIds.forEach(id => removeItem(id));
-      success(`Successfully deleted ${selectedIds.length} categories.`);
+      await Promise.all(selectedIds.map(id => categoriesApi.archive(id)));
       setSelectedIds([]);
-      setShowBulkDeleteConfirm(false);
-      refetchCategories();
+      setShowBulkArchiveConfirm(false);
+      await refetchCategories();
+      success(`Successfully archived ${selectedIds.length} categories. They remain available under the Archived tab.`);
     } catch (err) {
-      error(err instanceof Error ? err.message : 'Failed to delete selected categories.');
+      error(err instanceof Error ? err.message : 'Failed to archive selected categories.');
     } finally {
-      setIsBulkDeleting(false);
+      setIsBulkArchiving(false);
     }
   };
 
@@ -298,26 +285,25 @@ export function ManageCategories() {
     setSubmitting(true);
     setFormError('');
     try {
-      const addedItems: ApiCategory[] = [];
-      for (const catName of validNames) {
-        const created = await categoriesApi.create(catName) as ApiCategory;
-        const newItem: ApiCategory = {
-          id: created.id,
-          name: created.name ?? catName,
-          product_count: created.product_count ?? 0,
-        };
-        addedItems.push(newItem);
-        addItem(newItem);
-      }
+      // The names are already de-duplicated and validated above, and creating one
+      // category does not depend on another, so the requests run concurrently.
+      await Promise.all(validNames.map((catName) => categoriesApi.create(catName)));
       setNames(['']);
       setSelectedTypes(['']);
       setIsAddOpen(false);
+
+      // The table holds 5 rows, so a newly added category would otherwise land on a
+      // later page and the administrator would get a success toast with nothing to
+      // show for it. Filtering to what was just created puts it on screen.
+      setStatusFilter('all');
+      setCurrentPage(1);
+      setSearch(validNames.length === 1 ? validNames[0] : '');
       await refetchCategories();
       
-      if (addedItems.length === 1) {
-        success(`Category "${addedItems[0].name}" created successfully.`);
+      if (validNames.length === 1) {
+        success(`Category "${validNames[0]}" created successfully.`);
       } else {
-        success(`Successfully created ${addedItems.length} categories.`);
+        success(`Successfully created ${validNames.length} categories.`);
       }
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to add category');
@@ -339,11 +325,10 @@ export function ManageCategories() {
     setSubmitting(true);
     setFormError('');
     try {
-      const updated = await categoriesApi.update(editingCategory.id, cleanName) as ApiCategory;
+      await categoriesApi.update(editingCategory.id, cleanName);
       setEditName('');
       setIsEditOpen(false);
       setEditingCategory(null);
-      updateItem(editingCategory.id, updated);
       await refetchCategories();
       success(`Category updated successfully.`);
     } catch (err) {
@@ -353,16 +338,17 @@ export function ManageCategories() {
     }
   };
 
-  const handleDelete = async (id: number) => {
+  const handleArchiveToggle = async (id: number) => {
     try {
-      await categoriesApi.delete(id);
-      removeItem(id);
+      await categoriesApi.archive(id);
       await refetchCategories();
-      success('Category deleted successfully.');
+      success(statusFilter === 'Archived'
+        ? 'Category restored and available for use again.'
+        : 'Category archived. Its products and records are unchanged.');
     } catch (err) {
-      error(err instanceof Error ? err.message : 'Failed to delete category');
+      error(err instanceof Error ? err.message : 'Failed to archive category');
     }
-    setDeletingId(null);
+    setArchivingId(null);
   };
 
   const openEdit = (cat: ApiCategory) => {
@@ -398,27 +384,42 @@ export function ManageCategories() {
       minWidth: '100px',
       render: (row) => <span className="text-xs">{row.product_count ?? 0} SKUs</span>,
     },
+    {
+      key: 'status',
+      header: 'Status',
+      align: 'center',
+      minWidth: '100px',
+      render: (row) => row.status === 'Archived' ? (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800/50">
+          <Archive className="h-3 w-3" aria-hidden="true" /> Archived
+        </span>
+      ) : (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50">
+          <Check className="h-3 w-3" aria-hidden="true" /> Active
+        </span>
+      ),
+    },
   ];
 
   if (loading) return (
     <div className="flex flex-col items-center justify-center h-48 gap-3">
       <div className="relative w-12 h-12">
-        <div className="absolute inset-0 rounded-full border-3 border-slate-200 dark:border-slate-800"></div>
+        <div className="absolute inset-0 rounded-full border-3 border-border dark:border-slate-800"></div>
         <div className="absolute inset-0 rounded-full border-3 border-transparent border-t-[#006a61] border-r-[#006a61] animate-spin"></div>
         <div className="absolute inset-1.5 flex items-center justify-center">
           <Tag className="h-6 w-6 text-[#006a61] dark:text-[#7ef0cf] animate-pulse" />
         </div>
       </div>
       <div className="text-center">
-        <p className="text-slate-600 dark:text-slate-400 font-semibold text-sm">Loading categories...</p>
-        <p className="text-[9px] text-slate-400 dark:text-slate-500 mt-0.5">Fetching category list</p>
+        <p className="text-muted-fg dark:text-muted-fg font-semibold text-sm">Loading categories...</p>
+        <p className="text-[9px] text-muted-fg dark:text-muted-fg mt-0.5">Fetching category list</p>
       </div>
     </div>
   );
 
 
   if (fetchError) {
-    const errorCode = fetchError.match(/\((\d+)\)/)?.[1] || 'Unknown';
+    const errorCode = /\((\d+)\)/.exec(fetchError)?.[1] || 'Unknown';
     const errorMessage = errorCode === '2002' ? "There's no connection (2002)" : `Connection error (${errorCode})`;
     return (
       <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800/40 flex items-center justify-between gap-3">
@@ -447,7 +448,7 @@ export function ManageCategories() {
             <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Manage Categories</h1>
             <UITooltip>
               <TooltipTrigger asChild>
-                <Info className="h-4 w-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
+                <Info className="h-4 w-4 text-muted-fg hover:text-muted-fg dark:hover:text-slate-300 cursor-help" />
               </TooltipTrigger>
               <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs text-xs">
                 Classify product inventory sectors for shelf placement index.
@@ -464,19 +465,35 @@ export function ManageCategories() {
         </button>
       </div>
 
-      <div className="bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden">
-        <div className="p-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-200 dark:border-white/10">
-          <div className="flex items-center gap-2">
-            <span className="px-2.5 py-1 bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-lg">
-              All Categories ({categories.length})
+      <div className="bg-white dark:bg-slate-950 rounded-xl border border-border dark:border-white/10 shadow-sm overflow-hidden">
+        <div className="p-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border dark:border-white/10">
+          <fieldset className="flex items-center gap-1 border-0 p-0 m-0 min-w-0">
+            <legend className="text-[9px] font-bold text-muted-fg dark:text-muted-fg px-2 uppercase tracking-wider">Status:</legend>
+            {[
+              { id: 'all' as const, label: 'Active', icon: Check },
+              { id: 'Archived' as const, label: 'Archived', icon: Archive },
+            ].map(tab => {
+              const TabIcon = tab.icon;
+              const isSelected = statusFilter === tab.id;
+              return (
+                <button key={tab.id} onClick={() => { setStatusFilter(tab.id); setCurrentPage(1); }}
+                  aria-pressed={isSelected}
+                  className={`flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${isSelected ? 'bg-slate-100 dark:bg-slate-950 text-[#006a61] dark:text-[#7ef0cf] shadow-sm' : 'text-muted-fg dark:text-muted-fg hover:text-slate-900 dark:hover:text-slate-200'}`}>
+                  <TabIcon className="h-3.5 w-3.5" />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+            <span className="px-2.5 py-1 bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-lg ml-1">
+              {totalItems} shown
             </span>
-          </div>
+          </fieldset>
 
           <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
             <select
               value={sortBy}
               onChange={e => setSortBy(e.target.value as 'name-asc' | 'name-desc' | 'products-desc' | 'products-asc' | 'id-desc')}
-              className="w-full sm:w-auto h-8 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-xs font-medium rounded-lg px-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#006a61]"
+              className="w-full sm:w-auto h-8 bg-bg dark:bg-slate-900 border border-border dark:border-white/10 text-xs font-medium rounded-lg px-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#006a61]"
             >
               <option value="name-asc">Sort: A - Z</option>
               <option value="name-desc">Sort: Z - A</option>
@@ -486,13 +503,13 @@ export function ManageCategories() {
             </select>
 
             <div className="relative max-w-xs w-full sm:w-64">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-fg" />
               <input
                 type="text"
                 placeholder="Search category name..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="w-full h-8 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-white/10 pl-8 pr-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-700 dark:text-slate-200"
+                className="w-full h-8 bg-bg dark:bg-slate-900/50 border border-border dark:border-white/10 pl-8 pr-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-700 dark:text-slate-200"
               />
             </div>
           </div>
@@ -510,17 +527,17 @@ export function ManageCategories() {
               <button
                 type="button"
                 onClick={() => setSelectedIds([])}
-                className="px-2 py-0.5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium hover:underline text-xs"
+                className="px-2 py-0.5 text-muted-fg dark:text-muted-fg hover:text-slate-900 dark:hover:text-slate-100 font-medium hover:underline text-xs"
               >
                 Deselect All
               </button>
               <button
                 type="button"
-                onClick={() => setShowBulkDeleteConfirm(true)}
+                onClick={() => setShowBulkArchiveConfirm(true)}
                 className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-rose-600 text-white font-semibold hover:bg-rose-700 transition-all shadow-sm text-xs"
               >
                 <Archive className="h-3.5 w-3.5" />
-                Delete Selected ({selectedIds.length})
+                Archive Selected ({selectedIds.length})
               </button>
             </div>
           </div>
@@ -543,10 +560,12 @@ export function ManageCategories() {
                 onClick={() => openEdit(row)}
               />
               <ActionButton
-                icon={<Archive className="h-3.5 w-3.5" />}
-                label="Delete"
-                variant="danger"
-                onClick={() => { setDeletingId(row.id); setDeleteName(row.name); }}
+                icon={row.status === 'Archived'
+                  ? <RotateCcw className="h-3.5 w-3.5" />
+                  : <Archive className="h-3.5 w-3.5" />}
+                label={row.status === 'Archived' ? 'Restore' : 'Archive'}
+                variant={row.status === 'Archived' ? 'default' : 'danger'}
+                onClick={() => { setArchivingId(row.id); setArchivingName(row.name); setArchivingStatus(row.status ?? 'Active'); }}
               />
             </>
           )}
@@ -555,7 +574,7 @@ export function ManageCategories() {
               page={currentPage}
               totalPages={totalPages}
               onPageChange={setCurrentPage}
-              totalItems={filteredCategories.length}
+              totalItems={totalItems}
               perPage={ITEMS_PER_PAGE}
               label="categories"
             />
@@ -583,7 +602,7 @@ export function ManageCategories() {
       )}
 
       {isAddOpen && (
-        <Modal title="Add New Category" onClose={() => setIsAddOpen(false)} maxWidth="lg" contentClassName="p-4">
+        <Modal title="Add New Category" onClose={() => setIsAddOpen(false)} size="lg">
           <form onSubmit={handleAdd} className="space-y-3">
             <div className="space-y-2.5 max-h-[60vh] overflow-y-auto pr-1">
               {names.map((rowName, idx) => {
@@ -613,7 +632,7 @@ export function ManageCategories() {
                         <button
                           type="button"
                           onClick={() => setTilePickerRowIndex(idx)}
-                          className="h-8 px-3 rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-800 hover:border-[#006a61] text-xs font-semibold text-[#006a61] dark:text-[#7ef0cf] flex items-center gap-1.5 transition-all cursor-pointer shrink-0 shadow-xs"
+                          className="h-8 px-3 rounded-lg border border-border dark:border-white/10 bg-bg dark:bg-slate-800 hover:border-[#006a61] text-xs font-semibold text-[#006a61] dark:text-[#7ef0cf] flex items-center gap-1.5 transition-all cursor-pointer shrink-0 shadow-xs"
                           title="Open Visual Category Tiles Grid"
                         >
                           <Grid className="h-3.5 w-3.5" />
@@ -624,7 +643,7 @@ export function ManageCategories() {
                           <button
                             type="button"
                             onClick={() => handleRemoveRow(idx)}
-                            className="p-1.5 text-slate-400 hover:text-red-500 transition-colors"
+                            className="p-1.5 text-muted-fg hover:text-red-500 transition-colors"
                             title="Remove category row"
                           >
                             <Archive className="h-3.5 w-3.5" />
@@ -658,8 +677,8 @@ export function ManageCategories() {
                       {!isOthersSelected && trimmed && (() => {
                         const { icon: CatIcon, color: catColor } = getCategoryIcon(rowName);
                         return (
-                          <div className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400">
-                            <span className="text-[9px] text-slate-400">Auto Icon:</span>
+                          <div className="flex items-center gap-2 text-xs font-semibold text-muted-fg dark:text-muted-fg">
+                            <span className="text-[9px] text-muted-fg">Auto Icon:</span>
                             <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold border ${catColor}`}>
                               <CatIcon className="h-3 w-3" />
                               <span>{rowName}</span>
@@ -699,7 +718,7 @@ export function ManageCategories() {
       )}
 
       {isEditOpen && editingCategory && (
-        <Modal title="Edit Category" onClose={() => setIsEditOpen(false)} maxWidth="lg" contentClassName="p-4">
+        <Modal title="Edit Category" onClose={() => setIsEditOpen(false)} size="lg">
           <form onSubmit={handleEdit} className="space-y-3">
             <FormField label="Category Name" labelClassName="text-sm font-bold">
               <div className="relative flex items-center">
@@ -728,23 +747,25 @@ export function ManageCategories() {
         </Modal>
       )}
 
-      {deletingId && (
+      {archivingId && (
         <ConfirmDialog
-          message={`Are you sure you want to delete "${deleteName}"? This operation cannot be undone.`}
-          confirmLabel="Delete"
-          danger
-          onConfirm={() => handleDelete(deletingId)}
-          onCancel={() => setDeletingId(null)}
+          message={archivingStatus === 'Archived'
+            ? `Restore "${archivingName}"? It will become available for assigning to products again.`
+            : `Archive "${archivingName}"? The category is retained and can be restored from the Archived tab. Products, sales and wastage records that reference it are not affected.`}
+          confirmLabel={archivingStatus === 'Archived' ? 'Restore' : 'Archive'}
+          danger={archivingStatus !== 'Archived'}
+          onConfirm={() => handleArchiveToggle(archivingId)}
+          onCancel={() => setArchivingId(null)}
         />
       )}
 
-      {showBulkDeleteConfirm && (
+      {showBulkArchiveConfirm && (
         <ConfirmDialog
-          message={`Are you sure you want to delete ${selectedIds.length} selected categories? This operation cannot be undone.`}
-          confirmLabel={isBulkDeleting ? "Deleting..." : `Delete ${selectedIds.length} Categories`}
+          message={`Are you sure you want to archive ${selectedIds.length} selected categories? They are retained and can be restored from the Archived tab.`}
+          confirmLabel={isBulkArchiving ? "Archiving..." : `Archive ${selectedIds.length} Categories`}
           danger
-          onConfirm={handleBulkDelete}
-          onCancel={() => setShowBulkDeleteConfirm(false)}
+          onConfirm={handleBulkArchive}
+          onCancel={() => setShowBulkArchiveConfirm(false)}
         />
       )}
 
@@ -755,24 +776,23 @@ export function ManageCategories() {
             setTilePickerRowIndex(null);
             setTileSearch('');
           }}
-          maxWidth="lg"
-          contentClassName="p-4"
+          size="lg"
         >
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <div className="relative flex-1">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-fg" />
                 <input
                   type="text"
                   placeholder="Search category tiles..."
                   value={tileSearch}
                   onChange={e => setTileSearch(e.target.value)}
-                  className="w-full h-8 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 pl-8 pr-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100"
+                  className="w-full h-8 bg-bg dark:bg-slate-800 border border-border dark:border-white/10 pl-8 pr-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100"
                 />
               </div>
             </div>
 
-            <p className="text-[9px] text-slate-500">
+            <p className="text-[9px] text-muted-fg">
               Click any category tile below to select its auto-icon and pre-set category name:
             </p>
 
@@ -790,7 +810,7 @@ export function ManageCategories() {
                     className={`p-2.5 rounded-xl border text-left flex flex-col justify-between gap-1.5 transition-all cursor-pointer ${
                       isSelected
                         ? 'border-[#006a61] bg-[#006a61]/10 dark:bg-[#006a61]/20 shadow-md ring-2 ring-[#006a61]/30'
-                        : 'border-slate-200 dark:border-white/10 bg-slate-50/60 dark:bg-slate-800/60 hover:border-[#006a61] hover:bg-slate-100 dark:hover:bg-slate-800 hover:scale-[1.02]'
+                        : 'border-border dark:border-white/10 bg-bg/60 dark:bg-slate-800/60 hover:border-[#006a61] hover:bg-slate-100 dark:hover:bg-slate-800 hover:scale-[1.02]'
                     }`}
                   >
                     <div className="flex items-center justify-between w-full">
@@ -808,7 +828,7 @@ export function ManageCategories() {
                         <span>{isOthers ? 'Others' : catName}</span>
                         {isOthers && <Sparkles className="h-2.5 w-2.5 text-amber-500" />}
                       </div>
-                      <p className="text-[9px] text-slate-400 mt-0.5">
+                      <p className="text-[9px] text-muted-fg mt-0.5">
                         {isOthers ? 'Type custom name' : 'Preset icon'}
                       </p>
                     </div>

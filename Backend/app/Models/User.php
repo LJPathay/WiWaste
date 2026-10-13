@@ -2,19 +2,29 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
+use App\Enums\Role;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    use HasApiTokens;
+    use BelongsToTenant;
+
+    use HasApiTokens, HasFactory;
 
     protected $table = 'User';
+
     protected $primaryKey = 'User_id';
+
     public $timestamps = false;
 
     protected $fillable = [
-        'Full_name',
+        'first_name',
+        'middle_name',
+        'surname',
+        'contact_number',
         'username',
         'password',
         'email',
@@ -33,14 +43,9 @@ class User extends Authenticatable
         'password' => 'hashed',
     ];
 
-    public function business()
+    public function getFullNameAttribute(): string
     {
-        return $this->belongsTo(Business::class, 'business_id', 'id');
-    }
-
-    public function branch()
-    {
-        return $this->belongsTo(Branch::class, 'branch_id', 'id');
+        return trim($this->first_name.' '.$this->surname);
     }
 
     public function stockMovements()
@@ -84,19 +89,19 @@ class User extends Authenticatable
     }
 
     // Scopes
-    public function scopeForBusiness($query, $businessId)
-    {
-        return $query->where('business_id', $businessId);
-    }
-
-    public function scopeForBranch($query, $branchId)
-    {
-        return $query->where('branch_id', $branchId);
-    }
-
+    /**
+     * Owner-and-co-admin. `scopeOwners` is used to pick the account that owns
+     * system-level records, so a co-admin has to be included here too.
+     */
     public function scopeOwners($query)
     {
-        return $query->where('role', 'Owner');
+        return $query->whereIn('role', Role::ownerTier());
+    }
+
+    /** Business-wide administrative authority, on the model as well as the enum. */
+    public function isOwnerTier(): bool
+    {
+        return Role::isOwnerTier($this->role);
     }
 
     public function scopeInventory($query)

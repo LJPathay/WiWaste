@@ -1,13 +1,17 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
-  Search, Filter, Calendar, Database, Clock, Shield, Trash2, Save, RotateCcw,
-  AlertTriangle, CheckCircle, X, Edit, Eye, Download, Settings, History, HardDrive, Plus
+  Database,
+  Trash2,
+  RotateCcw,
+  AlertTriangle,
+  Edit,
+  Eye,
+  History,
+  HardDrive,
+  Plus,
 } from 'lucide-react';
-import { Toast, useToast, ConfirmDialog, Modal, FormField, inputCls } from '../../components/ui/Toast';
-import { formatCurrency } from '../../utils/cashierData';
+import { Toast, useToast, Modal, FormField } from '../../components/ui/Toast';
 import { privacy as privacyApi, type ApiRetentionPolicy, type ApiRetentionSummary } from '../../services/api';
-import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
-import { Pagination } from '../../components/ui/pagination';
 
 const ENTITY_TYPES = [
   { value: 'audit_logs', label: 'Audit Logs', icon: <History className="w-4 h-4" />, description: 'System audit trail records' },
@@ -21,23 +25,12 @@ const ENTITY_TYPES = [
 
 const DEFAULT_RETENTION_DAYS = 2555; // 7 years
 
-function formatDate(value: string | null) {
-  if (!value) return 'Never';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Invalid';
-  return date.toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' });
-}
 
-function formatNumber(num: number) {
-  return new Intl.NumberFormat('en-PH').format(num);
-}
 
 export function DataRetentionConfig() {
   const { toasts, dismiss, success, error: showError } = useToast();
   const [loading, setLoading] = useState(false);
-  const [page, setPage] = useState(1);
-  const pageSize = 10;
-  const [policies, setPolicies] = useState<ApiRetentionPolicy[]>([]);
+      const [policies, setPolicies] = useState<ApiRetentionPolicy[]>([]);
   const [summary, setSummary] = useState<ApiRetentionSummary | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -47,25 +40,6 @@ export function DataRetentionConfig() {
     description: '',
     enabled: true,
   });
-
-  const fetcher = useCallback(
-    () => privacyApi.retentionPolicies(),
-    []
-  );
-
-  const { data: policiesData, refetch: refetchPolicies } = useApi(fetcher);
-
-  const policiesList = useMemo<ApiRetentionPolicy[]>(() =>
-    (policiesData?.data ?? []).map((p) => ({
-      entity_type: p.entity_type,
-      retention_days: p.retention_days,
-      description: p.description,
-      enabled: p.enabled,
-      last_purged: p.last_purged,
-      records_purged: p.records_purged,
-    })),
-    [policiesData]
-  );
 
   const loadPolicies = useCallback(async () => {
     setLoading(true);
@@ -83,13 +57,6 @@ export function DataRetentionConfig() {
   useEffect(() => {
     loadPolicies();
   }, [loadPolicies]);
-
-  const entityInfo = useMemo(() => {
-    return ENTITY_TYPES.reduce((acc, e) => {
-      acc[e.value] = e;
-      return acc;
-    }, {} as Record<string, typeof ENTITY_TYPES[0]>);
-  }, []);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,29 +95,6 @@ export function DataRetentionConfig() {
     }
   };
 
-  const handleTestPurge = async (entityType: string) => {
-    const entity = ENTITY_TYPES.find(e => e.value === entityType);
-    if (!entity) return;
-
-    try {
-      await privacyApi.testPurge(entityType);
-      success('Dry run completed. Check logs for details.');
-    } catch (err) {
-      showError(err instanceof Error ? err.message : 'Test purge failed');
-    }
-  };
-
-  const startEdit = (policy: ApiRetentionPolicy) => {
-    setEditingId(policy.entity_type);
-    setForm({
-      entity_type: policy.entity_type,
-      retention_days: policy.retention_days,
-      description: policy.description,
-      enabled: policy.enabled,
-    });
-    setShowCreateModal(true);
-  };
-
   const startCreate = () => {
     setEditingId(null);
     setForm({
@@ -162,13 +106,6 @@ export function DataRetentionConfig() {
     setShowCreateModal(true);
   };
 
-  const formatDate = (value: string | null) => {
-    if (!value) return 'Never';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return 'Invalid';
-    return date.toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' });
-  };
-
   function formatNumber(num: number) {
     return new Intl.NumberFormat('en-PH').format(num);
   }
@@ -178,7 +115,7 @@ export function DataRetentionConfig() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Data Retention Configuration</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-sm text-muted-fg dark:text-muted-fg mt-1">
             Configure retention periods and purge schedules for data compliance
           </p>
         </div>
@@ -204,55 +141,53 @@ export function DataRetentionConfig() {
       {/* Summary Cards */}
       {summary && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-sm text-slate-500 dark:text-slate-400">Total Policies</div>
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-border dark:border-slate-700">
+            <div className="text-sm text-muted-fg dark:text-muted-fg">Total Policies</div>
             <div className="text-2xl font-bold text-slate-900 dark:text-white">{summary.total_policies}</div>
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-sm text-slate-500 dark:text-slate-400">Active Policies</div>
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-border dark:border-slate-700">
+            <div className="text-sm text-muted-fg dark:text-muted-fg">Active Policies</div>
             <div className="text-2xl font-bold text-green-600">{summary.active_policies}</div>
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-sm text-slate-500 dark:text-slate-400">Total Records Purged</div>
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-border dark:border-slate-700">
+            <div className="text-sm text-muted-fg dark:text-muted-fg">Total Records Purged</div>
             <div className="text-2xl font-bold text-amber-600">{formatNumber(summary.total_records_purged)}</div>
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-sm text-slate-500 dark:text-slate-400">Next Scheduled Purge</div>
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-border dark:border-slate-700">
+            <div className="text-sm text-muted-fg dark:text-muted-fg">Next Scheduled Purge</div>
             <div className="text-2xl font-bold text-blue-600">{summary.next_scheduled_purge ? new Date(summary.next_scheduled_purge).toLocaleDateString('en-PH') : 'Not scheduled'}</div>
           </div>
         </div>
       )}
 
       {/* Policies Table */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-border dark:border-slate-700 overflow-hidden">
         {policies.length === 0 ? (
           <div className="p-12 text-center">
-            <HardDrive className="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600 mb-4" />
-            <p className="text-slate-500 dark:text-slate-400">No retention policies configured</p>
-            <p className="text-sm text-slate-400 dark:text-slate-500 mt-1">Create policies to automatically purge old data</p>
+            <HardDrive className="w-12 h-12 mx-auto text-slate-300 dark:text-muted-fg mb-4" />
+            <p className="text-muted-fg dark:text-muted-fg">No retention policies configured</p>
+            <p className="text-sm text-muted-fg dark:text-muted-fg mt-1">Create policies to automatically purge old data</p>
           </div>
         ) : (
           <>
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
+                <thead className="bg-bg dark:bg-slate-800/50 border-b border-border dark:border-slate-700">
                   <tr>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Entity</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Retention</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Status</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Last Purged</th>
-                    <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Records Purged</th>
-                    <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 pr-4">Actions</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg">Entity</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg">Retention</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg">Status</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg">Last Purged</th>
+                    <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg">Records Purged</th>
+                    <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg pr-4">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                   {policies.map((p) => {
                     const entity = ENTITY_TYPES.find(e => e.value === p.entity_type);
                     const entityLabel = entity?.label ?? p.entity_type;
-                    const entityIcon = entity?.icon ?? <Database className="w-4 h-4" />;
-                    
                     return (
-                      <tr key={p.entity_type} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                      <tr key={p.entity_type} className="hover:bg-bg dark:hover:bg-slate-700/50">
                         <td className="px-3 py-3">
                           <div className="flex items-center gap-2">
                             <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400">
@@ -260,7 +195,7 @@ export function DataRetentionConfig() {
                             </span>
                             <div>
                               <div className="font-medium text-slate-900 dark:text-white">{entityLabel}</div>
-                              <div className="text-xs text-slate-500 dark:text-slate-400 font-mono">{p.entity_type}</div>
+                              <div className="text-xs text-muted-fg dark:text-muted-fg font-mono">{p.entity_type}</div>
                             </div>
                           </div>
                         </td>
@@ -277,11 +212,11 @@ export function DataRetentionConfig() {
                           </div>
                         </td>
                         <td className="px-3 py-3">
-                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${p.enabled ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-slate-50 text-slate-500 border border-slate-200'}`}>
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${p.enabled ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-bg text-muted-fg border border-border'}`}>
                             {p.enabled ? 'Enabled' : 'Disabled'}
                           </span>
                         </td>
-                        <td className="px-3 py-3 text-sm text-slate-500 dark:text-slate-400">
+                        <td className="px-3 py-3 text-sm text-muted-fg dark:text-muted-fg">
                           {p.last_purged ? new Date(p.last_purged).toLocaleDateString('en-PH') : 'Never'}
                         </td>
                         <td className="px-3 py-3 text-right font-mono text-slate-900 dark:text-white">
@@ -307,7 +242,7 @@ export function DataRetentionConfig() {
                             </button>
                             <button
                               onClick={() => { setEditingId(p.entity_type); setForm({ entity_type: p.entity_type, retention_days: p.retention_days, description: '', enabled: p.enabled }); setShowCreateModal(true); }}
-                              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg border transition-colors bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-600"
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg border transition-colors bg-bg text-slate-700 border-border hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-600"
                             >
                               <Edit className="w-3.5 h-3.5" />
                             </button>
@@ -332,7 +267,7 @@ export function DataRetentionConfig() {
               onChange={(e) => setForm({ ...form, entity_type: e.target.value })}
               className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-colors"
               required
-              disabled={editingId}
+              disabled={!!editingId}
             >
               {ENTITY_TYPES.map(e => (
                 <option key={e.value} value={e.value}>
@@ -352,7 +287,7 @@ export function DataRetentionConfig() {
               className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-colors"
               required
             />
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            <p className="text-xs text-muted-fg dark:text-muted-fg mt-1">
               Minimum 1 day. 2555 days = 7 years (recommended for compliance)
             </p>
           </FormField>
@@ -379,8 +314,8 @@ export function DataRetentionConfig() {
             </label>
           </FormField>
           
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
-            <button type="button" onClick={() => { setShowCreateModal(false); setEditingId(null); setForm({ entity_type: 'audit_logs', retention_days: DEFAULT_RETENTION_DAYS, description: '', enabled: true }); }} className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
+          <div className="flex justify-end gap-3 pt-4 border-t border-border dark:border-slate-700">
+            <button type="button" onClick={() => { setShowCreateModal(false); setEditingId(null); setForm({ entity_type: 'audit_logs', retention_days: DEFAULT_RETENTION_DAYS, description: '', enabled: true }); }} className="px-4 py-2 text-muted-fg dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
               Cancel
             </button>
             <button type="submit" className="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg">

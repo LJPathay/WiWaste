@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('reason', 255)->nullable();
             $table->decimal('refund_amount', 10, 2);
             $table->dateTime('return_date');
-            
+
             $table->foreign('sale_item_id')->references('sales_item_id')->on('Sales_Item');
             $table->foreign('user_id')->references('User_id')->on('User');
         });

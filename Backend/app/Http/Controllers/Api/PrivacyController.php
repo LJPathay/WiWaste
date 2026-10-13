@@ -3,13 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\DataSubjectRequest;
-use App\Models\SalesTransaction;
-use App\Models\ReturnTransaction;
+use App\Http\Requests\Api\RectifyDataSubjectRequestRequest;
+use App\Http\Resources\DataSubjectRequestResource;
 use App\Models\AuditLog;
-use App\Models\Customer;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
+use App\Models\DataSubjectRequest;
+use App\Models\ReturnTransaction;
+use App\Models\SalesTransaction;
 
 class PrivacyController extends Controller
 {
@@ -29,27 +28,19 @@ class PrivacyController extends Controller
         $request->update([
             'status' => 'completed',
             'completed_at' => now(),
-            'notes' => "Data erasure completed. Erased: " . json_encode($erasedCounts),
+            'notes' => 'Data erasure completed. Erased: '.json_encode($erasedCounts),
         ]);
 
         return response()->json([
             'message' => 'Data erasure completed successfully.',
             'erased_summary' => $erasedCounts,
-            'request' => $request
+            'request' => (new DataSubjectRequestResource($request))->resolve(request()),
         ], 200);
     }
 
-    public function rectify(Request $request, DataSubjectRequest $dataSubjectRequest)
+    public function rectify(RectifyDataSubjectRequestRequest $request, DataSubjectRequest $dataSubjectRequest)
     {
-        $validator = Validator::make($request->all(), [
-            'corrections' => 'required|array|min:1',
-            'corrections.*.field' => 'required|string',
-            'corrections.*.new_value' => 'required',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
+        $request->validated();
 
         $identifier = $dataSubjectRequest->subject_identifier;
         $businessId = $dataSubjectRequest->business_id;
@@ -70,7 +61,7 @@ class PrivacyController extends Controller
         $dataSubjectRequest->update([
             'status' => 'completed',
             'completed_at' => now(),
-            'notes' => "Rectified fields: " . implode(', ', $updated),
+            'notes' => 'Rectified fields: '.implode(', ', $updated),
         ]);
 
         return response()->json([
@@ -89,7 +80,7 @@ class PrivacyController extends Controller
 
         return response()->json([
             'message' => 'Processing restriction applied. Data marked as restricted.',
-            'request' => $dataSubjectRequest,
+            'request' => (new DataSubjectRequestResource($dataSubjectRequest))->resolve(request()),
         ]);
     }
 
@@ -103,7 +94,7 @@ class PrivacyController extends Controller
 
         return response()->json([
             'message' => 'Objection recorded. Processing will be reviewed.',
-            'request' => $dataSubjectRequest,
+            'request' => (new DataSubjectRequestResource($dataSubjectRequest))->resolve(request()),
         ]);
     }
 
@@ -111,12 +102,12 @@ class PrivacyController extends Controller
     {
         $customer = $this->findCustomerByIdentifier($businessId, $identifier);
 
-        if (!$customer) {
+        if (! $customer) {
             return 0;
         }
 
         $customer->update([
-            'customer_name' => 'ANONYMIZED_' . $customer->customer_id,
+            'customer_name' => 'ANONYMIZED_'.$customer->customer_id,
             'customer_phone' => 'ANONYMIZED',
             'customer_email' => 'ANONYMIZED',
             'customer_address' => 'ANONYMIZED',
@@ -130,8 +121,8 @@ class PrivacyController extends Controller
         $transactions = SalesTransaction::where('business_id', $businessId)
             ->where(function ($q) use ($identifier) {
                 $q->where('customer_name', 'like', "%{$identifier}%")
-                  ->orWhere('customer_phone', $identifier)
-                  ->orWhere('customer_email', $identifier);
+                    ->orWhere('customer_phone', $identifier)
+                    ->orWhere('customer_email', $identifier);
             })
             ->get();
 
@@ -150,11 +141,11 @@ class PrivacyController extends Controller
     {
         $returns = ReturnTransaction::whereHas('saleItem.transaction', function ($q) use ($businessId, $identifier) {
             $q->where('business_id', $businessId)
-              ->where(function ($q) use ($identifier) {
-                  $q->where('customer_name', 'like', "%{$identifier}%")
-                    ->orWhere('customer_phone', $identifier)
-                    ->orWhere('customer_email', $identifier);
-              });
+                ->where(function ($q) use ($identifier) {
+                    $q->where('customer_name', 'like', "%{$identifier}%")
+                        ->orWhere('customer_phone', $identifier)
+                        ->orWhere('customer_email', $identifier);
+                });
         })->get();
 
         return $returns->count();
@@ -165,8 +156,8 @@ class PrivacyController extends Controller
         $auditLogs = AuditLog::where('business_id', $businessId)
             ->where(function ($q) use ($identifier) {
                 $q->where('action', 'like', "%{$identifier}%")
-                  ->orWhere('new_values', 'like', "%{$identifier}%")
-                  ->orWhere('old_values', 'like', "%{$identifier}%");
+                    ->orWhere('new_values', 'like', "%{$identifier}%")
+                    ->orWhere('old_values', 'like', "%{$identifier}%");
             })
             ->get();
 
@@ -188,7 +179,7 @@ class PrivacyController extends Controller
 
     protected function anonymizeValues(array $data, string $identifier): array
     {
-        if (!$data) {
+        if (! $data) {
             return $data;
         }
 
@@ -201,6 +192,7 @@ class PrivacyController extends Controller
                 $data[$key] = $this->anonymizeValues($value, $identifier);
             }
         }
+
         return $data;
     }
 }

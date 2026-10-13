@@ -37,6 +37,10 @@ class DatabaseSeeder extends Seeder
     private const PG_SUPPLIER = 'P&G Philippines';
     private const PHARMADIST_SUPPLIER = 'PharmaDist Corp';
     private const COCA_COLA_SUPPLIER = 'Coca-Cola Beverages PH';
+    private const NESTLE_SUPPLIER = 'Nestlé Philippines';
+
+    /** Product name used across product, inventory, forecast and recommendation fixtures. */
+    private const BIOGESIC = 'Biogesic Paracetamol 500mg';
 
     private array $categoryMap = [];
 
@@ -222,7 +226,7 @@ class DatabaseSeeder extends Seeder
     {
         $data = [
             ['supplier_name' => self::PHARMADIST_SUPPLIER,  'contact_person' => 'Maria Santos',     'contact_number' => '09171234567', 'email' => 'orders@pharmadist.example',   'address' => 'Quezon City, Metro Manila'],
-            ['supplier_name' => 'Nestlé Philippines',     'contact_person' => 'John Reyes',       'contact_number' => '09182223344', 'email' => 'supply@nestle-ph.example',   'address' => 'Makati City, Metro Manila'],
+            ['supplier_name' => self::NESTLE_SUPPLIER,     'contact_person' => 'John Reyes',       'contact_number' => '09182223344', 'email' => 'supply@nestle-ph.example',   'address' => 'Makati City, Metro Manila'],
             ['supplier_name' => self::PG_SUPPLIER,        'contact_person' => 'Anna Lim',         'contact_number' => '09173334455', 'email' => 'sales@pg-ph.example',        'address' => 'Pasig City, Metro Manila'],
             ['supplier_name' => self::COCA_COLA_SUPPLIER,   'contact_person' => 'Pedro Santos',     'contact_number' => '09194445566', 'email' => 'orders@coca-cola-ph.example', 'address' => 'Mandaluyong City, Metro Manila'],
             ['supplier_name' => 'Del Monte Philippines',  'contact_person' => 'Sofia Garcia',     'contact_number' => '09195556677', 'email' => 'bulk@delmonte-ph.example',  'address' => 'Cebu City, Cebu'],
@@ -252,7 +256,7 @@ class DatabaseSeeder extends Seeder
         $expired = now()->subDays(5);
 
         $products = [
-            ['name' => 'Biogesic Paracetamol 500mg',  'barcode' => '480123456789', 'cat' => 'Medicine & Health', 'sup' => self::PHARMADIST_SUPPLIER, 'cost' => 5.50,  'sell' => 7.50,  'reorder' => 50,  'exp' => $plus90],
+            ['name' => self::BIOGESIC,  'barcode' => '480123456789', 'cat' => 'Medicine & Health', 'sup' => self::PHARMADIST_SUPPLIER, 'cost' => 5.50,  'sell' => 7.50,  'reorder' => 50,  'exp' => $plus90],
             ['name' => 'Neozep Forte 10s',             'barcode' => '480987654321', 'cat' => 'Medicine & Health', 'sup' => self::PHARMADIST_SUPPLIER, 'cost' => 8.00,  'sell' => 12.00, 'reorder' => 30,  'exp' => $plus60],
             ['name' => 'Coca-Cola 1.5L',               'barcode' => '480111111111', 'cat' => 'Food & Beverage',   'sup' => self::COCA_COLA_SUPPLIER,   'cost' => 55.00, 'sell' => 72.00, 'reorder' => 20,  'exp' => $plus30],
             ['name' => 'C2 Green Tea 500ml',           'barcode' => '480222222222', 'cat' => 'Food & Beverage',   'sup' => self::COCA_COLA_SUPPLIER,   'cost' => 18.00, 'sell' => 25.00, 'reorder' => 40,  'exp' => $plus30],
@@ -260,12 +264,12 @@ class DatabaseSeeder extends Seeder
             ['name' => 'Tide Original Powder 1kg',     'barcode' => '480444444444', 'cat' => 'Household',         'sup' => self::PG_SUPPLIER,        'cost' => 85.00, 'sell' => 110.00, 'reorder' => 15,  'exp' => null],
             ['name' => 'Del Monte Tomato Sauce 250g',  'barcode' => '480555555555', 'cat' => 'Food & Beverage',   'sup' => 'Del Monte Philippines',  'cost' => 22.00, 'sell' => 30.00, 'reorder' => 35,  'exp' => $plus90],
             ['name' => 'Del Monte Pineapple Tidbits',  'barcode' => '480666666666', 'cat' => 'Food & Beverage',   'sup' => 'Del Monte Philippines',  'cost' => 45.00, 'sell' => 60.00, 'reorder' => 20,  'exp' => $plus90],
-            ['name' => 'Nestlé Bear Brand 800g',       'barcode' => '480777777777', 'cat' => 'Dairy',             'sup' => 'Nestlé Philippines',     'cost' => 120.00, 'sell' => 155.00, 'reorder' => 12,  'exp' => $plus60],
-            ['name' => 'Nestlé Coffee Creamer 200g',   'barcode' => '480888888888', 'cat' => 'Dairy',             'sup' => 'Nestlé Philippines',     'cost' => 65.00, 'sell' => 85.00, 'reorder' => 15,  'exp' => $plus60],
+            ['name' => 'Nestlé Bear Brand 800g',       'barcode' => '480777777777', 'cat' => 'Dairy',             'sup' => self::NESTLE_SUPPLIER,     'cost' => 120.00, 'sell' => 155.00, 'reorder' => 12,  'exp' => $plus60],
+            ['name' => 'Nestlé Coffee Creamer 200g',   'barcode' => '480888888888', 'cat' => 'Dairy',             'sup' => self::NESTLE_SUPPLIER,     'cost' => 65.00, 'sell' => 85.00, 'reorder' => 15,  'exp' => $plus60],
             ['name' => 'San Miguel Pale Pilsen 6-pack', 'barcode' => '480999999999', 'cat' => 'Food & Beverage',   'sup' => 'San Miguel Corporation', 'cost' => 90.00, 'sell' => 120.00, 'reorder' => 10,  'exp' => $plus30],
             ['name' => 'Gardenia Classic White Bread', 'barcode' => '480000000001', 'cat' => 'Food & Beverage',   'sup' => 'San Miguel Corporation', 'cost' => 48.00, 'sell' => 65.00, 'reorder' => 20,  'exp' => $expired],
-            ['name' => 'Alaska Evaporada 370ml',       'barcode' => '480000000002', 'cat' => 'Dairy',             'sup' => 'Nestlé Philippines',     'cost' => 25.00, 'sell' => 35.00, 'reorder' => 30,  'exp' => $plus90],
-            ['name' => 'Milo Energy Pack 200g',        'barcode' => '480000000003', 'cat' => 'Food & Beverage',   'sup' => 'Nestlé Philippines',     'cost' => 38.00, 'sell' => 52.00, 'reorder' => 25,  'exp' => $plus60],
+            ['name' => 'Alaska Evaporada 370ml',       'barcode' => '480000000002', 'cat' => 'Dairy',             'sup' => self::NESTLE_SUPPLIER,     'cost' => 25.00, 'sell' => 35.00, 'reorder' => 30,  'exp' => $plus90],
+            ['name' => 'Milo Energy Pack 200g',        'barcode' => '480000000003', 'cat' => 'Food & Beverage',   'sup' => self::NESTLE_SUPPLIER,     'cost' => 38.00, 'sell' => 52.00, 'reorder' => 25,  'exp' => $plus60],
             ['name' => 'Head & Shoulders 200ml',       'barcode' => '480000000004', 'cat' => 'Personal Care',     'sup' => self::PG_SUPPLIER,        'cost' => 95.00, 'sell' => 130.00, 'reorder' => 10,  'exp' => null],
         ];
 
@@ -288,7 +292,7 @@ class DatabaseSeeder extends Seeder
     private function seedInventory(): void
     {
         $stocks = [
-            'Biogesic Paracetamol 500mg' => ['stock' => 200, 'status' => 'Normal'],
+            self::BIOGESIC => ['stock' => 200, 'status' => 'Normal'],
             'Neozep Forte 10s' => ['stock' => 80,  'status' => 'Normal'],
             'Coca-Cola 1.5L' => ['stock' => 45,  'status' => 'Normal'],
             'C2 Green Tea 500ml' => ['stock' => 120, 'status' => 'Normal'],
@@ -331,7 +335,7 @@ class DatabaseSeeder extends Seeder
 
         SalesItem::create([
             'transaction_id' => $txn1->transaction_id,
-            'product_id' => $this->productMap['Biogesic Paracetamol 500mg'],
+            'product_id' => $this->productMap[self::BIOGESIC],
             'quantity' => 3,
             'unit_price' => 7.50,
             'subtotal' => 22.50,
@@ -445,7 +449,7 @@ class DatabaseSeeder extends Seeder
 
         // ── Initial stock-in for all products ──
         $stockInData = [
-            'Biogesic Paracetamol 500mg' => 200,
+            self::BIOGESIC => 200,
             'Neozep Forte 10s' => 100,
             'Coca-Cola 1.5L' => 100,
             'C2 Green Tea 500ml' => 150,
@@ -596,7 +600,7 @@ class DatabaseSeeder extends Seeder
 
         PurchaseOrderItem::create([
             'po_id' => $po->po_id,
-            'product_id' => $this->productMap['Biogesic Paracetamol 500mg'],
+            'product_id' => $this->productMap[self::BIOGESIC],
             'quantity' => 50,
             'unit_price' => 5.50,
             'subtotal' => 275.00,
@@ -624,7 +628,7 @@ class DatabaseSeeder extends Seeder
             'received_at' => null,
         ]);
 
-        foreach (['Biogesic Paracetamol 500mg' => 50, 'Neozep Forte 10s' => 24] as $name => $qty) {
+        foreach ([self::BIOGESIC => 50, 'Neozep Forte 10s' => 24] as $name => $qty) {
             if (! isset($this->productMap[$name])) {
                 continue;
             }
@@ -698,9 +702,9 @@ class DatabaseSeeder extends Seeder
     private function seedForecastResults(): void
     {
         $forecasts = [
-            ['name' => 'Biogesic Paracetamol 500mg',  'period' => '2026-07', 'demand' => 320, 'risk' => 'Low'],
-            ['name' => 'Biogesic Paracetamol 500mg',  'period' => '2026-08', 'demand' => 280, 'risk' => 'Low'],
-            ['name' => 'Biogesic Paracetamol 500mg',  'period' => '2026-09', 'demand' => 150, 'risk' => 'Medium'],
+            ['name' => self::BIOGESIC,  'period' => '2026-07', 'demand' => 320, 'risk' => 'Low'],
+            ['name' => self::BIOGESIC,  'period' => '2026-08', 'demand' => 280, 'risk' => 'Low'],
+            ['name' => self::BIOGESIC,  'period' => '2026-09', 'demand' => 150, 'risk' => 'Medium'],
             ['name' => 'Coca-Cola 1.5L',              'period' => '2026-07', 'demand' => 180, 'risk' => 'Low'],
             ['name' => 'Coca-Cola 1.5L',              'period' => '2026-08', 'demand' => 220, 'risk' => 'Low'],
             ['name' => 'Coca-Cola 1.5L',              'period' => '2026-09', 'demand' => 95,  'risk' => 'Medium'],
@@ -724,7 +728,7 @@ class DatabaseSeeder extends Seeder
     private function seedProfitLossAnalysis(): void
     {
         $analyses = [
-            ['name' => 'Biogesic Paracetamol 500mg',  'sales' => 8250.00, 'loss' => 0.00,    'risk' => 'Low',   'leakage' => 120.50],
+            ['name' => self::BIOGESIC,  'sales' => 8250.00, 'loss' => 0.00,    'risk' => 'Low',   'leakage' => 120.50],
             ['name' => 'Neozep Forte 10s',            'sales' => 4800.00, 'loss' => 0.00,    'risk' => 'Low',   'leakage' => 85.00],
             ['name' => 'Coca-Cola 1.5L',              'sales' => 12960.00, 'loss' => 0.00,    'risk' => 'Low',   'leakage' => 210.00],
             ['name' => 'C2 Green Tea 500ml',           'sales' => 7500.00, 'loss' => 0.00,    'risk' => 'Low',   'leakage' => 95.00],
@@ -749,7 +753,7 @@ class DatabaseSeeder extends Seeder
     private function seedInventoryRecommendations(): void
     {
         $inventoryRecs = [
-            ['name' => 'Biogesic Paracetamol 500mg',  'current' => 200, 'recommended' => 150, 'type' => 'Reduce Stock', 'confidence' => 0.85, 'status' => 'approved',  'reviewed_by' => 'inventory', 'rejection_reason' => null],
+            ['name' => self::BIOGESIC,  'current' => 200, 'recommended' => 150, 'type' => 'Reduce Stock', 'confidence' => 0.85, 'status' => 'approved',  'reviewed_by' => 'inventory', 'rejection_reason' => null],
             ['name' => 'Gardenia Classic White Bread', 'current' => 0,   'recommended' => 60,  'type' => 'Restock',      'confidence' => 0.93, 'status' => 'pending',   'reviewed_by' => null,       'rejection_reason' => null],
             ['name' => 'Coca-Cola 1.5L',              'current' => 45,  'recommended' => 80,  'type' => 'Restock',      'confidence' => 0.88, 'status' => 'pending',   'reviewed_by' => null,       'rejection_reason' => null],
             ['name' => 'San Miguel Pale Pilsen 6-pack', 'current' => 20,  'recommended' => 35,  'type' => 'Restock',      'confidence' => 0.82, 'status' => 'pending',   'reviewed_by' => null,       'rejection_reason' => null],

@@ -201,12 +201,9 @@ class ReorderService
             ? $product->inventory->firstWhere('branch_id', $branchId)
             : $product->inventory->first();
 
-        if (! $inventory || $inventory->current_stock > $inventory->reorder_level) {
-            return null;
-        }
-
         $supplier = $product->supplier;
-        if (! $supplier) {
+
+        if (! $inventory || ! $supplier || $inventory->current_stock > $inventory->reorder_level) {
             return null;
         }
 

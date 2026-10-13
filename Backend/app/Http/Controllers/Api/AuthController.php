@@ -40,9 +40,7 @@ class AuthController extends BaseApiController
 
         // Check if account is locked
         if ($this->loginAttemptService->isLocked($identifier)) {
-            $remainingMinutes = $this->loginAttemptService->getRemainingLockoutMinutes($identifier);
-
-            return $this->tooManyRequests("Account locked due to too many failed attempts. Try again in {$remainingMinutes} minutes.");
+            return $this->lockedResponse($identifier);
         }
 
         $user = User::where('username', $identifier)
@@ -55,9 +53,7 @@ class AuthController extends BaseApiController
 
             // Re-check if now locked after this attempt
             if ($this->loginAttemptService->isLocked($identifier)) {
-                $remainingMinutes = $this->loginAttemptService->getRemainingLockoutMinutes($identifier);
-
-                return $this->tooManyRequests("Account locked due to too many failed attempts. Try again in {$remainingMinutes} minutes.");
+                return $this->lockedResponse($identifier);
             }
 
             throw ValidationException::withMessages(['username' => ['Invalid credentials.']]);
@@ -92,6 +88,16 @@ class AuthController extends BaseApiController
         ], 'Login successful')->withCookie($cookie);
     }
 
+    /**
+     * Shared 429 for both "already locked" checks in login().
+     */
+    private function lockedResponse(string $identifier)
+    {
+        $remainingMinutes = $this->loginAttemptService->getRemainingLockoutMinutes($identifier);
+
+        return $this->tooManyRequests("Account locked due to too many failed attempts. Try again in {$remainingMinutes} minutes.");
+    }
+
     public function logout(Request $request)
     {
         $request->user()->currentAccessToken()->delete();
@@ -114,15 +120,13 @@ class AuthController extends BaseApiController
         // Get refresh token from HttpOnly cookie
         $refreshToken = $request->cookie('refresh_token');
 
-        if (! $refreshToken) {
-            return $this->unauthorized('Refresh token not found.');
-        }
-
         // Find the token in database
-        $token = $request->user()->tokens()->where('token', hash('sha256', $refreshToken))->first();
+        $token = $refreshToken
+            ? $request->user()->tokens()->where('token', hash('sha256', $refreshToken))->first()
+            : null;
 
-        if (! $token || ! $token->abilities->contains('refresh')) {
-            return $this->unauthorized('Invalid refresh token.');
+        if (! $refreshToken || ! $token || ! $token->abilities->contains('refresh')) {
+            return $this->unauthorized($refreshToken ? 'Invalid refresh token.' : 'Refresh token not found.');
         }
 
         // Check if refresh token is expired
@@ -131,8 +135,6 @@ class AuthController extends BaseApiController
 
             return $this->unauthorized('Refresh token expired. Please log in again.');
         }
-
-        $user = $request->user();
 
         // Revoke old refresh token
         $token->delete();

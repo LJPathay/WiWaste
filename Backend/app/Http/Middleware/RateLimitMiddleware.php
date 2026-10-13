@@ -27,7 +27,7 @@ class RateLimitMiddleware
     public function handle(Request $request, Closure $next): Response
     {
         // Skip rate limiting for health checks
-        if ($request->is('health') || $request->is('api/health') || $request->is('api/v1/health')) {
+        if ($request->is('health', 'api/health', 'api/v1/health')) {
             return $next($request);
         }
 
@@ -44,49 +44,67 @@ class RateLimitMiddleware
         $isAuth = $request->is('api/login', 'api/v1/login', 'api/register', 'api/v1/register');
         $isPassword = $request->is('api/password/*', 'api/v1/password/*');
         $isWrite = in_array($request->method(), ['POST', 'PUT', 'PATCH', 'DELETE']);
-
-        // Determine limit key
         $key = $this->resolveRequestSignature($request);
 
-        // Check auth endpoints first (strictest)
-        if ($isAuth || $isPassword) {
-            $limit = $isPassword ? self::PASSWORD_LIMIT : self::AUTH_LIMIT;
-            if (RateLimiter::tooManyAttempts("auth:{$key}", $limit['max'])) {
-                return $this->rateLimitResponse("auth:{$key}", $limit['decay']);
-            }
-        }
-
-        // API rate limits based on role
-        if ($isApi) {
-            $limits = self::ROLE_LIMITS[$role] ?? self::ROLE_LIMITS['guest'];
-
-            if ($isWrite && RateLimiter::tooManyAttempts("api:write:{$key}", $limits['write'])) {
-                return $this->rateLimitResponse("api:write:{$key}", 60);
-            }
-
-            if (RateLimiter::tooManyAttempts("api:read:{$key}", $limits['read'])) {
-                return $this->rateLimitResponse("api:read:{$key}", 60);
-            }
+        // Check the strictest bucket first (auth/password, then write, then read).
+        if ($blocked = $this->findBlockedResponse($key, $role, $isApi, $isAuth, $isPassword, $isWrite)) {
+            return $blocked;
         }
 
         $response = $next($request);
 
-        // Increment counters
-        if ($isApi && ($isAuth || $isPassword)) {
-            $limit = $isPassword ? self::PASSWORD_LIMIT : self::AUTH_LIMIT;
-            RateLimiter::hit("auth:{$key}", $limit['decay'] * 60);
-        } elseif ($isApi) {
-            $limits = self::ROLE_LIMITS[$role] ?? self::ROLE_LIMITS['guest'];
-            if ($isWrite) {
-                RateLimiter::hit("api:write:{$key}", 3600);
-            }
-            RateLimiter::hit("api:read:{$key}", 3600);
-        }
-
-        // Add rate limit headers
+        $this->recordHits($key, $role, $isApi, $isAuth, $isPassword, $isWrite);
         $this->addRateLimitHeaders($response, $key, $role, $isApi, $isAuth, $isPassword, $isWrite);
 
         return $response;
+    }
+
+    /**
+     * Returns a 429 response when the caller has exhausted any applicable
+     * bucket, or null when the request is still allowed.
+     */
+    private function findBlockedResponse(string $key, string $role, bool $isApi, bool $isAuth, bool $isPassword, bool $isWrite): ?Response
+    {
+        if ($isAuth || $isPassword) {
+            $limit = $isPassword ? self::PASSWORD_LIMIT : self::AUTH_LIMIT;
+            if (RateLimiter::tooManyAttempts("auth:{$key}", $limit['max'])) {
+                return $this->rateLimitResponse("auth:{$key}");
+            }
+        }
+
+        if ($isApi) {
+            $limits = self::ROLE_LIMITS[$role] ?? self::ROLE_LIMITS['guest'];
+            $bucket = $isWrite ? 'write' : 'read';
+
+            if (RateLimiter::tooManyAttempts("api:{$bucket}:{$key}", $limits[$bucket])) {
+                return $this->rateLimitResponse("api:{$bucket}:{$key}");
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Increments every counter that applies to this request, once the response
+     * has been produced.
+     */
+    private function recordHits(string $key, string $role, bool $isApi, bool $isAuth, bool $isPassword, bool $isWrite): void
+    {
+        if (! $isApi) {
+            return;
+        }
+
+        if ($isAuth || $isPassword) {
+            $limit = $isPassword ? self::PASSWORD_LIMIT : self::AUTH_LIMIT;
+            RateLimiter::hit("auth:{$key}", $limit['decay'] * 60);
+
+            return;
+        }
+
+        if ($isWrite) {
+            RateLimiter::hit("api:write:{$key}", 3600);
+        }
+        RateLimiter::hit("api:read:{$key}", 3600);
     }
 
     /**
@@ -129,16 +147,23 @@ class RateLimitMiddleware
             return null;
         }
 
+        return $this->resolveSanctumUser();
+    }
+
+    /**
+     * A malformed or stale token must not 500 the request; treat it as
+     * a guest so the rate limiter still buckets it.
+     */
+    private function resolveSanctumUser()
+    {
         try {
             return Auth::guard('sanctum')->user();
         } catch (\Throwable) {
-            // A malformed or stale token must not 500 the request; treat it as
-            // a guest so the rate limiter still buckets it.
             return null;
         }
     }
 
-    protected function rateLimitResponse(string $key, int $decayMinutes): Response
+    protected function rateLimitResponse(string $key): Response
     {
         $retryAfter = RateLimiter::availableIn($key);
 

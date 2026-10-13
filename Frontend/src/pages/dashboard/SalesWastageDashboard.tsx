@@ -73,7 +73,7 @@ const CHART_HEIGHT = 320;
 const CHART_PLACEHOLDER_CLASS = 'h-80 flex items-center justify-center text-muted-fg';
 const TABLE_PLACEHOLDER_CLASS = 'h-64 flex items-center justify-center text-muted-fg';
 
-function ChartPlaceholder({ message }: { message: string }) {
+function ChartPlaceholder({ message }: Readonly<{ message: string }>) {
   return <div className={CHART_PLACEHOLDER_CLASS}>{message}</div>;
 }
 
@@ -328,39 +328,39 @@ function TopProductsTables({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       <Card title="Top 10 Wasted Products" icon={<AlertTriangle className="h-4 w-4" />}>
-        {loading ? (
-          <ChartPlaceholder message="Loading..." />
-        ) : topWasted && topWasted.length > 0 ? (
-          <DataTable
-            columns={[
-              { key: 'product_name', header: 'Product', minWidth: '180px' },
-              { key: 'sku', header: 'SKU', minWidth: '100px' },
-              { key: 'units_wasted', header: 'Units Wasted', numeric: true, minWidth: '100px', render: (_, v) => numberFormatter.format(v) },
-              { key: 'wastage_value', header: 'Est. Value', numeric: true, minWidth: '120px', render: (_, v) => currencyFormatter.format(v) },
-            ]}
-            data={topWasted}
-          />
-        ) : (
-          <div className={TABLE_PLACEHOLDER_CLASS}>No wasted products data</div>
-        )}
+        {(() => {
+          if (loading) return <ChartPlaceholder message="Loading..." />;
+          if (!topWasted?.length) return <div className={TABLE_PLACEHOLDER_CLASS}>No wasted products data</div>;
+          return (
+            <DataTable
+              columns={[
+                { key: 'product_name', header: 'Product', minWidth: '180px' },
+                { key: 'sku', header: 'SKU', minWidth: '100px' },
+                { key: 'units_wasted', header: 'Units Wasted', numeric: true, minWidth: '100px', render: (_, v) => numberFormatter.format(v) },
+                { key: 'wastage_value', header: 'Est. Value', numeric: true, minWidth: '120px', render: (_, v) => currencyFormatter.format(v) },
+              ]}
+              data={topWasted}
+            />
+          );
+        })()}
       </Card>
 
       <Card title="Slow Movers (Lowest Sales)" icon={<TrendingDown className="h-4 w-4" />}>
-        {loading ? (
-          <ChartPlaceholder message="Loading..." />
-        ) : slowMovers && slowMovers.length > 0 ? (
-          <DataTable
-            columns={[
-              { key: 'product_name', header: 'Product', minWidth: '180px' },
-              { key: 'sku', header: 'SKU', minWidth: '100px' },
-              { key: 'units_sold', header: 'Units Sold', numeric: true, minWidth: '100px', render: (_, v) => numberFormatter.format(v) },
-              { key: 'stock', header: 'Current Stock', numeric: true, minWidth: '100px', render: (_, v) => numberFormatter.format(v) },
-            ]}
-            data={slowMovers}
-          />
-        ) : (
-          <div className={TABLE_PLACEHOLDER_CLASS}>No slow movers data</div>
-        )}
+        {(() => {
+          if (loading) return <ChartPlaceholder message="Loading..." />;
+          if (!slowMovers?.length) return <div className={TABLE_PLACEHOLDER_CLASS}>No slow movers data</div>;
+          return (
+            <DataTable
+              columns={[
+                { key: 'product_name', header: 'Product', minWidth: '180px' },
+                { key: 'sku', header: 'SKU', minWidth: '100px' },
+                { key: 'units_sold', header: 'Units Sold', numeric: true, minWidth: '100px', render: (_, v) => numberFormatter.format(v) },
+                { key: 'stock', header: 'Current Stock', numeric: true, minWidth: '100px', render: (_, v) => numberFormatter.format(v) },
+              ]}
+              data={slowMovers}
+            />
+          );
+        })()}
       </Card>
     </div>
   );
@@ -420,7 +420,13 @@ function DataTable({ columns, data }: Readonly<{ columns: Array<{ key: string; h
         </thead>
         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
           {data.map((row, i) => (
-            <tr key={i} className={i % 2 === 0 ? 'bg-bg-elevated' : 'bg-bg dark:bg-slate-800/50'}>
+            <tr
+              // Rows carry no stable id, so the row's own contents form the key —
+              // an array index would remount unrelated rows when one is inserted.
+              // `i` is kept only for the zebra striping, which the rule does not cover.
+              key={JSON.stringify(row)}
+              className={i % 2 === 0 ? 'bg-bg-elevated' : 'bg-bg dark:bg-slate-800/50'}
+            >
               {columns.map(col => {
                 const value = row[col.key];
                 return (

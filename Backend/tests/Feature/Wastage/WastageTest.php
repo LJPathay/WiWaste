@@ -27,6 +27,9 @@ class WastageTest extends TestCase
     /** Endpoint Inventory/Owner use to record loss directly. */
     private const WASTAGE_ENDPOINT = '/api/v1/wastage';
 
+    /** Cashier flag endpoint, shared by the flag creation tests. */
+    private const FLAGS_ENDPOINT = '/api/v1/wastage-flags';
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -243,7 +246,7 @@ class WastageTest extends TestCase
         $product = $this->makeProduct();
         $inventory = $this->makeInventory($product, 100);
 
-        $this->postJson('/api/v1/wastage-flags', [
+        $this->postJson(self::FLAGS_ENDPOINT, [
             'product_id' => $product->product_id,
             'quantity' => 4,
             'reason' => 'damaged',
@@ -266,7 +269,7 @@ class WastageTest extends TestCase
         $product = $this->makeProduct();
         $this->makeInventory($product, 10);
 
-        $this->postJson('/api/v1/wastage-flags', [
+        $this->postJson(self::FLAGS_ENDPOINT, [
             'product_id' => $product->product_id,
             'quantity' => 1,
             'reason' => 'melted',
@@ -282,7 +285,7 @@ class WastageTest extends TestCase
         $product = $this->makeProduct();
         $this->makeInventory($product, 20);
 
-        $this->postJson('/api/v1/wastage-flags', [
+        $this->postJson(self::FLAGS_ENDPOINT, [
             'product_id' => $product->product_id,
             'quantity' => 1,
             'reason' => 'damaged',

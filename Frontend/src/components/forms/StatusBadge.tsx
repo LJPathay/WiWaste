@@ -3,9 +3,12 @@ import { cn } from '../ui/utils';
 import { STATUS_COLORS, USER_ROLES, ROLE_COLORS } from '../../constants';
 import { Briefcase, Package, Shield } from 'lucide-react';
 
+/** Shared size ladder for the badge components in this file. */
+type BadgeSize = 'sm' | 'md' | 'lg';
+
 interface StatusBadgeProps {
   readonly status: string;
-  readonly size?: 'sm' | 'md' | 'lg';
+  readonly size?: BadgeSize;
   readonly showDot?: boolean;
   readonly className?: string;
 }
@@ -45,7 +48,7 @@ export function StatusBadge({ status, size = 'md', showDot = true }: StatusBadge
 
 interface RoleBadgeProps {
   readonly role: (typeof USER_ROLES)[number];
-  readonly size?: 'sm' | 'md' | 'lg';
+  readonly size?: BadgeSize;
   readonly className?: string;
 }
 
@@ -84,7 +87,12 @@ export function RoleBadge({ role, size = 'md', className }: RoleBadgeProps) {
   );
 }
 
-export function PaymentMethodBadge({ method, size = 'md' }: { method: string; size?: 'sm' | 'md' | 'lg' }) {
+interface PaymentMethodBadgeProps {
+  readonly method: string;
+  readonly size?: BadgeSize;
+}
+
+export function PaymentMethodBadge({ method, size = 'md' }: PaymentMethodBadgeProps) {
   const methodColors: Record<string, { bg: string; text: string; icon: React.ReactNode }> = {
     Cash: {
       bg: 'bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-300 border border-green-200 dark:border-green-800/50',

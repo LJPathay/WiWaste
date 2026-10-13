@@ -264,15 +264,15 @@ export function ConfirmDialog({
 }
 
 interface FieldProps {
-  label: string;
-  children: React.ReactNode;
-  error?: string;
-  hint?: string;
-  htmlFor?: string;
+  readonly label: string;
+  readonly children: React.ReactNode;
+  readonly error?: string;
+  readonly hint?: string;
+  readonly htmlFor?: string;
   /** Marks the control as required: renders the asterisk and sets `aria-required`. */
-  required?: boolean;
+  readonly required?: boolean;
   /** Extra classes for the label element. */
-  labelClassName?: string;
+  readonly labelClassName?: string;
 }
 
 export function FormField({ label, children, error, hint, htmlFor, required, labelClassName }: FieldProps) {

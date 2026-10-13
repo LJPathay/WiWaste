@@ -63,9 +63,11 @@ export function ActionMenu({ items, trigger, align = 'right' }: ActionMenuProps)
           )}
           role="menu"
         >
-          {items.map((item, index) => (
+          {items.map((item) => (
             <button
-              key={index}
+              // Menu items are one-per-label by construction (Edit, Delete, …), so the
+              // label is a stable key and avoids the array-index anti-pattern.
+              key={item.label}
               type="button"
               onClick={() => {
                 item.onClick();

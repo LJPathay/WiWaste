@@ -23,6 +23,12 @@ class StockMovementTest extends TestCase
     /** Endpoint under test for the stock-in block below. */
     private const STOCK_IN_ENDPOINT = '/api/v1/inventory/stock-in';
 
+    /** Endpoint that receives stock against a receiving record. */
+    private const RECEIVE_ENDPOINT = '/api/v1/inventory/receive';
+
+    /** Movement type label written by the stock-in path. */
+    private const MOVEMENT_STOCK_IN = 'Stock In';
+
     private function actingAsInventory(): void
     {
         Sanctum::actingAs($this->makeInventoryUser('Inventory'));
@@ -49,7 +55,7 @@ class StockMovementTest extends TestCase
 
         $this->assertDatabaseHas('Stock_Movement', [
             'product_id' => $product->product_id,
-            'movement_type' => 'Stock In',
+            'movement_type' => self::MOVEMENT_STOCK_IN,
             'quantity' => 10,
         ]);
     }
@@ -101,7 +107,7 @@ class StockMovementTest extends TestCase
         $product = $this->makeProduct(['reorder_level' => 20]);
         $inventory = $this->makeInventory($product, 0);
 
-        $this->postJson('/api/v1/inventory/receive', [
+        $this->postJson(self::RECEIVE_ENDPOINT, [
             'product_id' => $product->product_id,
             'quantity' => 60,
             'batch_number' => 'LOT-777',
@@ -133,8 +139,8 @@ class StockMovementTest extends TestCase
             'expiry_date' => now()->addMonths(9)->toDateString(),
         ];
 
-        $this->postJson('/api/v1/inventory/receive', $payload + ['quantity' => 20])->assertOk();
-        $this->postJson('/api/v1/inventory/receive', $payload + ['quantity' => 15])->assertOk();
+        $this->postJson(self::RECEIVE_ENDPOINT, $payload + ['quantity' => 20])->assertOk();
+        $this->postJson(self::RECEIVE_ENDPOINT, $payload + ['quantity' => 15])->assertOk();
 
         $batch = FEFOBatch::where('batch_number', 'LOT-888')->firstOrFail();
 
@@ -148,7 +154,7 @@ class StockMovementTest extends TestCase
         $product = $this->makeProduct();
         $this->makeInventory($product, 0);
 
-        $this->postJson('/api/v1/inventory/receive', [
+        $this->postJson(self::RECEIVE_ENDPOINT, [
             'product_id' => $product->product_id,
             'quantity' => 10,
             'batch_number' => 'LOT-OLD',
@@ -325,7 +331,7 @@ class StockMovementTest extends TestCase
 
         $this->postJson(self::STOCK_IN_ENDPOINT, ['product_id' => $product->product_id, 'quantity' => 10])
             ->assertOk();
-        $this->postJson('/api/v1/inventory/receive', [
+        $this->postJson(self::RECEIVE_ENDPOINT, [
             'product_id' => $product->product_id,
             'quantity' => 5,
             'batch_number' => 'LOT-1',
@@ -337,7 +343,7 @@ class StockMovementTest extends TestCase
         $response->assertOk()->assertJsonCount(2, 'data');
 
         $types = array_column($response->json('data'), 'movement_type');
-        $this->assertSame(['Stock In', 'Stock In'], $types);
+        $this->assertSame([self::MOVEMENT_STOCK_IN, self::MOVEMENT_STOCK_IN], $types);
     }
 
     public function test_per_inventory_movement_history_is_scoped_to_one_product(): void

@@ -303,7 +303,6 @@
 .dark .theme-content [class~="bg-[#fcf8fa]"],
 .dark .theme-content [class~="bg-[#f6f3f5]"],
 .dark .theme-content [class~="bg-[#f8f9ff]"],
-.dark .theme-content [class~="bg-bg"],
 .dark .theme-content [class~="bg-bg"] {
     background-color: rgb(30 41 59 / 0.55);
 }

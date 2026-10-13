@@ -898,7 +898,7 @@ export function ManageProducts() {
                   link.download = `label-${labelProduct.sku ?? labelProduct.id}.${labelFormat}`;
                   document.body.appendChild(link);
                   link.click();
-                  document.body.removeChild(link);
+                  link.remove();
                 }}
                 className="flex-1 h-9 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-900 dark:text-slate-100 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 border border-border dark:border-slate-600"
               >

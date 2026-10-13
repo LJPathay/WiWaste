@@ -21,6 +21,9 @@ use Carbon\Carbon;
  */
 class BirIntegrationService
 {
+    /** Fallback TIN used when a business record has none. */
+    private const DEFAULT_TIN = '000-000-000-000';
+
     /**
      * Generate BIR-compliant receipt data for a transaction
      *
@@ -67,7 +70,7 @@ class BirIntegrationService
         return [
             'receipt_header' => [
                 'business_name' => $business?->name ?? 'WiWaste',
-                'business_tin' => $business?->tin ?? '000-000-000-000',
+                'business_tin' => $business?->tin ?? self::DEFAULT_TIN,
                 'business_address' => $branch?->address ?? 'N/A',
                 'branch_name' => $branch?->name ?? 'Main Branch',
                 'receipt_number' => $transaction->transaction_id,
@@ -96,7 +99,7 @@ class BirIntegrationService
             ],
             'footer' => [
                 'footer_message' => 'THIS SERVES AS YOUR OFFICIAL RECEIPT',
-                'vat_reg_tin' => $business?->tin ?? '000-000-000-000',
+                'vat_reg_tin' => $business?->tin ?? self::DEFAULT_TIN,
                 'software_version' => 'WiWaste v1.0',
                 'cas_ready' => true, // Indicates CAS-ready format
             ],
@@ -196,7 +199,7 @@ class BirIntegrationService
             'period' => $periodType === 'monthly'
                 ? $periodDate->format('F Y')
                 : 'Q'.$periodDate->quarter.' '.$periodDate->year,
-            'business_tin' => Business::find($businessId)?->tin ?? '000-000-000-000',
+            'business_tin' => Business::find($businessId)?->tin ?? self::DEFAULT_TIN,
             'business_name' => Business::find($businessId)?->name ?? 'WiWaste',
             'total_sales' => $report['summary']['total_sales'] ?? 0,
             'vatable_sales' => $report['summary']['total_vatable_sales'] ?? 0,
@@ -226,7 +229,7 @@ class BirIntegrationService
             $cashier = $transaction->user;
 
             return [
-                'tin' => $business?->tin ?? '000-000-000-000',
+                'tin' => $business?->tin ?? self::DEFAULT_TIN,
                 'branch_code' => $branch?->id,
                 'transaction_id' => $transaction->transaction_id,
                 'date' => $transaction->transaction_date->format('Y-m-d'),
@@ -263,7 +266,7 @@ class BirIntegrationService
         })->toArray();
 
         return [
-            'business_tin' => Business::find($fromDate->month)?->tin ?? '000-000-000-000',
+            'business_tin' => Business::find($fromDate->month)?->tin ?? self::DEFAULT_TIN,
             'branch_code' => 'ALL',
             'period_from' => $fromDate->format('Y-m-d'),
             'period_to' => $toDate->format('Y-m-d'),
@@ -280,9 +283,6 @@ class BirIntegrationService
      */
     protected function generateSerialNumber(SalesTransaction $transaction): string
     {
-        $branch = $transaction->branch;
-        $date = $transaction->transaction_date;
-
         return 'SER-'.$transaction->transaction_id;
     }
 

@@ -24,6 +24,9 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
 
+/** Endpoint exercised by the category-cache test below. */
+const CATEGORIES_ENDPOINT = '/api/v1/categories';
+
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
@@ -48,7 +51,7 @@ it('serves the category list from a cache that only a model write can drop', fun
     Cache::forget(Category::CACHE_KEY);
 
     // A cold cache fills on the first read…
-    expect($this->getJson('/api/v1/categories')->json('meta.total'))->toBe(0);
+    expect($this->getJson(CATEGORIES_ENDPOINT)->json('meta.total'))->toBe(0);
     expect(Cache::has(Category::CACHE_KEY))->toBeTrue();
 
     // …and is then authoritative. This row bypasses Eloquent entirely, so no model
@@ -56,7 +59,7 @@ it('serves the category list from a cache that only a model write can drop', fun
     $ghost = 'Ghost '.uniqid();
     DB::table('Category')->insert(['Category_name' => $ghost]);
 
-    expect($this->getJson('/api/v1/categories')->json('meta.total'))->toBe(0);
+    expect($this->getJson(CATEGORIES_ENDPOINT)->json('meta.total'))->toBe(0);
 
     // A model write is what finally drops the key.
     $written = 'Written '.uniqid();
@@ -64,7 +67,7 @@ it('serves the category list from a cache that only a model write can drop', fun
 
     expect(Cache::has(Category::CACHE_KEY))->toBeFalse();
 
-    $names = collect($this->getJson('/api/v1/categories')->json('data'))->pluck('name');
+    $names = collect($this->getJson(CATEGORIES_ENDPOINT)->json('data'))->pluck('name');
     expect($names)->toContain($written)->toContain($ghost);
 });
 
@@ -75,7 +78,7 @@ it('filters the cached category list the way the query used to', function () {
     Category::create(['Category_name' => $archived, 'status' => 'Archived']);
 
     // The default list still hides archived rows (pickers must not offer them)…
-    $default = collect($this->getJson('/api/v1/categories')->json('data'))->pluck('name');
+    $default = collect($this->getJson(CATEGORIES_ENDPOINT)->json('data'))->pluck('name');
     expect($default)->toContain($active)->and($default)->not->toContain($archived);
 
     // …an explicit status tab still reaches them…
@@ -91,7 +94,7 @@ it('filters the cached category list the way the query used to', function () {
 it('drops the cached category list when a product write moves its count', function () {
     Category::create(['Category_name' => 'Counted '.uniqid()]);
 
-    $this->getJson('/api/v1/categories');
+    $this->getJson(CATEGORIES_ENDPOINT);
     expect(Cache::has(Category::CACHE_KEY))->toBeTrue();
 
     $supplier = Supplier::create([

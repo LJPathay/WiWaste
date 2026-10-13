@@ -107,13 +107,40 @@ function sortIndicator<T>(col: DataTableColumn<T>): 'ascending' | 'descending' |
 }
 
 interface ColumnHeadProps<T> {
-  col: DataTableColumn<T>;
-  selectable: boolean;
-  hasActions: boolean;
+  readonly col: DataTableColumn<T>;
+  readonly selectable: boolean;
+  readonly hasActions: boolean;
+}
+
+/** Kept out of `ColumnHead` so its `&&` chain does not count against that function's complexity. */
+function headClassName<T>(col: DataTableColumn<T>, pin: 'start' | 'end' | null): string {
+  return cn(
+    col.align === 'numeric' && "text-left",
+    col.align === 'center' && "text-center",
+    pin === 'start' && "sticky left-0 z-30 bg-bg dark:bg-slate-900",
+    pin === 'end' && "sticky right-0 z-30 bg-bg dark:bg-slate-900",
+    col.hideOnMobile && "hidden md:table-cell",
+    col.sortable && "cursor-pointer select-none hover:bg-bg dark:hover:bg-slate-800",
+  );
+}
+
+function headStyle<T>(
+  col: DataTableColumn<T>,
+  pin: 'start' | 'end' | null,
+  selectable: boolean,
+  hasActions: boolean,
+): React.CSSProperties {
+  return {
+    minWidth: col.minWidth,
+    width: col.width,
+    ...(pin === 'start' ? { left: selectable ? '40px' : '0' } : {}),
+    ...(pin === 'end' ? { right: hasActions ? '64px' : '0' } : {}),
+  };
 }
 
 function ColumnHead<T>({ col, selectable, hasActions }: ColumnHeadProps<T>) {
   const pin = pinOf(col);
+  const sortable = Boolean(col.sortable && col.onSort);
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
@@ -127,22 +154,10 @@ function ColumnHead<T>({ col, selectable, hasActions }: ColumnHeadProps<T>) {
       aria-sort={col.sortable ? sortIndicator(col) : undefined}
       tabIndex={col.sortable ? 0 : undefined}
       role={col.sortable ? 'button' : undefined}
-      onKeyDown={col.sortable && col.onSort ? handleKeyDown : undefined}
-      onClick={col.sortable && col.onSort ? col.onSort : undefined}
-      className={cn(
-        col.align === 'numeric' && "text-left",
-        col.align === 'center' && "text-center",
-        pin === 'start' && "sticky left-0 z-30 bg-bg dark:bg-slate-900",
-        pin === 'end' && "sticky right-0 z-30 bg-bg dark:bg-slate-900",
-        col.hideOnMobile && "hidden md:table-cell",
-        col.sortable && "cursor-pointer select-none hover:bg-bg dark:hover:bg-slate-800",
-      )}
-      style={{
-        minWidth: col.minWidth,
-        width: col.width,
-        ...(pin === 'start' ? { left: selectable ? '40px' : '0' } : {}),
-        ...(pin === 'end' ? { right: hasActions ? '64px' : '0' } : {}),
-      }}
+      onKeyDown={sortable ? handleKeyDown : undefined}
+      onClick={sortable ? col.onSort : undefined}
+      className={headClassName(col, pin)}
+      style={headStyle(col, pin, selectable, hasActions)}
     >
       {col.header}
     </TableHead>
@@ -156,6 +171,53 @@ interface DataCellProps<T> {
   readonly hasActions: boolean;
 }
 
+/**
+ * Renders an unrendered cell value as text. The old `String(cellValue ?? '—')` could
+ * reach an object or array and stringify it as `[object Object]`; anything non-primitive
+ * is JSON-encoded instead so the cell stays readable.
+ */
+function cellText(value: unknown): string {
+  if (value === null || value === undefined) return '—';
+  if (typeof value === 'object') {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return '[object]';
+    }
+  }
+  return String(value);
+}
+
+/** Kept out of `DataCell` so its `&&` chain does not count against that function's complexity. */
+function cellClassName<T>(col: DataTableColumn<T>, pin: 'start' | 'end' | null): string {
+  return cn(
+    (col.align === 'numeric' || col.numeric) && "text-left tabular-nums",
+    col.align === 'center' && "text-center",
+    pin === 'start' && cn("sticky left-0 z-10", PINNED_CELL_BG),
+    pin === 'end' && cn("sticky right-0 z-10", PINNED_CELL_BG),
+    col.numeric && "tabular-nums",
+    col.hideOnMobile && "hidden md:table-cell",
+  );
+}
+
+function cellStyle(
+  pin: 'start' | 'end' | null,
+  selectable: boolean,
+  hasActions: boolean,
+): React.CSSProperties {
+  return {
+    ...(pin === 'start' ? { left: selectable ? '40px' : '0' } : {}),
+    ...(pin === 'end' ? { right: hasActions ? '64px' : '0' } : {}),
+  };
+}
+
+function cellBody<T>(col: DataTableColumn<T>, row: T, cellValue: unknown): React.ReactNode {
+  if (col.render) return col.render(row, cellValue);
+  const text = cellText(cellValue);
+  if (col.truncate) return <TruncatedCell>{text}</TruncatedCell>;
+  return <span className={cn(col.numeric && "tabular-nums")}>{text}</span>;
+}
+
 function DataCell<T>({ col, row, selectable, hasActions }: DataCellProps<T>) {
   const pin = pinOf(col);
   // The row type has no index signature, so the dynamic column key needs a
@@ -165,26 +227,10 @@ function DataCell<T>({ col, row, selectable, hasActions }: DataCellProps<T>) {
   return (
     <TableCell
       key={col.key}
-      className={cn(
-        (col.align === 'numeric' || col.numeric) && "text-left tabular-nums",
-        col.align === 'center' && "text-center",
-        pin === 'start' && cn("sticky left-0 z-10", PINNED_CELL_BG),
-        pin === 'end' && cn("sticky right-0 z-10", PINNED_CELL_BG),
-        col.numeric && "tabular-nums",
-        col.hideOnMobile && "hidden md:table-cell",
-      )}
-      style={{
-        ...(pin === 'start' ? { left: selectable ? '40px' : '0' } : {}),
-        ...(pin === 'end' ? { right: hasActions ? '64px' : '0' } : {}),
-      }}
+      className={cellClassName(col, pin)}
+      style={cellStyle(pin, selectable, hasActions)}
     >
-      {col.render ? (
-        col.render(row, cellValue)
-      ) : col.truncate ? (
-        <TruncatedCell>{String(cellValue ?? '—')}</TruncatedCell>
-      ) : (
-        <span className={cn(col.numeric && "tabular-nums")}>{String(cellValue ?? '—')}</span>
-      )}
+      {cellBody(col, row, cellValue)}
     </TableCell>
   );
 }

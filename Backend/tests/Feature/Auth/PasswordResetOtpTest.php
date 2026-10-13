@@ -23,6 +23,15 @@ class PasswordResetOtpTest extends TestCase
     /** `POST /api/v1/password/reset` — consumes the OTP and sets the new password. */
     private const RESET_ENDPOINT = '/api/v1/password/reset';
 
+    /** Fixed OTP used across tests. */
+    private const OTP = '123456';
+
+    /** Second OTP value used to assert an expired or mismatched code. */
+    private const OTHER_OTP = '000000';
+
+    /** Email that deliberately has no account, for the "unknown user" paths. */
+    private const NOBODY_EMAIL = 'nobody@example.com';
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -95,7 +104,7 @@ class PasswordResetOtpTest extends TestCase
     {
         Mail::fake();
 
-        $this->postJson('/api/v1/password/forgot', ['email' => 'nobody@example.com'])
+        $this->postJson('/api/v1/password/forgot', ['email' => self::NOBODY_EMAIL])
             ->assertStatus(422)
             ->assertJsonValidationErrors('email');
     }
@@ -126,9 +135,9 @@ class PasswordResetOtpTest extends TestCase
     public function test_verify_otp_accepts_the_current_code(): void
     {
         $user = $this->user();
-        $this->seedOtp($user->email, '123456');
+        $this->seedOtp($user->email, self::OTP);
 
-        $this->postJson(self::VERIFY_OTP_ENDPOINT, ['email' => $user->email, 'otp' => '123456'])
+        $this->postJson(self::VERIFY_OTP_ENDPOINT, ['email' => $user->email, 'otp' => self::OTP])
             ->assertOk()
             ->assertJsonPath('data.verified', true);
     }
@@ -136,7 +145,7 @@ class PasswordResetOtpTest extends TestCase
     public function test_verify_otp_rejects_a_wrong_code(): void
     {
         $user = $this->user();
-        $this->seedOtp($user->email, '123456');
+        $this->seedOtp($user->email, self::OTP);
 
         $this->postJson(self::VERIFY_OTP_ENDPOINT, ['email' => $user->email, 'otp' => '654321'])
             ->assertStatus(422)
@@ -146,9 +155,9 @@ class PasswordResetOtpTest extends TestCase
     public function test_verify_otp_rejects_an_expired_code(): void
     {
         $user = $this->user();
-        $this->seedOtp($user->email, '123456', ['expires_at' => now()->subMinutes(1)]);
+        $this->seedOtp($user->email, self::OTP, ['expires_at' => now()->subMinutes(1)]);
 
-        $this->postJson(self::VERIFY_OTP_ENDPOINT, ['email' => $user->email, 'otp' => '123456'])
+        $this->postJson(self::VERIFY_OTP_ENDPOINT, ['email' => $user->email, 'otp' => self::OTP])
             ->assertStatus(422);
     }
 
@@ -168,18 +177,18 @@ class PasswordResetOtpTest extends TestCase
     public function test_five_failed_attempts_burn_the_code(): void
     {
         $user = $this->user();
-        $record = $this->seedOtp($user->email, '123456');
+        $record = $this->seedOtp($user->email, self::OTP);
 
         for ($i = 0; $i < 4; $i++) {
-            $this->assertFalse(PasswordResetOtp::verifyOtp($user->email, '000000'));
+            $this->assertFalse(PasswordResetOtp::verifyOtp($user->email, self::OTHER_OTP));
             $this->assertFalse($record->fresh()->used, 'Must still be usable before the 5th attempt.');
         }
 
-        $this->assertFalse(PasswordResetOtp::verifyOtp($user->email, '000000'));
+        $this->assertFalse(PasswordResetOtp::verifyOtp($user->email, self::OTHER_OTP));
         $this->assertTrue($record->fresh()->used, 'Code must be burnt after 5 failed attempts.');
 
         // Even the correct code no longer verifies.
-        $this->assertFalse(PasswordResetOtp::verifyOtp($user->email, '123456'));
+        $this->assertFalse(PasswordResetOtp::verifyOtp($user->email, self::OTP));
     }
 
     // === POST /api/v1/password/reset ===
@@ -187,9 +196,9 @@ class PasswordResetOtpTest extends TestCase
     public function test_reset_password_updates_the_credential(): void
     {
         $user = $this->user();
-        $this->seedOtp($user->email, '123456');
+        $this->seedOtp($user->email, self::OTP);
 
-        $this->postJson(self::RESET_ENDPOINT, $this->resetPayload($user->email, '123456', self::VALID_PASSWORD))
+        $this->postJson(self::RESET_ENDPOINT, $this->resetPayload($user->email, self::OTP, self::VALID_PASSWORD))
             ->assertOk()
             ->assertJsonPath('success', true);
 
@@ -199,13 +208,13 @@ class PasswordResetOtpTest extends TestCase
     public function test_reset_password_revokes_every_active_token(): void
     {
         $user = $this->user();
-        $this->seedOtp($user->email, '123456');
+        $this->seedOtp($user->email, self::OTP);
 
         $user->createToken('desktop')->plainTextToken;
         $user->createToken('tablet')->plainTextToken;
         $this->assertCount(2, $user->tokens()->get());
 
-        $this->postJson(self::RESET_ENDPOINT, $this->resetPayload($user->email, '123456', self::VALID_PASSWORD))
+        $this->postJson(self::RESET_ENDPOINT, $this->resetPayload($user->email, self::OTP, self::VALID_PASSWORD))
             ->assertOk();
 
         $this->assertCount(0, $user->fresh()->tokens()->get());
@@ -214,22 +223,22 @@ class PasswordResetOtpTest extends TestCase
     public function test_a_code_cannot_be_reused_after_reset(): void
     {
         $user = $this->user();
-        $this->seedOtp($user->email, '123456');
+        $this->seedOtp($user->email, self::OTP);
 
-        $this->postJson(self::RESET_ENDPOINT, $this->resetPayload($user->email, '123456', self::VALID_PASSWORD))
+        $this->postJson(self::RESET_ENDPOINT, $this->resetPayload($user->email, self::OTP, self::VALID_PASSWORD))
             ->assertOk();
 
-        $this->postJson(self::RESET_ENDPOINT, $this->resetPayload($user->email, '123456', 'Another123!'))
+        $this->postJson(self::RESET_ENDPOINT, $this->resetPayload($user->email, self::OTP, 'Another123!'))
             ->assertStatus(422);
     }
 
     public function test_reset_enforces_the_password_policy(): void
     {
         $user = $this->user();
-        $this->seedOtp($user->email, '123456');
+        $this->seedOtp($user->email, self::OTP);
 
         // Too weak: no uppercase, digit or symbol.
-        $this->postJson(self::RESET_ENDPOINT, $this->resetPayload($user->email, '123456', 'weak'))
+        $this->postJson(self::RESET_ENDPOINT, $this->resetPayload($user->email, self::OTP, 'weak'))
             ->assertStatus(422)
             ->assertJsonValidationErrors('password');
     }
@@ -237,11 +246,11 @@ class PasswordResetOtpTest extends TestCase
     public function test_reset_requires_a_matching_confirmation(): void
     {
         $user = $this->user();
-        $this->seedOtp($user->email, '123456');
+        $this->seedOtp($user->email, self::OTP);
 
         $this->postJson(self::RESET_ENDPOINT, [
             'email' => $user->email,
-            'otp' => '123456',
+            'otp' => self::OTP,
             'password' => self::VALID_PASSWORD,
             'password_confirmation' => 'Different123!',
         ])->assertStatus(422)->assertJsonValidationErrors('password_confirmation');
@@ -250,12 +259,12 @@ class PasswordResetOtpTest extends TestCase
     public function test_a_failed_policy_check_does_not_consume_the_code(): void
     {
         $user = $this->user();
-        $this->seedOtp($user->email, '123456');
+        $this->seedOtp($user->email, self::OTP);
 
-        $this->postJson(self::RESET_ENDPOINT, $this->resetPayload($user->email, '123456', 'weak'))
+        $this->postJson(self::RESET_ENDPOINT, $this->resetPayload($user->email, self::OTP, 'weak'))
             ->assertStatus(422);
 
-        $this->postJson(self::RESET_ENDPOINT, $this->resetPayload($user->email, '123456', self::VALID_PASSWORD))
+        $this->postJson(self::RESET_ENDPOINT, $this->resetPayload($user->email, self::OTP, self::VALID_PASSWORD))
             ->assertOk();
     }
 
@@ -283,14 +292,14 @@ class PasswordResetOtpTest extends TestCase
 
         for ($i = 0; $i < 3; $i++) {
             $this->postJson(self::VERIFY_OTP_ENDPOINT, [
-                'email' => 'nobody@example.com',
-                'otp' => '000000',
+                'email' => self::NOBODY_EMAIL,
+                'otp' => self::OTHER_OTP,
             ])->assertStatus(422);
         }
 
         // Without the /api/v1/* arm in the matcher this would fall through to
         // the far looser guest read limit instead of returning 429.
-        $this->postJson(self::VERIFY_OTP_ENDPOINT, ['email' => 'nobody@example.com', 'otp' => '000000'])
+        $this->postJson(self::VERIFY_OTP_ENDPOINT, ['email' => self::NOBODY_EMAIL, 'otp' => self::OTHER_OTP])
             ->assertStatus(429);
     }
 }

@@ -23,7 +23,11 @@ export function useDashboardData(period = '30') {
           ownerDashboard.analytics({ period }).catch(() => null),
         ]);
         return { data: d, overview: ov, ownerAnalytics: analytics };
-      } catch (e) {
+      } catch {
+        // The dashboard falls back to local demo fixtures whenever the session or mock
+        // bootstrap throws (no stored session, expired local state). The error is not
+        // surfaced: every consumer below tolerates null overview/analytics and the
+        // fallback payload keeps the page renderable.
         const analyticsData = getPredictiveAnalytics();
         return {
           data: {

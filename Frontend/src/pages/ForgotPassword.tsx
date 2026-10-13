@@ -108,28 +108,31 @@ export function ForgotPassword() {
         <div className="bg-bg-elevated rounded-2xl border border-border dark:border-slate-800 p-8">
           {/* ── Step indicator ── */}
           <ol className="flex items-center justify-center gap-2 mb-8">
-            {[1, 2, 3].map((n) => (
+            {[1, 2, 3].map((n) => {
+              // The three-way step state is computed first: the chained ternary that
+              // used to sit inside the template literal was hard to read.
+              const isPast = n < stepNumbers[step];
+              const isCurrent = n === stepNumbers[step];
+              let stepClass = 'bg-slate-200 dark:bg-slate-700 text-muted-fg dark:text-muted-fg';
+              if (isCurrent) stepClass = 'bg-brand-600 text-white';
+              else if (isPast) stepClass = 'bg-emerald-500 text-white';
+              return (
               <li className="flex items-center gap-2" key={n}>
                 <div
-                  aria-current={n === stepNumbers[step] ? 'step' : undefined}
-                  className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${
-                    n < stepNumbers[step]
-                      ? 'bg-emerald-500 text-white'
-                      : n === stepNumbers[step]
-                        ? 'bg-brand-600 text-white'
-                        : 'bg-slate-200 dark:bg-slate-700 text-muted-fg dark:text-muted-fg'
-                  }`}
+                  aria-current={isCurrent ? 'step' : undefined}
+                  className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${stepClass}`}
                 >
-                  {n < stepNumbers[step] ? <CheckCircle aria-hidden="true" className="h-5 w-5" /> : n}
+                  {isPast ? <CheckCircle aria-hidden="true" className="h-5 w-5" /> : n}
                 </div>
                 {n < 3 && (
                   <div
                     aria-hidden="true"
-                    className={`w-12 h-0.5 ${n < stepNumbers[step] ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-slate-700'}`}
+                    className={`w-12 h-0.5 ${isPast ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-slate-700'}`}
                   />
                 )}
               </li>
-            ))}
+              );
+            })}
           </ol>
 
           {/* ── Step: email ── */}

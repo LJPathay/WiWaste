@@ -138,16 +138,11 @@ class PrivacyComplianceController extends Controller
         $processing = PrivacyProcessingRecord::query()
             ->when($businessId, fn ($q) => $q->where('business_id', $businessId));
 
-        $byStatus = (clone $requests)->select('status', DB::raw('COUNT(*) as total'))
-            ->groupBy('status')->pluck('total', 'status');
-        $byType = (clone $requests)->select('request_type', DB::raw('COUNT(*) as total'))
-            ->groupBy('request_type')->pluck('total', 'request_type');
-        $byRisk = (clone $breaches)->select('risk_assessment', DB::raw('COUNT(*) as total'))
-            ->groupBy('risk_assessment')->pluck('total', 'risk_assessment');
-        $byCategory = (clone $processing)->select('data_category', DB::raw('COUNT(*) as total'))
-            ->groupBy('data_category')->pluck('total', 'data_category');
-        $byLegalBasis = (clone $processing)->select('legal_basis', DB::raw('COUNT(*) as total'))
-            ->groupBy('legal_basis')->pluck('total', 'legal_basis');
+        $byStatus = $this->countByGroup(clone $requests, 'status');
+        $byType = $this->countByGroup(clone $requests, 'request_type');
+        $byRisk = $this->countByGroup(clone $breaches, 'risk_assessment');
+        $byCategory = $this->countByGroup(clone $processing, 'data_category');
+        $byLegalBasis = $this->countByGroup(clone $processing, 'legal_basis');
 
         return response()->json([
             'period' => [
@@ -192,5 +187,17 @@ class PrivacyComplianceController extends Controller
             'message' => $message,
             'request' => $this->requestPayload($row->fresh()),
         ]);
+    }
+
+    /**
+     * Counts rows grouped by the given column, keyed by the column value.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @return \Illuminate\Support\Collection
+     */
+    private function countByGroup($query, string $column)
+    {
+        return $query->select($column, DB::raw('COUNT(*) as total'))
+            ->groupBy($column)->pluck('total', $column);
     }
 }

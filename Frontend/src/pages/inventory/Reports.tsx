@@ -109,7 +109,7 @@ function reportPreviewColumns(rows: ApiReport[]): DataTableColumn<ApiReport>[] {
   if (!first) return [];
   return Object.keys(first).map(key => ({
     key,
-    header: key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+    header: key.replaceAll('_', ' ').replaceAll(/\b\w/g, c => c.toUpperCase()),
     truncate: true,
   }));
 }

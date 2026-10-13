@@ -552,8 +552,9 @@ export function ManageInventory() {
             </div>
             <div className="p-4 space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-muted-fg dark:text-slate-300 mb-1.5">Item Name</label>
+                <label htmlFor="adjust-item-name" className="block text-xs font-semibold text-muted-fg dark:text-slate-300 mb-1.5">Item Name</label>
                 <input
+                  id="adjust-item-name"
                   type="text"
                   readOnly
                   value={adjustItem.itemName}
@@ -561,8 +562,9 @@ export function ManageInventory() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-muted-fg dark:text-slate-300 mb-1.5">Adjustment Type</label>
+                <label htmlFor="adjust-type" className="block text-xs font-semibold text-muted-fg dark:text-slate-300 mb-1.5">Adjustment Type</label>
                 <select
+                  id="adjust-type"
                   value={adjustType}
                   onChange={e => setAdjustType(e.target.value as 'Stock In' | 'Stock Out')}
                   className="w-full px-3 py-2 text-xs rounded-lg border border-border dark:border-white/10 bg-bg-elevated text-gray-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0F766E]"
@@ -572,8 +574,9 @@ export function ManageInventory() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-muted-fg dark:text-slate-300 mb-1.5">Quantity</label>
+                <label htmlFor="adjust-qty" className="block text-xs font-semibold text-muted-fg dark:text-slate-300 mb-1.5">Quantity</label>
                 <input
+                  id="adjust-qty"
                   type="number"
                   min="1"
                   value={adjustQty}
@@ -583,8 +586,9 @@ export function ManageInventory() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-muted-fg dark:text-slate-300 mb-1.5">Remarks</label>
+                <label htmlFor="adjust-remarks" className="block text-xs font-semibold text-muted-fg dark:text-slate-300 mb-1.5">Remarks</label>
                 <input
+                  id="adjust-remarks"
                   type="text"
                   value={adjustRemarks}
                   onChange={e => setAdjustRemarks(e.target.value)}

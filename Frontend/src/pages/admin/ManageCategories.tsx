@@ -285,9 +285,9 @@ export function ManageCategories() {
     setSubmitting(true);
     setFormError('');
     try {
-      for (const catName of validNames) {
-        await categoriesApi.create(catName);
-      }
+      // The names are already de-duplicated and validated above, and creating one
+      // category does not depend on another, so the requests run concurrently.
+      await Promise.all(validNames.map((catName) => categoriesApi.create(catName)));
       setNames(['']);
       setSelectedTypes(['']);
       setIsAddOpen(false);

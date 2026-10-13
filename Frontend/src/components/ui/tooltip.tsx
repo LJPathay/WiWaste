@@ -69,8 +69,15 @@ function Tooltip({ children }: { children: React.ReactNode }) {
         };
     }, [open]);
 
+    // The provider value is memoised: a fresh object every render would re-render every
+    // consumer (the trigger and the content) whenever any sibling state changes.
+    const value = React.useMemo(
+        () => ({ open, setOpen, timerRef, anchorRef }),
+        [open, setOpen, timerRef, anchorRef]
+    );
+
     return (
-        <TooltipContext.Provider value={{ open, setOpen, timerRef, anchorRef }}>
+        <TooltipContext.Provider value={value}>
             <div ref={anchorRef} className="relative inline-flex items-center">
                 {children}
             </div>

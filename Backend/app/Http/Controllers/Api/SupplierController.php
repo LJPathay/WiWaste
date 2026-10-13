@@ -8,7 +8,6 @@ use App\Http\Requests\Api\UpdateSupplierRequest;
 use App\Http\Resources\SupplierResource;
 use App\Models\Supplier;
 use Carbon\Carbon;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class SupplierController extends BaseApiController
@@ -172,7 +171,7 @@ class SupplierController extends BaseApiController
         ]);
     }
 
-    public function alerts(Request $request)
+    public function alerts()
     {
         $days = (int) request()->input('days', 30);
 

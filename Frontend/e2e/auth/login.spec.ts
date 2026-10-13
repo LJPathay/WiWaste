@@ -47,7 +47,10 @@ test.describe('Login and role routing', () => {
 
     // `required` on the password field stops submission, so no auth call is made.
     await expect(page.locator('#password')).toHaveJSProperty('validity.valueMissing', true);
-    await page.waitForTimeout(500);
+    // Settle the network rather than sleeping a fixed interval: once every in-flight
+    // request has finished, a late `/login` POST would have been observed by the
+    // listener above.
+    await page.waitForLoadState('networkidle');
     expect(loginCalls).toBe(0);
     await expect(page).toHaveURL(/\/login/);
   });

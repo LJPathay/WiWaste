@@ -182,8 +182,13 @@ class PurchaseOrderController extends Controller
 
         $inventory->current_stock += $additionalQty;
         $reorderLevel = $inventory->product?->reorder_level ?? 10;
-        $inventory->stock_status = $inventory->current_stock > $reorderLevel * 5
-            ? 'Overstock' : ($inventory->current_stock <= $reorderLevel ? 'Low Stock' : 'Normal');
+        if ($inventory->current_stock > $reorderLevel * 5) {
+            $inventory->stock_status = 'Overstock';
+        } elseif ($inventory->current_stock <= $reorderLevel) {
+            $inventory->stock_status = 'Low Stock';
+        } else {
+            $inventory->stock_status = 'Normal';
+        }
         $inventory->last_updated = now();
         $inventory->save();
 

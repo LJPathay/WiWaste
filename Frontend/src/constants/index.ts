@@ -180,5 +180,5 @@ export const REGEX = {
   EMAIL: /^[^\s@]+@(?:[^\s@.]+\.)+[^\s@.]+$/,
   PHONE: /^\+?[\d\s-]{10,}$/,
   PASSWORD: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).+$/,
-  CURRENCY: /^[\d,]+(?:\.[\d]*)?$/,
+  CURRENCY: /^[\d,]+(?:\.\d*)?$/,
 } as const;

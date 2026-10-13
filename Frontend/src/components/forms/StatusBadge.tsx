@@ -86,7 +86,7 @@ export function RoleBadge({ role, size = 'md', className }: RoleBadgeProps) {
   );
 }
 
-export function PaymentMethodBadge({ method }: { method: string; size?: 'sm' | 'md' | 'lg' }) {
+export function PaymentMethodBadge({ method, size = 'md' }: { method: string; size?: 'sm' | 'md' | 'lg' }) {
   const methodColors: Record<string, { bg: string; text: string; icon: React.ReactNode }> = {
     Cash: {
       bg: 'bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-300 border border-green-200 dark:border-green-800/50',
@@ -116,10 +116,16 @@ export function PaymentMethodBadge({ method }: { method: string; size?: 'sm' | '
       )},
   };
 
+  const sizeClasses = {
+    sm: 'px-2 py-0.5 text-[10px]',
+    md: 'px-2.5 py-0.5 text-[11px]',
+    lg: 'px-3 py-1 text-xs',
+  };
+
   const config = methodColors[method] || { bg: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-border dark:border-slate-700', text: '', icon: null };
 
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${config.bg}`}>
+    <span className={`inline-flex items-center gap-1.5 rounded-full font-bold border ${sizeClasses[size]} ${config.bg}`}>
       {config.icon && <span>{config.icon}</span>}
       <span>{method}</span>
     </span>

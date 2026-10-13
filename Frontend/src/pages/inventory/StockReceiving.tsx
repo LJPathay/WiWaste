@@ -169,9 +169,10 @@ export function StockReceiving() {
       header: 'Outstanding',
       render: (row) => {
         const units = row.pendingItems.reduce((sum, i) => sum + i.expected_quantity, 0);
+        const unitLabel = units === 1 ? 'unit' : 'units';
         return (
           <span className="font-semibold text-xs">
-            {row.pendingItems.length === 0 ? '—' : `${units} unit${units === 1 ? '' : 's'}`}
+            {row.pendingItems.length === 0 ? '—' : `${units} ${unitLabel}`}
           </span>
         );
       },
@@ -262,11 +263,12 @@ export function StockReceiving() {
       </div>
 
       <div className="flex items-center gap-3">
-        {/* `role="group"` + `aria-pressed` so the tabs are distinguishable from the
-            stat cards that repeat the same words, and so the selected bucket is
-            exposed to assistive tech at all. */}
-        <div
-          role="group"
+        {/* A fieldset (not a div with role="group") so the filter buttons
+            are exposed as a native grouping across all devices. `aria-label`
+            keeps them distinguishable from the stat cards that repeat the
+            same words, and the selected bucket is exposed to assistive
+            tech at all. */}
+        <fieldset
           aria-label="Filter deliveries by status"
           className="flex gap-1 rounded-lg border border-border bg-white p-1"
         >
@@ -284,7 +286,7 @@ export function StockReceiving() {
               {f.charAt(0).toUpperCase() + f.slice(1)}
             </button>
           ))}
-        </div>
+        </fieldset>
       </div>
 
       <div className="rounded-xl border border-border bg-white p-3.5">

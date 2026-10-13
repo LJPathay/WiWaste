@@ -22,6 +22,9 @@ use Laravel\Sanctum\Sanctum;
 
 uses(RefreshDatabase::class);
 
+/** Every product test starts from this name; the assertions quote it too. */
+const PRODUCT_NAME = 'Ibuprofen 200mg';
+
 beforeEach(function () {
     $this->owner = User::factory()->role('Owner')->create();
     $this->category = Category::create(['Category_name' => 'Analgesics '.uniqid()]);
@@ -40,7 +43,7 @@ function productPayload(array $overrides = []): array
         'category_id' => test()->category->Category_id,
         'supplier_id' => test()->supplier->supplier_id,
         'barcode' => '480'.str_pad((string) random_int(0, 999999999), 9, '0', STR_PAD_LEFT),
-        'product_name' => 'Ibuprofen 200mg',
+        'product_name' => PRODUCT_NAME,
         'cost_price' => 8.00,
         'selling_price' => 15.00,
         'reorder_level' => 10,
@@ -55,11 +58,11 @@ it('creates a product and answers with the ProductResource whitelist', function 
 
     $response->assertStatus(201);
 
-    $product = Product::where('product_name', 'Ibuprofen 200mg')->firstOrFail();
+    $product = Product::where('product_name', PRODUCT_NAME)->firstOrFail();
 
     $response
         ->assertJsonPath('id', $product->product_id)
-        ->assertJsonPath('name', 'Ibuprofen 200mg')
+        ->assertJsonPath('name', PRODUCT_NAME)
         ->assertJsonPath('sku', $product->barcode)
         ->assertJsonPath('plu_code', (string) $product->product_id)
         ->assertJsonPath('category', $this->category->Category_name)
@@ -123,7 +126,7 @@ it('lists products in the flat paginator envelope the frontend reads', function 
             'to',
         ])
         ->assertJsonPath('data.0.id', $product->product_id)
-        ->assertJsonPath('data.0.name', 'Ibuprofen 200mg')
+        ->assertJsonPath('data.0.name', PRODUCT_NAME)
         ->assertJsonPath('total', 1);
 
     // `XResource::collection()` would have answered {data, links, meta}; the flat

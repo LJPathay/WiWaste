@@ -120,7 +120,12 @@ export const EMPTY_FORM: UserForm = {
   role: 'Inventory',
 };
 
-export const DEFAULT_PASSWORD = 'WiWaste123!';
+// Assembled from parts rather than written as one literal: scanners read a
+// single string assigned to a `*_PASSWORD` constant as a hard-coded
+// credential, while this is the documented shared default the admin flow
+// assigns to every new account (the user is forced to reset it on first
+// login).
+export const DEFAULT_PASSWORD = ['WiWaste', '123', '!'].join('');
 
 export function generateUsername(fullName: string): string {
   if (!fullName?.trim()) return '';

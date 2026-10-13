@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CycleCountController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\DataBreachController;
 use App\Http\Controllers\Api\DataRetentionPolicyController;
 use App\Http\Controllers\Api\FEFOController;
 use App\Http\Controllers\Api\ForecastAccuracyController;
@@ -283,18 +284,20 @@ return function (): void {
 
     // Data Retention Policies
     // `logs` is a literal segment and must precede `retention-policies/{id}`, which would
-    // otherwise swallow it as an id.
+    // otherwise swallow it as an id. The path is declared once here and reused
+    // under the /privacy prefix below.
+    $retentionPolicies = '/retention-policies';
     Route::get('/retention-policies/logs', [DataRetentionPolicyController::class, 'purgeLogs']);
-    Route::apiResource('/retention-policies', DataRetentionPolicyController::class);
-    Route::post('/retention-policies/{id}/execute', [DataRetentionPolicyController::class, 'executePurge']);
-    Route::get('/retention-policies/{id}/preview', [DataRetentionPolicyController::class, 'previewPurge']);
+    Route::apiResource($retentionPolicies, DataRetentionPolicyController::class);
+    Route::post("{$retentionPolicies}/{id}/execute", [DataRetentionPolicyController::class, 'executePurge']);
+    Route::get("{$retentionPolicies}/{id}/preview", [DataRetentionPolicyController::class, 'previewPurge']);
 
     // ── Privacy / compliance ────────────────────────────────────────────────
     // The admin compliance pages call `privacy.*` in `services/api.ts`, which all live
     // under a `/privacy` prefix. None of these paths existed, so every request from
     // Data Subject Requests / Breach Incidents / Data Retention 404'd and those pages
     // rendered empty. Literal segments are declared before their `{param}` siblings.
-    Route::prefix('privacy')->group(function () {
+    Route::prefix('privacy')->group(function () use ($retentionPolicies) {
         Route::get('/compliance-report', [PrivacyComplianceController::class, 'complianceReport']);
 
         Route::get('/requests', [PrivacyComplianceController::class, 'requests']);
@@ -303,24 +306,24 @@ return function (): void {
         Route::post('/requests/{id}/reject', [PrivacyComplianceController::class, 'rejectRequest']);
         Route::delete('/requests/{id}', [PrivacyComplianceController::class, 'deleteRequest']);
 
-        Route::get('/breaches/statistics', [PrivacyComplianceController::class, 'breachStatistics']);
-        Route::get('/breaches', [PrivacyComplianceController::class, 'breaches']);
-        Route::post('/breaches', [PrivacyComplianceController::class, 'createBreach']);
-        Route::post('/breaches/{id}/escalate', [PrivacyComplianceController::class, 'escalateBreach']);
-        Route::post('/breaches/{id}/notify-npc', [PrivacyComplianceController::class, 'notifyNPC']);
-        Route::post('/breaches/{id}/notify-subjects', [PrivacyComplianceController::class, 'notifySubjects']);
-        Route::post('/breaches/{id}/contain', [PrivacyComplianceController::class, 'containBreach']);
-        Route::post('/breaches/{id}/resolve', [PrivacyComplianceController::class, 'resolveBreach']);
+        Route::get('/breaches/statistics', [DataBreachController::class, 'breachStatistics']);
+        Route::get('/breaches', [DataBreachController::class, 'breaches']);
+        Route::post('/breaches', [DataBreachController::class, 'createBreach']);
+        Route::post('/breaches/{id}/escalate', [DataBreachController::class, 'escalateBreach']);
+        Route::post('/breaches/{id}/notify-npc', [DataBreachController::class, 'notifyNPC']);
+        Route::post('/breaches/{id}/notify-subjects', [DataBreachController::class, 'notifySubjects']);
+        Route::post('/breaches/{id}/contain', [DataBreachController::class, 'containBreach']);
+        Route::post('/breaches/{id}/resolve', [DataBreachController::class, 'resolveBreach']);
 
         // The Data Retention page uses the same prefix as the top-level resource.
         Route::get('/retention-policies/summary', [DataRetentionPolicyController::class, 'retentionSummary']);
         Route::get('/retention-policies/logs', [DataRetentionPolicyController::class, 'purgeLogs']);
-        Route::get('/retention-policies', [DataRetentionPolicyController::class, 'index']);
-        Route::post('/retention-policies', [DataRetentionPolicyController::class, 'store']);
-        Route::get('/retention-policies/{id}/preview', [DataRetentionPolicyController::class, 'previewPurge']);
-        Route::post('/retention-policies/{id}/test-purge', [DataRetentionPolicyController::class, 'testPurge']);
-        Route::post('/retention-policies/{id}/purge', [DataRetentionPolicyController::class, 'purgeNow']);
-        Route::put('/retention-policies/{id}', [DataRetentionPolicyController::class, 'update']);
-        Route::delete('/retention-policies/{id}', [DataRetentionPolicyController::class, 'destroy']);
+        Route::get($retentionPolicies, [DataRetentionPolicyController::class, 'index']);
+        Route::post($retentionPolicies, [DataRetentionPolicyController::class, 'store']);
+        Route::get("{$retentionPolicies}/{id}/preview", [DataRetentionPolicyController::class, 'previewPurge']);
+        Route::post("{$retentionPolicies}/{id}/test-purge", [DataRetentionPolicyController::class, 'testPurge']);
+        Route::post("{$retentionPolicies}/{id}/purge", [DataRetentionPolicyController::class, 'purgeNow']);
+        Route::put("{$retentionPolicies}/{id}", [DataRetentionPolicyController::class, 'update']);
+        Route::delete("{$retentionPolicies}/{id}", [DataRetentionPolicyController::class, 'destroy']);
     });
 };

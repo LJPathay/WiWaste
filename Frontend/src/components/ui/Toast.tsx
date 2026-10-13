@@ -125,7 +125,7 @@ export function Modal({
   className,
   contentClassName,
   titleClassName,
-}: ModalProps) {
+}: Readonly<ModalProps>) {
   const modalRef = useRef<HTMLDivElement>(null);
   const previousActiveElement = useRef<HTMLElement | null>(null);
   useFocusTrap(modalRef, true);

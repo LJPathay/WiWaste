@@ -181,7 +181,7 @@ export function SanitationChecklist() {
         checks: [{ item: '', passed: false, notes: '', photo_url: '' }],
         notes: '',
       });
-      refetchChecklists();
+      void refetchChecklists();
     } catch (err) {
       showError(err instanceof Error ? err.message : 'Failed to update checklist');
     }
@@ -191,7 +191,7 @@ export function SanitationChecklist() {
     try {
       await sanitationApi.verify(id);
       success('Checklist verified.');
-      refetchChecklists();
+      void refetchChecklists();
     } catch (err) {
       showError(err instanceof Error ? err.message : 'Verification failed');
     }
@@ -201,7 +201,7 @@ export function SanitationChecklist() {
     try {
       await sanitationApi.update(id, { checks: [] }); // Using update to mark as deleted via empty checks
       success('Checklist removed.');
-      refetchChecklists();
+      void refetchChecklists();
     } catch (err) {
       showError(err instanceof Error ? err.message : 'Delete failed');
     }

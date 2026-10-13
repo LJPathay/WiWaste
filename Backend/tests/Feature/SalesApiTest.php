@@ -21,6 +21,9 @@ use Laravel\Sanctum\Sanctum;
 
 uses(RefreshDatabase::class);
 
+/** The product every sale test transacts against; assertions quote it too. */
+const SALE_PRODUCT_NAME = 'Bottled Water 500ml';
+
 beforeEach(function () {
     $this->cashier = User::factory()->role('Cashier')->create();
     $this->category = Category::create(['Category_name' => 'Beverages '.uniqid()]);
@@ -32,7 +35,7 @@ beforeEach(function () {
         'category_id' => $this->category->Category_id,
         'supplier_id' => $this->supplier->supplier_id,
         'barcode' => '480'.str_pad((string) random_int(0, 999999999), 9, '0', STR_PAD_LEFT),
-        'product_name' => 'Bottled Water 500ml',
+        'product_name' => SALE_PRODUCT_NAME,
         'cost_price' => 8.00,
         'selling_price' => 15.00,
         'reorder_level' => 10,
@@ -102,7 +105,7 @@ it('lists sales in the flat paginator envelope with resource fields', function (
             'to',
         ])
         ->assertJsonPath('data.0.payment_method', 'Cash')
-        ->assertJsonPath('data.0.items.0.product_name', 'Bottled Water 500ml')
+        ->assertJsonPath('data.0.items.0.product_name', SALE_PRODUCT_NAME)
         ->assertJsonPath('data.0.items.0.sku', $this->product->barcode)
         ->assertJsonPath('total', 1);
 
@@ -132,7 +135,7 @@ it('answers a single sale with the SaleResource object, not a wrapped one', func
         ->assertOk()
         ->assertJsonPath('id', $transactionId)
         ->assertJsonPath('payment_method', 'E-wallet')
-        ->assertJsonPath('items.0.product_name', 'Bottled Water 500ml');
+        ->assertJsonPath('items.0.product_name', SALE_PRODUCT_NAME);
 
     // `new SaleResource()` returned straight from the controller would sit under `data`.
     expect($response->json())->not->toHaveKey('data');

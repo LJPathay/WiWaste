@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, type ReactNode } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { PageLoader } from '../components/ui/PageLoader';
 import { DashboardSkeleton } from '../components/ui/DashboardSkeleton';
@@ -21,14 +21,12 @@ export function Dashboard() {
 
   if (loading) return <PageLoader />;
 
-  const view =
-    session?.role === 'inventory' ? (
-      <InventoryDashboard />
-    ) : session?.role === 'cashier' ? (
-      <POSTerminal />
-    ) : (
-      <DashboardOverview />
-    );
+  let view: ReactNode = <DashboardOverview />;
+  if (session?.role === 'inventory') {
+    view = <InventoryDashboard />;
+  } else if (session?.role === 'cashier') {
+    view = <POSTerminal />;
+  }
 
   return <Suspense fallback={<DashboardSkeleton />}>{view}</Suspense>;
 }

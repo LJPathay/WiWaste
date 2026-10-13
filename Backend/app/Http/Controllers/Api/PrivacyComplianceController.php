@@ -2,19 +2,13 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Concerns\PrivacyComplianceHelpers;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Api\CreateDataBreachIncidentRequest;
 use App\Http\Requests\Api\CreateDataSubjectRequestRequest;
-use App\Http\Requests\Api\ResolveDataBreachIncidentRequest;
-use App\Http\Resources\DataBreachIncidentResource;
-use App\Http\Resources\DataSubjectRequestResource;
-use App\Models\AuditLog;
 use App\Models\DataBreachIncident;
 use App\Models\DataSubjectRequest;
 use App\Models\PrivacyProcessingRecord;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -22,12 +16,18 @@ use Illuminate\Support\Facades\DB;
  *
  * The admin pages (Data Subject Requests, Breach Incident Log, Data Retention
  * Configuration) all live under `Frontend/src/pages/admin` and call `privacy.*`
- * in `services/api.ts`, but none of those paths were ever routed â€” every request
+ * in `services/api.ts`, but none of those paths were ever routed — every request
  * 404'd and each page rendered with empty tables. This controller provides them.
+ *
+ * The breach-incident handlers moved to `DataBreachController`; the two
+ * controllers share their lookups, audit writes and payload shaping through
+ * the `PrivacyComplianceHelpers` trait.
  */
 class PrivacyComplianceController extends Controller
 {
-    /** Data subject requests (access / rectification / erasure / â€¦). */
+    use PrivacyComplianceHelpers;
+
+    /** Data subject requests (access / rectification / erasure / …). */
     public function requests(Request $request)
     {
         $query = DataSubjectRequest::query();
@@ -66,7 +66,7 @@ class PrivacyComplianceController extends Controller
     {
         $data = $request->validated();
 
-        $businessId = $request->user()?->business_id ?? DB::table('businesses')->value('id');
+        $businessId = $this->fallbackBusinessId($request);
         if ($businessId === null) {
             return response()->json(['message' => 'No business is configured.'], 422);
         }
@@ -176,180 +176,7 @@ class PrivacyComplianceController extends Controller
         ]);
     }
 
-    /**
-     * Mean days between a record being raised and it being closed out.
-     *
-     * @param  Collection<int, Model>  $rows
-     */
-    private function avgResolutionDays($rows, string $from = 'requested_at', string $to = 'completed_at'): float
-    {
-        if ($rows->isEmpty()) {
-            return 0.0;
-        }
-
-        $total = $rows->sum(fn ($row) => max(0, $row->{$from}->diffInDays($row->{$to})));
-
-        return round($total / $rows->count(), 2);
-    }
-
-    /** Data breach incidents. */
-    public function breaches(Request $request)
-    {
-        $query = DataBreachIncident::query();
-
-        if ($businessId = $request->user()?->business_id) {
-            $query->where('business_id', $businessId);
-        }
-        if ($status = $request->input('status')) {
-            $query->where('status', $status);
-        }
-        if ($risk = $request->input('risk')) {
-            $query->where('risk_assessment', $risk);
-        }
-
-        $perPage = min((int) $request->input('per_page', 50), 100);
-        $page = (int) $request->input('page', 1);
-
-        $total = (clone $query)->count();
-        $rows = $query->orderByDesc('detected_at')
-            ->forPage($page, $perPage)
-            ->get()
-            ->map(fn (DataBreachIncident $b) => $this->breachPayload($b));
-
-        return response()->json([
-            'data' => $rows,
-            'meta' => [
-                'current_page' => $page,
-                'per_page' => $perPage,
-                'total' => $total,
-                'last_page' => max(1, (int) ceil($total / $perPage)),
-            ],
-        ]);
-    }
-
-    public function createBreach(CreateDataBreachIncidentRequest $request)
-    {
-        $data = $request->validated();
-
-        $businessId = $request->user()?->business_id ?? DB::table('businesses')->value('id');
-        if ($businessId === null) {
-            return response()->json(['message' => 'No business is configured.'], 422);
-        }
-
-        $breach = DataBreachIncident::create([
-            'business_id' => $businessId,
-            'detected_at' => $data['detected_at'] ?? now(),
-            'description' => $data['description'],
-            'personal_data_affected' => $data['personal_data_affected'],
-            'risk_assessment' => $data['risk_assessment'],
-            // A high/critical breach always triggers an NPC notification requirement.
-            'npc_notification_required' => $data['npc_notification_required']
-                ?? in_array($data['risk_assessment'], ['high', 'critical'], true),
-            'status' => 'open',
-        ]);
-
-        return response()->json([
-            'message' => 'Breach incident logged.',
-            'incident' => $this->breachPayload($breach),
-        ], 201);
-    }
-
-    public function breachStatistics(Request $request)
-    {
-        $businessId = $request->user()?->business_id;
-        $base = fn () => DataBreachIncident::query()
-            ->when($businessId, fn ($q) => $q->where('business_id', $businessId));
-
-        $byStatus = $base()->select('status', DB::raw('COUNT(*) as total'))
-            ->groupBy('status')->pluck('total', 'status');
-        $byRisk = $base()->select('risk_assessment', DB::raw('COUNT(*) as total'))
-            ->groupBy('risk_assessment')->pluck('total', 'risk_assessment');
-
-        return response()->json([
-            'total' => $base()->count(),
-            'by_status' => $byStatus,
-            'by_risk' => $byRisk,
-            'npc_notified' => (clone $base())->whereNotNull('npc_notified_at')->count(),
-            'subjects_notified' => (clone $base())->whereNotNull('subjects_notified_at')->count(),
-            'avg_resolution_days' => $this->avgResolutionDays(
-                (clone $base())->whereNotNull('resolved_at')->get(['detected_at', 'resolved_at']),
-                'detected_at',
-                'resolved_at'
-            ),
-        ]);
-    }
-
-    public function escalateBreach(Request $request, int $id)
-    {
-        $breach = $this->findBreach($request, $id);
-        $breach->update([
-            'status' => 'investigating',
-            'npc_notification_required' => true,
-        ]);
-
-        return response()->json([
-            'message' => 'Incident escalated for investigation.',
-            'incident' => $this->breachPayload($breach->fresh()),
-        ]);
-    }
-
-    public function notifyNPC(Request $request, int $id)
-    {
-        $breach = $this->findBreach($request, $id);
-        $breach->update(['npc_notified_at' => now()]);
-
-        return response()->json([
-            'message' => 'National Privacy Commission notified.',
-            'incident' => $this->breachPayload($breach->fresh()),
-        ]);
-    }
-
-    public function notifySubjects(Request $request, int $id)
-    {
-        $breach = $this->findBreach($request, $id);
-        $breach->update(['subjects_notified_at' => now()]);
-
-        return response()->json([
-            'message' => 'Affected data subjects notified.',
-            'incident' => $this->breachPayload($breach->fresh()),
-        ]);
-    }
-
-    public function containBreach(Request $request, int $id)
-    {
-        $breach = $this->findBreach($request, $id);
-        $breach->update(['status' => 'contained']);
-
-        return response()->json([
-            'message' => 'Incident contained.',
-            'incident' => $this->breachPayload($breach->fresh()),
-        ]);
-    }
-
-    public function resolveBreach(ResolveDataBreachIncidentRequest $request, int $id)
-    {
-        $data = $request->validated();
-        $breach = $this->findBreach($request, $id);
-        $breach->update(['status' => 'resolved', 'resolved_at' => now()]);
-
-        return response()->json([
-            'message' => 'Incident resolved.',
-            'resolution_notes' => $data['resolution_notes'] ?? null,
-            'incident' => $this->breachPayload($breach->fresh()),
-        ]);
-    }
-
-    // â”€â”€ helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-    private function findRequest(Request $request, int $id): DataSubjectRequest
-    {
-        $query = DataSubjectRequest::query();
-        if ($businessId = $request->user()?->business_id) {
-            $query->where('business_id', $businessId);
-        }
-
-        return $query->findOrFail($id);
-    }
+    // ── helpers ──
 
     private function transitionRequest(Request $request, int $id, string $status, string $message)
     {
@@ -365,39 +192,5 @@ class PrivacyComplianceController extends Controller
             'message' => $message,
             'request' => $this->requestPayload($row->fresh()),
         ]);
-    }
-
-    private function findBreach(Request $request, int $id): DataBreachIncident
-    {
-        $query = DataBreachIncident::query();
-        if ($businessId = $request->user()?->business_id) {
-            $query->where('business_id', $businessId);
-        }
-
-        return $query->findOrFail($id);
-    }
-
-    private function audit(Request $request, string $action, string $entityType, $entityId, array $new = []): void
-    {
-        AuditLog::create([
-            'user_id' => $request->user()?->User_id,
-            'action' => $action,
-            'entity_type' => $entityType,
-            'entity_id' => (string) $entityId,
-            'new_values' => $new ? json_encode($new) : null,
-            'created_at' => now(),
-            'business_id' => $request->user()?->business_id,
-            'branch_id' => $request->user()?->branch_id,
-        ]);
-    }
-
-    private function requestPayload(DataSubjectRequest $row): array
-    {
-        return (new DataSubjectRequestResource($row))->resolve(request());
-    }
-
-    private function breachPayload(DataBreachIncident $b): array
-    {
-        return (new DataBreachIncidentResource($b))->resolve(request());
     }
 }

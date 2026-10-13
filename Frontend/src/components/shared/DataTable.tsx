@@ -85,6 +85,110 @@ function TruncatedCell({ children, className }: { children: React.ReactNode; cla
   );
 }
 
+function pinOf<T>(col: DataTableColumn<T>): 'start' | 'end' | null {
+  return col.pin ?? (col.pinned ? 'start' : null);
+}
+
+/**
+ * A sticky cell must paint an opaque background that matches whatever the row is
+ * currently showing, otherwise the columns scrolling underneath are visible through
+ * it. These classes mirror TableRow's hover and selected states exactly.
+ */
+const PINNED_CELL_BG =
+  "bg-white dark:bg-slate-950 " +
+  "group-hover:bg-bg dark:group-hover:bg-slate-900 " +
+  "group-data-[state=selected]:bg-teal-50 dark:group-data-[state=selected]:bg-teal-950/40";
+
+/** `aria-sort` value for a sortable column; callers gate this behind `col.sortable`. */
+function sortIndicator<T>(col: DataTableColumn<T>): 'ascending' | 'descending' | 'none' {
+  if (col.sortDirection === 'asc') return 'ascending';
+  if (col.sortDirection === 'desc') return 'descending';
+  return 'none';
+}
+
+interface ColumnHeadProps<T> {
+  col: DataTableColumn<T>;
+  selectable: boolean;
+  hasActions: boolean;
+}
+
+function ColumnHead<T>({ col, selectable, hasActions }: ColumnHeadProps<T>) {
+  const pin = pinOf(col);
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      col.onSort?.();
+    }
+  };
+  return (
+    <TableHead
+      key={col.key}
+      scope="col"
+      aria-sort={col.sortable ? sortIndicator(col) : undefined}
+      tabIndex={col.sortable ? 0 : undefined}
+      role={col.sortable ? 'button' : undefined}
+      onKeyDown={col.sortable && col.onSort ? handleKeyDown : undefined}
+      onClick={col.sortable && col.onSort ? col.onSort : undefined}
+      className={cn(
+        col.align === 'numeric' && "text-left",
+        col.align === 'center' && "text-center",
+        pin === 'start' && "sticky left-0 z-30 bg-bg dark:bg-slate-900",
+        pin === 'end' && "sticky right-0 z-30 bg-bg dark:bg-slate-900",
+        col.hideOnMobile && "hidden md:table-cell",
+        col.sortable && "cursor-pointer select-none hover:bg-bg dark:hover:bg-slate-800",
+      )}
+      style={{
+        minWidth: col.minWidth,
+        width: col.width,
+        ...(pin === 'start' ? { left: selectable ? '40px' : '0' } : {}),
+        ...(pin === 'end' ? { right: hasActions ? '64px' : '0' } : {}),
+      }}
+    >
+      {col.header}
+    </TableHead>
+  );
+}
+
+interface DataCellProps<T> {
+  col: DataTableColumn<T>;
+  row: T;
+  selectable: boolean;
+  hasActions: boolean;
+}
+
+function DataCell<T>({ col, row, selectable, hasActions }: DataCellProps<T>) {
+  const pin = pinOf(col);
+  // The row type has no index signature, so the dynamic column key needs a
+  // cast. `DataTableColumn.render` takes the value as `unknown`, so nothing
+  // downstream is trusting this to be a particular type.
+  const cellValue = (row as Record<string, unknown>)[col.key];
+  return (
+    <TableCell
+      key={col.key}
+      className={cn(
+        (col.align === 'numeric' || col.numeric) && "text-left tabular-nums",
+        col.align === 'center' && "text-center",
+        pin === 'start' && cn("sticky left-0 z-10", PINNED_CELL_BG),
+        pin === 'end' && cn("sticky right-0 z-10", PINNED_CELL_BG),
+        col.numeric && "tabular-nums",
+        col.hideOnMobile && "hidden md:table-cell",
+      )}
+      style={{
+        ...(pin === 'start' ? { left: selectable ? '40px' : '0' } : {}),
+        ...(pin === 'end' ? { right: hasActions ? '64px' : '0' } : {}),
+      }}
+    >
+      {col.render ? (
+        col.render(row, cellValue)
+      ) : col.truncate ? (
+        <TruncatedCell>{String(cellValue ?? '—')}</TruncatedCell>
+      ) : (
+        <span className={cn(col.numeric && "tabular-nums")}>{String(cellValue ?? '—')}</span>
+      )}
+    </TableCell>
+  );
+}
+
 // `T` is intentionally left unconstrained. The constraint used to be
 // `Record<string, unknown>`, but an `interface` has no implicit index signature, so none of
 // the API row shapes (`ApiProduct`, `ApiUser`, ...) satisfied it -- every page's table
@@ -135,20 +239,7 @@ export function DataTable<T>({
     onSelectionChange(next);
   }, [selectedKeys, onSelectionChange]);
 
-  const pinOf = (col: DataTableColumn<T>): 'start' | 'end' | null =>
-    col.pin ?? (col.pinned ? 'start' : null);
-
   const hasPinnedCol = columns.some(c => pinOf(c) !== null);
-
-  /**
-   * A sticky cell must paint an opaque background that matches whatever the row is
-   * currently showing, otherwise the columns scrolling underneath are visible through
-   * it. These classes mirror TableRow's hover and selected states exactly.
-   */
-  const pinnedCellBg =
-    "bg-white dark:bg-slate-950 " +
-    "group-hover:bg-bg dark:group-hover:bg-slate-900 " +
-    "group-data-[state=selected]:bg-teal-50 dark:group-data-[state=selected]:bg-teal-950/40";
 
   if (loading) {
     return (
@@ -183,36 +274,9 @@ export function DataTable<T>({
                     />
                   </TableHead>
                 )}
-                {columns.map(col => {
-                  const pin = pinOf(col);
-                  return (
-                    <TableHead
-                      key={col.key}
-                      scope="col"
-                      aria-sort={col.sortable ? (col.sortDirection === 'asc' ? 'ascending' : col.sortDirection === 'desc' ? 'descending' : 'none') : undefined}
-                      tabIndex={col.sortable ? 0 : undefined}
-                      role={col.sortable ? 'button' : undefined}
-                      onKeyDown={col.sortable && col.onSort ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); col.onSort!(); } } : undefined}
-                      onClick={col.sortable && col.onSort ? col.onSort : undefined}
-                      className={cn(
-                        col.align === 'numeric' && "text-left",
-                        col.align === 'center' && "text-center",
-                        pin === 'start' && "sticky left-0 z-30 bg-bg dark:bg-slate-900",
-                        pin === 'end' && "sticky right-0 z-30 bg-bg dark:bg-slate-900",
-                        col.hideOnMobile && "hidden md:table-cell",
-                        col.sortable && "cursor-pointer select-none hover:bg-bg dark:hover:bg-slate-800",
-                      )}
-                      style={{
-                        minWidth: col.minWidth,
-                        width: col.width,
-                        ...(pin === 'start' ? { left: selectable ? '40px' : '0' } : {}),
-                        ...(pin === 'end' ? { right: actions ? '64px' : '0' } : {}),
-                      }}
-                    >
-                      {col.header}
-                    </TableHead>
-                  );
-                })}
+                {columns.map(col => (
+                  <ColumnHead key={col.key} col={col} selectable={selectable} hasActions={Boolean(actions)} />
+                ))}
                 {actions && (
                   <TableHead className="w-16 text-right" scope="col">
                     <span className="sr-only">Actions</span>
@@ -269,37 +333,9 @@ export function DataTable<T>({
                         />
                       </TableCell>
                     )}
-                    {columns.map(col => {
-                      // The row type has no index signature, so the dynamic column key needs a
-                      // cast. `DataTableColumn.render` takes the value as `unknown`, so nothing
-                      // downstream is trusting this to be a particular type.
-                      const cellValue = (row as Record<string, unknown>)[col.key];
-                      const pin = pinOf(col);
-                      return (
-                        <TableCell
-                          key={col.key}
-                          className={cn(
-                            (col.align === 'numeric' || col.numeric) && "text-left tabular-nums",
-                            col.align === 'center' && "text-center",
-                            pin === 'start' && cn("sticky left-0 z-10", pinnedCellBg),
-                            pin === 'end' && cn("sticky right-0 z-10", pinnedCellBg),
-                            col.numeric && "tabular-nums",
-                            col.hideOnMobile && "hidden md:table-cell",
-                          )}
-                          style={{
-                            ...(pin === 'start' ? { left: selectable ? '40px' : '0' } : {}),
-                            ...(pin === 'end' ? { right: actions ? '64px' : '0' } : {}),
-                          }}
-                        >
-                          {col.render
-                            ? col.render(row, cellValue)
-                            : col.truncate
-                              ? <TruncatedCell>{String(cellValue ?? '—')}</TruncatedCell>
-                              : <span className={cn(col.numeric && "tabular-nums")}>{String(cellValue ?? '—')}</span>
-                          }
-                        </TableCell>
-                      );
-                    })}
+                    {columns.map(col => (
+                      <DataCell key={col.key} col={col} row={row} selectable={selectable} hasActions={Boolean(actions)} />
+                    ))}
                     {actions && (
                       <TableCell className="w-16 text-right">
                         <div className={cn(

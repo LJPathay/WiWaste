@@ -319,8 +319,6 @@
 }
 
 .dark .theme-content [class~="border-border"],
-.dark .theme-content [class~="border-border"],
-.dark .theme-content [class~="border-border"],
 .dark .theme-content [class~="border-[#c6c6cd]/50"],
 .dark .theme-content [class~="border-[#c6c6cd]"] {
     border-color: rgb(255 255 255 / 0.1);
@@ -337,9 +335,6 @@
 .dark .theme-content [class~="text-[#45464d]"],
 .dark .theme-content [class~="text-[#76777d]"],
 .dark .theme-content [class~="text-gray-700"],
-.dark .theme-content [class~="text-muted-fg"],
-.dark .theme-content [class~="text-muted-fg"],
-.dark .theme-content [class~="text-muted-fg"],
 .dark .theme-content [class~="text-muted-fg"],
 .dark .theme-content [class~="text-slate-700"] {
     color: rgb(148 163 184);

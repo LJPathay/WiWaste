@@ -344,7 +344,7 @@ function KpiCard({ label, value, icon, iconBg, trend, trendUp }: {
   );
 }
 
-function Card({ title, icon, children, fullWidth = false }: { title: string; icon: React.ReactNode; children: React.ReactNode; fullWidth?: boolean }) {
+function Card({ title, icon, children, fullWidth = false }: Readonly<{ title: string; icon: React.ReactNode; children: React.ReactNode; fullWidth?: boolean }>) {
   return (
     <div className={`bg-bg-elevated rounded-xl border border-border dark:border-slate-700 shadow-sm ${fullWidth ? 'lg:col-span-2' : ''}`}>
       <div className="flex items-center justify-between border-b border-border dark:border-slate-700 px-5 py-4">
@@ -358,7 +358,7 @@ function Card({ title, icon, children, fullWidth = false }: { title: string; ico
   );
 }
 
-function DataTable({ columns, data }: { columns: Array<{ key: string; header: string; numeric?: boolean; minWidth?: string; render?: (row: any, value: any) => React.ReactNode }>; data: any[] }) {
+function DataTable({ columns, data }: Readonly<{ columns: Array<{ key: string; header: string; numeric?: boolean; minWidth?: string; render?: (row: any, value: any) => React.ReactNode }>; data: any[] }>) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">

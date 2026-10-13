@@ -272,7 +272,12 @@ export function Reports() {
                   <DataTable
                     data={data}
                     columns={reportPreviewColumns(data)}
-                    rowKey={(row, i) => String(row.id ?? i)}
+                    rowKey={(row, i) => {
+                      const id = row.id;
+                      // `id` is `unknown` here -- an object would stringify as
+                      // "[object Object]", so fall back to the index.
+                      return typeof id === 'string' || typeof id === 'number' ? String(id) : String(i);
+                    }}
                   />
                 </div>
               )}

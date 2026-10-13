@@ -12,11 +12,12 @@ export function DashboardRedirect() {
     if (!loading && user) {
       // Only redirect from the exact /dashboard path, not from sub-routes
       if (location.pathname === '/dashboard') {
-        const target = user.role === 'cashier' 
-          ? '/cashier/pos' 
-          : user.role === 'owner' 
-            ? '/owner/users' 
-            : '/inventory/manage';
+        let target = '/inventory/manage';
+        if (user.role === 'cashier') {
+          target = '/cashier/pos';
+        } else if (user.role === 'owner') {
+          target = '/owner/users';
+        }
         navigate(target, { replace: true });
       }
     }

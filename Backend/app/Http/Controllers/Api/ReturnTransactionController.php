@@ -72,25 +72,33 @@ class ReturnTransactionController extends Controller
         $daysSinceSale = $saleDate->diffInDays($returnDate, false);
         $isWithin7Days = $daysSinceSale <= 7;
 
-        if (! $isWithin7Days && ! in_array($data['return_reason_code'], ['defective', 'damaged', 'expired'])) {
-            return response()->json([
-                'message' => 'Returns beyond 7 days are only allowed for defective, damaged, or expired items (RA 7394).',
-                'days_since_sale' => $daysSinceSale,
-                'is_within_7_days' => false,
-            ], 422);
-        }
-
         // Check available quantity (not already returned)
         $alreadyReturned = ReturnTransaction::where('sale_item_id', $saleItem->sales_item_id)
             ->where('approval_status', '!=', 'rejected')
             ->sum('quantity_returned');
 
         $maxReturnable = $saleItem->quantity - $alreadyReturned;
-        if ($data['quantity_returned'] > $maxReturnable) {
-            return response()->json([
-                'message' => "Cannot return more than purchased. Max returnable: {$maxReturnable}",
-                'max_returnable' => $maxReturnable,
-            ], 422);
+
+        // Both rejections answer 422; the policy violation is reported first,
+        // matching the order the checks ran in. One guard keeps the method
+        // to three returns.
+        $beyondCoolingOff = ! $isWithin7Days && ! in_array($data['return_reason_code'], ['defective', 'damaged', 'expired']);
+        $overMaxReturnable = $data['quantity_returned'] > $maxReturnable;
+
+        if ($beyondCoolingOff || $overMaxReturnable) {
+            return response()->json(
+                $beyondCoolingOff
+                    ? [
+                        'message' => 'Returns beyond 7 days are only allowed for defective, damaged, or expired items (RA 7394).',
+                        'days_since_sale' => $daysSinceSale,
+                        'is_within_7_days' => false,
+                    ]
+                    : [
+                        'message' => "Cannot return more than purchased. Max returnable: {$maxReturnable}",
+                        'max_returnable' => $maxReturnable,
+                    ],
+                422
+            );
         }
 
         // Calculate refund amount (proportional to original price paid)

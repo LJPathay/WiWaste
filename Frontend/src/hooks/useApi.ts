@@ -61,14 +61,15 @@ export function useApi<T>(
     retry: 1,
   });
 
+  let errorMessage: string | null = null;
+  if (error) {
+    errorMessage = error instanceof Error ? error.message : 'Failed to load data';
+  }
+
   return {
     data: data ?? null,
     loading: isLoading,
-    error: error
-      ? error instanceof Error
-        ? error.message
-        : 'Failed to load data'
-      : null,
+    error: errorMessage,
     refetch: async () => {
       // A refetch runs after a write, so it must not be answered by the copy the
       // browser stored while the list still had `max-age=60` on it.

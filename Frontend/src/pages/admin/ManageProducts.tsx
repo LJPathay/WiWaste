@@ -23,6 +23,23 @@ const currencyFormatter = new Intl.NumberFormat('en-PH', {
 
 const ITEMS_PER_PAGE = 5;
 
+/**
+ * Barcode-label URLs interpolate `labelProduct.id` straight into the attribute.
+ * `id` is API data, so every segment goes through `encodeURIComponent` to keep
+ * it a single URL segment -- an id containing `/`, `?` or `#` would otherwise
+ * rewrite the path or the query string (CodeQL: DOM text reinterpreted as HTML).
+ */
+function productLabelUrl(id: ApiProduct['id'], format: string): string {
+  const base = import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api/v1';
+  return `${base}/products/${encodeURIComponent(String(id))}/label?format=${encodeURIComponent(format)}`;
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (ch) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch] as string
+  ));
+}
+
 export function ManageProducts() {
   const { toasts, dismiss, success, error: toastError } = useToast();
   const { data: productList, loading: pLoading, error: pError, addItem, updateItem, removeItem, refetch: refetchProducts } = useOptimisticList(productsApi.list);
@@ -826,12 +843,12 @@ export function ManageProducts() {
               </div>
               <div className="relative inline-block bg-white p-4 rounded-lg border border-border dark:border-slate-700 dark:bg-slate-800">
                 <img
-                  src={`${import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api/v1'}/products/${labelProduct.id}/label?format=${labelFormat}`}
+                  src={productLabelUrl(labelProduct.id, labelFormat)}
                   alt={`Barcode label for ${labelProduct.name}`}
                   className="max-w-full h-auto"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
-                    target.src = `${import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api/v1'}/products/${labelProduct.id}/label?format=png`;
+                    target.src = productLabelUrl(labelProduct.id, 'png');
                   }}
                 />
               </div>
@@ -857,7 +874,7 @@ export function ManageProducts() {
                     printWindow.document.write(`
                       <html>
                         <head>
-                          <title>Print Label - ${labelProduct.name}</title>
+                          <title>Print Label - ${escapeHtml(labelProduct.name)}</title>
                           <style>
                             @media print {
                               @page { margin: 0; size: auto; }
@@ -867,7 +884,7 @@ export function ManageProducts() {
                           </style>
                         </head>
                         <body onload="window.print(); window.close();">
-                          <img src="${import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api/v1'}/products/${labelProduct.id}/label?format=png" />
+                          <img src="${productLabelUrl(labelProduct.id, 'png')}" />
                         </body>
                       </html>
                     `);
@@ -882,7 +899,7 @@ export function ManageProducts() {
               <button
                 onClick={() => {
                   const link = document.createElement('a');
-                  link.href = `${import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api/v1'}/products/${labelProduct.id}/label?format=${labelFormat}`;
+                  link.href = productLabelUrl(labelProduct.id, labelFormat);
                   link.download = `label-${labelProduct.sku ?? labelProduct.id}.${labelFormat}`;
                   document.body.appendChild(link);
                   link.click();

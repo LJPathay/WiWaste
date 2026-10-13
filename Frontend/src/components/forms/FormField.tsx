@@ -28,6 +28,13 @@ export const FormField = forwardRef<HTMLInputElement, FormFieldProps>(
   ) => {
     const inputId = id || label.toLowerCase().replace(/\s+/g, '-');
 
+    let describedBy: string | undefined;
+    if (error) {
+      describedBy = `${inputId}-error`;
+    } else if (hint) {
+      describedBy = `${inputId}-hint`;
+    }
+
     return (
       <div className="space-y-1.5">
         <label
@@ -62,7 +69,7 @@ export const FormField = forwardRef<HTMLInputElement, FormFieldProps>(
               className
             )}
             aria-invalid={error ? 'true' : 'false'}
-            aria-describedby={error ? `${inputId}-error` : hint ? `${inputId}-hint` : undefined}
+            aria-describedby={describedBy}
             {...props}
           />
 

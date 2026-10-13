@@ -13,6 +13,9 @@ use Illuminate\Support\Facades\Gate;
 
 uses(RefreshDatabase::class);
 
+/** The token endpoint every credential test posts to. */
+const LOGIN_URL = '/api/v1/login';
+
 it('rejects an unauthenticated request to a protected endpoint', function () {
     $this->getJson('/api/v1/products')->assertStatus(401);
 });
@@ -20,7 +23,7 @@ it('rejects an unauthenticated request to a protected endpoint', function () {
 it('issues an access token for valid credentials', function () {
     $user = User::factory()->role('Owner')->create();
 
-    $response = $this->postJson('/api/v1/login', [
+    $response = $this->postJson(LOGIN_URL, [
         'username' => $user->username,
         'password' => 'password',
     ]);
@@ -37,7 +40,7 @@ it('issues an access token for valid credentials', function () {
 it('rejects a wrong password without leaking which half was wrong', function () {
     $user = User::factory()->create();
 
-    $this->postJson('/api/v1/login', [
+    $this->postJson(LOGIN_URL, [
         'username' => $user->username,
         'password' => 'not-the-password',
     ])
@@ -48,7 +51,7 @@ it('rejects a wrong password without leaking which half was wrong', function () 
 it('refuses to authenticate an inactive account', function () {
     $user = User::factory()->inactive()->create();
 
-    $this->postJson('/api/v1/login', [
+    $this->postJson(LOGIN_URL, [
         'username' => $user->username,
         'password' => 'password',
     ])
@@ -61,7 +64,7 @@ it('locks an account after five failed attempts', function () {
 
     $statuses = [];
     for ($attempt = 0; $attempt < 6; $attempt++) {
-        $statuses[] = $this->postJson('/api/v1/login', [
+        $statuses[] = $this->postJson(LOGIN_URL, [
             'username' => $user->username,
             'password' => 'wrong-password',
         ])->status();
@@ -91,7 +94,7 @@ it('lets an inventory user read products but not write them', function () {
 it('returns a token that can be used and then revoked', function () {
     $user = User::factory()->role('Owner')->create();
 
-    $token = $this->postJson('/api/v1/login', [
+    $token = $this->postJson(LOGIN_URL, [
         'username' => $user->username,
         'password' => 'password',
     ])->json('data.access_token');

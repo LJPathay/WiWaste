@@ -159,7 +159,6 @@ class SalesWastageDashboardController extends Controller
     // CSV Export
     public function exportCsv(Request $request)
     {
-        $user = $request->user();
         $from = $request->input('from', Carbon::now()->subDays(30)->startOfDay());
         $to = $request->input('to', Carbon::now()->endOfDay());
 

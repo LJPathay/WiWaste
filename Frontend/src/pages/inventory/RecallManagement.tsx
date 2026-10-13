@@ -101,7 +101,7 @@ export function RecallManagement() {
         if (notes) await recallApi.resolve(id, { resolution_notes: notes, release_quarantine: true });
       }
       success(`Recall ${action}d successfully.`);
-      refetchRecalls();
+      void refetchRecalls();
     } catch (err) {
       showError(err instanceof Error ? err.message : 'Action failed');
     }
@@ -140,7 +140,7 @@ export function RecallManagement() {
         affected_batches: [{ batch_id: '', quantity: 1 }],
         target_resolution_date: '',
       });
-      refetchRecalls();
+      void refetchRecalls();
     } catch (err) {
       showError(err instanceof Error ? err.message : 'Failed to create recall');
     }

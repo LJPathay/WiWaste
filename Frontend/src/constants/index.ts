@@ -172,10 +172,12 @@ export const TIMEOUTS = {
   MODAL_ANIMATION: 200,
 } as const;
 
-// Regex patterns
+// Regex patterns. EMAIL keeps every quantified class disjoint from the
+// separators it is followed by, so the engine never has to retry a match
+// (a plain `[^\s@]+\.[^\s@]+` domain backtracks super-linearly).
 export const REGEX = {
   USERNAME: /^[a-zA-Z0-9_-]+$/,
-  EMAIL: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+  EMAIL: /^[^\s@]+@(?:[^\s@.]+\.)+[^\s@.]+$/,
   PHONE: /^\+?[\d\s-]{10,}$/,
   PASSWORD: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).+$/,
   CURRENCY: /^[\d,]+\.?\d*$/,

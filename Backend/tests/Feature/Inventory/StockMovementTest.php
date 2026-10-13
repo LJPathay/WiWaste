@@ -14,6 +14,9 @@ class StockMovementTest extends TestCase
 {
     use CreatesInventoryFixtures, RefreshDatabase;
 
+    /** Inventory::calcStatus() label for zero-or-negative stock. */
+    private const OUT_OF_STOCK = 'Out of Stock';
+
     private function actingAsInventory(): void
     {
         Sanctum::actingAs($this->makeInventoryUser('Inventory'));
@@ -355,8 +358,9 @@ class StockMovementTest extends TestCase
 
     public function test_draining_a_product_to_zero_persists_without_a_db_error(): void
     {
-        // Inventory.stock_status is an ENUM. calcStatus() returns 'Out of Stock'
-        // at zero, so the enum has to accept it or every zero-stock write 500s.
+        // Inventory.stock_status is an ENUM. calcStatus() returns the
+        // zero-stock label, so the enum has to accept it or every
+        // zero-stock write 500s.
         $this->actingAsInventory();
         $product = $this->makeProduct(['reorder_level' => 20]);
         $inventory = $this->makeInventory($product, 7);
@@ -368,13 +372,13 @@ class StockMovementTest extends TestCase
         ])->assertOk();
 
         $this->assertSame(0, $inventory->fresh()->current_stock);
-        $this->assertSame('Out of Stock', $inventory->fresh()->stock_status);
+        $this->assertSame(self::OUT_OF_STOCK, $inventory->fresh()->stock_status);
     }
 
     public function test_calc_status_boundaries(): void
     {
-        $this->assertSame('Out of Stock', Inventory::calcStatus(0, 20));
-        $this->assertSame('Out of Stock', Inventory::calcStatus(-5, 20));
+        $this->assertSame(self::OUT_OF_STOCK, Inventory::calcStatus(0, 20));
+        $this->assertSame(self::OUT_OF_STOCK, Inventory::calcStatus(-5, 20));
         $this->assertSame('Low Stock', Inventory::calcStatus(20, 20));
         $this->assertSame('Normal', Inventory::calcStatus(21, 20));
         $this->assertSame('Normal', Inventory::calcStatus(100, 20));

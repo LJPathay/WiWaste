@@ -33,7 +33,7 @@ class SupplierController extends BaseApiController
             });
         }
 
-        $paginated = $query->paginate(min((int) request()->get('per_page', 15), 100), ['*'], 'page', (int) request()->get('page', 1));
+        $paginated = $query->paginate($perPage, ['*'], 'page', $page);
 
         return $this->paginated($paginated->through(fn ($s) => (new SupplierResource($s))->resolve(request())));
     }

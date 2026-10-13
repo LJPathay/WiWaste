@@ -1251,8 +1251,9 @@ export function POSTerminal() {
               </div>
             ) : (
               <div className="mb-6">
-                <label className="block text-xs font-bold text-muted-fg dark:text-slate-300 mb-2">Discount Amount (₱)</label>
+                <label htmlFor="discount-amount" className="block text-xs font-bold text-muted-fg dark:text-slate-300 mb-2">Discount Amount (₱)</label>
                 <input
+                  id="discount-amount"
                   type="number"
                   autoFocus
                   value={fixedDiscountInput}
@@ -1308,8 +1309,9 @@ export function POSTerminal() {
             <p className="text-xs text-muted-fg dark:text-muted-fg mb-4">Enter customer details to apply 20% discount.</p>
             <div className="space-y-3 mb-4">
               <div>
-                <label className="block text-xs font-bold text-muted-fg dark:text-slate-300 mb-1">Full Name</label>
+                <label htmlFor="senior-pwd-name" className="block text-xs font-bold text-muted-fg dark:text-slate-300 mb-1">Full Name</label>
                 <input
+                  id="senior-pwd-name"
                   type="text"
                   autoFocus
                   value={seniorPwdInfo?.name ?? ''}
@@ -1319,8 +1321,9 @@ export function POSTerminal() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-muted-fg dark:text-slate-300 mb-1">OSCA / PWD ID Number</label>
+                <label htmlFor="senior-pwd-id" className="block text-xs font-bold text-muted-fg dark:text-slate-300 mb-1">OSCA / PWD ID Number</label>
                 <input
+                  id="senior-pwd-id"
                   type="text"
                   value={seniorPwdInfo?.id ?? ''}
                   onChange={e => setSeniorPwdInfo(prev => ({ ...prev, id: e.target.value, name: prev?.name ?? '' }))}
@@ -1625,11 +1628,12 @@ export function POSTerminal() {
 
                     {/* Card Number */}
                     <div>
-                      <label className="block text-xs font-bold text-muted-fg mb-2 flex items-center gap-1">
+                      <label htmlFor="card-number" className="block text-xs font-bold text-muted-fg mb-2 flex items-center gap-1">
                         Card Number
                         <span className="text-red-500">*</span>
                       </label>
                       <input
+                        id="card-number"
                         type="text"
                         inputMode="numeric"
                         value={cardNumber}

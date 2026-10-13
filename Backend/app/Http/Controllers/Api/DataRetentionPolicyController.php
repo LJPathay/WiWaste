@@ -98,15 +98,17 @@ class DataRetentionPolicyController extends Controller
 
         $data = $request->validated();
 
-        if (! isset(self::ENTITY_TABLES[$data['entity_type']])) {
-            return response()->json([
-                'message' => 'Unknown entity type: '.$data['entity_type'],
-            ], 422);
-        }
-
+        // One guard for both rejections keeps the method to three returns:
+        // the message differs, the status (422) does not.
+        $unknownEntityType = ! isset(self::ENTITY_TABLES[$data['entity_type']]);
         $businessId = $user?->business_id ?? DB::table('businesses')->value('id');
-        if ($businessId === null) {
-            return response()->json(['message' => 'No business is configured.'], 422);
+
+        if ($unknownEntityType || $businessId === null) {
+            return response()->json([
+                'message' => $unknownEntityType
+                    ? 'Unknown entity type: '.$data['entity_type']
+                    : 'No business is configured.',
+            ], 422);
         }
 
         $existing = DataRetentionPolicy::where('business_id', $businessId)
@@ -354,11 +356,5 @@ class DataRetentionPolicyController extends Controller
             'initiated_by' => (string) (request()->user()?->User_id ?? 'system'),
             'status' => 'completed',
         ]);
-    }
-
-    /** The shape `ApiRetentionPolicy` declares on the frontend. */
-    private function payload(DataRetentionPolicy $p): array
-    {
-        return (new DataRetentionPolicyResource($p))->resolve(request());
     }
 }

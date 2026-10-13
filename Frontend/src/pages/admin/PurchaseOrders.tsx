@@ -275,29 +275,29 @@ export function PurchaseOrders() {
       </div>
 
       {showCreate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" role="dialog" aria-modal="true" onClick={() => setShowCreate(false)}>
-          <div className="bg-bg-elevated rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto m-4" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" role="dialog" aria-modal="true" onClick={() => setShowCreate(false)} onKeyDown={(e) => { if (e.key === 'Escape') setShowCreate(false); }}>
+          <div className="bg-bg-elevated rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto m-4" role="document" tabIndex={-1} onClick={e => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-border dark:border-white/10">
               <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">New Purchase Order</h2>
               <button onClick={() => setShowCreate(false)} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700" aria-label="Close"><X className="h-4 w-4" /></button>
             </div>
             <div className="p-4 space-y-3">
               <div>
-                <label className="block text-[9px] font-bold text-muted-fg dark:text-muted-fg mb-1">Supplier</label>
-                <select value={formData.supplier_id} onChange={e => setFormData(f => ({ ...f, supplier_id: Number(e.target.value) }))}
+                <label htmlFor="po-supplier" className="block text-[9px] font-bold text-muted-fg dark:text-muted-fg mb-1">Supplier</label>
+                <select id="po-supplier" value={formData.supplier_id} onChange={e => setFormData(f => ({ ...f, supplier_id: Number(e.target.value) }))}
                   className="w-full bg-bg dark:bg-slate-800 border border-border dark:border-white/10 rounded-lg px-3 h-8 text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61]">
                   <option value={0}>Select supplier...</option>
                   {suppliers.map(s => <option key={s.id ?? s.supplier_id} value={s.id ?? s.supplier_id}>{s.name ?? s.supplier_name}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-[9px] font-bold text-muted-fg dark:text-muted-fg mb-1">Notes (optional)</label>
-                <textarea value={formData.notes} onChange={e => setFormData(f => ({ ...f, notes: e.target.value }))}
+                <label htmlFor="po-notes" className="block text-[9px] font-bold text-muted-fg dark:text-muted-fg mb-1">Notes (optional)</label>
+                <textarea id="po-notes" value={formData.notes} onChange={e => setFormData(f => ({ ...f, notes: e.target.value }))}
                   className="w-full bg-bg dark:bg-slate-800 border border-border dark:border-white/10 rounded-lg px-3 h-8 text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61]" rows={2} />
               </div>
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-[9px] font-bold text-muted-fg dark:text-muted-fg">Items</label>
+                  <span className="text-[9px] font-bold text-muted-fg dark:text-muted-fg">Items</span>
                   <button onClick={addItem} className="text-xs text-[#006a61] hover:underline font-semibold">+ Add Item</button>
                 </div>
                 <div className="space-y-1.5">
@@ -330,8 +330,8 @@ export function PurchaseOrders() {
       )}
 
       {showDetail.open && showDetail.order && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" role="dialog" aria-modal="true" onClick={() => setShowDetail({ open: false, order: null })}>
-          <div className="bg-bg-elevated rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto m-4" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" role="dialog" aria-modal="true" onClick={() => setShowDetail({ open: false, order: null })} onKeyDown={(e) => { if (e.key === 'Escape') setShowDetail({ open: false, order: null }); }}>
+          <div className="bg-bg-elevated rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto m-4" role="document" tabIndex={-1} onClick={e => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-border dark:border-white/10">
               <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">{showDetail.order.po_number}</h2>
               <button onClick={() => setShowDetail({ open: false, order: null })} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700" aria-label="Close detail"><X className="h-4 w-4" /></button>
@@ -365,8 +365,8 @@ export function PurchaseOrders() {
       )}
 
       {showReceive.open && showReceive.order && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" role="dialog" aria-modal="true" onClick={() => setShowReceive({ open: false, order: null })}>
-          <div className="bg-bg-elevated rounded-xl shadow-2xl w-full max-w-lg m-4" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" role="dialog" aria-modal="true" onClick={() => setShowReceive({ open: false, order: null })} onKeyDown={(e) => { if (e.key === 'Escape') setShowReceive({ open: false, order: null }); }}>
+          <div className="bg-bg-elevated rounded-xl shadow-2xl w-full max-w-lg m-4" role="document" tabIndex={-1} onClick={e => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-border dark:border-white/10">
               <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Receive Stock — {showReceive.order.po_number}</h2>
               <button onClick={() => setShowReceive({ open: false, order: null })} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700" aria-label="Close receive"><X className="h-4 w-4" /></button>

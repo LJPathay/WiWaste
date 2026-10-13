@@ -131,7 +131,7 @@ export function ManageUsers() {
     fullName.trim() &&
     users.some(u =>
       (u.name?.trim()?.toLowerCase() ?? '') === fullName.trim().toLowerCase() &&
-      (!editingUser || u.id !== editingUser.id)
+      editingUser?.id !== u.id
     )
   );
 
@@ -490,7 +490,7 @@ export function ManageUsers() {
     // itself. Reaching through `.message` again yielded `undefined`, and calling `.match`
     // on that threw a TypeError -- so the "Failed to load users" panel crashed the page
     // instead of rendering whenever the request failed.
-    const errorCode = apiError.match(/\((\d+)\)/)?.[1] || 'Unknown';
+    const errorCode = /\((\d+)\)/.exec(apiError)?.[1] || 'Unknown';
     return (
       <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800/40 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
@@ -674,9 +674,9 @@ export function ManageUsers() {
               </div>
 
               <div className="relative">
-                <label className="block text-sm font-bold text-muted-fg dark:text-muted-fg mb-1">Assign Role <span className="text-rose-500">*</span></label>
+                <label id="assign-role-label" className="block text-sm font-bold text-muted-fg dark:text-muted-fg mb-1">Assign Role <span className="text-rose-500">*</span></label>
                 <div className="relative">
-                  <button type="button" onClick={() => setRoleDropdownOpen(prev => !prev)}
+                  <button type="button" aria-labelledby="assign-role-label" onClick={() => setRoleDropdownOpen(prev => !prev)}
                     className="h-8 w-full bg-bg dark:bg-slate-800 border border-border dark:border-white/10 px-3 rounded-lg text-xs flex items-center justify-between focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100">
                     <div className="flex items-center gap-2">
                       {React.createElement(roleConfigFor(form.role).icon, { className: `h-3.5 w-3.5 ${roleConfigFor(form.role).iconColor}` })}
@@ -779,9 +779,9 @@ export function ManageUsers() {
               </div>
 
               <div className="relative">
-                <label className="block text-sm font-bold text-muted-fg dark:text-muted-fg mb-1">Role</label>
+                <label id="edit-user-role" className="block text-sm font-bold text-muted-fg dark:text-muted-fg mb-1">Role</label>
                 <div className="relative">
-                  <button type="button" onClick={() => setRoleDropdownOpen(prev => !prev)}
+                  <button type="button" aria-labelledby="edit-user-role" onClick={() => setRoleDropdownOpen(prev => !prev)}
                     className="h-8 w-full bg-bg dark:bg-slate-800 border border-border dark:border-white/10 px-3 rounded-lg text-xs flex items-center justify-between focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100">
                     <div className="flex items-center gap-2">
                       {React.createElement(roleConfigFor(form.role).icon, { className: `h-3.5 w-3.5 ${roleConfigFor(form.role).iconColor}` })}
@@ -884,29 +884,29 @@ export function ManageUsers() {
 
             <div className="space-y-3">
               <div>
-                <label className="text-[9px] font-bold text-muted-fg dark:text-muted-fg uppercase tracking-wider">Full Name</label>
+                <span className="text-[9px] font-bold text-muted-fg dark:text-muted-fg uppercase tracking-wider">Full Name</span>
                 <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 mt-0.5">{viewingUser.name}</p>
               </div>
 
               {viewingUser.contact_number && (
                 <div>
-                  <label className="text-[9px] font-bold text-muted-fg dark:text-muted-fg uppercase tracking-wider">Contact Number</label>
+                  <span className="text-[9px] font-bold text-muted-fg dark:text-muted-fg uppercase tracking-wider">Contact Number</span>
                   <p className="text-sm text-slate-700 dark:text-slate-300 mt-0.5">{viewingUser.contact_number}</p>
                 </div>
               )}
 
               <div>
-                <label className="text-[9px] font-bold text-muted-fg dark:text-muted-fg uppercase tracking-wider">Username</label>
+                <span className="text-[9px] font-bold text-muted-fg dark:text-muted-fg uppercase tracking-wider">Username</span>
                 <p className="text-sm font-mono text-slate-700 dark:text-slate-300 mt-0.5">@{viewingUser.username}</p>
               </div>
 
               <div>
-                <label className="text-[9px] font-bold text-muted-fg dark:text-muted-fg uppercase tracking-wider">Email Address</label>
+                <span className="text-[9px] font-bold text-muted-fg dark:text-muted-fg uppercase tracking-wider">Email Address</span>
                 <p className="text-sm text-slate-700 dark:text-slate-300 mt-0.5 break-all">{viewingUser.email || 'Not provided'}</p>
               </div>
 
               <div>
-                <label className="text-[9px] font-bold text-muted-fg dark:text-muted-fg uppercase tracking-wider">Role</label>
+                <span className="text-[9px] font-bold text-muted-fg dark:text-muted-fg uppercase tracking-wider">Role</span>
                 <div className="mt-0.5">
                   {(() => {
                     const roleConfig = roleConfigFor(viewingUser.role);

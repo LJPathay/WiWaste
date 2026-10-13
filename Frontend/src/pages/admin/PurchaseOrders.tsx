@@ -64,6 +64,21 @@ export function PurchaseOrders() {
   const [formData, setFormData] = useState({ supplier_id: 0, notes: '', items: [] as PurchaseOrderLineItem[] });
   const [submitting, setSubmitting] = useState(false);
 
+  // Escape closes the top-most open overlay. These overlays are plain divs
+  // rather than <dialog> elements, so the browser fires no `cancel` event and
+  // the keydown has to be observed on the document.
+  useEffect(() => {
+    if (!showCreate && !showDetail.open && !showReceive.open) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (showReceive.open) setShowReceive({ open: false, order: null });
+      else if (showDetail.open) setShowDetail({ open: false, order: null });
+      else setShowCreate(false);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [showCreate, showDetail.open, showReceive.open]);
+
   const fetchOrders = useCallback(() => {
     setLoading(true);
     poApi.list({ search, status: statusFilter || undefined, page }).then((res) => {
@@ -275,8 +290,16 @@ export function PurchaseOrders() {
       </div>
 
       {showCreate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" role="dialog" aria-modal="true" onClick={() => setShowCreate(false)} onKeyDown={(e) => { if (e.key === 'Escape') setShowCreate(false); }}>
-          <div className="bg-bg-elevated rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto m-4" role="document" tabIndex={-1} onClick={e => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+        <dialog
+          open
+          aria-label="New Purchase Order"
+          className="fixed inset-0 z-50 flex items-center justify-center m-0 w-screen h-screen max-w-none max-h-none border-0 bg-transparent backdrop:bg-black/40"
+        >
+          {/* A real button, not a div with onClick: only a control is keyboard
+              reachable and is announced as one. */}
+          <button type="button" aria-label="Discard new purchase order" onClick={() => setShowCreate(false)}
+            className="absolute inset-0 cursor-default" />
+          <div className="relative bg-bg-elevated rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto m-4" tabIndex={-1}>
             <div className="flex items-center justify-between p-4 border-b border-border dark:border-white/10">
               <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">New Purchase Order</h2>
               <button onClick={() => setShowCreate(false)} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700" aria-label="Close"><X className="h-4 w-4" /></button>
@@ -326,12 +349,18 @@ export function PurchaseOrders() {
               </button>
             </div>
           </div>
-        </div>
+        </dialog>
       )}
 
       {showDetail.open && showDetail.order && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" role="dialog" aria-modal="true" onClick={() => setShowDetail({ open: false, order: null })} onKeyDown={(e) => { if (e.key === 'Escape') setShowDetail({ open: false, order: null }); }}>
-          <div className="bg-bg-elevated rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto m-4" role="document" tabIndex={-1} onClick={e => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+        <dialog
+          open
+          aria-label="Order details"
+          className="fixed inset-0 z-50 flex items-center justify-center m-0 w-screen h-screen max-w-none max-h-none border-0 bg-transparent backdrop:bg-black/40"
+        >
+          <button type="button" aria-label="Close order details" onClick={() => setShowDetail({ open: false, order: null })}
+            className="absolute inset-0 cursor-default" />
+          <div className="relative bg-bg-elevated rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto m-4" tabIndex={-1}>
             <div className="flex items-center justify-between p-4 border-b border-border dark:border-white/10">
               <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">{showDetail.order.po_number}</h2>
               <button onClick={() => setShowDetail({ open: false, order: null })} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700" aria-label="Close detail"><X className="h-4 w-4" /></button>
@@ -361,12 +390,18 @@ export function PurchaseOrders() {
               <button onClick={() => setShowDetail({ open: false, order: null })} className="px-3 h-8 rounded-lg border border-border dark:border-white/10 text-xs font-semibold text-muted-fg dark:text-muted-fg">Close</button>
             </div>
           </div>
-        </div>
+        </dialog>
       )}
 
       {showReceive.open && showReceive.order && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" role="dialog" aria-modal="true" onClick={() => setShowReceive({ open: false, order: null })} onKeyDown={(e) => { if (e.key === 'Escape') setShowReceive({ open: false, order: null }); }}>
-          <div className="bg-bg-elevated rounded-xl shadow-2xl w-full max-w-lg m-4" role="document" tabIndex={-1} onClick={e => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+        <dialog
+          open
+          aria-label="Receive Stock"
+          className="fixed inset-0 z-50 flex items-center justify-center m-0 w-screen h-screen max-w-none max-h-none border-0 bg-transparent backdrop:bg-black/40"
+        >
+          <button type="button" aria-label="Cancel receiving stock" onClick={() => setShowReceive({ open: false, order: null })}
+            className="absolute inset-0 cursor-default" />
+          <div className="relative bg-bg-elevated rounded-xl shadow-2xl w-full max-w-lg m-4" tabIndex={-1}>
             <div className="flex items-center justify-between p-4 border-b border-border dark:border-white/10">
               <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Receive Stock — {showReceive.order.po_number}</h2>
               <button onClick={() => setShowReceive({ open: false, order: null })} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700" aria-label="Close receive"><X className="h-4 w-4" /></button>
@@ -407,7 +442,7 @@ export function PurchaseOrders() {
               </button>
             </div>
           </div>
-        </div>
+        </dialog>
       )}
 
       {confirmCancel.open && confirmCancel.order && (

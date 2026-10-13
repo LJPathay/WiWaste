@@ -44,29 +44,29 @@ export interface DataTableColumn<T> {
 }
 
 export interface DataTableProps<T> {
-  columns: DataTableColumn<T>[];
-  data: T[];
+  readonly columns: DataTableColumn<T>[];
+  readonly data: T[];
   /**
    * `index` is declared because the implementation calls `data.map(rowKey)`, so the index
    * has always been passed at runtime -- it simply was not in the type. Report previews
    * need it as a fallback key for rows that have no `id`.
    */
-  rowKey: (row: T, index: number) => string | number;
-  selectable?: boolean;
-  selectedKeys?: Set<string | number>;
-  onSelectionChange?: (keys: Set<string | number>) => void;
-  showHeader?: boolean;
-  emptyState?: React.ReactNode;
-  emptyMessage?: string;
-  loading?: boolean;
-  loadingComponent?: React.ReactNode;
-  pagination?: React.ReactNode;
-  horizontalScroll?: boolean;
-  className?: string;
-  hoverActions?: boolean;
-  rowClassName?: (row: T) => string;
-  onRowClick?: (row: T) => void;
-  actions?: (row: T, isHovered: boolean) => React.ReactNode;
+  readonly rowKey: (row: T, index: number) => string | number;
+  readonly selectable?: boolean;
+  readonly selectedKeys?: Set<string | number>;
+  readonly onSelectionChange?: (keys: Set<string | number>) => void;
+  readonly showHeader?: boolean;
+  readonly emptyState?: React.ReactNode;
+  readonly emptyMessage?: string;
+  readonly loading?: boolean;
+  readonly loadingComponent?: React.ReactNode;
+  readonly pagination?: React.ReactNode;
+  readonly horizontalScroll?: boolean;
+  readonly className?: string;
+  readonly hoverActions?: boolean;
+  readonly rowClassName?: (row: T) => string;
+  readonly onRowClick?: (row: T) => void;
+  readonly actions?: (row: T, isHovered: boolean) => React.ReactNode;
 }
 
 function TruncatedCell({ children, className }: { children: React.ReactNode; className?: string }) {
@@ -150,10 +150,10 @@ function ColumnHead<T>({ col, selectable, hasActions }: ColumnHeadProps<T>) {
 }
 
 interface DataCellProps<T> {
-  col: DataTableColumn<T>;
-  row: T;
-  selectable: boolean;
-  hasActions: boolean;
+  readonly col: DataTableColumn<T>;
+  readonly row: T;
+  readonly selectable: boolean;
+  readonly hasActions: boolean;
 }
 
 function DataCell<T>({ col, row, selectable, hasActions }: DataCellProps<T>) {
@@ -218,7 +218,7 @@ export function DataTable<T>({
   const [hoveredRow, setHoveredRow] = useState<string | number | null>(null);
   const tableRef = useRef<HTMLTableElement>(null);
 
-  const allKeys = (data ?? []).map(rowKey);
+  const allKeys = (data ?? []).map((row, index) => rowKey(row, index));
   const allSelected = allKeys.length > 0 && allKeys.every(k => selectedKeys.has(k));
   const someSelected = allKeys.some(k => selectedKeys.has(k)) && !allSelected;
 

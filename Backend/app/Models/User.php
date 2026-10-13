@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use App\Enums\Role;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -9,6 +10,8 @@ use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
+    use BelongsToTenant;
+
     use HasApiTokens, HasFactory;
 
     protected $table = 'User';
@@ -43,16 +46,6 @@ class User extends Authenticatable
     public function getFullNameAttribute(): string
     {
         return trim($this->first_name.' '.$this->surname);
-    }
-
-    public function business()
-    {
-        return $this->belongsTo(Business::class, 'business_id', 'id');
-    }
-
-    public function branch()
-    {
-        return $this->belongsTo(Branch::class, 'branch_id', 'id');
     }
 
     public function stockMovements()
@@ -96,16 +89,6 @@ class User extends Authenticatable
     }
 
     // Scopes
-    public function scopeForBusiness($query, $businessId)
-    {
-        return $query->where('business_id', $businessId);
-    }
-
-    public function scopeForBranch($query, $branchId)
-    {
-        return $query->where('branch_id', $branchId);
-    }
-
     /**
      * Owner-and-co-admin. `scopeOwners` is used to pick the account that owns
      * system-level records, so a co-admin has to be included here too.

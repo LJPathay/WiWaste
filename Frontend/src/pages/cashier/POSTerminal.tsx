@@ -402,7 +402,7 @@ export function POSTerminal() {
   useEffect(() => {
     let cancelled = false;
 
-    (async () => {
+    void (async () => {
       try {
         const res = await productsApi.list({ per_page: 100 });
         if (cancelled) return;
@@ -1255,7 +1255,6 @@ export function POSTerminal() {
                 <input
                   id="discount-amount"
                   type="number"
-                  autoFocus
                   value={fixedDiscountInput}
                   onChange={e => setFixedDiscountInput(e.target.value)}
                   placeholder="0.00"
@@ -1313,7 +1312,6 @@ export function POSTerminal() {
                 <input
                   id="senior-pwd-name"
                   type="text"
-                  autoFocus
                   value={seniorPwdInfo?.name ?? ''}
                   onChange={e => setSeniorPwdInfo(prev => ({ ...prev, name: e.target.value, id: prev?.id ?? '' }))}
                   placeholder="e.g. Juan Dela Cruz"
@@ -1350,10 +1348,10 @@ export function POSTerminal() {
             <p className="text-xs text-muted-fg dark:text-muted-fg mb-4">Change the selling price for the selected item.</p>
             <div className="space-y-3 mb-4">
               <div>
-                <label className="block text-xs font-bold text-muted-fg dark:text-slate-300 mb-1">New Price (₱)</label>
+                <label htmlFor="price-override-price" className="block text-xs font-bold text-muted-fg dark:text-slate-300 mb-1">New Price (₱)</label>
                 <input
+                  id="price-override-price"
                   type="number"
-                  autoFocus
                   value={overridePriceInput}
                   onChange={e => setOverridePriceInput(e.target.value)}
                   placeholder="0.00"
@@ -1363,8 +1361,9 @@ export function POSTerminal() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-muted-fg dark:text-slate-300 mb-1">Reason (optional)</label>
+                <label htmlFor="price-override-reason" className="block text-xs font-bold text-muted-fg dark:text-slate-300 mb-1">Reason (optional)</label>
                 <input
+                  id="price-override-reason"
                   type="text"
                   value={overrideReasonInput}
                   onChange={e => setOverrideReasonInput(e.target.value)}
@@ -1562,13 +1561,13 @@ export function POSTerminal() {
 
                     {/* Amount Received - Large Input */}
                     <div>
-                      <label className="block text-xs font-bold text-muted-fg mb-2">Amount Received</label>
+                      <label htmlFor="amount-tendered" className="block text-xs font-bold text-muted-fg mb-2">Amount Received</label>
                       <div className="relative">
                         <span className="absolute left-5 top-1/2 -translate-y-1/2 text-muted-fg font-bold text-3xl">₱</span>
                         <input
+                          id="amount-tendered"
                           type="text"
                           inputMode="numeric"
-                          autoFocus
                           value={amountTendered}
                           onChange={(e) => setAmountTendered(e.target.value.replace(/[^0-9.]/g, ''))}
                           placeholder="0.00"
@@ -1643,7 +1642,6 @@ export function POSTerminal() {
                         }}
                         placeholder="****-****-****-****"
                         className="w-full px-5 py-4 border-2 border-border rounded-xl text-lg font-mono focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-[#0F766E] transition-all"
-                        autoFocus
                       />
                       {cardNumber.length > 0 && (
                         <p className="mt-1.5 text-xs text-muted-fg">
@@ -1654,11 +1652,12 @@ export function POSTerminal() {
 
                     {/* Transaction Number */}
                     <div>
-                      <label className="block text-xs font-bold text-muted-fg mb-2 flex items-center gap-1">
+                      <label htmlFor="card-transaction-ref" className="block text-xs font-bold text-muted-fg mb-2 flex items-center gap-1">
                         Transaction Number
                         <span className="text-red-500">*</span>
                       </label>
                       <input
+                        id="card-transaction-ref"
                         type="text"
                         value={transactionRef}
                         onChange={e => setTransactionRef(e.target.value)}
@@ -1669,10 +1668,11 @@ export function POSTerminal() {
 
                     {/* Amount Charged */}
                     <div>
-                      <label className="block text-xs font-bold text-muted-fg mb-2">Amount Charged</label>
+                      <label htmlFor="card-amount-charged" className="block text-xs font-bold text-muted-fg mb-2">Amount Charged</label>
                       <div className="relative">
                         <span className="absolute left-5 top-1/2 -translate-y-1/2 text-muted-fg font-bold text-xl">₱</span>
                         <input
+                          id="card-amount-charged"
                           type="number"
                           step="0.01"
                           value={chargedAmount}
@@ -1718,27 +1718,28 @@ export function POSTerminal() {
 
                     {/* Account Details */}
                     <div>
-                      <label className="block text-xs font-bold text-muted-fg mb-2 flex items-center gap-1">
+                      <label htmlFor="ewallet-account-details" className="block text-xs font-bold text-muted-fg mb-2 flex items-center gap-1">
                         Account Details
                         <span className="text-red-500">*</span>
                       </label>
                       <input
+                        id="ewallet-account-details"
                         type="text"
                         value={accountDetails}
                         onChange={e => setAccountDetails(e.target.value)}
                         placeholder="e.g. 09171234567 or GCash/Maya account"
                         className="w-full px-5 py-4 border-2 border-border rounded-xl text-lg focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-[#0F766E] transition-all"
-                        autoFocus
                       />
                     </div>
 
                     {/* Transaction Number */}
                     <div>
-                      <label className="block text-xs font-bold text-muted-fg mb-2 flex items-center gap-1">
+                      <label htmlFor="ewallet-transaction-ref" className="block text-xs font-bold text-muted-fg mb-2 flex items-center gap-1">
                         Transaction Number
                         <span className="text-red-500">*</span>
                       </label>
                       <input
+                        id="ewallet-transaction-ref"
                         type="text"
                         value={transactionRef}
                         onChange={e => setTransactionRef(e.target.value)}
@@ -1749,10 +1750,11 @@ export function POSTerminal() {
 
                     {/* Amount Paid */}
                     <div>
-                      <label className="block text-xs font-bold text-muted-fg mb-2">Amount Paid</label>
+                      <label htmlFor="ewallet-amount-paid" className="block text-xs font-bold text-muted-fg mb-2">Amount Paid</label>
                       <div className="relative">
                         <span className="absolute left-5 top-1/2 -translate-y-1/2 text-muted-fg font-bold text-xl">₱</span>
                         <input
+                          id="ewallet-amount-paid"
                           type="number"
                           step="0.01"
                           value={amountPaid}

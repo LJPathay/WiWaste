@@ -163,11 +163,11 @@ export function ManageInventory() {
   };
 
   useEffect(() => {
-    if (historyItem) loadMovements(historyItem);
+    if (historyItem) void loadMovements(historyItem);
   }, [historyItem]);
 
   useEffect(() => {
-    if (selectedItem && activeTab === 'history') loadMovements(selectedItem);
+    if (selectedItem && activeTab === 'history') void loadMovements(selectedItem);
   }, [selectedItem, activeTab]);
 
   const handleStockMovement = async (type: 'Stock In' | 'Stock Out') => {
@@ -532,7 +532,11 @@ export function ManageInventory() {
       )}
 
       {adjustItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" role="dialog" aria-modal="true">
+        <dialog
+          open
+          aria-label="Adjust Stock"
+          className="fixed inset-0 z-50 flex items-center justify-center m-0 w-screen h-screen max-w-none max-h-none border-0 bg-transparent backdrop:bg-black/40 backdrop:backdrop-blur-sm"
+        >
           <div className="bg-bg-elevated rounded-xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-border dark:border-white/10">
               <div>
@@ -605,11 +609,19 @@ export function ManageInventory() {
               </div>
             </div>
           </div>
-        </div>
+        </dialog>
       )}
 
       {historyItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" role="dialog" aria-modal="true">
+        // A native <dialog> rather than a div with role="dialog": it gets the
+        // focus/inert behaviour for free and needs no aria-modal. With `open`
+        // (rather than showModal()) it stays non-modal, matching the previous
+        // click-outside-is-ignored behaviour.
+        <dialog
+          open
+          aria-label="Stock Movement History"
+          className="fixed inset-0 z-50 flex items-center justify-center p-0 m-0 w-screen h-screen max-w-none max-h-none border-0 bg-transparent backdrop:bg-black/40 backdrop:backdrop-blur-sm"
+        >
           <div className="bg-bg-elevated rounded-xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-border dark:border-white/10">
               <div>
@@ -650,7 +662,7 @@ export function ManageInventory() {
               )}
             </div>
           </div>
-        </div>
+        </dialog>
       )}
 
       {selectedItem && (

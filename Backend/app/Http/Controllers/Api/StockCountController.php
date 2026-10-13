@@ -88,9 +88,7 @@ class StockCountController extends Controller
         $user = $request->user();
         $userId = $user?->User_id ?? 1;
 
-        $query = StockCount::with(['product']);
-        $query = $this->scopeForBusinessAndBranch($query, $request);
-        $count = $query->findOrFail($id);
+        $count = $this->findScoped(StockCount::class, $id, ['product']);
 
         if ($count->status !== 'pending') {
             return response()->json(['message' => 'Count already processed.'], 422);
@@ -152,9 +150,7 @@ class StockCountController extends Controller
         $user = $request->user();
         $userId = $user?->User_id ?? 1;
 
-        $query = StockCount::with(['product']);
-        $query = $this->scopeForBusinessAndBranch($query, $request);
-        $count = $query->findOrFail($id);
+        $count = $this->findScoped(StockCount::class, $id, ['product']);
 
         if ($count->status !== 'pending') {
             return response()->json(['message' => 'Count already processed.'], 422);

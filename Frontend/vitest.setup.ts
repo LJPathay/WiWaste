@@ -28,9 +28,19 @@ Object.defineProperty(globalThis, 'localStorage', {
 // (used by the POS tooltips / dropdowns) both reach for them on mount.
 if (!('ResizeObserver' in globalThis)) {
   class ResizeObserverStub {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
+    private readonly observed = new Set<Element>();
+
+    observe(target: Element) {
+      this.observed.add(target);
+    }
+
+    unobserve(target: Element) {
+      this.observed.delete(target);
+    }
+
+    disconnect() {
+      this.observed.clear();
+    }
   }
   Object.defineProperty(globalThis, 'ResizeObserver', {
     value: ResizeObserverStub,

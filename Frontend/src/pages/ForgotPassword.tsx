@@ -154,7 +154,6 @@ export function ForgotPassword() {
                     />
                     <input
                       autoComplete="email"
-                      autoFocus
                       className="block w-full rounded-lg border border-border dark:border-slate-700 bg-white dark:bg-slate-800/80 py-3.5 pl-10 pr-4 text-slate-800 dark:text-slate-100 placeholder-slate-400 transition-colors focus:border-transparent focus:outline-none focus:ring-2 focus:ring-brand-500"
                       disabled={loading}
                       id="email"

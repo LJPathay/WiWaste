@@ -87,9 +87,7 @@ class RecallController extends Controller
 
     public function show($id)
     {
-        $query = Recall::with(['product', 'batch', 'supplier', 'initiator', 'approver']);
-        $query = $this->scopeForBusinessAndBranch($query, request());
-        $recall = $query->findOrFail($id);
+        $recall = $this->findScoped(Recall::class, $id, ['product', 'batch', 'supplier', 'initiator', 'approver']);
 
         return response()->json((new RecallResource($recall))->resolve(request()));
     }
@@ -97,10 +95,7 @@ class RecallController extends Controller
     public function update(UpdateRecallRequest $request, $id)
     {
         $user = $request->user();
-
-        $query = Recall::with(['product', 'batch', 'supplier', 'initiator', 'approver']);
-        $query = $this->scopeForBusinessAndBranch($query, $request);
-        $recall = $query->findOrFail($id);
+        $recall = $this->findScoped(Recall::class, $id, ['product', 'batch', 'supplier', 'initiator', 'approver']);
 
         $data = $request->validated();
 
@@ -133,10 +128,7 @@ class RecallController extends Controller
     public function activate(Request $request, $id)
     {
         $user = $request->user();
-
-        $query = Recall::with(['product', 'batch', 'supplier', 'initiator', 'approver']);
-        $query = $this->scopeForBusinessAndBranch($query, $request);
-        $recall = $query->findOrFail($id);
+        $recall = $this->findScoped(Recall::class, $id, ['product', 'batch', 'supplier', 'initiator', 'approver']);
 
         if ($recall->status !== 'draft') {
             return response()->json(['message' => 'Only draft recalls can be activated.'], 422);
@@ -166,10 +158,7 @@ class RecallController extends Controller
     public function quarantine(Request $request, $id)
     {
         $user = $request->user();
-
-        $query = Recall::with(['product', 'batch', 'supplier', 'initiator', 'approver']);
-        $query = $this->scopeForBusinessAndBranch($query, $request);
-        $recall = $query->findOrFail($id);
+        $recall = $this->findScoped(Recall::class, $id, ['product', 'batch', 'supplier', 'initiator', 'approver']);
 
         if ($recall->status === 'quarantined') {
             return response()->json(['message' => 'Recall already quarantined.'], 422);
@@ -199,10 +188,7 @@ class RecallController extends Controller
     public function notify(Request $request, $id)
     {
         $user = $request->user();
-
-        $query = Recall::with(['product', 'batch', 'supplier', 'initiator', 'approver']);
-        $query = $this->scopeForBusinessAndBranch($query, $request);
-        $recall = $query->findOrFail($id);
+        $recall = $this->findScoped(Recall::class, $id, ['product', 'batch', 'supplier', 'initiator', 'approver']);
 
         $recall->notifyAffectedParties();
 
@@ -228,10 +214,7 @@ class RecallController extends Controller
     public function resolve(ResolveRecallRequest $request, $id)
     {
         $user = $request->user();
-
-        $query = Recall::with(['product', 'batch', 'supplier', 'initiator', 'approver']);
-        $query = $this->scopeForBusinessAndBranch($query, $request);
-        $recall = $query->findOrFail($id);
+        $recall = $this->findScoped(Recall::class, $id, ['product', 'batch', 'supplier', 'initiator', 'approver']);
 
         $data = $request->validated();
 

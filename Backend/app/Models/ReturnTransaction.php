@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 
 class ReturnTransaction extends Model
 {
+    use BelongsToTenant;
+
     protected $table = 'Return_Transaction';
 
     protected $primaryKey = 'return_id';
@@ -49,32 +52,12 @@ class ReturnTransaction extends Model
         return $this->belongsTo(User::class, 'user_id', 'User_id');
     }
 
-    public function business()
-    {
-        return $this->belongsTo(Business::class, 'business_id', 'id');
-    }
-
-    public function branch()
-    {
-        return $this->belongsTo(Branch::class, 'branch_id', 'id');
-    }
-
     public function approver()
     {
         return $this->belongsTo(User::class, 'approved_by', 'User_id');
     }
 
     // Scopes
-    public function scopeForBusiness($query, $businessId)
-    {
-        return $query->where('business_id', $businessId);
-    }
-
-    public function scopeForBranch($query, $branchId)
-    {
-        return $query->where('branch_id', $branchId);
-    }
-
     public function scopePending($query)
     {
         return $query->where('approval_status', 'pending');

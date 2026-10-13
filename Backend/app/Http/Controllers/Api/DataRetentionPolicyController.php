@@ -47,6 +47,9 @@ class DataRetentionPolicyController extends Controller
         'stock_movements' => ['table' => 'Stock_Movement', 'date' => 'movement_date'],
     ];
 
+    /** Returned whenever a policy names an `entity_type` with no entry in `ENTITY_TABLES`. */
+    private const UNKNOWN_ENTITY_MESSAGE = 'Unknown entity type.';
+
     public function index(Request $request)
     {
         $query = DataRetentionPolicy::query();
@@ -198,7 +201,7 @@ class DataRetentionPolicyController extends Controller
         $entity = $this->resolveEntity($policy->entity_type);
 
         if ($entity === null) {
-            return response()->json(['message' => 'Unknown entity type.'], 422);
+            return response()->json(['message' => self::UNKNOWN_ENTITY_MESSAGE], 422);
         }
 
         $count = $this->buildPurgeQuery($policy, $entity)->count();
@@ -224,7 +227,7 @@ class DataRetentionPolicyController extends Controller
 
         $entity = $this->resolveEntity($policy->entity_type);
         if ($entity === null) {
-            return response()->json(['message' => 'Unknown entity type.'], 422);
+            return response()->json(['message' => self::UNKNOWN_ENTITY_MESSAGE], 422);
         }
 
         $query = $this->buildPurgeQuery($policy, $entity);
@@ -247,7 +250,7 @@ class DataRetentionPolicyController extends Controller
         $entity = $this->resolveEntity($policy->entity_type);
 
         if ($entity === null) {
-            return response()->json(['message' => 'Unknown entity type.'], 422);
+            return response()->json(['message' => self::UNKNOWN_ENTITY_MESSAGE], 422);
         }
 
         $query = $this->buildPurgeQuery($policy, $entity);

@@ -15,6 +15,7 @@ use App\Models\Inventory;
 use App\Models\StockMovement;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Symfony\Component\HttpFoundation\Response;
 
 class InventoryController extends Controller
 {
@@ -210,64 +211,10 @@ class InventoryController extends Controller
         }
 
         return DB::transaction(function () use ($data, $request, $inventory) {
-            $remainingQty = $data['quantity'];
-            $movements = [];
+            $movements = $this->resolveStockOutBatches($data);
 
-            // If specific batch_id provided, use that batch
-            if (isset($data['batch_id']) && $data['batch_id']) {
-                $batch = FEFOBatch::where('batch_id', $data['batch_id'])
-                    ->where('product_id', $data['product_id'])
-                    ->firstOrFail();
-
-                if ($batch->quantity < $remainingQty) {
-                    return response()->json(['message' => 'Insufficient quantity in specified batch.'], 422);
-                }
-
-                $batch->quantity -= $remainingQty;
-                if ($batch->quantity <= 0) {
-                    // `FEFO_Batch.status` is an ENUM(active, flagged, cleared).
-                    // A fully consumed batch is cleared, not "depleted".
-                    $batch->status = 'cleared';
-                }
-                $batch->save();
-
-                $movements[] = [
-                    'batch_id' => $batch->batch_id,
-                    'quantity' => $remainingQty,
-                ];
-
-                $remainingQty = 0;
-            } else {
-                // FEFO enforcement: auto-select earliest expiry batches
-                $batches = FEFOBatch::where('product_id', $data['product_id'])
-                    ->where('status', 'active')
-                    ->where('quantity', '>', 0)
-                    ->orderBy('expiry_date')
-                    ->get();
-
-                foreach ($batches as $batch) {
-                    if ($remainingQty <= 0) {
-                        break;
-                    }
-
-                    $takeQty = min($batch->quantity, $remainingQty);
-                    $batch->quantity -= $takeQty;
-                    if ($batch->quantity <= 0) {
-                        $batch->status = 'cleared';
-                    }
-                    $batch->save();
-
-                    $movements[] = [
-                        'batch_id' => $batch->batch_id,
-                        'quantity' => $takeQty,
-                    ];
-
-                    $remainingQty -= $takeQty;
-                }
-
-                if ($remainingQty > 0) {
-                    return response()->json(['message' => 'Insufficient stock in active batches.'], 422);
-                }
+            if ($movements instanceof Response) {
+                return $movements;
             }
 
             // Update inventory
@@ -293,31 +240,7 @@ class InventoryController extends Controller
                 ]);
             }
 
-            // Log override if provided
-            if (isset($data['override_reason']) && $data['override_reason']) {
-                AuditLog::create([
-                    'user_id' => $user?->User_id ?? 1,
-                    'action' => "FEFO Override: Stock-out with reason: {$data['override_reason']}",
-                    'entity_type' => 'Inventory',
-                    'entity_id' => $inventory->inventory_id,
-                    'new_values' => json_encode(['override_reason' => $data['override_reason']]),
-                    'created_at' => now(),
-                    'business_id' => $user?->business_id,
-                    'branch_id' => $user?->branch_id,
-                ]);
-            }
-
-            AuditLog::create([
-                'user_id' => $user?->User_id ?? 1,
-                'action' => "Stock-out (FEFO): {$data['quantity']} units of {$inventory->product?->product_name}",
-                'entity_type' => 'Inventory',
-                'entity_id' => $inventory->inventory_id,
-                'old_values' => null,
-                'new_values' => json_encode(['current_stock' => $inventory->current_stock, 'batches_used' => $movements]),
-                'created_at' => now(),
-                'business_id' => $user?->business_id,
-                'branch_id' => $user?->branch_id,
-            ]);
+            $this->logStockOut($data, $inventory, $user, $movements);
 
             WarmAnalyticsCache::dispatch();
 
@@ -329,14 +252,120 @@ class InventoryController extends Controller
         });
     }
 
+    /**
+     * Drains batches for a stock-out, FEFO first unless a specific batch_id was
+     * named. Returns the list of `{batch_id, quantity}` pairs, or a 422 Response
+     * when the request cannot be satisfied from stock.
+     *
+     * @return array<int, array{batch_id: int, quantity: int|float}>|Response
+     */
+    protected function resolveStockOutBatches(array $data)
+    {
+        $remainingQty = $data['quantity'];
+        $movements = [];
+
+        if (isset($data['batch_id']) && $data['batch_id']) {
+            $batch = FEFOBatch::where('batch_id', $data['batch_id'])
+                ->where('product_id', $data['product_id'])
+                ->firstOrFail();
+
+            if ($batch->quantity < $remainingQty) {
+                return response()->json(['message' => 'Insufficient quantity in specified batch.'], 422);
+            }
+
+            $batch->quantity -= $remainingQty;
+            $this->clearConsumedBatch($batch);
+
+            return [['batch_id' => $batch->batch_id, 'quantity' => $remainingQty]];
+        }
+
+        // FEFO enforcement: auto-select earliest expiry batches
+        $batches = FEFOBatch::where('product_id', $data['product_id'])
+            ->where('status', 'active')
+            ->where('quantity', '>', 0)
+            ->orderBy('expiry_date')
+            ->get();
+
+        foreach ($batches as $batch) {
+            if ($remainingQty <= 0) {
+                break;
+            }
+
+            $takeQty = min($batch->quantity, $remainingQty);
+            $batch->quantity -= $takeQty;
+            $this->clearConsumedBatch($batch);
+
+            $movements[] = [
+                'batch_id' => $batch->batch_id,
+                'quantity' => $takeQty,
+            ];
+
+            $remainingQty -= $takeQty;
+        }
+
+        if ($remainingQty > 0) {
+            return response()->json(['message' => 'Insufficient stock in active batches.'], 422);
+        }
+
+        return $movements;
+    }
+
+    /**
+     * Marks a fully drained batch as cleared.
+     *
+     * `FEFO_Batch.status` is an ENUM(active, flagged, cleared): a batch that has
+     * been consumed down to zero is "cleared", not "depleted".
+     */
+    protected function clearConsumedBatch(FEFOBatch $batch): void
+    {
+        if ($batch->quantity <= 0) {
+            $batch->status = 'cleared';
+        }
+        $batch->save();
+    }
+
+    /**
+     * Writes the override note (when one was supplied) and the stock-out trail.
+     *
+     * @param  array{batch_id?: int, quantity: int|float, remarks?: string, override_reason?: string}  $data
+     * @param  array<int, array{batch_id: int, quantity: int|float}>  $movements
+     */
+    protected function logStockOut(array $data, Inventory $inventory, $user, array $movements): void
+    {
+        if (isset($data['override_reason']) && $data['override_reason']) {
+            AuditLog::create([
+                'user_id' => $user?->User_id ?? 1,
+                'action' => "FEFO Override: Stock-out with reason: {$data['override_reason']}",
+                'entity_type' => 'Inventory',
+                'entity_id' => $inventory->inventory_id,
+                'new_values' => json_encode(['override_reason' => $data['override_reason']]),
+                'created_at' => now(),
+                'business_id' => $user?->business_id,
+                'branch_id' => $user?->branch_id,
+            ]);
+        }
+
+        AuditLog::create([
+            'user_id' => $user?->User_id ?? 1,
+            'action' => "Stock-out (FEFO): {$data['quantity']} units of {$inventory->product?->product_name}",
+            'entity_type' => 'Inventory',
+            'entity_id' => $inventory->inventory_id,
+            'old_values' => null,
+            'new_values' => json_encode(['current_stock' => $inventory->current_stock, 'batches_used' => $movements]),
+            'created_at' => now(),
+            'business_id' => $user?->business_id,
+            'branch_id' => $user?->branch_id,
+        ]);
+    }
+
     public function movements($id)
     {
-        $query = Inventory::with('product');
-        $query = $this->scopeForBusinessAndBranch($query, request());
-        $inventory = $query->findOrFail($id);
+        $inventory = $this->findScoped(Inventory::class, $id, ['product']);
 
-        $query = StockMovement::where('product_id', $inventory->product_id);
-        $query = $this->scopeForBusinessAndBranch($query, request());
+        $query = $this->scopeForBusinessAndBranch(
+            StockMovement::where('product_id', $inventory->product_id),
+            request()
+        );
         $movements = $query->with('user')
             ->orderByDesc('movement_date')
             ->get()

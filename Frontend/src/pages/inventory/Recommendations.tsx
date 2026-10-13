@@ -127,7 +127,7 @@ export function Recommendations() {
   };
 
   useEffect(() => {
-    loadRecommendations();
+    void loadRecommendations();
   }, []);
   const filtered = useMemo(() => {
     let list = recommendations;
@@ -196,7 +196,11 @@ export function Recommendations() {
       )}
 
       {rejectingId !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" role="dialog" aria-modal="true">
+        <dialog
+          open
+          aria-label="Reject Recommendation"
+          className="fixed inset-0 z-50 flex items-center justify-center m-0 w-screen h-screen max-w-none max-h-none border-0 bg-transparent backdrop:bg-black/40 backdrop:backdrop-blur-sm"
+        >
           <div className="bg-bg-elevated rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
             <div className="flex items-center justify-between px-5 py-4 border-b border-border">
               <h3 className="text-sm font-bold text-gray-900">Reject Recommendation</h3>
@@ -206,8 +210,9 @@ export function Recommendations() {
             </div>
             <div className="p-5 space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-muted-fg mb-1.5">Reason for Rejection</label>
+                <label htmlFor="reject-reason" className="block text-xs font-semibold text-muted-fg mb-1.5">Reason for Rejection</label>
                 <textarea
+                  id="reject-reason"
                   value={rejectReason}
                   onChange={e => setRejectReason(e.target.value)}
                   placeholder="Explain why this recommendation is being rejected..."
@@ -233,7 +238,7 @@ export function Recommendations() {
               </div>
             </div>
           </div>
-        </div>
+        </dialog>
       )}
 
       <div className="flex flex-col gap-1">

@@ -148,11 +148,10 @@ export function Modal({
   if (!isOpen) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      role="dialog"
-      aria-modal="true"
+    <dialog
+      open
       aria-labelledby="modal-title"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 m-0 w-screen h-screen max-w-none max-h-none border-0 bg-transparent backdrop:bg-black/40"
       onKeyDown={handleKeyDown}
       onClick={onClose}
     >
@@ -176,7 +175,7 @@ export function Modal({
         </div>
         <div className={cn('p-6', contentClassName)}>{children}</div>
       </div>
-    </div>
+    </dialog>
   );
 }
 
@@ -224,11 +223,10 @@ export function ConfirmDialog({
   if (!isOpen) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      role="dialog"
-      aria-modal="true"
+    <dialog
+      open
       aria-labelledby={title ? 'confirm-title' : 'confirm-message'}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 m-0 w-screen h-screen max-w-none max-h-none border-0 bg-transparent backdrop:bg-black/40"
       onKeyDown={handleKeyDown}
       onClick={dismiss}
     >
@@ -253,7 +251,6 @@ export function ConfirmDialog({
           </button>
           <button
             onClick={onConfirm}
-            autoFocus
             className={`px-4 py-2 text-xs font-semibold rounded-lg text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 ${
               danger ? 'bg-rose-600 hover:bg-rose-700' : 'bg-[#006a61] hover:bg-[#00574f]'
             }`}
@@ -262,7 +259,7 @@ export function ConfirmDialog({
           </button>
         </div>
       </div>
-    </div>
+    </dialog>
   );
 }
 

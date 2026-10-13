@@ -132,7 +132,7 @@ export function StockReceiving() {
       }
       success(`${confirmAction.type === 'receive' ? 'Received' : confirmAction.type === 'reject' ? 'Rejected' : 'Discarded'} successfully.`);
       setConfirmAction(null);
-      refetch();
+      void refetch();
     } catch (err) {
       showError(err instanceof Error ? err.message : 'Failed');
     }

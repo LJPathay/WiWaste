@@ -24,6 +24,9 @@ class WastageTest extends TestCase
 {
     use CreatesInventoryFixtures, RefreshDatabase;
 
+    /** Endpoint Inventory/Owner use to record loss directly. */
+    private const WASTAGE_ENDPOINT = '/api/v1/wastage';
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -45,7 +48,7 @@ class WastageTest extends TestCase
         $product = $this->makeProduct(['reorder_level' => 20]);
         $inventory = $this->makeInventory($product, 100);
 
-        $this->postJson('/api/v1/wastage', [
+        $this->postJson(self::WASTAGE_ENDPOINT, [
             'product_id' => $product->product_id,
             'wastage_type' => 'Expired',
             'quantity' => 5,
@@ -75,7 +78,7 @@ class WastageTest extends TestCase
         $product = $this->makeProduct();
         $this->makeInventory($product, 10);
 
-        $this->postJson('/api/v1/wastage', [
+        $this->postJson(self::WASTAGE_ENDPOINT, [
             'product_id' => $product->product_id,
             'wastage_type' => 'Damaged',
             'quantity' => 1,
@@ -94,7 +97,7 @@ class WastageTest extends TestCase
         $product = $this->makeProduct();
         $this->makeInventory($product, 10);
 
-        $this->postJson('/api/v1/wastage', [
+        $this->postJson(self::WASTAGE_ENDPOINT, [
             'product_id' => $product->product_id,
             'wastage_type' => 'Spoiled',
             'quantity' => 2,
@@ -115,7 +118,7 @@ class WastageTest extends TestCase
         $inventory = $this->makeInventory($product, 50);
         $batch = $this->makeBatch($product, 50, now()->addDays(5)->toDateString());
 
-        $this->postJson('/api/v1/wastage', [
+        $this->postJson(self::WASTAGE_ENDPOINT, [
             'product_id' => $product->product_id,
             'batch_id' => $batch->batch_id,
             'wastage_type' => 'Expired',
@@ -137,7 +140,7 @@ class WastageTest extends TestCase
         $product = $this->makeProduct();
         $inventory = $this->makeInventory($product, 3);
 
-        $this->postJson('/api/v1/wastage', [
+        $this->postJson(self::WASTAGE_ENDPOINT, [
             'product_id' => $product->product_id,
             'wastage_type' => 'Damaged',
             'quantity' => 10,
@@ -155,7 +158,7 @@ class WastageTest extends TestCase
         $product = $this->makeProduct();
         $this->makeInventory($product, 10);
 
-        $this->postJson('/api/v1/wastage', [
+        $this->postJson(self::WASTAGE_ENDPOINT, [
             'product_id' => $product->product_id,
             'wastage_type' => 'Melted',
             'quantity' => 1,
@@ -174,7 +177,7 @@ class WastageTest extends TestCase
             $product = $this->makeProduct();
             $this->makeInventory($product, 10);
 
-            $this->postJson('/api/v1/wastage', [
+            $this->postJson(self::WASTAGE_ENDPOINT, [
                 'product_id' => $product->product_id,
                 'wastage_type' => $type,
                 'quantity' => 1,
@@ -195,7 +198,7 @@ class WastageTest extends TestCase
         $product = $this->makeProduct();
         $this->makeInventory($product, 10);
 
-        $this->postJson('/api/v1/wastage', [
+        $this->postJson(self::WASTAGE_ENDPOINT, [
             'product_id' => $product->product_id,
             'wastage_type' => 'Expired',
             'quantity' => 0,
@@ -223,7 +226,7 @@ class WastageTest extends TestCase
             ]);
         }
 
-        $response = $this->getJson('/api/v1/wastage');
+        $response = $this->getJson(self::WASTAGE_ENDPOINT);
 
         $response->assertOk()->assertJsonCount(2, 'data');
         $this->assertSame(

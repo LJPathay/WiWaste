@@ -145,7 +145,7 @@ export function SanitationChecklist() {
         checks: [{ item: '', passed: false, notes: '', photo_url: '' }],
         notes: '',
       });
-      refetchChecklists();
+      void refetchChecklists();
     } catch (err) {
       showError(err instanceof Error ? err.message : 'Failed to create checklist');
     }
@@ -542,8 +542,8 @@ export function SanitationChecklist() {
         onClose={() => setConfirmAction(null)}
         onConfirm={() => {
           if (confirmAction) {
-            if (confirmAction.action === 'verify') handleVerify(confirmAction.id);
-            else if (confirmAction.action === 'delete') handleDelete(confirmAction.id);
+            if (confirmAction.action === 'verify') void handleVerify(confirmAction.id);
+            else if (confirmAction.action === 'delete') void handleDelete(confirmAction.id);
           }
           setConfirmAction(null);
         }}

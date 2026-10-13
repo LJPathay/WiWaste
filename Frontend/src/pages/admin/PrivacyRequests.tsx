@@ -100,7 +100,7 @@ export function PrivacyRequests() {
         await privacyApi.deleteRequest(id);
         success('Request deleted.');
       }
-      refetchRequests();
+      void refetchRequests();
     } catch (err) {
       showError(err instanceof Error ? err.message : 'Action failed');
     }
@@ -294,7 +294,7 @@ export function PrivacyRequests() {
       <ConfirmDialog
         isOpen={!!confirmAction}
         onClose={() => setConfirmAction(null)}
-        onConfirm={() => { if (confirmAction) handleAction(confirmAction.id, confirmAction.action); setConfirmAction(null); }}
+        onConfirm={() => { if (confirmAction) void handleAction(confirmAction.id, confirmAction.action); setConfirmAction(null); }}
         title={confirmAction?.action === 'approve' ? 'Approve Request' : confirmAction?.action === 'reject' ? 'Reject Request' : 'Delete Request'}
         message={confirmAction?.action === 'approve' ? 'Approve this data subject request?' : confirmAction?.action === 'reject' ? 'Reject this request? You will be prompted for a reason.' : 'Delete this request? This cannot be undone.'}
       />

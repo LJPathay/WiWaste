@@ -15,6 +15,9 @@ export interface PaginatedResponse<T> {
 }
 
 // ─── Auth & Users ───────────────────────────────────────
+/** Account lifecycle states. Spelled once so `ApiUser`, `CreateUserPayload` and `UserStatusCounts` cannot drift apart. */
+export type UserAccountStatus = 'Active' | 'Inactive' | 'Quarantined' | 'Archived';
+
 export interface ApiUser {
   id: number;
   name: string;
@@ -25,7 +28,7 @@ export interface ApiUser {
   username: string;
   email: string;
   role: 'Owner' | 'Admin' | 'Inventory' | 'Cashier' | 'Pharmacist';
-  status: 'Active' | 'Inactive' | 'Quarantined' | 'Archived';
+  status: UserAccountStatus;
   created_at?: string;
   business_id?: number;
   branch_id?: number;
@@ -40,7 +43,7 @@ export interface CreateUserPayload {
   password: string;
   email: string;
   role: 'Owner' | 'Admin' | 'Inventory' | 'Cashier' | 'Pharmacist';
-  status: 'Active' | 'Inactive' | 'Quarantined' | 'Archived';
+  status: UserAccountStatus;
   business_id?: number;
   branch_id?: number;
 }
@@ -54,7 +57,7 @@ export interface CreateUserPayload {
  */
 export interface UserStatusCounts {
   data: {
-    by_status: Record<'Active' | 'Inactive' | 'Quarantined' | 'Archived', number>;
+    by_status: Record<UserAccountStatus, number>;
     total: number;
     not_archived: number;
   };

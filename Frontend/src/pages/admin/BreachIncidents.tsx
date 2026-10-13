@@ -54,14 +54,7 @@ export function BreachIncidents() {
   const debouncedSearch = useDebounce(search, 300);
   const [page, setPage] = useState(1);
   const pageSize = 10;
-    const [confirmAction, setConfirmAction] = useState<{ id: number; action: BreachAction } | null>(null);
-  const [, setShowCreateModal] = useState(false);
-    const [, setForm] = useState({
-    description: '',
-    personal_data_affected: '',
-    risk_assessment: 'medium',
-    npc_notification_required: false,
-  });
+  const [confirmAction, setConfirmAction] = useState<{ id: number; action: BreachAction } | null>(null);
 
   const fetcher = useCallback(
     () => privacyApi.breaches({ status: statusFilter === 'all' ? undefined : statusFilter, risk: riskFilter === 'all' ? undefined : riskFilter }),
@@ -124,7 +117,7 @@ export function BreachIncidents() {
         showError('Delete not implemented yet');
         return;
       }
-      refetchBreaches();
+      void refetchBreaches();
     } catch (err) {
       showError(err instanceof Error ? err.message : 'Action failed');
     }
@@ -151,7 +144,7 @@ export function BreachIncidents() {
           </p>
         </div>
         <button
-          onClick={() => { setForm({ description: '', personal_data_affected: '', risk_assessment: 'medium', npc_notification_required: false }); setShowCreateModal(true); }}
+          onClick={() => showError('Breach intake runs through the DPO channel — no API endpoint is exposed yet.')}
           className="inline-flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium rounded-lg shadow-sm transition"
         >
           <AlertTriangle className="w-4 h-4" />
@@ -331,7 +324,7 @@ export function BreachIncidents() {
       <ConfirmDialog
         isOpen={!!confirmAction}
         onClose={() => setConfirmAction(null)}
-        onConfirm={() => { if (confirmAction) handleAction(confirmAction.id, confirmAction.action); setConfirmAction(null); }}
+        onConfirm={() => { if (confirmAction) void handleAction(confirmAction.id, confirmAction.action); setConfirmAction(null); }}
         title={confirmAction
           ? `${confirmAction.action.charAt(0).toUpperCase()}${confirmAction.action.slice(1).replace('_', ' ')}`
           : undefined}

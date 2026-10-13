@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 
 class PurchaseOrder extends Model
 {
+    use BelongsToTenant;
+
     protected $table = 'Purchase_Order';
 
     protected $primaryKey = 'po_id';
@@ -31,16 +34,6 @@ class PurchaseOrder extends Model
         'updated_at' => 'datetime',
     ];
 
-    public function business()
-    {
-        return $this->belongsTo(Business::class, 'business_id', 'id');
-    }
-
-    public function branch()
-    {
-        return $this->belongsTo(Branch::class, 'branch_id', 'id');
-    }
-
     public function supplier()
     {
         return $this->belongsTo(Supplier::class, 'supplier_id', 'supplier_id');
@@ -59,16 +52,5 @@ class PurchaseOrder extends Model
     public function stockReceiving()
     {
         return $this->hasMany(StockReceiving::class, 'supplier_id', 'supplier_id');
-    }
-
-    // Scopes
-    public function scopeForBusiness($query, $businessId)
-    {
-        return $query->where('business_id', $businessId);
-    }
-
-    public function scopeForBranch($query, $branchId)
-    {
-        return $query->where('branch_id', $branchId);
     }
 }

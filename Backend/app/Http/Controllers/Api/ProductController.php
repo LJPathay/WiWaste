@@ -109,18 +109,14 @@ class ProductController extends Controller
 
     public function show($id)
     {
-        $query = Product::with(['category', 'supplier', 'inventory']);
-        $query = $this->scopeForBusinessAndBranch($query, request());
-        $p = $query->findOrFail($id);
+        $p = $this->findScoped(Product::class, $id, ['category', 'supplier', 'inventory']);
 
         return response()->json((new ProductResource($p))->resolve(request()));
     }
 
     public function update(UpdateProductRequest $request, $id)
     {
-        $query = Product::with(['category', 'supplier', 'inventory']);
-        $query = $this->scopeForBusinessAndBranch($query, $request);
-        $product = $query->findOrFail($id);
+        $product = $this->findScoped(Product::class, $id, ['category', 'supplier', 'inventory']);
 
         $data = $request->validated();
 
@@ -144,9 +140,7 @@ class ProductController extends Controller
 
     public function destroy(Request $request, $id)
     {
-        $query = Product::with(['category', 'supplier', 'inventory']);
-        $query = $this->scopeForBusinessAndBranch($query, $request);
-        $product = $query->findOrFail($id);
+        $product = $this->findScoped(Product::class, $id, ['category', 'supplier', 'inventory']);
 
         $newStatus = $product->status === 'Discontinued' ? 'Active' : 'Discontinued';
         $product->update(['status' => $newStatus]);
@@ -171,8 +165,10 @@ class ProductController extends Controller
 
     public function lookup($code)
     {
-        $query = Product::with(['category', 'supplier', 'inventory']);
-        $query = $this->scopeForBusinessAndBranch($query, request());
+        $query = $this->scopeForBusinessAndBranch(
+            Product::with(['category', 'supplier', 'inventory']),
+            request()
+        );
 
         $product = $query->where('barcode', $code)->first();
 

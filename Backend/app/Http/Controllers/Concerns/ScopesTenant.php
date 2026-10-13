@@ -52,6 +52,26 @@ trait ScopesTenant
     }
 
     /**
+     * Eager-loads the given relations, scopes to the caller's tenant, and fetches
+     * one row — the `show()` / `update()` / `verify()` shape every controller repeats.
+     *
+     * @template T of \Illuminate\Database\Eloquent\Model
+     * @param  class-string<T>  $model
+     * @param  int|string  $id
+     * @param  array<int, string>  $relations
+     * @return T
+     */
+    protected function findScoped(string $model, $id, array $relations = [])
+    {
+        $query = $model::query();
+        if ($relations) {
+            $query->with($relations);
+        }
+
+        return $this->scopeForBusinessAndBranch($query, request())->findOrFail($id);
+    }
+
+    /**
      * @param  Builder|\Illuminate\Database\Eloquent\Builder  $query
      * @return mixed
      */

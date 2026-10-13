@@ -29,8 +29,14 @@ use Illuminate\Support\Facades\Schema;
 
 class DatabaseSeeder extends Seeder
 {
-    /** Supplier name shared by the supplier block and the product rows. */
+    /**
+     * Supplier names shared by the supplier block, the product rows and the
+     * purchase-order fixtures. Kept as constants so a rename cannot leave the
+     * `supplierMap` lookups pointing at a name that no longer exists.
+     */
     private const PG_SUPPLIER = 'P&G Philippines';
+    private const PHARMADIST_SUPPLIER = 'PharmaDist Corp';
+    private const COCA_COLA_SUPPLIER = 'Coca-Cola Beverages PH';
 
     private array $categoryMap = [];
 
@@ -215,10 +221,10 @@ class DatabaseSeeder extends Seeder
     private function seedSuppliers(): void
     {
         $data = [
-            ['supplier_name' => 'PharmaDist Corp',       'contact_person' => 'Maria Santos',     'contact_number' => '09171234567', 'email' => 'orders@pharmadist.example',   'address' => 'Quezon City, Metro Manila'],
+            ['supplier_name' => self::PHARMADIST_SUPPLIER,  'contact_person' => 'Maria Santos',     'contact_number' => '09171234567', 'email' => 'orders@pharmadist.example',   'address' => 'Quezon City, Metro Manila'],
             ['supplier_name' => 'Nestlé Philippines',     'contact_person' => 'John Reyes',       'contact_number' => '09182223344', 'email' => 'supply@nestle-ph.example',   'address' => 'Makati City, Metro Manila'],
             ['supplier_name' => self::PG_SUPPLIER,        'contact_person' => 'Anna Lim',         'contact_number' => '09173334455', 'email' => 'sales@pg-ph.example',        'address' => 'Pasig City, Metro Manila'],
-            ['supplier_name' => 'Coca-Cola Beverages PH', 'contact_person' => 'Pedro Santos',     'contact_number' => '09194445566', 'email' => 'orders@coca-cola-ph.example', 'address' => 'Mandaluyong City, Metro Manila'],
+            ['supplier_name' => self::COCA_COLA_SUPPLIER,   'contact_person' => 'Pedro Santos',     'contact_number' => '09194445566', 'email' => 'orders@coca-cola-ph.example', 'address' => 'Mandaluyong City, Metro Manila'],
             ['supplier_name' => 'Del Monte Philippines',  'contact_person' => 'Sofia Garcia',     'contact_number' => '09195556677', 'email' => 'bulk@delmonte-ph.example',  'address' => 'Cebu City, Cebu'],
             ['supplier_name' => 'San Miguel Corporation', 'contact_person' => 'Miguel Tan',       'contact_number' => '09196667788', 'email' => 'dealer@sanmiguel-ph.example', 'address' => 'Pasig City, Metro Manila'],
         ];
@@ -246,10 +252,10 @@ class DatabaseSeeder extends Seeder
         $expired = now()->subDays(5);
 
         $products = [
-            ['name' => 'Biogesic Paracetamol 500mg',  'barcode' => '480123456789', 'cat' => 'Medicine & Health', 'sup' => 'PharmaDist Corp',       'cost' => 5.50,  'sell' => 7.50,  'reorder' => 50,  'exp' => $plus90],
-            ['name' => 'Neozep Forte 10s',             'barcode' => '480987654321', 'cat' => 'Medicine & Health', 'sup' => 'PharmaDist Corp',       'cost' => 8.00,  'sell' => 12.00, 'reorder' => 30,  'exp' => $plus60],
-            ['name' => 'Coca-Cola 1.5L',               'barcode' => '480111111111', 'cat' => 'Food & Beverage',   'sup' => 'Coca-Cola Beverages PH', 'cost' => 55.00, 'sell' => 72.00, 'reorder' => 20,  'exp' => $plus30],
-            ['name' => 'C2 Green Tea 500ml',           'barcode' => '480222222222', 'cat' => 'Food & Beverage',   'sup' => 'Coca-Cola Beverages PH', 'cost' => 18.00, 'sell' => 25.00, 'reorder' => 40,  'exp' => $plus30],
+            ['name' => 'Biogesic Paracetamol 500mg',  'barcode' => '480123456789', 'cat' => 'Medicine & Health', 'sup' => self::PHARMADIST_SUPPLIER, 'cost' => 5.50,  'sell' => 7.50,  'reorder' => 50,  'exp' => $plus90],
+            ['name' => 'Neozep Forte 10s',             'barcode' => '480987654321', 'cat' => 'Medicine & Health', 'sup' => self::PHARMADIST_SUPPLIER, 'cost' => 8.00,  'sell' => 12.00, 'reorder' => 30,  'exp' => $plus60],
+            ['name' => 'Coca-Cola 1.5L',               'barcode' => '480111111111', 'cat' => 'Food & Beverage',   'sup' => self::COCA_COLA_SUPPLIER,   'cost' => 55.00, 'sell' => 72.00, 'reorder' => 20,  'exp' => $plus30],
+            ['name' => 'C2 Green Tea 500ml',           'barcode' => '480222222222', 'cat' => 'Food & Beverage',   'sup' => self::COCA_COLA_SUPPLIER,   'cost' => 18.00, 'sell' => 25.00, 'reorder' => 40,  'exp' => $plus30],
             ['name' => 'Safeguard White Soap 130g',    'barcode' => '480333333333', 'cat' => 'Personal Care',     'sup' => self::PG_SUPPLIER,        'cost' => 42.00, 'sell' => 55.00, 'reorder' => 25,  'exp' => null],
             ['name' => 'Tide Original Powder 1kg',     'barcode' => '480444444444', 'cat' => 'Household',         'sup' => self::PG_SUPPLIER,        'cost' => 85.00, 'sell' => 110.00, 'reorder' => 15,  'exp' => null],
             ['name' => 'Del Monte Tomato Sauce 250g',  'barcode' => '480555555555', 'cat' => 'Food & Beverage',   'sup' => 'Del Monte Philippines',  'cost' => 22.00, 'sell' => 30.00, 'reorder' => 35,  'exp' => $plus90],
@@ -575,7 +581,7 @@ class DatabaseSeeder extends Seeder
     private function seedPurchaseOrders(): void
     {
         $adminId = $this->userMap['admin'];
-        $supplierId = $this->supplierMap['PharmaDist Corp'];
+        $supplierId = $this->supplierMap[self::PHARMADIST_SUPPLIER];
 
         $po = PurchaseOrder::create([
             'supplier_id' => $supplierId,
@@ -611,7 +617,7 @@ class DatabaseSeeder extends Seeder
         $pending = StockReceiving::create([
             'business_id' => $this->businessId,
             'branch_id' => $this->branchId,
-            'supplier_id' => $this->supplierMap['PharmaDist Corp'],
+            'supplier_id' => $this->supplierMap[self::PHARMADIST_SUPPLIER],
             'received_by' => $this->userMap['admin'],
             'status' => 'pending',
             'notes' => 'Awaiting delivery — PO-20260722-000002',
@@ -634,7 +640,7 @@ class DatabaseSeeder extends Seeder
         $done = StockReceiving::create([
             'business_id' => $this->businessId,
             'branch_id' => $this->branchId,
-            'supplier_id' => $this->supplierMap['Coca-Cola Beverages PH'],
+            'supplier_id' => $this->supplierMap[self::COCA_COLA_SUPPLIER],
             'received_by' => $this->userMap['inventory'],
             'status' => 'received',
             'notes' => 'Received in full',

@@ -88,9 +88,7 @@ class SanitationController extends Controller
 
     public function show($id)
     {
-        $query = SanitationChecklist::with(['creator', 'verifier']);
-        $query = $this->scopeForBusinessAndBranch($query, request());
-        $checklist = $query->findOrFail($id);
+        $checklist = $this->findScoped(SanitationChecklist::class, $id, ['creator', 'verifier']);
 
         return response()->json((new SanitationChecklistResource($checklist))->resolve(request()));
     }
@@ -98,10 +96,7 @@ class SanitationController extends Controller
     public function update(UpdateSanitationChecklistRequest $request, $id)
     {
         $user = $request->user();
-
-        $query = SanitationChecklist::with(['creator', 'verifier']);
-        $query = $this->scopeForBusinessAndBranch($query, $request);
-        $checklist = $query->findOrFail($id);
+        $checklist = $this->findScoped(SanitationChecklist::class, $id, ['creator', 'verifier']);
 
         $data = $request->validated();
 
@@ -136,10 +131,7 @@ class SanitationController extends Controller
     public function verify(VerifySanitationChecklistRequest $request, $id)
     {
         $user = $request->user();
-
-        $query = SanitationChecklist::with(['creator', 'verifier']);
-        $query = $this->scopeForBusinessAndBranch($query, $request);
-        $checklist = $query->findOrFail($id);
+        $checklist = $this->findScoped(SanitationChecklist::class, $id, ['creator', 'verifier']);
 
         $data = $request->validated();
 

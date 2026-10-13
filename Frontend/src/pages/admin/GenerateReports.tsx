@@ -400,7 +400,7 @@ export function GenerateReports() {
       <div className="bg-white dark:bg-slate-950 rounded-xl border border-border dark:border-white/10 shadow-sm p-4 space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-end gap-2">
           <div className="flex-1">
-            <label className="block text-xs font-bold text-muted-fg dark:text-muted-fg uppercase tracking-wide mb-1">Budget (₱)</label>
+            <label htmlFor="reports-budget" className="block text-xs font-bold text-muted-fg dark:text-muted-fg uppercase tracking-wide mb-1">Budget (₱)</label>
             <div className="relative">
               <Wallet className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-fg" />
               <input
@@ -510,8 +510,9 @@ export function GenerateReports() {
         <div className="bg-white dark:bg-slate-950 rounded-xl border border-border dark:border-white/10 shadow-sm p-4">
           <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-2 items-end">
             <div>
-              <label className="block text-xs font-bold text-muted-fg uppercase tracking-wide mb-1">Payment Method</label>
+              <label htmlFor="pos-payment-filter" className="block text-xs font-bold text-muted-fg uppercase tracking-wide mb-1">Payment Method</label>
               <select
+                id="pos-payment-filter"
                 value={paymentFilter}
                 onChange={e => setPaymentFilter(e.target.value as 'all' | PaymentMethod)}
                 className="h-8 w-full bg-bg dark:bg-slate-800 border border-border dark:border-white/10 px-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-850 dark:text-slate-100"
@@ -523,8 +524,9 @@ export function GenerateReports() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-bold text-muted-fg uppercase tracking-wide mb-1">Cashier</label>
+              <label htmlFor="pos-cashier-filter" className="block text-xs font-bold text-muted-fg uppercase tracking-wide mb-1">Cashier</label>
               <select
+                id="pos-cashier-filter"
                 value={cashierFilter}
                 onChange={e => setCashierFilter(e.target.value)}
                 className="h-8 w-full bg-bg dark:bg-slate-800 border border-border dark:border-white/10 px-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-850 dark:text-slate-100"

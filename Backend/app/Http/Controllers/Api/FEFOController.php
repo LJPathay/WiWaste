@@ -53,12 +53,12 @@ class FEFOController extends Controller
 
     public function show($id)
     {
-        $query = FEFOBatch::with('product.category', 'creator');
-        $query = $this->scopeForBusinessAndBranch($query, request());
-        $batch = $query->findOrFail($id);
+        $batch = $this->findScoped(FEFOBatch::class, $id, ['product.category', 'creator']);
 
-        $query = StockMovement::where('product_id', $batch->product_id);
-        $query = $this->scopeForBusinessAndBranch($query, request());
+        $query = $this->scopeForBusinessAndBranch(
+            StockMovement::where('product_id', $batch->product_id),
+            request()
+        );
         $movements = $query->with('user')
             ->orderByDesc('movement_date')
             ->take(50)
@@ -123,9 +123,7 @@ class FEFOController extends Controller
 
     public function trace($id)
     {
-        $query = FEFOBatch::with(['product.supplier', 'product.category']);
-        $query = $this->scopeForBusinessAndBranch($query, request());
-        $batch = $query->findOrFail($id);
+        $batch = $this->findScoped(FEFOBatch::class, $id, ['product.supplier', 'product.category']);
 
         return response()->json([
             'batch' => [

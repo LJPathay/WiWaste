@@ -100,9 +100,7 @@ class PurchaseOrderController extends Controller
 
     public function update(UpdatePurchaseOrderRequest $request, $id)
     {
-        $query = PurchaseOrder::with('supplier', 'user', 'items.product');
-        $query = $this->scopeForBusinessAndBranch($query, $request);
-        $po = $query->findOrFail($id);
+        $po = $this->findScoped(PurchaseOrder::class, $id, ['supplier', 'user', 'items.product']);
 
         $data = $request->validated();
 
@@ -128,18 +126,16 @@ class PurchaseOrderController extends Controller
 
     public function receive(ReceivePurchaseOrderRequest $request, $id)
     {
-        $query = PurchaseOrder::with('items');
-        $query = $this->scopeForBusinessAndBranch($query, $request);
-        $po = $query->findOrFail($id);
+        $po = $this->findScoped(PurchaseOrder::class, $id, ['items']);
 
         if (! in_array($po->status, ['Ordered', 'Partially Received'])) {
             return response()->json(['message' => 'Only Ordered or Partially Received orders can receive stock.'], 422);
         }
 
         $data = $request->validated();
+        $user = $request->user();
 
-        $allFullyReceived = true;
-        $anyReceived = false;
+        $lineTotals = ['allFullyReceived' => true, 'anyReceived' => false];
 
         foreach ($data['items'] as $itemData) {
             $poItem = $po->items->firstWhere('po_item_id', $itemData['po_item_id']);
@@ -148,62 +144,22 @@ class PurchaseOrderController extends Controller
             }
 
             $newReceived = min($itemData['received_qty'], $poItem->quantity);
-            $prevReceived = $poItem->received_qty;
-            $additionalQty = $newReceived - $prevReceived;
+            $additionalQty = $newReceived - $poItem->received_qty;
 
             if ($additionalQty > 0) {
                 $poItem->update(['received_qty' => $newReceived]);
-                $anyReceived = true;
+                $lineTotals['anyReceived'] = true;
 
-                $query = Inventory::where('product_id', $poItem->product_id);
-                $query = $this->scopeForBusinessAndBranch($query, $request);
-                $inventory = $query->firstOrCreate(
-                    ['product_id' => $poItem->product_id],
-                    ['current_stock' => 0, 'stock_status' => 'Normal', 'last_updated' => now()]
-                );
-
-                $inventory->current_stock += $additionalQty;
-                $inventory->stock_status = $inventory->current_stock > ($inventory->product?->reorder_level ?? 10) * 5
-                    ? 'Overstock' : ($inventory->current_stock <= ($inventory->product?->reorder_level ?? 10) ? 'Low Stock' : 'Normal');
-                $inventory->last_updated = now();
-                $inventory->save();
-
-                // Create FEFO batch for received stock
-                $batch = FEFOBatch::create([
-                    'business_id' => $user?->business_id,
-                    'branch_id' => $user?->branch_id,
-                    'product_id' => $poItem->product_id,
-                    'batch_number' => 'PO-'.$po->po_number,
-                    'quantity' => $additionalQty,
-                    'expiry_date' => $poItem->product?->expiration_date ?? now()->addYear(),
-                    'status' => 'active',
-                    'received_date' => now()->toDateString(),
-                    'supplier_batch_number' => $poItem->product?->barcode,
-                    'created_by' => $user?->User_id ?? 1,
-                    'created_at' => now(),
-                ]);
-
-                $user = $request->user();
-                StockMovement::create([
-                    'business_id' => $user?->business_id,
-                    'branch_id' => $user?->branch_id,
-                    'product_id' => $poItem->product_id,
-                    'batch_id' => $batch->batch_id,
-                    'user_id' => $user?->User_id ?? 1,
-                    'movement_type' => 'Stock In',
-                    'quantity' => $additionalQty,
-                    'remarks' => "PO receive: {$po->po_number}",
-                    'movement_date' => now(),
-                ]);
+                $this->receiveLine($po, $poItem, $additionalQty, $user, $request);
             }
 
             if ($poItem->received_qty < $poItem->quantity) {
-                $allFullyReceived = false;
+                $lineTotals['allFullyReceived'] = false;
             }
         }
 
-        if ($anyReceived) {
-            $po->status = $allFullyReceived ? 'Received' : 'Partially Received';
+        if ($lineTotals['anyReceived']) {
+            $po->status = $lineTotals['allFullyReceived'] ? 'Received' : 'Partially Received';
             $po->updated_at = now();
             $po->save();
         }
@@ -211,11 +167,57 @@ class PurchaseOrderController extends Controller
         return response()->json(['message' => 'Stock received.', 'status' => $po->status]);
     }
 
+    /**
+     * Books one purchase-order line against inventory: raises the stock level,
+     * opens the FEFO batch it landed in, and records the Stock In movement.
+     */
+    protected function receiveLine(PurchaseOrder $po, $poItem, int $additionalQty, $user, Request $request): void
+    {
+        $query = Inventory::where('product_id', $poItem->product_id);
+        $query = $this->scopeForBusinessAndBranch($query, $request);
+        $inventory = $query->firstOrCreate(
+            ['product_id' => $poItem->product_id],
+            ['current_stock' => 0, 'stock_status' => 'Normal', 'last_updated' => now()]
+        );
+
+        $inventory->current_stock += $additionalQty;
+        $reorderLevel = $inventory->product?->reorder_level ?? 10;
+        $inventory->stock_status = $inventory->current_stock > $reorderLevel * 5
+            ? 'Overstock' : ($inventory->current_stock <= $reorderLevel ? 'Low Stock' : 'Normal');
+        $inventory->last_updated = now();
+        $inventory->save();
+
+        // Create FEFO batch for received stock
+        $batch = FEFOBatch::create([
+            'business_id' => $user?->business_id,
+            'branch_id' => $user?->branch_id,
+            'product_id' => $poItem->product_id,
+            'batch_number' => 'PO-'.$po->po_number,
+            'quantity' => $additionalQty,
+            'expiry_date' => $poItem->product?->expiration_date ?? now()->addYear(),
+            'status' => 'active',
+            'received_date' => now()->toDateString(),
+            'supplier_batch_number' => $poItem->product?->barcode,
+            'created_by' => $user?->User_id ?? 1,
+            'created_at' => now(),
+        ]);
+
+        StockMovement::create([
+            'business_id' => $user?->business_id,
+            'branch_id' => $user?->branch_id,
+            'product_id' => $poItem->product_id,
+            'batch_id' => $batch->batch_id,
+            'user_id' => $user?->User_id ?? 1,
+            'movement_type' => 'Stock In',
+            'quantity' => $additionalQty,
+            'remarks' => "PO receive: {$po->po_number}",
+            'movement_date' => now(),
+        ]);
+    }
+
     public function show($id)
     {
-        $query = PurchaseOrder::with('supplier', 'user', 'items.product');
-        $query = $this->scopeForBusinessAndBranch($query, request());
-        $po = $query->findOrFail($id);
+        $po = $this->findScoped(PurchaseOrder::class, $id, ['supplier', 'user', 'items.product']);
 
         return (new PurchaseOrderResource($po))->resolve(request());
     }

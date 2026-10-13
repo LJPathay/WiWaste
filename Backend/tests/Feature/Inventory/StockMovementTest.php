@@ -17,6 +17,12 @@ class StockMovementTest extends TestCase
     /** Inventory::calcStatus() label for zero-or-negative stock. */
     private const OUT_OF_STOCK = 'Out of Stock';
 
+    /** Endpoint under test for the FEFO block below. */
+    private const STOCK_OUT_ENDPOINT = '/api/v1/inventory/stock-out';
+
+    /** Endpoint under test for the stock-in block below. */
+    private const STOCK_IN_ENDPOINT = '/api/v1/inventory/stock-in';
+
     private function actingAsInventory(): void
     {
         Sanctum::actingAs($this->makeInventoryUser('Inventory'));
@@ -30,7 +36,7 @@ class StockMovementTest extends TestCase
         $product = $this->makeProduct(['reorder_level' => 20]);
         $inventory = $this->makeInventory($product, 15);
 
-        $this->postJson('/api/v1/inventory/stock-in', [
+        $this->postJson(self::STOCK_IN_ENDPOINT, [
             'product_id' => $product->product_id,
             'quantity' => 10,
             'remarks' => 'Weekly delivery',
@@ -56,7 +62,7 @@ class StockMovementTest extends TestCase
 
         $this->assertSame('Low Stock', $inventory->stock_status);
 
-        $this->postJson('/api/v1/inventory/stock-in', [
+        $this->postJson(self::STOCK_IN_ENDPOINT, [
             'product_id' => $product->product_id,
             'quantity' => 15,
         ])->assertOk();
@@ -71,7 +77,7 @@ class StockMovementTest extends TestCase
         $product = $this->makeProduct();
         $this->makeInventory($product, 10);
 
-        $this->postJson('/api/v1/inventory/stock-in', [
+        $this->postJson(self::STOCK_IN_ENDPOINT, [
             'product_id' => $product->product_id,
             'quantity' => 0,
         ])->assertStatus(422)->assertJsonValidationErrors('quantity');
@@ -81,7 +87,7 @@ class StockMovementTest extends TestCase
     {
         $this->actingAsInventory();
 
-        $this->postJson('/api/v1/inventory/stock-in', [
+        $this->postJson(self::STOCK_IN_ENDPOINT, [
             'product_id' => 999999,
             'quantity' => 5,
         ])->assertStatus(422)->assertJsonValidationErrors('product_id');
@@ -161,7 +167,7 @@ class StockMovementTest extends TestCase
         $late = $this->makeBatch($product, 40, now()->addDays(90)->toDateString());
         $early = $this->makeBatch($product, 30, now()->addDays(5)->toDateString());
 
-        $this->postJson('/api/v1/inventory/stock-out', [
+        $this->postJson(self::STOCK_OUT_ENDPOINT, [
             'product_id' => $product->product_id,
             'quantity' => 50,
         ])->assertOk()->assertJsonPath('new_stock', 50);
@@ -190,7 +196,7 @@ class StockMovementTest extends TestCase
         $this->makeBatch($product, 20, now()->addDays(2)->toDateString(), ['status' => 'flagged']);
         $usable = $this->makeBatch($product, 40, now()->addDays(60)->toDateString());
 
-        $this->postJson('/api/v1/inventory/stock-out', [
+        $this->postJson(self::STOCK_OUT_ENDPOINT, [
             'product_id' => $product->product_id,
             'quantity' => 20,
         ])->assertOk();
@@ -211,7 +217,7 @@ class StockMovementTest extends TestCase
         $early = $this->makeBatch($product, 30, now()->addDays(5)->toDateString());
         $later = $this->makeBatch($product, 70, now()->addDays(90)->toDateString());
 
-        $this->postJson('/api/v1/inventory/stock-out', [
+        $this->postJson(self::STOCK_OUT_ENDPOINT, [
             'product_id' => $product->product_id,
             'quantity' => 10,
             'batch_id' => $later->batch_id,
@@ -228,7 +234,7 @@ class StockMovementTest extends TestCase
         $inventory = $this->makeInventory($product, 100);
         $batch = $this->makeBatch($product, 5, now()->addDays(30)->toDateString());
 
-        $this->postJson('/api/v1/inventory/stock-out', [
+        $this->postJson(self::STOCK_OUT_ENDPOINT, [
             'product_id' => $product->product_id,
             'quantity' => 10,
             'batch_id' => $batch->batch_id,
@@ -245,7 +251,7 @@ class StockMovementTest extends TestCase
         $inventory = $this->makeInventory($product, 8);
         $this->makeBatch($product, 8, now()->addDays(30)->toDateString());
 
-        $this->postJson('/api/v1/inventory/stock-out', [
+        $this->postJson(self::STOCK_OUT_ENDPOINT, [
             'product_id' => $product->product_id,
             'quantity' => 20,
         ])->assertStatus(422)->assertJsonPath('message', 'Insufficient stock.');
@@ -262,7 +268,7 @@ class StockMovementTest extends TestCase
         // Physical stock says 50 but only 10 units sit in live batches.
         $this->makeBatch($product, 10, now()->addDays(30)->toDateString());
 
-        $this->postJson('/api/v1/inventory/stock-out', [
+        $this->postJson(self::STOCK_OUT_ENDPOINT, [
             'product_id' => $product->product_id,
             'quantity' => 40,
         ])->assertStatus(422)->assertJsonPath('message', 'Insufficient stock in active batches.');
@@ -277,7 +283,7 @@ class StockMovementTest extends TestCase
         $this->makeInventory($product, 20);
         $batch = $this->makeBatch($product, 20, now()->addDays(10)->toDateString());
 
-        $this->postJson('/api/v1/inventory/stock-out', [
+        $this->postJson(self::STOCK_OUT_ENDPOINT, [
             'product_id' => $product->product_id,
             'quantity' => 20,
         ])->assertOk();
@@ -296,7 +302,7 @@ class StockMovementTest extends TestCase
         $this->makeInventory($product, 40);
         $this->makeBatch($product, 40, now()->addDays(30)->toDateString());
 
-        $this->postJson('/api/v1/inventory/stock-out', [
+        $this->postJson(self::STOCK_OUT_ENDPOINT, [
             'product_id' => $product->product_id,
             'quantity' => 5,
             'override_reason' => 'Customer accepted near-expiry unit.',
@@ -317,7 +323,7 @@ class StockMovementTest extends TestCase
         $product = $this->makeProduct(['reorder_level' => 20]);
         $this->makeInventory($product, 0);
 
-        $this->postJson('/api/v1/inventory/stock-in', ['product_id' => $product->product_id, 'quantity' => 10])
+        $this->postJson(self::STOCK_IN_ENDPOINT, ['product_id' => $product->product_id, 'quantity' => 10])
             ->assertOk();
         $this->postJson('/api/v1/inventory/receive', [
             'product_id' => $product->product_id,
@@ -343,8 +349,8 @@ class StockMovementTest extends TestCase
         $invA = $this->makeInventory($a, 0);
         $this->makeInventory($b, 0);
 
-        $this->postJson('/api/v1/inventory/stock-in', ['product_id' => $a->product_id, 'quantity' => 3])->assertOk();
-        $this->postJson('/api/v1/inventory/stock-in', ['product_id' => $b->product_id, 'quantity' => 7])->assertOk();
+        $this->postJson(self::STOCK_IN_ENDPOINT, ['product_id' => $a->product_id, 'quantity' => 3])->assertOk();
+        $this->postJson(self::STOCK_IN_ENDPOINT, ['product_id' => $b->product_id, 'quantity' => 7])->assertOk();
 
         $response = $this->getJson("/api/v1/inventory/{$invA->inventory_id}/movements");
 
@@ -366,7 +372,7 @@ class StockMovementTest extends TestCase
         $inventory = $this->makeInventory($product, 7);
         $this->makeBatch($product, 7, now()->addDays(30)->toDateString());
 
-        $this->postJson('/api/v1/inventory/stock-out', [
+        $this->postJson(self::STOCK_OUT_ENDPOINT, [
             'product_id' => $product->product_id,
             'quantity' => 7,
         ])->assertOk();

@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 
 class FEFOBatch extends Model
 {
+    use BelongsToTenant;
+
     protected $table = 'FEFO_Batch';
 
     protected $primaryKey = 'batch_id';
@@ -36,16 +39,6 @@ class FEFOBatch extends Model
         'created_at' => 'datetime',
     ];
 
-    public function business()
-    {
-        return $this->belongsTo(Business::class, 'business_id', 'id');
-    }
-
-    public function branch()
-    {
-        return $this->belongsTo(Branch::class, 'branch_id', 'id');
-    }
-
     public function product()
     {
         return $this->belongsTo(Product::class, 'product_id', 'product_id');
@@ -67,16 +60,6 @@ class FEFOBatch extends Model
     }
 
     // Scopes
-    public function scopeForBusiness($query, $businessId)
-    {
-        return $query->where('business_id', $businessId);
-    }
-
-    public function scopeForBranch($query, $branchId)
-    {
-        return $query->where('branch_id', $branchId);
-    }
-
     public function scopeExpiringSoon($query, $days = 30)
     {
         return $query->where('expiry_date', '<=', now()->addDays($days))

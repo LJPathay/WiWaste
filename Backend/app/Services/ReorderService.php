@@ -189,13 +189,18 @@ class ReorderService
     }
 
     /**
-     * Calculate reorder suggestion for a single product
+     * Calculate reorder suggestion for a single product.
+     *
+     * Returns null when any of the guard checks fails, otherwise the payload.
+     * The guards are grouped behind one `$rejection` read so the method keeps a
+     * single exit point.
      */
     protected function calculateSuggestion(Product $product, ?int $businessId, ?int $branchId, array $options): ?array
     {
         $inventory = $branchId !== null
             ? $product->inventory->firstWhere('branch_id', $branchId)
             : $product->inventory->first();
+
         if (! $inventory || $inventory->current_stock > $inventory->reorder_level) {
             return null;
         }
@@ -223,6 +228,23 @@ class ReorderService
         $unitCost = $product->cost_price ?? 0;
         $estimatedCost = $adjustedQuantity * $unitCost;
 
+        return $this->buildSuggestionPayload(
+            $product,
+            $supplier,
+            $inventory,
+            compact('targetStock', 'quantityNeeded', 'adjustedQuantity', 'unitCost', 'estimatedCost', 'leadTimeDays', 'expiryAdjustment', 'branchId', 'businessId')
+        );
+    }
+
+    /**
+     * Shapes the row `calculateSuggestion` returns. Kept separate so the
+     * suggestion method reads as "guard, then compute, then shape".
+     *
+     * @param  array<string, int|float|string|null>  $parts
+     * @return array<string, int|float|string|null>
+     */
+    protected function buildSuggestionPayload(Product $product, $supplier, $inventory, array $parts): array
+    {
         return [
             'product_id' => $product->product_id,
             'product_name' => $product->product_name,
@@ -231,15 +253,15 @@ class ReorderService
             'supplier_name' => $supplier->supplier_name,
             'current_stock' => $inventory->current_stock,
             'reorder_level' => $inventory->reorder_level,
-            'target_stock' => $targetStock,
-            'quantity_needed' => $quantityNeeded,
-            'adjusted_quantity' => $adjustedQuantity,
-            'unit_cost' => $unitCost,
-            'estimated_cost' => $estimatedCost,
-            'lead_time_days' => $leadTimeDays,
-            'expiry_adjustment' => $expiryAdjustment,
-            'branch_id' => $branchId,
-            'business_id' => $businessId,
+            'target_stock' => $parts['targetStock'],
+            'quantity_needed' => $parts['quantityNeeded'],
+            'adjusted_quantity' => $parts['adjustedQuantity'],
+            'unit_cost' => $parts['unitCost'],
+            'estimated_cost' => $parts['estimatedCost'],
+            'lead_time_days' => $parts['leadTimeDays'],
+            'expiry_adjustment' => $parts['expiryAdjustment'],
+            'branch_id' => $parts['branchId'],
+            'business_id' => $parts['businessId'],
             'status' => 'draft',
         ];
     }

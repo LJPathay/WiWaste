@@ -106,9 +106,7 @@ class VendorReturnController extends Controller
 
     public function show($id)
     {
-        $query = VendorReturn::with(['supplier', 'creator', 'approver', 'items.product', 'items.batch']);
-        $query = $this->scopeForBusinessAndBranch($query, request());
-        $vendorReturn = $query->findOrFail($id);
+        $vendorReturn = $this->findScoped(VendorReturn::class, $id, ['supplier', 'creator', 'approver', 'items.product', 'items.batch']);
 
         return response()->json((new VendorReturnResource($vendorReturn))->resolve(request()));
     }
@@ -117,9 +115,7 @@ class VendorReturnController extends Controller
     {
         $user = $request->user();
 
-        $query = VendorReturn::with(['items.product']);
-        $query = $this->scopeForBusinessAndBranch($query, $request);
-        $vendorReturn = $query->findOrFail($id);
+        $vendorReturn = $this->findScoped(VendorReturn::class, $id, ['items.product']);
 
         if (! in_array($vendorReturn->status, ['draft', 'pending_approval'])) {
             return response()->json(['message' => 'Cannot modify vendor return in current status.'], 422);
@@ -173,9 +169,7 @@ class VendorReturnController extends Controller
     {
         $user = $request->user();
 
-        $query = VendorReturn::query();
-        $query = $this->scopeForBusinessAndBranch($query, $request);
-        $vendorReturn = $query->findOrFail($id);
+        $vendorReturn = $this->findScoped(VendorReturn::class, $id);
 
         if ($vendorReturn->status !== 'pending_approval') {
             return response()->json(['message' => 'Only pending returns can be approved.'], 422);
@@ -204,9 +198,7 @@ class VendorReturnController extends Controller
     {
         $user = $request->user();
 
-        $query = VendorReturn::query();
-        $query = $this->scopeForBusinessAndBranch($query, $request);
-        $vendorReturn = $query->findOrFail($id);
+        $vendorReturn = $this->findScoped(VendorReturn::class, $id);
 
         if ($vendorReturn->status !== 'pending_approval') {
             return response()->json(['message' => 'Only pending returns can be rejected.'], 422);
@@ -237,9 +229,7 @@ class VendorReturnController extends Controller
     {
         $user = $request->user();
 
-        $query = VendorReturn::query();
-        $query = $this->scopeForBusinessAndBranch($query, $request);
-        $vendorReturn = $query->findOrFail($id);
+        $vendorReturn = $this->findScoped(VendorReturn::class, $id);
 
         if ($vendorReturn->status !== 'approved') {
             return response()->json(['message' => 'Only approved returns can be shipped.'], 422);
@@ -345,9 +335,7 @@ class VendorReturnController extends Controller
     {
         $user = $request->user();
 
-        $query = VendorReturn::query();
-        $query = $this->scopeForBusinessAndBranch($query, $request);
-        $vendorReturn = $query->findOrFail($id);
+        $vendorReturn = $this->findScoped(VendorReturn::class, $id);
 
         if ($vendorReturn->status !== 'received') {
             return response()->json(['message' => 'Only received returns can be credited.'], 422);

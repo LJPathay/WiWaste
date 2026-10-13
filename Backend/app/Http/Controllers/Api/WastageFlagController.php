@@ -77,9 +77,7 @@ class WastageFlagController extends Controller
         $user = $request->user();
         $userId = $user?->User_id ?? 1;
 
-        $query = WastageFlag::with(['product']);
-        $query = $this->scopeForBusinessAndBranch($query, $request);
-        $flag = $query->findOrFail($id);
+        $flag = $this->findScoped(WastageFlag::class, $id, ['product']);
 
         if ($flag->status !== 'pending') {
             return response()->json(['message' => 'Flag already processed.'], 422);
@@ -164,9 +162,7 @@ class WastageFlagController extends Controller
         $user = $request->user();
         $userId = $user?->User_id ?? 1;
 
-        $query = WastageFlag::with(['product']);
-        $query = $this->scopeForBusinessAndBranch($query, $request);
-        $flag = $query->findOrFail($id);
+        $flag = $this->findScoped(WastageFlag::class, $id, ['product']);
 
         if ($flag->status !== 'pending') {
             return response()->json(['message' => 'Flag already processed.'], 422);

@@ -1,6 +1,6 @@
 import { Loader2 } from 'lucide-react';
 
-export function PageLoader({ message }: { message?: string }) {
+export function PageLoader({ message }: Readonly<{ message?: string }>) {
   return (
     <div className="flex items-center justify-center min-h-[60vh]">
       <div className="flex flex-col items-center gap-3 text-gray-400 dark:text-muted-fg">

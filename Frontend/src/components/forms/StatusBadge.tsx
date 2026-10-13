@@ -1,12 +1,13 @@
 import React from 'react';
 import { cn } from '../ui/utils';
-import { STATUS_COLORS, USER_ROLES } from '../../constants';
+import { STATUS_COLORS, USER_ROLES, ROLE_COLORS } from '../../constants';
+import { Briefcase, Package, Shield } from 'lucide-react';
 
 interface StatusBadgeProps {
-  status: string;
-  size?: 'sm' | 'md' | 'lg';
-  showDot?: boolean;
-  className?: string;
+  readonly status: string;
+  readonly size?: 'sm' | 'md' | 'lg';
+  readonly showDot?: boolean;
+  readonly className?: string;
 }
 
 // `className` is part of the public prop type but was never folded into the class list, so
@@ -35,7 +36,7 @@ export function StatusBadge({ status, size = 'md', showDot = true }: StatusBadge
       )}
     >
       {showDot && (
-        <span className={cn(config.dot, 'rounded-full', sizeClasses[size] === 'px-2 py-0.5 text-[10px]' ? 'w-1.5 h-1.5' : 'w-1.5 h-1.5')} />
+        <span className={cn(config.dot, 'rounded-full', 'w-1.5 h-1.5')} />
       )}
       <span>{status}</span>
     </span>
@@ -43,13 +44,10 @@ export function StatusBadge({ status, size = 'md', showDot = true }: StatusBadge
 }
 
 interface RoleBadgeProps {
-  role: (typeof USER_ROLES)[number];
-  size?: 'sm' | 'md' | 'lg';
-  className?: string;
+  readonly role: (typeof USER_ROLES)[number];
+  readonly size?: 'sm' | 'md' | 'lg';
+  readonly className?: string;
 }
-
-import { ROLE_COLORS } from '../../constants';
-import { Briefcase, Package, Shield } from 'lucide-react';
 
 // `ROLE_COLORS.icon` is the *name* of an icon, not the component. Reading it straight off the
 // config and rendering it produced `<Shield />`-style tags that React does not recognise, so

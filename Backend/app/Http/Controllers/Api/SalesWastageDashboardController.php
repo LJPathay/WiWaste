@@ -16,10 +16,15 @@ class SalesWastageDashboardController extends Controller
 {
     use ScopesTenant;
 
-    // Overview: Units sold vs Units wasted, wastage rate, top metrics
-    public function overview(Request $request)
+    /**
+     * Fetches the sales and wastage rows for a date range, scoped to the caller's
+     * tenant. Every endpoint on this controller needs the same pair, so the query
+     * construction lives here once.
+     *
+     * @return array{0: \Illuminate\Database\Eloquent\Collection, 1: \Illuminate\Database\Eloquent\Collection, 2: mixed, 3: mixed}
+     */
+    private function fetchSalesAndWastage(Request $request): array
     {
-        $user = $request->user();
         $from = $request->input('from', Carbon::now()->subDays(30)->startOfDay());
         $to = $request->input('to', Carbon::now()->endOfDay());
 
@@ -32,6 +37,58 @@ class SalesWastageDashboardController extends Controller
         $wastageQuery = WastageRecord::whereBetween('date_recorded', [$from, $to]);
         $wastageQuery = $this->scopeForBusinessAndBranch($wastageQuery, $request);
         $wastage = $wastageQuery->get();
+
+        return [$sales, $wastage, $from, $to];
+    }
+
+    /**
+     * Shapes the sales + wastage CSV body. `overview()` and `exportCsv()` both
+     * need the same rows, only wrapped differently.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildCsvRows($sales, $wastage): array
+    {
+        $rows = [];
+
+        foreach ($sales as $sale) {
+            foreach ($sale->salesItems as $item) {
+                $rows[] = [
+                    'Sales',
+                    $sale->transaction_date,
+                    $item->product?->product_name ?? 'N/A',
+                    $item->product?->barcode ?? 'N/A',
+                    $item->product?->category?->Category_name ?? 'N/A',
+                    $item->batch?->batch_number ?? 'N/A',
+                    $item->quantity,
+                    'N/A',
+                    $item->subtotal,
+                ];
+            }
+        }
+
+        foreach ($wastage as $w) {
+            $rows[] = [
+                'Wastage',
+                $w->date_recorded,
+                $w->product?->product_name ?? 'N/A',
+                $w->product?->barcode ?? 'N/A',
+                $w->product?->category?->Category_name ?? 'N/A',
+                $w->batch?->batch_number ?? 'N/A',
+                $w->quantity,
+                $w->wastage_type,
+                $w->estimated_loss,
+            ];
+        }
+
+        return $rows;
+    }
+
+    // Overview: Units sold vs Units wasted, wastage rate, top metrics
+    public function overview(Request $request)
+    {
+        $user = $request->user();
+        [$sales, $wastage] = $this->fetchSalesAndWastage($request);
 
         $unitsSold = $sales->sum(fn ($s) => $s->salesItems->sum('quantity'));
         $unitsWasted = $wastage->sum('quantity');
@@ -121,19 +178,7 @@ class SalesWastageDashboardController extends Controller
     // Daily time series for charts
     public function timeSeries(Request $request)
     {
-        $user = $request->user();
-        $from = $request->input('from', Carbon::now()->subDays(30)->startOfDay());
-        $to = $request->input('to', Carbon::now()->endOfDay());
-
-        $salesQuery = SalesTransaction::with('salesItems')
-            ->where('status', 'Completed')
-            ->whereBetween('transaction_date', [$from, $to]);
-        $salesQuery = $this->scopeForBusinessAndBranch($salesQuery, $request);
-        $sales = $salesQuery->get();
-
-        $wastageQuery = WastageRecord::whereBetween('date_recorded', [$from, $to]);
-        $wastageQuery = $this->scopeForBusinessAndBranch($wastageQuery, $request);
-        $wastage = $wastageQuery->get();
+        [$sales, $wastage, $from, $to] = $this->fetchSalesAndWastage($request);
 
         $salesByDate = $sales->groupBy(fn ($s) => Carbon::parse($s->transaction_date)->format('Y-m-d'))
             ->map(fn ($items) => $items->flatMap->salesItems->sum('quantity'));
@@ -159,55 +204,13 @@ class SalesWastageDashboardController extends Controller
     // CSV Export
     public function exportCsv(Request $request)
     {
-        $from = $request->input('from', Carbon::now()->subDays(30)->startOfDay());
-        $to = $request->input('to', Carbon::now()->endOfDay());
-
-        $salesQuery = SalesTransaction::with('salesItems.product.category')
-            ->where('status', 'Completed')
-            ->whereBetween('transaction_date', [$from, $to]);
-        $salesQuery = $this->scopeForBusinessAndBranch($salesQuery, $request);
-        $sales = $salesQuery->get();
-
-        $wastageQuery = WastageRecord::with('product.category')
-            ->whereBetween('date_recorded', [$from, $to]);
-        $wastageQuery = $this->scopeForBusinessAndBranch($wastageQuery, $request);
-        $wastage = $wastageQuery->get();
+        [$sales, $wastage] = $this->fetchSalesAndWastage($request);
 
         $headers = [
             'Type', 'Date', 'Product', 'SKU', 'Category', 'Batch', 'Quantity', 'Reason', 'Value',
         ];
 
-        $rows = [];
-
-        foreach ($sales as $sale) {
-            foreach ($sale->salesItems as $item) {
-                $rows[] = [
-                    'Sales',
-                    $sale->transaction_date,
-                    $item->product?->product_name ?? 'N/A',
-                    $item->product?->barcode ?? 'N/A',
-                    $item->product?->category?->Category_name ?? 'N/A',
-                    $item->batch?->batch_number ?? 'N/A',
-                    $item->quantity,
-                    'N/A',
-                    $item->subtotal,
-                ];
-            }
-        }
-
-        foreach ($wastage as $w) {
-            $rows[] = [
-                'Wastage',
-                $w->date_recorded,
-                $w->product?->product_name ?? 'N/A',
-                $w->product?->barcode ?? 'N/A',
-                $w->product?->category?->Category_name ?? 'N/A',
-                $w->batch?->batch_number ?? 'N/A',
-                $w->quantity,
-                $w->wastage_type,
-                $w->estimated_loss,
-            ];
-        }
+        $rows = $this->buildCsvRows($sales, $wastage);
 
         $callback = function () use ($headers, $rows) {
             $file = fopen('php://output', 'w');

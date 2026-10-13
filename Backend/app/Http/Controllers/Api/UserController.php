@@ -50,7 +50,6 @@ class UserController extends BaseApiController
     public function index()
     {
         $perPage = min((int) request()->get('per_page', 15), 100);
-        $page = (int) request()->get('page', 1);
 
         $query = User::query();
 
@@ -138,17 +137,7 @@ class UserController extends BaseApiController
 
         // Audit log for status changes
         if (isset($data['status']) && $data['status'] !== $user->status) {
-            $oldStatus = $user->status;
-            $newStatus = $data['status'];
-            AuditLog::create([
-                'user_id' => auth()->id() ?? null,
-                'action' => "Status changed: {$oldStatus} -> {$newStatus}",
-                'entity_type' => 'User',
-                'entity_id' => $id,
-                'old_values' => json_encode(['status' => $oldStatus]),
-                'new_values' => json_encode(['status' => $newStatus]),
-                'created_at' => now(),
-            ]);
+            $this->logStatusChange($id, $user->status, $data['status']);
         }
 
         if (request()->filled('password')) {
@@ -169,58 +158,55 @@ class UserController extends BaseApiController
 
     public function quarantine($id)
     {
-        $user = User::findOrFail($id);
-        $oldStatus = $user->status;
-        $user->update(['status' => 'Quarantined']);
-
-        AuditLog::create([
-            'user_id' => auth()->id() ?? null,
-            'action' => "Status changed: {$oldStatus} -> Quarantined",
-            'entity_type' => 'User',
-            'entity_id' => $id,
-            'old_values' => json_encode(['status' => $oldStatus]),
-            'new_values' => json_encode(['status' => 'Quarantined']),
-            'created_at' => now(),
-        ]);
-
-        return $this->success(null, 'User quarantined.');
+        return $this->transitionStatus($id, 'Quarantined', 'User quarantined.');
     }
 
     public function reactivate($id)
     {
-        $user = User::findOrFail($id);
-        $oldStatus = $user->status;
-        $user->update(['status' => 'Active']);
-
-        AuditLog::create([
-            'user_id' => auth()->id() ?? null,
-            'action' => "Status changed: {$oldStatus} -> Active",
-            'entity_type' => 'User',
-            'entity_id' => $id,
-            'old_values' => json_encode(['status' => $oldStatus]),
-            'new_values' => json_encode(['status' => 'Active']),
-            'created_at' => now(),
-        ]);
-
-        return $this->success(null, 'User reactivated.');
+        return $this->transitionStatus($id, 'Active', 'User reactivated.');
     }
 
     public function archive($id)
     {
+        return $this->transitionStatus($id, 'Archived', 'User archived.');
+    }
+
+    /**
+     * Moves an account to a new status, writes the audit trail, and returns the
+     * success response.
+     *
+     * The three single-status endpoints (quarantine / reactivate / archive) are
+     * identical apart from the target status and the message, so they all funnel
+     * through here.
+     */
+    private function transitionStatus($id, string $newStatus, string $successMessage)
+    {
         $user = User::findOrFail($id);
         $oldStatus = $user->status;
-        $user->update(['status' => 'Archived']);
+        $user->update(['status' => $newStatus]);
 
+        $this->logStatusChange($id, $oldStatus, $newStatus);
+
+        return $this->success(null, $successMessage);
+    }
+
+    /**
+     * Records a status transition on the audit trail.
+     *
+     * @param  int|string  $id
+     * @param  string  $oldStatus
+     * @param  string  $newStatus
+     */
+    private function logStatusChange($id, string $oldStatus, string $newStatus): void
+    {
         AuditLog::create([
             'user_id' => auth()->id() ?? null,
-            'action' => "Status changed: {$oldStatus} -> Archived",
+            'action' => "Status changed: {$oldStatus} -> {$newStatus}",
             'entity_type' => 'User',
             'entity_id' => $id,
             'old_values' => json_encode(['status' => $oldStatus]),
-            'new_values' => json_encode(['status' => 'Archived']),
+            'new_values' => json_encode(['status' => $newStatus]),
             'created_at' => now(),
         ]);
-
-        return $this->success(null, 'User archived.');
     }
 }

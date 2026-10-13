@@ -62,10 +62,7 @@ class StockReceivingController extends Controller
     public function receive(ReceiveStockReceivingRequest $request, $id)
     {
         $user = $request->user();
-
-        $query = StockReceiving::with(['supplier', 'receiver', 'verifier', 'items.product', 'items.batch']);
-        $query = $this->scopeForBusinessAndBranch($query, $request);
-        $receiving = $query->findOrFail($id);
+        $receiving = $this->findScoped(StockReceiving::class, $id, ['supplier', 'receiver', 'verifier', 'items.product', 'items.batch']);
 
         if (! in_array($receiving->status, ['pending', 'received', 'partial'])) {
             return response()->json(['message' => 'Cannot receive in current status.'], 422);
@@ -95,18 +92,14 @@ class StockReceivingController extends Controller
 
     public function show($id)
     {
-        $query = StockReceiving::with(['supplier', 'receiver', 'verifier', 'items.product', 'items.batch']);
-        $query = $this->scopeForBusinessAndBranch($query, request());
-        $receiving = $query->findOrFail($id);
+        $receiving = $this->findScoped(StockReceiving::class, $id, ['supplier', 'receiver', 'verifier', 'items.product', 'items.batch']);
 
         return response()->json((new StockReceivingResource($receiving))->resolve(request()));
     }
 
     public function update(UpdateStockReceivingRequest $request, $id)
     {
-        $query = StockReceiving::with(['supplier', 'receiver', 'verifier', 'items.product', 'items.batch']);
-        $query = $this->scopeForBusinessAndBranch($query, $request);
-        $receiving = $query->findOrFail($id);
+        $receiving = $this->findScoped(StockReceiving::class, $id, ['supplier', 'receiver', 'verifier', 'items.product', 'items.batch']);
 
         $data = $request->validated();
 
@@ -125,10 +118,7 @@ class StockReceivingController extends Controller
     public function verify(VerifyStockReceivingRequest $request, $id)
     {
         $user = $request->user();
-
-        $query = StockReceiving::with(['supplier', 'receiver', 'verifier', 'items.product', 'items.batch']);
-        $query = $this->scopeForBusinessAndBranch($query, $request);
-        $receiving = $query->findOrFail($id);
+        $receiving = $this->findScoped(StockReceiving::class, $id, ['supplier', 'receiver', 'verifier', 'items.product', 'items.batch']);
 
         $data = $request->validated();
 
@@ -153,42 +143,35 @@ class StockReceivingController extends Controller
 
     public function reject(RejectStockReceivingRequest $request, $id)
     {
-        $user = $request->user();
-
-        $query = StockReceiving::with(['supplier', 'receiver', 'verifier']);
-        $query = $this->scopeForBusinessAndBranch($query, $request);
-        $receiving = $query->findOrFail($id);
-
-        $data = $request->validated();
-
-        $receiving->update([
-            'status' => 'rejected',
-            'notes' => ($receiving->notes ? $receiving->notes."\n" : '')."Rejected: {$data['reason']}",
-        ]);
-
-        $this->logAudit($user, "Rejected stock receiving record #{$receiving->receiving_id}: {$data['reason']}", $receiving, null, $data);
-
-        return response()->json(['message' => 'Order rejected.']);
+        return $this->markReceivingRejected($request, $id, 'Rejected', 'Order rejected.');
     }
 
     public function discard(DiscardStockReceivingRequest $request, $id)
     {
-        $user = $request->user();
+        return $this->markReceivingRejected($request, $id, 'Discarded', 'Order discarded.');
+    }
 
-        $query = StockReceiving::with(['supplier', 'receiver', 'verifier']);
-        $query = $this->scopeForBusinessAndBranch($query, $request);
-        $receiving = $query->findOrFail($id);
+    /**
+     * Marks a receiving record as rejected with the given prefix on the note line.
+     *
+     * `reject` and `discard` are the same operation apart from the word used and the
+     * response message, so they share one implementation.
+     */
+    private function markReceivingRejected($request, $id, string $prefix, string $message)
+    {
+        $user = $request->user();
+        $receiving = $this->findScoped(StockReceiving::class, $id, ['supplier', 'receiver', 'verifier']);
 
         $data = $request->validated();
 
         $receiving->update([
             'status' => 'rejected',
-            'notes' => ($receiving->notes ? $receiving->notes."\n" : '')."Discarded: {$data['reason']}",
+            'notes' => ($receiving->notes ? $receiving->notes."\n" : '')."{$prefix}: {$data['reason']}",
         ]);
 
-        $this->logAudit($user, "Discarded stock receiving record #{$receiving->receiving_id}: {$data['reason']}", $receiving, null, $data);
+        $this->logAudit($user, "{$prefix} stock receiving record #{$receiving->receiving_id}: {$data['reason']}", $receiving, null, $data);
 
-        return response()->json(['message' => 'Order discarded.']);
+        return response()->json(['message' => $message]);
     }
 
     protected function applyReceivingDefaults(array &$data, $user): void

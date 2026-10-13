@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 
 class Inventory extends Model
 {
+    use BelongsToTenant;
+
     protected $table = 'Inventory';
 
     protected $primaryKey = 'inventory_id';
@@ -39,29 +42,8 @@ class Inventory extends Model
         return 'Normal';
     }
 
-    public function business()
-    {
-        return $this->belongsTo(Business::class, 'business_id', 'id');
-    }
-
-    public function branch()
-    {
-        return $this->belongsTo(Branch::class, 'branch_id', 'id');
-    }
-
     public function product()
     {
         return $this->belongsTo(Product::class, 'product_id', 'product_id');
-    }
-
-    // Scopes
-    public function scopeForBusiness($query, $businessId)
-    {
-        return $query->where('business_id', $businessId);
-    }
-
-    public function scopeForBranch($query, $branchId)
-    {
-        return $query->where('branch_id', $branchId);
     }
 }

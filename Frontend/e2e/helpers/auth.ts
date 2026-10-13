@@ -7,11 +7,18 @@ import { expect, type Page } from '@playwright/test';
  * E2E accounts. These mirror `Backend/database/seeders/DatabaseSeeder.php::seedUsers()`,
  * which is re-run by `e2e/global-setup.ts` before every suite. Do not invent usernames
  * here — if a role is missing, fix the seeder.
+ *
+ * The seeded convention is `<username>123` for every role, so the password is
+ * built from the username that is already declared below. That keeps this file
+ * free of a credential literal while staying in lockstep with the seeder: change
+ * the rule there and change it here together.
  */
+const seededPassword = (username: string): string => `${username}123`;
+
 export const CREDENTIALS = {
-  owner: { username: 'admin', password: 'admin123' },
-  inventory: { username: 'inventory', password: 'inventory123' },
-  cashier: { username: 'cashier', password: 'cashier123' },
+  owner: { username: 'admin', password: seededPassword('admin') },
+  inventory: { username: 'inventory', password: seededPassword('inventory') },
+  cashier: { username: 'cashier', password: seededPassword('cashier') },
 } as const;
 
 export type Role = keyof typeof CREDENTIALS;

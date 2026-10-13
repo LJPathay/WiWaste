@@ -20,6 +20,16 @@ class AuthController extends BaseApiController
 {
     public function __construct(private readonly LoginAttemptService $loginAttemptService) {}
 
+    /**
+     * Account states that must never receive a token, and what to tell the caller.
+     * A status missing from this map just signs in.
+     */
+    private const BLOCKED_STATUS_MESSAGES = [
+        'Inactive' => 'Your account has been deactivated.',
+        'Quarantined' => 'Your account has been quarantined. Contact an administrator.',
+        'Archived' => 'Your account has been archived.',
+    ];
+
     public function login(LoginRequest $request)
     {
         $validated = $request->validated();
@@ -53,16 +63,10 @@ class AuthController extends BaseApiController
             throw ValidationException::withMessages(['username' => ['Invalid credentials.']]);
         }
 
-        if ($user->status === 'Inactive') {
-            return $this->forbidden('Your account has been deactivated.');
-        }
-
-        if ($user->status === 'Quarantined') {
-            return $this->forbidden('Your account has been quarantined. Contact an administrator.');
-        }
-
-        if ($user->status === 'Archived') {
-            return $this->forbidden('Your account has been archived.');
+        // Account states that must never get a token. Anything else (Active, and
+        // any future status) is allowed through.
+        if ($blocked = self::BLOCKED_STATUS_MESSAGES[$user->status] ?? null) {
+            return $this->forbidden($blocked);
         }
 
         // Clear failed attempts on successful login

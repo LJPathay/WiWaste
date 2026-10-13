@@ -94,9 +94,6 @@ export const CHART_GRADIENTS = {
   wastage: 'chart-wastage-fill',
 } as const;
 
-// Default passwords
-export const DEFAULT_PASSWORD = 'WiWaste123!';
-
 // Page size options
 export const PAGE_SIZE_OPTIONS = [5, 10, 15, 25, 50, 100];
 
@@ -156,7 +153,9 @@ export const API_ENDPOINTS = {
 export const VALIDATION = {
   PASSWORD_MIN_LENGTH: 8,
   PASSWORD_REGEX: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).+$/,
-  EMAIL_REGEX: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+  // Each quantified class is disjoint from what follows it, so a non-matching
+  // input cannot make the engine retry a partial match (backtracking).
+  EMAIL_REGEX: /^[^\s@]+@(?:[^\s@.]+\.)+[^\s@.]+$/,
   PHONE_REGEX: /^\+?[\d\s-]{10,}$/,
   USERNAME_MIN_LENGTH: 3,
   USERNAME_MAX_LENGTH: 50,
@@ -172,13 +171,14 @@ export const TIMEOUTS = {
   MODAL_ANIMATION: 200,
 } as const;
 
-// Regex patterns. EMAIL keeps every quantified class disjoint from the
-// separators it is followed by, so the engine never has to retry a match
-// (a plain `[^\s@]+\.[^\s@]+` domain backtracks super-linearly).
+// Regex patterns. Each quantified class is kept disjoint from the separator that
+// follows it, so a non-matching input cannot force the engine to retry a partial
+// match. A plain `[^\s@]+\.[^\s@]+` domain or `[\d,]+\.?\d*` amount both backtrack
+// super-linearly; the grouped forms below do not.
 export const REGEX = {
   USERNAME: /^[a-zA-Z0-9_-]+$/,
   EMAIL: /^[^\s@]+@(?:[^\s@.]+\.)+[^\s@.]+$/,
   PHONE: /^\+?[\d\s-]{10,}$/,
   PASSWORD: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).+$/,
-  CURRENCY: /^[\d,]+\.?\d*$/,
+  CURRENCY: /^[\d,]+(?:\.[\d]*)?$/,
 } as const;

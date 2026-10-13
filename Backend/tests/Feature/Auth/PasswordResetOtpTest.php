@@ -17,6 +17,12 @@ class PasswordResetOtpTest extends TestCase
 
     private const VALID_PASSWORD = 'NewPass123!';
 
+    /** `POST /api/v1/password/verify-otp` — checks the code the email delivered. */
+    private const VERIFY_OTP_ENDPOINT = '/api/v1/password/verify-otp';
+
+    /** `POST /api/v1/password/reset` — consumes the OTP and sets the new password. */
+    private const RESET_ENDPOINT = '/api/v1/password/reset';
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -122,7 +128,7 @@ class PasswordResetOtpTest extends TestCase
         $user = $this->user();
         $this->seedOtp($user->email, '123456');
 
-        $this->postJson('/api/v1/password/verify-otp', ['email' => $user->email, 'otp' => '123456'])
+        $this->postJson(self::VERIFY_OTP_ENDPOINT, ['email' => $user->email, 'otp' => '123456'])
             ->assertOk()
             ->assertJsonPath('data.verified', true);
     }
@@ -132,7 +138,7 @@ class PasswordResetOtpTest extends TestCase
         $user = $this->user();
         $this->seedOtp($user->email, '123456');
 
-        $this->postJson('/api/v1/password/verify-otp', ['email' => $user->email, 'otp' => '654321'])
+        $this->postJson(self::VERIFY_OTP_ENDPOINT, ['email' => $user->email, 'otp' => '654321'])
             ->assertStatus(422)
             ->assertJsonPath('success', false);
     }
@@ -142,7 +148,7 @@ class PasswordResetOtpTest extends TestCase
         $user = $this->user();
         $this->seedOtp($user->email, '123456', ['expires_at' => now()->subMinutes(1)]);
 
-        $this->postJson('/api/v1/password/verify-otp', ['email' => $user->email, 'otp' => '123456'])
+        $this->postJson(self::VERIFY_OTP_ENDPOINT, ['email' => $user->email, 'otp' => '123456'])
             ->assertStatus(422);
     }
 
@@ -150,7 +156,7 @@ class PasswordResetOtpTest extends TestCase
     {
         $user = $this->user();
 
-        $this->postJson('/api/v1/password/verify-otp', ['email' => $user->email, 'otp' => '123'])
+        $this->postJson(self::VERIFY_OTP_ENDPOINT, ['email' => $user->email, 'otp' => '123'])
             ->assertStatus(422)
             ->assertJsonValidationErrors('otp');
     }
@@ -183,7 +189,7 @@ class PasswordResetOtpTest extends TestCase
         $user = $this->user();
         $this->seedOtp($user->email, '123456');
 
-        $this->postJson('/api/v1/password/reset', $this->resetPayload($user->email, '123456', self::VALID_PASSWORD))
+        $this->postJson(self::RESET_ENDPOINT, $this->resetPayload($user->email, '123456', self::VALID_PASSWORD))
             ->assertOk()
             ->assertJsonPath('success', true);
 
@@ -199,7 +205,7 @@ class PasswordResetOtpTest extends TestCase
         $user->createToken('tablet')->plainTextToken;
         $this->assertCount(2, $user->tokens()->get());
 
-        $this->postJson('/api/v1/password/reset', $this->resetPayload($user->email, '123456', self::VALID_PASSWORD))
+        $this->postJson(self::RESET_ENDPOINT, $this->resetPayload($user->email, '123456', self::VALID_PASSWORD))
             ->assertOk();
 
         $this->assertCount(0, $user->fresh()->tokens()->get());
@@ -210,10 +216,10 @@ class PasswordResetOtpTest extends TestCase
         $user = $this->user();
         $this->seedOtp($user->email, '123456');
 
-        $this->postJson('/api/v1/password/reset', $this->resetPayload($user->email, '123456', self::VALID_PASSWORD))
+        $this->postJson(self::RESET_ENDPOINT, $this->resetPayload($user->email, '123456', self::VALID_PASSWORD))
             ->assertOk();
 
-        $this->postJson('/api/v1/password/reset', $this->resetPayload($user->email, '123456', 'Another123!'))
+        $this->postJson(self::RESET_ENDPOINT, $this->resetPayload($user->email, '123456', 'Another123!'))
             ->assertStatus(422);
     }
 
@@ -223,7 +229,7 @@ class PasswordResetOtpTest extends TestCase
         $this->seedOtp($user->email, '123456');
 
         // Too weak: no uppercase, digit or symbol.
-        $this->postJson('/api/v1/password/reset', $this->resetPayload($user->email, '123456', 'weak'))
+        $this->postJson(self::RESET_ENDPOINT, $this->resetPayload($user->email, '123456', 'weak'))
             ->assertStatus(422)
             ->assertJsonValidationErrors('password');
     }
@@ -233,7 +239,7 @@ class PasswordResetOtpTest extends TestCase
         $user = $this->user();
         $this->seedOtp($user->email, '123456');
 
-        $this->postJson('/api/v1/password/reset', [
+        $this->postJson(self::RESET_ENDPOINT, [
             'email' => $user->email,
             'otp' => '123456',
             'password' => self::VALID_PASSWORD,
@@ -246,10 +252,10 @@ class PasswordResetOtpTest extends TestCase
         $user = $this->user();
         $this->seedOtp($user->email, '123456');
 
-        $this->postJson('/api/v1/password/reset', $this->resetPayload($user->email, '123456', 'weak'))
+        $this->postJson(self::RESET_ENDPOINT, $this->resetPayload($user->email, '123456', 'weak'))
             ->assertStatus(422);
 
-        $this->postJson('/api/v1/password/reset', $this->resetPayload($user->email, '123456', self::VALID_PASSWORD))
+        $this->postJson(self::RESET_ENDPOINT, $this->resetPayload($user->email, '123456', self::VALID_PASSWORD))
             ->assertOk();
     }
 
@@ -276,7 +282,7 @@ class PasswordResetOtpTest extends TestCase
         Mail::fake();
 
         for ($i = 0; $i < 3; $i++) {
-            $this->postJson('/api/v1/password/verify-otp', [
+            $this->postJson(self::VERIFY_OTP_ENDPOINT, [
                 'email' => 'nobody@example.com',
                 'otp' => '000000',
             ])->assertStatus(422);
@@ -284,7 +290,7 @@ class PasswordResetOtpTest extends TestCase
 
         // Without the /api/v1/* arm in the matcher this would fall through to
         // the far looser guest read limit instead of returning 429.
-        $this->postJson('/api/v1/password/verify-otp', ['email' => 'nobody@example.com', 'otp' => '000000'])
+        $this->postJson(self::VERIFY_OTP_ENDPOINT, ['email' => 'nobody@example.com', 'otp' => '000000'])
             ->assertStatus(429);
     }
 }

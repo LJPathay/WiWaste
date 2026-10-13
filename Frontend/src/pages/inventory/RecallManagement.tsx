@@ -439,7 +439,7 @@ export function RecallManagement() {
         isOpen={!!confirmRecall}
         onClose={() => setConfirmRecall(null)}
         onConfirm={() => {
-          if (confirmRecall) handleAction(confirmRecall.id, confirmRecall.action);
+          if (confirmRecall) void handleAction(confirmRecall.id, confirmRecall.action);
           setConfirmRecall(null);
         }}
         title={`Confirm ${confirmRecall?.action}`}

@@ -25,7 +25,7 @@ type StatusFilter = 'all' | UserStatus;
  * grey "Active" pill, so Inactive and Quarantined accounts were indistinguishable from
  * healthy ones in both the table and the detail view.
  */
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status }: Readonly<{ status: string }>) {
   const config = STATUS_CONFIG[status as UserStatus] ?? STATUS_CONFIG.Active;
   const StatusIcon = config.icon;
 
@@ -34,6 +34,57 @@ function StatusBadge({ status }: { status: string }) {
       <StatusIcon className="h-3 w-3" aria-hidden="true" />
       {config.label}
     </span>
+  );
+}
+
+/**
+ * The first / middle / last name inputs shared by the Add and Edit user modals.
+ *
+ * Both modals carried an identical copy of these three fields — same class strings,
+ * same `setForm` updaters — differing only in the `id` prefix and whether empty
+ * placeholders were shown. Extracting them keeps the labels, `htmlFor` pairing and
+ * error styling in one place.
+ */
+function NameFields({
+  idPrefix,
+  form,
+  setForm,
+  isDuplicateName,
+  showPlaceholders,
+}: Readonly<{
+  idPrefix: string;
+  form: CreateUserPayload;
+  setForm: React.Dispatch<React.SetStateAction<CreateUserPayload>>;
+  isDuplicateName: boolean;
+  showPlaceholders: boolean;
+}>) {
+  const inputClass = `h-8 w-full bg-bg dark:bg-slate-800 border px-3 rounded-lg text-xs focus:outline-none focus:ring-1 text-slate-900 dark:text-slate-100 ${
+    isDuplicateName ? 'border-rose-500 focus:ring-rose-500' : 'border-border dark:border-white/10 focus:ring-[#006a61]'
+  }`;
+  const plainClass =
+    'h-8 w-full bg-bg dark:bg-slate-800 border border-border dark:border-white/10 px-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100';
+
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      <div>
+        <label htmlFor={`${idPrefix}-first-name`} className="block text-sm font-bold text-muted-fg dark:text-muted-fg mb-1">First Name <span className="text-rose-500">*</span></label>
+        <input id={`${idPrefix}-first-name`} type="text" required placeholder={showPlaceholders ? 'First' : undefined} value={form.first_name}
+          onChange={e => setForm(prev => ({ ...prev, first_name: e.target.value }))}
+          className={inputClass} />
+      </div>
+      <div>
+        <label htmlFor={`${idPrefix}-middle-name`} className="block text-sm font-bold text-muted-fg dark:text-muted-fg mb-1">Middle Name</label>
+        <input id={`${idPrefix}-middle-name`} type="text" placeholder={showPlaceholders ? 'Middle' : undefined} value={form.middle_name}
+          onChange={e => setForm(prev => ({ ...prev, middle_name: e.target.value }))}
+          className={plainClass} />
+      </div>
+      <div>
+        <label htmlFor={`${idPrefix}-last-name`} className="block text-sm font-bold text-muted-fg dark:text-muted-fg mb-1">Last Name <span className="text-rose-500">*</span></label>
+        <input id={`${idPrefix}-last-name`} type="text" required placeholder={showPlaceholders ? 'Last' : undefined} value={form.surname}
+          onChange={e => setForm(prev => ({ ...prev, surname: e.target.value }))}
+          className={inputClass} />
+      </div>
+    </div>
   );
 }
 
@@ -535,8 +586,8 @@ export function ManageUsers() {
       <div className="bg-white dark:bg-slate-950 rounded-xl border border-border dark:border-white/10 shadow-sm">
         <div className="p-3.5 border-b border-border dark:border-white/10 space-y-2.5">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-1" role="group" aria-label="Filter by status">
-              <span className="text-[9px] font-bold text-muted-fg dark:text-muted-fg px-2 uppercase tracking-wider">Status:</span>
+            <fieldset className="flex flex-wrap items-center gap-1 border-0 p-0 m-0 min-w-0">
+              <legend className="text-[9px] font-bold text-muted-fg dark:text-muted-fg px-2 uppercase tracking-wider">Status:</legend>
               {statusTabs.map(tab => {
                 const TabIcon = tab.Icon;
                 const isSelected = statusFilter === tab.id;
@@ -550,7 +601,7 @@ export function ManageUsers() {
                   </button>
                 );
               })}
-            </div>
+            </fieldset>
 
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex items-center gap-1">
@@ -585,7 +636,13 @@ export function ManageUsers() {
 
       {/* ── ADD USER MODAL ── */}
       {isAddOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-3 overflow-y-auto" role="dialog" aria-modal="true">
+        // Native <dialog> rather than a div with role="dialog": see the history
+        // modal in ManageInventory.tsx for why.
+        <dialog
+          open
+          aria-label="Add New User"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 m-0 w-screen h-screen max-w-none max-h-none border-0 bg-transparent overflow-y-auto backdrop:bg-black/50 backdrop:backdrop-blur-xs"
+        >
           <div className="bg-bg-elevated rounded-xl border border-border dark:border-white/10 w-full max-w-lg p-4 relative shadow-2xl my-6">
             <button type="button" aria-label="Close" onClick={() => setIsAddOpen(false)} className="absolute top-3 right-3 text-muted-fg hover:text-muted-fg dark:hover:text-slate-200 p-0.5">
               <X className="h-4 w-4" />
@@ -599,26 +656,13 @@ export function ManageUsers() {
             </div>
 
             <form onSubmit={handleAddUser} className="space-y-3">
-              <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <label htmlFor="add-user-first-name" className="block text-sm font-bold text-muted-fg dark:text-muted-fg mb-1">First Name <span className="text-rose-500">*</span></label>
-                  <input id="add-user-first-name" type="text" required placeholder="First" value={form.first_name}
-                    onChange={e => setForm(prev => ({ ...prev, first_name: e.target.value }))}
-                    className={`h-8 w-full bg-bg dark:bg-slate-800 border px-3 rounded-lg text-xs focus:outline-none focus:ring-1 text-slate-900 dark:text-slate-100 ${isDuplicateName ? 'border-rose-500 focus:ring-rose-500' : 'border-border dark:border-white/10 focus:ring-[#006a61]'}`} />
-                </div>
-                <div>
-                  <label htmlFor="add-user-middle-name" className="block text-sm font-bold text-muted-fg dark:text-muted-fg mb-1">Middle Name</label>
-                  <input id="add-user-middle-name" type="text" placeholder="Middle" value={form.middle_name}
-                    onChange={e => setForm(prev => ({ ...prev, middle_name: e.target.value }))}
-                    className="h-8 w-full bg-bg dark:bg-slate-800 border border-border dark:border-white/10 px-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100" />
-                </div>
-                <div>
-                  <label htmlFor="add-user-last-name" className="block text-sm font-bold text-muted-fg dark:text-muted-fg mb-1">Last Name <span className="text-rose-500">*</span></label>
-                  <input id="add-user-last-name" type="text" required placeholder="Last" value={form.surname}
-                    onChange={e => setForm(prev => ({ ...prev, surname: e.target.value }))}
-                    className={`h-8 w-full bg-bg dark:bg-slate-800 border px-3 rounded-lg text-xs focus:outline-none focus:ring-1 text-slate-900 dark:text-slate-100 ${isDuplicateName ? 'border-rose-500 focus:ring-rose-500' : 'border-border dark:border-white/10 focus:ring-[#006a61]'}`} />
-                </div>
-              </div>
+              <NameFields
+                idPrefix="add"
+                form={form}
+                setForm={setForm}
+                isDuplicateName={isDuplicateName}
+                showPlaceholders
+              />
               {isDuplicateName && <p className="text-rose-500 text-[10px] font-semibold mt-1 flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> A user with this name already exists.</p>}
 
               {fullName.trim() && (
@@ -674,9 +718,9 @@ export function ManageUsers() {
               </div>
 
               <div className="relative">
-                <label id="assign-role-label" className="block text-sm font-bold text-muted-fg dark:text-muted-fg mb-1">Assign Role <span className="text-rose-500">*</span></label>
+                <label id="assign-role-label" htmlFor="assign-role-btn" className="block text-sm font-bold text-muted-fg dark:text-muted-fg mb-1">Assign Role <span className="text-rose-500">*</span></label>
                 <div className="relative">
-                  <button type="button" aria-labelledby="assign-role-label" onClick={() => setRoleDropdownOpen(prev => !prev)}
+                  <button type="button" id="assign-role-btn" aria-labelledby="assign-role-label" onClick={() => setRoleDropdownOpen(prev => !prev)}
                     className="h-8 w-full bg-bg dark:bg-slate-800 border border-border dark:border-white/10 px-3 rounded-lg text-xs flex items-center justify-between focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100">
                     <div className="flex items-center gap-2">
                       {React.createElement(roleConfigFor(form.role).icon, { className: `h-3.5 w-3.5 ${roleConfigFor(form.role).iconColor}` })}
@@ -721,12 +765,16 @@ export function ManageUsers() {
               </button>
             </form>
           </div>
-        </div>
+        </dialog>
       )}
 
       {/* ── EDIT USER MODAL ── */}
       {isEditOpen && editingUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-3 overflow-y-auto" role="dialog" aria-modal="true">
+        <dialog
+          open
+          aria-label="Edit User"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 m-0 w-screen h-screen max-w-none max-h-none border-0 bg-transparent overflow-y-auto backdrop:bg-black/50 backdrop:backdrop-blur-xs"
+        >
           <div className="bg-bg-elevated rounded-xl border border-border dark:border-white/10 w-full max-w-lg p-4 relative shadow-2xl my-6">
             <button type="button" aria-label="Close" onClick={() => { setIsEditOpen(false); setViewingUser(null); }} className="absolute top-3 right-3 text-muted-fg hover:text-muted-fg p-0.5">
               <X className="h-4 w-4" />
@@ -740,26 +788,13 @@ export function ManageUsers() {
             </div>
 
             <form onSubmit={handleEditUser} className="space-y-3">
-              <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <label htmlFor="edit-user-first-name" className="block text-sm font-bold text-muted-fg dark:text-muted-fg mb-1">First Name <span className="text-rose-500">*</span></label>
-                  <input id="edit-user-first-name" type="text" required value={form.first_name}
-                    onChange={e => setForm(prev => ({ ...prev, first_name: e.target.value }))}
-                    className={`h-8 w-full bg-bg dark:bg-slate-800 border px-3 rounded-lg text-xs focus:outline-none focus:ring-1 text-slate-900 dark:text-slate-100 ${isDuplicateName ? 'border-rose-500 focus:ring-rose-500' : 'border-border dark:border-white/10 focus:ring-[#006a61]'}`} />
-                </div>
-                <div>
-                  <label htmlFor="edit-user-middle-name" className="block text-sm font-bold text-muted-fg dark:text-muted-fg mb-1">Middle Name</label>
-                  <input id="edit-user-middle-name" type="text" value={form.middle_name}
-                    onChange={e => setForm(prev => ({ ...prev, middle_name: e.target.value }))}
-                    className="h-8 w-full bg-bg dark:bg-slate-800 border border-border dark:border-white/10 px-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100" />
-                </div>
-                <div>
-                  <label htmlFor="edit-user-last-name" className="block text-sm font-bold text-muted-fg dark:text-muted-fg mb-1">Last Name <span className="text-rose-500">*</span></label>
-                  <input id="edit-user-last-name" type="text" required value={form.surname}
-                    onChange={e => setForm(prev => ({ ...prev, surname: e.target.value }))}
-                    className={`h-8 w-full bg-bg dark:bg-slate-800 border px-3 rounded-lg text-xs focus:outline-none focus:ring-1 text-slate-900 dark:text-slate-100 ${isDuplicateName ? 'border-rose-500 focus:ring-rose-500' : 'border-border dark:border-white/10 focus:ring-[#006a61]'}`} />
-                </div>
-              </div>
+              <NameFields
+                idPrefix="edit"
+                form={form}
+                setForm={setForm}
+                isDuplicateName={isDuplicateName}
+                showPlaceholders={false}
+              />
               {isDuplicateName && <p className="text-rose-500 text-[10px] font-semibold mt-1">A user with this name already exists.</p>}
 
               <div>
@@ -779,9 +814,9 @@ export function ManageUsers() {
               </div>
 
               <div className="relative">
-                <label id="edit-user-role" className="block text-sm font-bold text-muted-fg dark:text-muted-fg mb-1">Role</label>
+                <label id="edit-user-role" htmlFor="edit-user-role-btn" className="block text-sm font-bold text-muted-fg dark:text-muted-fg mb-1">Role</label>
                 <div className="relative">
-                  <button type="button" aria-labelledby="edit-user-role" onClick={() => setRoleDropdownOpen(prev => !prev)}
+                  <button type="button" id="edit-user-role-btn" aria-labelledby="edit-user-role" onClick={() => setRoleDropdownOpen(prev => !prev)}
                     className="h-8 w-full bg-bg dark:bg-slate-800 border border-border dark:border-white/10 px-3 rounded-lg text-xs flex items-center justify-between focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-900 dark:text-slate-100">
                     <div className="flex items-center gap-2">
                       {React.createElement(roleConfigFor(form.role).icon, { className: `h-3.5 w-3.5 ${roleConfigFor(form.role).iconColor}` })}
@@ -864,12 +899,18 @@ export function ManageUsers() {
               </button>
             </form>
           </div>
-        </div>
+        </dialog>
       )}
 
       {/* ── VIEW USER MODAL ── */}
       {viewingUser && !isEditOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-3 overflow-y-auto" role="dialog" aria-modal="true">
+        // Native <dialog> instead of role="dialog": see the history modal in
+        // ManageInventory.tsx for why.
+        <dialog
+          open
+          aria-label="User Account Details"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 m-0 w-screen h-screen max-w-none max-h-none border-0 bg-transparent overflow-y-auto backdrop:bg-black/50 backdrop:backdrop-blur-xs"
+        >
           <div className="bg-bg-elevated rounded-xl border border-border dark:border-white/10 w-full max-w-md p-4 relative shadow-2xl my-6">
             <button type="button" aria-label="Close" onClick={() => setViewingUser(null)} className="absolute top-3 right-3 text-muted-fg hover:text-muted-fg dark:hover:text-slate-200 p-0.5">
               <X className="h-4 w-4" />
@@ -922,7 +963,7 @@ export function ManageUsers() {
               </div>
 
               <div>
-                <label className="text-[9px] font-bold text-muted-fg dark:text-muted-fg uppercase tracking-wider">Account Status</label>
+                <span className="text-[9px] font-bold text-muted-fg dark:text-muted-fg uppercase tracking-wider">Account Status</span>
                 <div className="mt-0.5 flex items-center gap-2 flex-wrap">
                   <StatusBadge status={viewingUser.status} />
                   {viewingUser.status !== 'Active' && (
@@ -935,7 +976,7 @@ export function ManageUsers() {
 
               {viewingUser.created_at && (
                 <div>
-                  <label className="text-[9px] font-bold text-muted-fg dark:text-muted-fg uppercase tracking-wider">Account Created</label>
+                  <span className="text-[9px] font-bold text-muted-fg dark:text-muted-fg uppercase tracking-wider">Account Created</span>
                   <p className="text-sm text-slate-700 dark:text-slate-300 mt-0.5">
                     {new Date(viewingUser.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </p>
@@ -965,12 +1006,16 @@ export function ManageUsers() {
               )}
             </div>
           </div>
-        </div>
+        </dialog>
       )}
 
       {/* ── ARCHIVE CONFIRM MODAL ── */}
       {archiveModalUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-3" role="dialog" aria-modal="true">
+        <dialog
+          open
+          aria-label="Archive User Account"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 m-0 w-screen h-screen max-w-none max-h-none border-0 bg-transparent backdrop:bg-black/50 backdrop:backdrop-blur-xs"
+        >
           <div className="bg-bg-elevated rounded-xl border border-rose-200 dark:border-rose-800/40 w-full max-w-md p-4 relative shadow-2xl">
             <button type="button" aria-label="Close" onClick={() => setArchiveModalUser(null)} className="absolute top-3 right-3 text-muted-fg hover:text-muted-fg"><X className="h-4 w-4" /></button>
             <div className="flex items-center gap-2.5 mb-2.5">
@@ -993,12 +1038,16 @@ export function ManageUsers() {
               </button>
             </div>
           </div>
-        </div>
+        </dialog>
       )}
 
       {/* ── REACTIVATE CONFIRM MODAL ── */}
       {reactivateModalUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-3" role="dialog" aria-modal="true">
+        <dialog
+          open
+          aria-label="Reactivate User Account"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 m-0 w-screen h-screen max-w-none max-h-none border-0 bg-transparent backdrop:bg-black/50 backdrop:backdrop-blur-xs"
+        >
           <div className="bg-bg-elevated rounded-xl border border-emerald-200 dark:border-emerald-800/40 w-full max-w-md p-4 relative shadow-2xl">
             <button type="button" aria-label="Close" onClick={() => setReactivateModalUser(null)} className="absolute top-3 right-3 text-muted-fg hover:text-muted-fg"><X className="h-4 w-4" /></button>
             <div className="flex items-center gap-2.5 mb-2.5">
@@ -1023,7 +1072,7 @@ export function ManageUsers() {
               </button>
             </div>
           </div>
-        </div>
+        </dialog>
       )}
 
       <Toast toasts={toasts} onDismiss={dismiss} />

@@ -62,7 +62,7 @@ export function ReorderDashboard() {
 
   const handleConfirmApprove = () => {
     if (confirmApprove) {
-      handleApprove(confirmApprove);
+      void handleApprove(confirmApprove);
       setConfirmApprove(null);
     }
   };
@@ -97,8 +97,9 @@ export function ReorderDashboard() {
             )}
           </button>
           <div className="flex items-center gap-2">
-            <label className="text-sm text-muted-fg dark:text-muted-fg">Safety Multiplier:</label>
+            <label htmlFor="safety-multiplier" className="text-sm text-muted-fg dark:text-muted-fg">Safety Multiplier:</label>
             <select
+              id="safety-multiplier"
               value={safetyMultiplier}
               onChange={(e) => setSafetyMultiplier(parseFloat(e.target.value))}
               className="w-full sm:w-auto px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-colors"

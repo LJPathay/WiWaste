@@ -60,10 +60,8 @@ class RateLimitMiddleware
         if ($isApi) {
             $limits = self::ROLE_LIMITS[$role] ?? self::ROLE_LIMITS['guest'];
 
-            if ($isWrite) {
-                if (RateLimiter::tooManyAttempts("api:write:{$key}", $limits['write'])) {
-                    return $this->rateLimitResponse("api:write:{$key}", 60);
-                }
+            if ($isWrite && RateLimiter::tooManyAttempts("api:write:{$key}", $limits['write'])) {
+                return $this->rateLimitResponse("api:write:{$key}", 60);
             }
 
             if (RateLimiter::tooManyAttempts("api:read:{$key}", $limits['read'])) {
@@ -74,17 +72,15 @@ class RateLimitMiddleware
         $response = $next($request);
 
         // Increment counters
-        if ($isApi) {
-            if ($isAuth || $isPassword) {
-                $limit = $isPassword ? self::PASSWORD_LIMIT : self::AUTH_LIMIT;
-                RateLimiter::hit("auth:{$key}", $limit['decay'] * 60);
-            } else {
-                $limits = self::ROLE_LIMITS[$role] ?? self::ROLE_LIMITS['guest'];
-                if ($isWrite) {
-                    RateLimiter::hit("api:write:{$key}", 3600);
-                }
-                RateLimiter::hit("api:read:{$key}", 3600);
+        if ($isApi && ($isAuth || $isPassword)) {
+            $limit = $isPassword ? self::PASSWORD_LIMIT : self::AUTH_LIMIT;
+            RateLimiter::hit("auth:{$key}", $limit['decay'] * 60);
+        } elseif ($isApi) {
+            $limits = self::ROLE_LIMITS[$role] ?? self::ROLE_LIMITS['guest'];
+            if ($isWrite) {
+                RateLimiter::hit("api:write:{$key}", 3600);
             }
+            RateLimiter::hit("api:read:{$key}", 3600);
         }
 
         // Add rate limit headers
@@ -127,15 +123,19 @@ class RateLimitMiddleware
             return $user;
         }
 
-        if ($request->bearerToken()) {
-            try {
-                return Auth::guard('sanctum')->user();
-            } catch (\Throwable) {
-                return null;
-            }
+        // No bearer token means the caller is genuinely a guest; resolving the
+        // Sanctum guard would just return null for the same reason.
+        if (! $request->bearerToken()) {
+            return null;
         }
 
-        return null;
+        try {
+            return Auth::guard('sanctum')->user();
+        } catch (\Throwable) {
+            // A malformed or stale token must not 500 the request; treat it as
+            // a guest so the rate limiter still buckets it.
+            return null;
+        }
     }
 
     protected function rateLimitResponse(string $key, int $decayMinutes): Response

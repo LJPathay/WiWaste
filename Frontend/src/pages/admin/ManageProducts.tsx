@@ -34,12 +34,6 @@ function productLabelUrl(id: ApiProduct['id'], format: string): string {
   return `${base}/products/${encodeURIComponent(String(id))}/label?format=${encodeURIComponent(format)}`;
 }
 
-function escapeHtml(value: string): string {
-  return value.replace(/[&<>"']/g, (ch) => (
-    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch] as string
-  ));
-}
-
 export function ManageProducts() {
   const { toasts, dismiss, success, error: toastError } = useToast();
   const { data: productList, loading: pLoading, error: pError, addItem, updateItem, removeItem, refetch: refetchProducts } = useOptimisticList(productsApi.list);
@@ -698,7 +692,6 @@ export function ManageProducts() {
                   className="h-10 text-base font-mono bg-white dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-600 rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-transparent transition-all shadow-inner"
                   inputMode="numeric"
                   autoComplete="off"
-                  autoFocus
                 />
               </div>
               {isDuplicateAddBarcode && <p className="text-red-500 text-[10px] mt-1">SKU / Barcode already exists.</p>}
@@ -855,8 +848,9 @@ export function ManageProducts() {
             </div>
 
             <div className="flex items-center gap-2 p-3 bg-bg dark:bg-slate-800/50 rounded-lg">
-              <label className="text-xs font-medium text-slate-700 dark:text-slate-300">Format:</label>
+              <label htmlFor="label-format" className="text-xs font-medium text-slate-700 dark:text-slate-300">Format:</label>
               <select
+                id="label-format"
                 value={labelFormat}
                 onChange={(e) => setLabelFormat(e.target.value as 'png' | 'svg')}
                 className="h-8 px-3 text-xs bg-white dark:bg-slate-700 border border-border dark:border-slate-600 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#006a61]"
@@ -871,24 +865,25 @@ export function ManageProducts() {
                 onClick={() => {
                   const printWindow = window.open('', '_blank');
                   if (printWindow) {
-                    printWindow.document.write(`
-                      <html>
-                        <head>
-                          <title>Print Label - ${escapeHtml(labelProduct.name)}</title>
-                          <style>
-                            @media print {
-                              @page { margin: 0; size: auto; }
-                              body { margin: 0; padding: 20px; }
-                              img { max-width: 100%; height: auto; }
-                            }
-                          </style>
-                        </head>
-                        <body onload="window.print(); window.close();">
-                          <img src="${productLabelUrl(labelProduct.id, 'png')}" />
-                        </body>
-                      </html>
-                    `);
-                    printWindow.document.close();
+                    // Built with DOM APIs rather than `document.write`, which is
+                    // deprecated and blocked in some browsers.
+                    const doc = printWindow.document;
+                    doc.title = `Print Label - ${labelProduct.name}`;
+
+                    const style = doc.createElement('style');
+                    style.textContent =
+                      '@media print { @page { margin: 0; size: auto; } body { margin: 0; padding: 20px; } img { max-width: 100%; height: auto; } }';
+                    doc.head.appendChild(style);
+
+                    const img = doc.createElement('img');
+                    img.src = productLabelUrl(labelProduct.id, 'png');
+                    // Print once the image is laid out, otherwise most browsers emit
+                    // a blank page.
+                    img.addEventListener('load', () => {
+                      printWindow.print();
+                      printWindow.close();
+                    });
+                    doc.body.appendChild(img);
                   }
                 }}
                 className="flex-1 h-9 bg-[#006a61] hover:bg-[#00574f] text-white rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5"

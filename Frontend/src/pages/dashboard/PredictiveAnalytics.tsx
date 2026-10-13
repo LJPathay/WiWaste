@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-  AreaChart,
-  Area,
   CartesianGrid,
   LineChart,
   Line,
@@ -18,6 +16,7 @@ import { retailExamples } from '../../utils/mockAuthAndFeatures';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { ChartGradients, ChartTooltipStyle } from '../../components/charts/ChartGradients';
 import { CHART_DEFAULTS, CHART_COLORS, useChartAnimation } from '../../components/charts/ChartConfig';
+import { StockMovementChart, StockMovementLegend } from '../../components/charts/StockMovementChart';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -204,66 +203,9 @@ export function PredictiveAnalyticsPage() {
                 {generating ? 'Generating…' : 'Regenerate Forecast'}
               </button>
             </div>
-            <div className="mb-2 flex items-center gap-3 text-[10px] text-[#64748B] dark:text-muted-fg">
-              <span className="flex items-center gap-1">
-                <span className="inline-block h-2 w-2 rounded-sm bg-[#0F766E]" />
-                Stock In
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="inline-block h-2 w-2 rounded-sm bg-[#3B82F6]" />
-                Stock Out
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="inline-block h-2 w-2 rounded-sm bg-[#EF4444]" />
-                Wastage
-              </span>
-            </div>
+            <StockMovementLegend />
             <div className="h-52">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={mockPredictiveMovement}>
-                  <ChartGradients />
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_COLORS.grid} />
-                  <XAxis dataKey="date" tick={{ fontSize: 11, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} />
-                  <YAxis tick={{ fontSize: 11, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} />
-                  <Tooltip contentStyle={ChartTooltipStyle()} />
-                  <Area
-                    type="monotone"
-                    dataKey="stock_in"
-                    name="Stock In"
-                    stroke={CHART_COLORS.primary}
-                    fill="url(#chart-stock-in-fill)"
-                    strokeWidth={2}
-                    isAnimationActive={isAnimationActive}
-                    animationDuration={animationDuration}
-                    animationEasing={animationEasing}
-                    animationBegin={CHART_DEFAULTS.animationBegin}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="stock_out"
-                    name="Stock Out"
-                    stroke={CHART_COLORS.secondary}
-                    fill="url(#chart-stock-out-fill)"
-                    strokeWidth={2}
-                    isAnimationActive={isAnimationActive}
-                    animationDuration={animationDuration}
-                    animationEasing={animationEasing}
-                    animationBegin={CHART_DEFAULTS.animationBegin}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="wastage"
-                    name="Wastage"
-                    stroke={CHART_COLORS.danger}
-                    fill="url(#chart-wastage-fill)"
-                    strokeWidth={2}
-                    isAnimationActive={isAnimationActive}
-                    animationDuration={animationDuration}
-                    animationEasing={animationEasing}
-                    animationBegin={CHART_DEFAULTS.animationBegin}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+              <StockMovementChart data={mockPredictiveMovement} />
             </div>
           </section>
 

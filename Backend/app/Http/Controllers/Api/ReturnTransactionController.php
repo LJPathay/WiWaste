@@ -167,9 +167,7 @@ class ReturnTransactionController extends Controller
     {
         $user = $request->user();
 
-        $query = ReturnTransaction::query();
-        $query = $this->scopeForBusinessAndBranch($query, $request);
-        $return = $query->findOrFail($id);
+        $return = $this->findScoped(ReturnTransaction::class, $id);
 
         if ($return->approval_status === 'approved') {
             return response()->json(['message' => 'Return already approved.'], 422);
@@ -203,9 +201,7 @@ class ReturnTransactionController extends Controller
     {
         $user = $request->user();
 
-        $query = ReturnTransaction::query();
-        $query = $this->scopeForBusinessAndBranch($query, $request);
-        $return = $query->findOrFail($id);
+        $return = $this->findScoped(ReturnTransaction::class, $id);
 
         if ($return->approval_status === 'rejected') {
             return response()->json(['message' => 'Return already rejected.'], 422);
@@ -240,9 +236,7 @@ class ReturnTransactionController extends Controller
 
     public function show($id)
     {
-        $query = ReturnTransaction::with(['salesItem.product', 'user', 'approver']);
-        $query = $this->scopeForBusinessAndBranch($query, request());
-        $return = $query->findOrFail($id);
+        $return = $this->findScoped(ReturnTransaction::class, $id, ['salesItem.product', 'user', 'approver']);
 
         return (new ReturnTransactionResource($return))->resolve(request());
     }

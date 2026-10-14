@@ -30,6 +30,9 @@ class SalesTransactionController extends Controller
         if ($user && $user->branch_id) {
             $query->where('branch_id', $user->branch_id);
         }
+        if (in_array($user?->role, ['Cashier', 'Business Owner'], true) && $query->getModel() instanceof SalesTransaction) {
+            $query->where('user_id', $user->User_id);
+        }
         return $query;
     }
 
@@ -241,6 +244,10 @@ class SalesTransactionController extends Controller
                 return [null, response()->json([
                     'message' => "No inventory record for product #{$item['product_id']}.",
                 ], 422)];
+            }
+
+            if ($inventory->product?->status === 'Archived' || $inventory->product?->archived_at !== null) {
+                return [null, response()->json(['message' => 'Archived products cannot be sold.'], 422)];
             }
 
             $batches = $this->getFEFObatchesForProduct($item['product_id'], $request);

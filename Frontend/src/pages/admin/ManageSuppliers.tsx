@@ -20,6 +20,7 @@ const EMPTY_FORM = {
   supplier_name: '',
   contact_person: '',
   contact_number: '',
+  email: '',
   address: '',
 };
 
@@ -58,6 +59,13 @@ const columns: DataTableColumn<ApiSupplier & Record<string, unknown>>[] = [
         {row.contact_number}
       </span>
     ),
+  },
+  {
+    key: 'email',
+    header: 'Email Address',
+    truncate: true,
+    minWidth: '180px',
+    render: (row) => <span className="text-slate-600 dark:text-slate-400">{row.email ?? ''}</span>,
   },
   {
     key: 'address',
@@ -101,7 +109,7 @@ export function ManageSuppliers() {
     {
       id: 'add-supplier-btn',
       title: 'Add New Supplier',
-      description: 'Click here to add a new supplier to your system. You\'ll need to provide supplier name, contact person, phone number, and address.',
+      description: 'Click here to add a new supplier to your system. You\'ll need to provide supplier name, contact person, phone number, email address, and address.',
       targetSelector: 'button:has(svg.lucide-plus):first-of-type',
       position: 'bottom' as const,
     },
@@ -206,25 +214,9 @@ export function ManageSuppliers() {
     });
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, filtered.length);
+  const page = Math.min(currentPage, totalPages);
+  const startIndex = (page - 1) * ITEMS_PER_PAGE;
   const paginatedSuppliers = filtered.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-
-  const isAllSelected = paginatedSuppliers.length > 0 && paginatedSuppliers.every(s => selectedIds.includes(s.id));
-
-  const toggleSelectAll = () => {
-    if (isAllSelected) {
-      const pageIds = new Set(paginatedSuppliers.map(s => s.id));
-      setSelectedIds(prev => prev.filter(id => !pageIds.has(id)));
-    } else {
-      const pageIds = paginatedSuppliers.map(s => s.id);
-      setSelectedIds(prev => Array.from(new Set([...prev, ...pageIds])));
-    }
-  };
-
-  const toggleSelectRow = (id: number) => {
-    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
-  };
 
   const handleBulkDelete = async () => {
     if (selectedIds.length === 0) return;
@@ -250,8 +242,13 @@ export function ManageSuppliers() {
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!addForm.supplier_name.trim() || !addForm.contact_number.trim()) {
+    if (!addForm.supplier_name.trim() || !addForm.contact_number.trim() || !addForm.email.trim() || !addForm.address.trim()) {
       error('Please fill in all required fields.');
+      return;
+    }
+
+    if (!/^[0-9]{7,11}$/.test(addForm.contact_number)) {
+      error('Contact number must contain 7 to 11 digits only.');
       return;
     }
 
@@ -274,6 +271,7 @@ export function ManageSuppliers() {
         name: created.name ?? addForm.supplier_name.trim(),
         contact_person: created.contact_person ?? (addForm.contact_person.trim() || null),
         contact_number: created.contact_number ?? addForm.contact_number.trim(),
+        email: created.email ?? addForm.email.trim(),
         address: created.address ?? (addForm.address.trim() || null),
         product_count: created.product_count ?? 0,
       };
@@ -293,6 +291,7 @@ export function ManageSuppliers() {
       supplier_name: s.name,
       contact_person: s.contact_person ?? '',
       contact_number: s.contact_number,
+      email: s.email ?? '',
       address: s.address ?? '',
     });
   };
@@ -300,8 +299,13 @@ export function ManageSuppliers() {
   const handleEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingSupplier) return;
-    if (!editForm.supplier_name.trim() || !editForm.contact_number.trim()) {
+    if (!editForm.supplier_name.trim() || !editForm.contact_number.trim() || !editForm.email.trim() || !editForm.address.trim()) {
       error('Please fill in all required fields.');
+      return;
+    }
+
+    if (!/^[0-9]{7,11}$/.test(editForm.contact_number)) {
+      error('Contact number must contain 7 to 11 digits only.');
       return;
     }
 
@@ -501,7 +505,7 @@ export function ManageSuppliers() {
         )}
         pagination={
           <Pagination
-            page={currentPage}
+            page={page}
             totalPages={totalPages}
             onPageChange={setCurrentPage}
             totalItems={filtered.length}
@@ -535,22 +539,27 @@ export function ManageSuppliers() {
       {isAddOpen && (
         <Modal title="Add New Supplier" onClose={() => { if (!addLoading) setIsAddOpen(false); }} maxWidth="lg">
           <form onSubmit={handleAdd} className="space-y-3 p-4">
-            <FormField label="Supplier Name">
-              <input type="text" required placeholder="e.g. FreshPack Co." value={addForm.supplier_name}
+            <FormField label="Supplier Name" htmlFor="add-supplier-supplier_name">
+              <input type="text" required placeholder="e.g. FreshPack Co." id="add-supplier-supplier_name" value={addForm.supplier_name}
                 onChange={e => setAddForm(f => ({ ...f, supplier_name: e.target.value }))} className={inputCls} />
               {isDuplicateAddName && <p className="text-red-500 text-[9px] mt-0.5">Supplier name already exists.</p>}
             </FormField>
-            <FormField label="Contact Person">
-              <input type="text" placeholder="e.g. Ana Reyes" value={addForm.contact_person}
+            <FormField label="Contact Person" htmlFor="add-supplier-contact_person">
+              <input type="text" placeholder="e.g. Ana Reyes" id="add-supplier-contact_person" value={addForm.contact_person}
                 onChange={e => setAddForm(f => ({ ...f, contact_person: e.target.value }))} className={inputCls} />
             </FormField>
-            <FormField label="Phone Number">
-              <input type="tel" required placeholder="09XXXXXXXXX" value={addForm.contact_number}
-                onChange={e => setAddForm(f => ({ ...f, contact_number: e.target.value }))} className={inputCls} />
+            <FormField label="Phone Number" htmlFor="add-supplier-contact_number">
+              <input type="tel" required inputMode="numeric" minLength={7} maxLength={11} pattern="[0-9]{7,11}" title="Enter 7 to 11 digits only" placeholder="09XXXXXXXXX" id="add-supplier-contact_number" value={addForm.contact_number}
+                onChange={e => setAddForm(f => ({ ...f, contact_number: e.target.value.replace(/\D/g, '').slice(0, 11) }))} className={inputCls} />
+              <p className="text-xs text-slate-500">7 to 11 digits only.</p>
               {isDuplicateAddPhone && <p className="text-red-500 text-[9px] mt-0.5">Phone number already exists.</p>}
             </FormField>
-            <FormField label="Address">
-              <input type="text" placeholder="Metro Manila, PH" value={addForm.address}
+            <FormField label="Email Address" htmlFor="add-supplier-email">
+              <input type="email" required maxLength={100} placeholder="supplier@example.com" id="add-supplier-email" value={addForm.email}
+                onChange={e => setAddForm(f => ({ ...f, email: e.target.value }))} className={inputCls} />
+            </FormField>
+            <FormField label="Address" htmlFor="add-supplier-address">
+              <input type="text" required placeholder="Metro Manila, PH" id="add-supplier-address" value={addForm.address}
                 onChange={e => setAddForm(f => ({ ...f, address: e.target.value }))} className={inputCls} />
             </FormField>
             <button type="submit" disabled={addLoading || isDuplicateAddName || isDuplicateAddPhone}
@@ -565,22 +574,27 @@ export function ManageSuppliers() {
       {editingSupplier && (
         <Modal title="Edit Supplier" onClose={() => { if (!editLoading) setEditingSupplier(null); }} maxWidth="lg">
           <form onSubmit={handleEdit} className="space-y-3 p-4">
-            <FormField label="Supplier Name">
-              <input type="text" required placeholder="e.g. FreshPack Co." value={editForm.supplier_name}
+            <FormField label="Supplier Name" htmlFor="edit-supplier-supplier_name">
+              <input type="text" required placeholder="e.g. FreshPack Co." id="edit-supplier-supplier_name" value={editForm.supplier_name}
                 onChange={e => setEditForm(f => ({ ...f, supplier_name: e.target.value }))} className={inputCls} />
               {isDuplicateEditName && <p className="text-red-500 text-[9px] mt-0.5">Supplier name already exists.</p>}
             </FormField>
-            <FormField label="Contact Person">
-              <input type="text" placeholder="e.g. Ana Reyes" value={editForm.contact_person}
+            <FormField label="Contact Person" htmlFor="edit-supplier-contact_person">
+              <input type="text" placeholder="e.g. Ana Reyes" id="edit-supplier-contact_person" value={editForm.contact_person}
                 onChange={e => setEditForm(f => ({ ...f, contact_person: e.target.value }))} className={inputCls} />
             </FormField>
-            <FormField label="Phone Number">
-              <input type="tel" required placeholder="09XXXXXXXXX" value={editForm.contact_number}
-                onChange={e => setEditForm(f => ({ ...f, contact_number: e.target.value }))} className={inputCls} />
+            <FormField label="Phone Number" htmlFor="edit-supplier-contact_number">
+              <input type="tel" required inputMode="numeric" minLength={7} maxLength={11} pattern="[0-9]{7,11}" title="Enter 7 to 11 digits only" placeholder="09XXXXXXXXX" id="edit-supplier-contact_number" value={editForm.contact_number}
+                onChange={e => setEditForm(f => ({ ...f, contact_number: e.target.value.replace(/\D/g, '').slice(0, 11) }))} className={inputCls} />
+              <p className="text-xs text-slate-500">7 to 11 digits only.</p>
               {isDuplicateEditPhone && <p className="text-red-500 text-[9px] mt-0.5">Phone number already exists.</p>}
             </FormField>
-            <FormField label="Address">
-              <input type="text" placeholder="Metro Manila, PH" value={editForm.address}
+            <FormField label="Email Address" htmlFor="edit-supplier-email">
+              <input type="email" required maxLength={100} placeholder="supplier@example.com" id="edit-supplier-email" value={editForm.email}
+                onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} className={inputCls} />
+            </FormField>
+            <FormField label="Address" htmlFor="edit-supplier-address">
+              <input type="text" required placeholder="Metro Manila, PH" id="edit-supplier-address" value={editForm.address}
                 onChange={e => setEditForm(f => ({ ...f, address: e.target.value }))} className={inputCls} />
             </FormField>
             <button type="submit" disabled={editLoading || isDuplicateEditName || isDuplicateEditPhone}

@@ -11,31 +11,31 @@ class UserPolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->role === 'Owner';
+        return $user->canManageUsers();
     }
 
     public function view(User $user, $model): bool
     {
-        return $user->role === 'Owner';
+        return $user->canManageUsers();
     }
 
     public function create(User $user): bool
     {
-        return $user->role === 'Owner';
+        return $user->canManageUsers();
     }
 
     public function update(User $user, $model): bool
     {
-        return $user->role === 'Owner';
+        return $user->canManageUsers();
     }
 
     public function delete(User $user, $model): bool
     {
-        return $user->role === 'Owner';
+        return $user->canManageUsers();
     }
 
     public function quarantine(User $user, $model): bool
     {
-        return $user->role === 'Owner';
+        return $user->canManageUsers();
     }
 }

@@ -31,7 +31,7 @@ class LossRiskTest extends TestCase
             'username'   => 'loss-owner',
             'password'   => Hash::make('password'),
             'email'      => 'loss@test.com',
-            'role'       => 'Business Owner',
+            'role'       => 'Owner',
             'status'     => 'Active',
             'Created_at' => now(),
         ]);

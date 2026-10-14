@@ -33,6 +33,8 @@ use App\Http\Controllers\Api\ReorderController;
 use App\Http\Controllers\Api\SanitationController;
 use App\Http\Controllers\Api\RecallController;
 use App\Http\Controllers\Api\DataRetentionPolicyController;
+use App\Http\Controllers\Api\WebhookController;
+use App\Http\Middleware\EnsureActiveUser;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\ForceHttps;
 use App\Http\Middleware\RateLimitMiddleware;
@@ -42,13 +44,19 @@ use App\Http\Middleware\ValidateApiInput;
 |--------------------------------------------------------------------------
 | WiWaste API Routes
 |--------------------------------------------------------------------------
-| Open access for development/prototyping across all roles & transactions.
+| Authentication is required for application data and transactions.
 */
 
 // Global middleware
 Route::middleware([SecurityHeaders::class, ForceHttps::class, RateLimitMiddleware::class])->group(function () {
     // Auth
     Route::post('/login',  [AuthController::class, 'login']);
+    Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
+    Route::post('/reset-password', [AuthController::class, 'resetPassword']);
+    Route::get('/health', fn () => response()->json(['status' => 'ok', 'service' => 'laravel']));
+    Route::post('/webhooks/{provider}', [WebhookController::class, 'handle']);
+
+    Route::middleware(['auth:sanctum', EnsureActiveUser::class])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me',      [AuthController::class, 'me']);
 
@@ -59,12 +67,14 @@ Route::middleware([SecurityHeaders::class, ForceHttps::class, RateLimitMiddlewar
 
     // Lookup tables
     Route::apiResource('/categories', CategoryController::class);
+    Route::post('/categories/{id}/restore', [CategoryController::class, 'restore']);
     Route::apiResource('/suppliers',  SupplierController::class);
     Route::get('/suppliers/compliance', [SupplierController::class, 'compliance']);
     Route::get('/suppliers/alerts', [SupplierController::class, 'alerts']);
 
     // Products
     Route::apiResource('/products', ProductController::class);
+    Route::post('/products/{id}/restore', [ProductController::class, 'restore']);
     Route::get('/products/lookup/{code}', [ProductController::class, 'lookup']);
 
     // Inventory
@@ -83,9 +93,6 @@ Route::middleware([SecurityHeaders::class, ForceHttps::class, RateLimitMiddlewar
     // Wastage
     Route::get('/wastage',  [WastageRecordController::class, 'index']);
     Route::post('/wastage', [WastageRecordController::class, 'store']);
-
-    // Health Check
-    Route::get('/health', fn () => response()->json(['status' => 'ok', 'service' => 'laravel']));
 
     // Sales / POS
     Route::get('/sales',  [SalesTransactionController::class, 'index']);
@@ -115,6 +122,8 @@ Route::prefix('/reports')->group(function () {
 });
 
 // Settings
+Route::get('/settings/email', [SettingsController::class, 'email']);
+Route::put('/settings/email', [SettingsController::class, 'updateEmail']);
 Route::get('/settings',  [SettingsController::class, 'index']);
 Route::put('/settings',  [SettingsController::class, 'update']);
 
@@ -238,9 +247,6 @@ Route::post('/ml/accuracy',               [ForecastAccuracyController::class, 's
 Route::get('/ml/accuracy/alerts',         [ForecastAccuracyController::class, 'alerts']);
 Route::get('/ml/accuracy/{product_id}',   [ForecastAccuracyController::class, 'show']);
 
-// Webhook Framework
-    Route::post('/webhooks/{provider}', [WebhookController::class, 'handle']);
-
     // Data Retention Policies
     $retentionPrefix = '/retention-policies';
     $retentionId = $retentionPrefix.'/{id}';
@@ -252,5 +258,5 @@ Route::get('/ml/accuracy/{product_id}',   [ForecastAccuracyController::class, 's
     Route::post($retentionId.'/execute', [DataRetentionPolicyController::class, 'executePurge']);
     Route::get($retentionId.'/preview', [DataRetentionPolicyController::class, 'previewPurge']);
     Route::get($retentionPrefix.'/logs', [DataRetentionPolicyController::class, 'purgeLogs']);
-
+    });
 });

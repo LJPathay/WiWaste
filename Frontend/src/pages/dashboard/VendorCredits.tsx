@@ -73,6 +73,20 @@ export function VendorCreditsPage() {
         </UITooltip>
       </div>
 
+      <section aria-labelledby="return-window-notice-title" className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 dark:border-white/10 dark:bg-slate-800/40">
+        <div className="flex items-start gap-2">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-200 dark:bg-slate-700">
+            <TimerReset className="h-3.5 w-3.5 text-slate-600 dark:text-slate-300" />
+          </div>
+          <div className="min-w-0">
+            <h2 id="return-window-notice-title" className="text-sm font-bold text-slate-800 dark:text-slate-200">What does a missed window mean?</h2>
+            <p className="mt-0.5 text-xs leading-5 text-slate-600 dark:text-slate-400">
+              A missed window means the vendor's return deadline has passed. Credits may be permanently lost unless the supplier grants a special exception. Always prepare return documentation and photos before deadlines close.
+            </p>
+          </div>
+        </div>
+      </section>
+
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3 dark:border-emerald-500/20 dark:bg-emerald-500/5">
           <div className="flex items-center justify-between">
@@ -133,20 +147,6 @@ export function VendorCreditsPage() {
               </Bar>
             </BarChart>
           </ResponsiveContainer>
-        </div>
-      </section>
-
-      <section className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 dark:border-white/10 dark:bg-slate-800/40">
-        <div className="flex items-start gap-2">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-200 dark:bg-slate-700">
-            <TimerReset className="h-3.5 w-3.5 text-slate-600 dark:text-slate-300" />
-          </div>
-          <div>
-            <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">What does a missed window mean?</h4>
-            <p className="mt-0.5 text-xs leading-5 text-slate-600 dark:text-slate-400">
-              A missed window means the vendor's return deadline has passed. Credits may be permanently lost unless the supplier grants a special exception. Always prepare return documentation and photos before deadlines close.
-            </p>
-          </div>
         </div>
       </section>
 

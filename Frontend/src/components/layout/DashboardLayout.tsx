@@ -356,6 +356,10 @@ export function DashboardLayout() {
     return <Navigate to="/login" replace />;
   }
 
+  if (session.role === 'cashier') {
+    return <Navigate to="/cashier/pos" replace />;
+  }
+
   const handleLogout = () => {
     clearStoredSession();
     navigate('/');
@@ -507,7 +511,9 @@ export function DashboardLayout() {
                 {/* Page content */}
                 <div className="theme-content min-w-0 flex-1 relative p-6 bg-white dark:bg-slate-950 border-0 outline-none shadow-none transition-colors duration-200 overflow-y-auto" id="main-content">
                   <Breadcrumb />
-                  <Outlet />
+                  <div className={location.pathname.startsWith('/owner') || location.pathname.startsWith('/admin') ? 'admin-module' : undefined}>
+                    <Outlet />
+                  </div>
                 </div>
                 {/* Footer */}
                 <footer className="bg-white/50 dark:bg-slate-950/50 py-4 px-6 flex-shrink-0" id="footer" role="contentinfo">

@@ -24,6 +24,9 @@ class ReturnTransactionController extends Controller
         if ($user && $user->branch_id) {
             $query->where('branch_id', $user->branch_id);
         }
+        if (in_array($user?->role, ['Cashier', 'Business Owner'], true) && ($query->getModel() instanceof ReturnTransaction || $query->getModel() instanceof SalesTransaction)) {
+            $query->where('user_id', $user->User_id);
+        }
         return $query;
     }
 

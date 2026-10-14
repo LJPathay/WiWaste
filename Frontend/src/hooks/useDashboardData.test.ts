@@ -3,8 +3,9 @@ import { describe, expect, it, vi } from 'vitest';
 import { useDashboardData } from './useDashboardData';
 
 vi.mock('../services/api', () => ({
-  dashboard: {
+  ownerDashboard: {
     overview: vi.fn().mockRejectedValue(new Error('offline')),
+    analytics: vi.fn().mockRejectedValue(new Error('offline')),
   },
 }));
 

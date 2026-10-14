@@ -153,6 +153,32 @@ export function PredictiveAnalyticsPage() {
         </UITooltip>
       </div>
 
+      {/* Seasonal Advisory */}
+      {!loading && !error && overview && data && (
+        <section aria-labelledby="seasonal-advisory-title" className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-500/20 dark:bg-amber-500/5">
+          <div className="flex items-start gap-2.5">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-amber-100 dark:bg-amber-500/20">
+              <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <h2 id="seasonal-advisory-title" className="break-words text-sm font-bold text-amber-900 dark:text-amber-200">Read this before ordering</h2>
+                <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[9px] font-bold text-amber-700 dark:bg-amber-500/20 dark:text-amber-300">SEASONAL ALERT</span>
+              </div>
+              <p className="mt-1.5 text-xs leading-5 text-amber-800/80 dark:text-amber-200/70">
+                {data?.predictiveAnalytics?.seasonalTrends ?? 'Watch seasonal demand patterns before placing large orders.'} Watch high-turn minimart brands like{' '}
+                <span className="font-semibold">{retailExamples.minimart.topBrands.slice(0, 4).join(', ')}</span> and pharmacy items like{' '}
+                <span className="font-semibold">{retailExamples.pharma.topBrands.slice(0, 4).join(', ')}</span> because these are most exposed to over-ordering and expiry waste.
+              </p>
+              <div className="mt-3 flex items-center gap-1.5">
+                <Zap className="h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+                <span className="text-[9px] font-semibold text-amber-700 dark:text-amber-300">Action: Adjust purchase orders downward for flagged SKUs this season.</span>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
       {loading ? (
         <div className="space-y-4 animate-pulse">
           <div className="h-72 rounded-xl bg-slate-200 dark:bg-slate-800" />
@@ -349,29 +375,6 @@ export function PredictiveAnalyticsPage() {
             })}
           </section>
 
-          {/* Seasonal Advisory */}
-          <section className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-500/20 dark:bg-amber-500/5">
-            <div className="flex items-start gap-2.5">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-amber-100 dark:bg-amber-500/20">
-                <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-              </div>
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <h3 className="text-sm font-bold text-amber-900 dark:text-amber-200">Read this before ordering</h3>
-                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[9px] font-bold text-amber-700 dark:bg-amber-500/20 dark:text-amber-300">SEASONAL ALERT</span>
-                </div>
-                <p className="mt-1.5 text-xs leading-5 text-amber-800/80 dark:text-amber-200/70">
-                  {data?.predictiveAnalytics?.seasonalTrends ?? 'Watch seasonal demand patterns before placing large orders.'} Watch high-turn minimart brands like{' '}
-                  <span className="font-semibold">{retailExamples.minimart.topBrands.slice(0, 4).join(', ')}</span> and pharmacy items like{' '}
-                  <span className="font-semibold">{retailExamples.pharma.topBrands.slice(0, 4).join(', ')}</span> because these are most exposed to over-ordering and expiry waste.
-                </p>
-                <div className="mt-3 flex items-center gap-1.5">
-                  <Zap className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
-                  <span className="text-[9px] font-semibold text-amber-700 dark:text-amber-300">Action: Adjust purchase orders downward for flagged SKUs this season.</span>
-                </div>
-              </div>
-            </div>
-          </section>
         </>
       )}
     </div>

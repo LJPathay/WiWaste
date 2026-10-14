@@ -68,7 +68,7 @@ class RateLimitMiddleware
     protected function getRateLimits(Request $request): array
     {
         $isApi = $request->is('api/*');
-        $isAuth = $request->is('api/login') || $request->is('api/register') || $request->is('api/password/*');
+        $isAuth = $request->is('api/login', 'api/register', 'api/password/*', 'api/forgot-password', 'api/reset-password');
         $isWrite = in_array($request->method(), ['POST', 'PUT', 'PATCH', 'DELETE']);
 
         if ($isAuth) {

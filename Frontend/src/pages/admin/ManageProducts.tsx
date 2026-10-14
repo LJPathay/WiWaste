@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, Plus, Info, Loader2, Package, AlertCircle } from 'lucide-react';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { Tutorial } from '../../components/ui/Tutorial';
-import { Modal, FormField, inputCls, useToast, Toast, ConfirmDialog } from '../../components/ui/Toast';
+import { Modal, FormField, useToast, Toast, ConfirmDialog } from '../../components/ui/Toast';
 import { useOptimisticList } from '../../hooks/useOptimisticList';
 import {
   products as productsApi,
@@ -22,16 +22,25 @@ const currencyFormatter = new Intl.NumberFormat('en-PH', {
 });
 
 const ITEMS_PER_PAGE = 5;
+async function fetchManagedProducts() {
+  const first = await productsApi.list({ include_archived: true, per_page: 100 });
+  const remaining = await Promise.all(
+    Array.from({ length: Math.max(0, first.last_page - 1) }, (_, index) =>
+      productsApi.list({ include_archived: true, per_page: 100, page: index + 2 }),
+    ),
+  );
+  return [...first.data, ...remaining.flatMap(page => page.data)];
+}
 
 export function ManageProducts() {
   const { toasts, dismiss, success, error: toastError } = useToast();
-  const { data: productList, loading: pLoading, error: pError, addItem, updateItem, removeItem, refetch: refetchProducts } = useOptimisticList(productsApi.list);
+  const { data: productList, loading: pLoading, error: pError, addItem, updateItem, removeItem, refetch: refetchProducts } = useOptimisticList(fetchManagedProducts);
   const { data: categoryList } = useOptimisticList(categoriesApi.list);
   const { data: supplierList } = useOptimisticList(suppliersApi.list);
 
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [statusFilter, setStatusFilter] = useState<'all' | 'Active' | 'Discontinued'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'Active' | 'Discontinued' | 'Archived'>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
   const [selectedProduct, setSelectedProduct] = useState<ApiProduct | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -51,7 +60,7 @@ export function ManageProducts() {
     {
       id: 'status-filter',
       title: 'Filter by Status',
-      description: 'Use these tabs to view All Products, Active items, or Discontinued products.',
+      description: 'Use these tabs to view current products, Active items, Discontinued products, or the archive.',
       targetSelector: '.flex.flex-wrap.items-center.gap-1.5.bg-slate-100',
       position: 'bottom' as const,
     },
@@ -171,28 +180,26 @@ export function ManageProducts() {
                           (p.sku?.toLowerCase() ?? '').includes(search.toLowerCase());
     const matchesCategory = categoryFilter === 'All' || String(p.category_id) === categoryFilter || p.category === categoryFilter;
     
-    let matchesStatus = true;
-    if (statusFilter === 'Active') {
-      matchesStatus = p.status !== 'Discontinued';
-    } else if (statusFilter === 'Discontinued') {
-      matchesStatus = p.status === 'Discontinued';
-    }
+    const matchesStatus = statusFilter === 'all'
+      ? p.status !== 'Archived'
+      : p.status === statusFilter;
 
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / ITEMS_PER_PAGE));
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, filteredProducts.length);
+  const page = Math.min(currentPage, totalPages);
+  const startIndex = (page - 1) * ITEMS_PER_PAGE;
   const paginatedProducts = filteredProducts.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
   const toggleSelectAll = (keys: Set<string | number>) => {
     setSelectedIds(Array.from(keys) as number[]);
   };
 
-  const activeCount = products.filter(p => p.status !== 'Discontinued').length;
+  const activeCount = products.filter(p => p.status === 'Active').length;
+  const archivedCount = products.filter(p => p.status === 'Archived').length;
   const discontinuedCount = products.filter(p => p.status === 'Discontinued').length;
-  const allCount = products.length;
+  const allCount = products.filter(p => p.status !== 'Archived').length;
 
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -305,10 +312,11 @@ export function ManageProducts() {
 
   const handleArchive = async (id: number, name: string) => {
     try {
-      await productsApi.delete(id);
+      if (archiving?.status === 'Archived') await productsApi.restore(id);
+      else await productsApi.delete(id);
       removeItem(id);
       await refetchProducts();
-      success(`Product "${name}" status updated.`);
+      success(`Product "${name}" ${archiving?.status === 'Archived' ? 'restored' : 'archived'} successfully.`);
     } catch (err) {
       toastError(err instanceof Error ? err.message : 'Failed to update product status.');
     }
@@ -491,12 +499,13 @@ export function ManageProducts() {
                 { id: 'all', label: 'All Products', count: allCount },
                 { id: 'Active', label: 'Active', count: activeCount },
                 { id: 'Discontinued', label: 'Discontinued', count: discontinuedCount },
+                { id: 'Archived', label: 'Archived', count: archivedCount },
               ].map(tab => {
                 const isSelected = statusFilter === tab.id;
                 return (
                   <button
                     key={tab.id}
-                    onClick={() => setStatusFilter(tab.id as 'all' | 'Active' | 'Discontinued')}
+                    onClick={() => setStatusFilter(tab.id as 'all' | 'Active' | 'Discontinued' | 'Archived')}
                     className={`flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold rounded transition-all ${
                       isSelected
                         ? 'bg-white dark:bg-slate-950 text-[#006a61] dark:text-[#7ef0cf] shadow-sm'
@@ -581,8 +590,8 @@ export function ManageProducts() {
 
         <DataTable
           columns={columns}
-          data={paginatedProducts as Record<string, unknown>[]}
-          rowKey={(row) => row.id as number}
+          data={paginatedProducts}
+          rowKey={(row) => row.id}
           selectable
           selectedKeys={selectedKeys}
           onSelectionChange={toggleSelectAll}
@@ -598,12 +607,13 @@ export function ManageProducts() {
                 <ActionButton
                   icon={<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>}
                   label="Edit"
+                  disabled={p.status === 'Archived'}
                   onClick={() => openEdit(p)}
                 />
                 <ActionButton
                   icon={<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>}
-                  label={p.status === 'Discontinued' ? 'Re-activate' : 'Archive'}
-                  variant={p.status === 'Discontinued' ? 'default' : 'danger'}
+                  label={p.status === 'Archived' ? 'Restore' : 'Archive'}
+                  variant={p.status === 'Archived' ? 'default' : 'danger'}
                   onClick={() => setArchiving({ id: p.id, name: p.name, status: p.status })}
                 />
               </>
@@ -611,7 +621,7 @@ export function ManageProducts() {
           }}
           pagination={
             <Pagination
-              page={currentPage}
+              page={page}
               totalPages={totalPages}
               onPageChange={setCurrentPage}
               totalItems={filteredProducts.length}
@@ -767,8 +777,8 @@ export function ManageProducts() {
 
       {archiving && (
         <ConfirmDialog
-          message={`Are you sure you want to ${archiving.status === 'Discontinued' ? 're-activate' : 'archive'} "${archiving.name}"? Historical sales, wastage logs, and forecast records for this item will be safely preserved for audit compliance.`}
-          confirmLabel={archiving.status === 'Discontinued' ? 'Re-activate' : 'Archive'}
+          message={`Are you sure you want to ${archiving.status === 'Archived' ? 'restore' : 'archive'} "${archiving.name}"? Historical sales, wastage logs, and forecast records for this item will be safely preserved for audit compliance.`}
+          confirmLabel={archiving.status === 'Archived' ? 'Restore' : 'Archive'}
           onConfirm={() => handleArchive(archiving.id, archiving.name)}
           onCancel={() => setArchiving(null)}
         />

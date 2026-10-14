@@ -1,121 +1,34 @@
-"use client";
+import * as React from 'react';
+import * as TooltipPrimitive from '@radix-ui/react-tooltip';
+import { cn } from './utils';
 
-import * as React from "react";
-import { cn } from "./utils";
+const TooltipProvider = TooltipPrimitive.Provider;
+const TooltipTrigger = TooltipPrimitive.Trigger;
 
-function TooltipProvider({ children }: { children: React.ReactNode }) {
-    return <>{children}</>;
+function Tooltip(props: React.ComponentProps<typeof TooltipPrimitive.Root>) {
+  return (
+    <TooltipPrimitive.Provider delayDuration={350}>
+      <TooltipPrimitive.Root {...props} />
+    </TooltipPrimitive.Provider>
+  );
 }
 
-const TooltipContext = React.createContext<{
-    open: boolean;
-    setOpen: React.Dispatch<React.SetStateAction<boolean>>;
-    timerRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>;
-}>({ open: false, setOpen: () => {}, timerRef: { current: null } });
-
-function Tooltip({ children }: { children: React.ReactNode }) {
-    const [open, setOpen] = React.useState(false);
-    const ref = React.useRef<HTMLDivElement>(null);
-    const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-
-    React.useEffect(() => {
-        if (!open) return;
-        const close = (e: MouseEvent | TouchEvent) => {
-            if (ref.current && !ref.current.contains(e.target as Node)) {
-                if (timerRef.current) clearTimeout(timerRef.current);
-                setOpen(false);
-            }
-        };
-        document.addEventListener("mousedown", close);
-        document.addEventListener("touchstart", close);
-        return () => {
-            document.removeEventListener("mousedown", close);
-            document.removeEventListener("touchstart", close);
-        };
-    }, [open]);
-
-    return (
-        <TooltipContext.Provider value={{ open, setOpen, timerRef }}>
-            <div ref={ref} className="relative inline-flex items-center">
-                {children}
-            </div>
-        </TooltipContext.Provider>
-    );
-}
-
-function TooltipTrigger({
-    children,
-    asChild,
-    ...props
-}: {
-    children: React.ReactNode;
-    asChild?: boolean;
-} & Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "onClick" | "onMouseEnter" | "onMouseLeave">) {
-    const { open, setOpen, timerRef } = React.useContext(TooltipContext);
-
-    const handleToggle = (e: React.SyntheticEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const isTouch = e.nativeEvent instanceof TouchEvent;
-        const next = !open;
-        if (timerRef.current) clearTimeout(timerRef.current);
-        setOpen(next);
-        if (next && isTouch) {
-            timerRef.current = setTimeout(() => setOpen(false), 10000);
-        }
-    };
-
-    const sharedProps = {
-        onClick: handleToggle,
-        onMouseEnter: () => { if (timerRef.current) clearTimeout(timerRef.current); setOpen(true); },
-        onMouseLeave: () => setOpen(false),
-    };
-
-    if (asChild && React.isValidElement(children)) {
-        return React.cloneElement(children as React.ReactElement<React.ButtonHTMLAttributes<HTMLButtonElement>>, { ...props, ...sharedProps });
-    }
-
-    return (
-        <button type="button" {...props} {...sharedProps}>
-            {children}
-        </button>
-    );
-}
-
-function TooltipContent({
-    children,
-    className,
-    align = "center",
-    ...props
-}: {
-    children: React.ReactNode;
-    className?: string;
-    sideOffset?: number;
-    align?: "center" | "start" | "end";
-} & React.HTMLAttributes<HTMLDivElement>) {
-    const { open } = React.useContext(TooltipContext);
-    if (!open) return null;
-
-    const alignClass =
-        align === "end"
-            ? "right-0"
-            : align === "start"
-            ? "left-0"
-            : "left-1/2 -translate-x-1/2";
-
-    return (
-        <div
-            role="tooltip"
-            className={cn(
-                "absolute bottom-full mb-2 z-[999] w-64 rounded-md px-3 py-2 text-xs shadow-md",
-                alignClass,
-                className
-            )}
-            {...props}
-        >
-            {children}
-        </div>
-    );
-}
+const TooltipContent = React.forwardRef<
+  React.ElementRef<typeof TooltipPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Content>
+>(({ className, sideOffset = 6, ...props }, ref) => (
+  <TooltipPrimitive.Portal>
+    <TooltipPrimitive.Content
+      ref={ref}
+      sideOffset={sideOffset}
+      className={cn(
+        'z-[999] max-w-xs rounded-md bg-slate-900 px-3 py-2 text-xs text-white shadow-md dark:bg-slate-800 dark:text-slate-100',
+        className,
+      )}
+      {...props}
+    />
+  </TooltipPrimitive.Portal>
+));
+TooltipContent.displayName = 'TooltipContent';
 
 export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider };

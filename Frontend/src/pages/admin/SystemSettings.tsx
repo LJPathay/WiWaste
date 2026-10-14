@@ -3,6 +3,7 @@ import { Save, Download, Trash2, Upload, Loader2, Info, TrendingUp, Activity, Sp
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { Toast, useToast, FormField, inputCls } from '../../components/ui/Toast';
 import { settings as settingsApi } from '../../services/api';
+import { EmailDeliverySettings } from './EmailDeliverySettings';
 
 /* ── Toggle Switch ── */
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
@@ -205,6 +206,7 @@ export function SystemSettings() {
       </div>
 
       {/* ── Store Profile ── */}
+      <EmailDeliverySettings />
       <SectionCard title="Store Profile">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <FormField label="Store Name">

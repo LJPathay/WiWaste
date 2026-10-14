@@ -168,6 +168,25 @@ export function LeakageDetectionPage() {
         </div>
       </div>
 
+      {topItem && topItem.risk_tier === 'High' && (
+        <section aria-labelledby="biggest-vulnerability-title" className="rounded-xl border border-rose-200 bg-gradient-to-r from-rose-50 to-orange-50 p-4 dark:border-rose-500/20 dark:from-rose-500/10 dark:to-orange-500/5">
+          <div className="flex items-start gap-2.5">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-rose-100 dark:bg-rose-500/20">
+              <AlertCircle className="h-4 w-4 text-rose-600 dark:text-rose-400" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <h2 id="biggest-vulnerability-title" className="break-words text-sm font-bold text-rose-900 dark:text-rose-200">Biggest Vulnerability: {topItem.product_name}</h2>
+                <span className="shrink-0 rounded-full bg-rose-100 px-1.5 py-0.5 text-[9px] font-bold text-rose-700 dark:bg-rose-500/20 dark:text-rose-300">PRIORITY</span>
+              </div>
+              <p className="mt-0.5 text-xs leading-5 text-rose-800/80 dark:text-rose-200/70">
+                This SKU alone could lose <strong>{currencyFormatter.format(topItem.expected_loss)}</strong> ({topItem.days_to_expiry} days to expiry, {topItem.current_stock} on hand). Treat it as the first investigation target.
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
+
       {empty ? (
         <div className="rounded-xl border border-dashed border-slate-300 bg-white p-6 text-center dark:border-white/10 dark:bg-slate-900">
           <ShieldAlert className="mx-auto h-7 w-7 text-rose-400" />
@@ -238,25 +257,6 @@ export function LeakageDetectionPage() {
               </ResponsiveContainer>
             </div>
           </section>
-
-          {topItem && topItem.risk_tier === 'High' && (
-            <section className="rounded-xl border border-rose-200 bg-gradient-to-r from-rose-50 to-orange-50 p-4 dark:border-rose-500/20 dark:from-rose-500/10 dark:to-orange-500/5">
-              <div className="flex items-start gap-2.5">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-rose-100 dark:bg-rose-500/20">
-                  <AlertCircle className="h-4 w-4 text-rose-600 dark:text-rose-400" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <h3 className="text-sm font-bold text-rose-900 dark:text-rose-200">Biggest Vulnerability: {topItem.product_name}</h3>
-                    <span className="rounded-full bg-rose-100 px-1.5 py-0.5 text-[9px] font-bold text-rose-700 dark:bg-rose-500/20 dark:text-rose-300">PRIORITY</span>
-                  </div>
-                  <p className="mt-0.5 text-xs leading-5 text-rose-800/80 dark:text-rose-200/70">
-                    This SKU alone could lose <strong>{currencyFormatter.format(topItem.expected_loss)}</strong> ({topItem.days_to_expiry} days to expiry, {topItem.current_stock} on hand). Treat it as the first investigation target.
-                  </p>
-                </div>
-              </div>
-            </section>
-          )}
 
           <section>
             <div className="flex flex-wrap items-center gap-1.5 mb-3">

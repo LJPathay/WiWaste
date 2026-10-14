@@ -18,31 +18,52 @@ export interface PaginatedResponse<T> {
 export interface ApiUser {
   id: number;
   name: string;
+  Full_name?: string;
+  First_name?: string;
+  Middle_name?: string;
+  Surname?: string;
   username: string;
   email: string;
+  contact_number?: string;
+  address?: string;
   role: 'Admin' | 'Inventory' | 'Business Owner' | 'Owner' | 'Cashier' | 'Pharmacist';
-  status: 'Active' | 'Inactive' | 'Quarantined';
+  status: 'Active' | 'Inactive' | 'Quarantined' | 'Archived';
+  status_changed_at?: string | null;
+  status_changed_by?: number | null;
+  status_changed_by_user?: { id: number; name: string } | null;
   created_at?: string;
   business_id?: number;
   branch_id?: number;
 }
 
 export interface CreateUserPayload {
-  Full_name: string;
+  Full_name?: string;
+  First_name: string;
+  Middle_name?: string;
+  Surname: string;
   username: string;
   password: string;
-  email?: string;
+  email: string;
+  contact_number: string;
+  address?: string;
   role: 'Admin' | 'Inventory' | 'Business Owner' | 'Owner' | 'Cashier' | 'Pharmacist';
-  status: 'Active' | 'Inactive' | 'Quarantined';
+  status: ApiUser['status'];
   business_id?: number;
   branch_id?: number;
 }
+
+export type UpdateUserPayload = Partial<Omit<CreateUserPayload, 'password' | 'username'>> & {
+  status_change_confirmed?: boolean;
+};
 
 // ─── Categories ─────────────────────────────────────────
 export interface ApiCategory {
   id: number;
   name: string;
   product_count: number;
+  status?: 'Active' | 'Archived';
+  archived_at?: string | null;
+  archived_by?: number | null;
 }
 
 // ─── Suppliers ──────────────────────────────────────────
@@ -51,6 +72,7 @@ export interface ApiSupplier {
   name: string;
   contact_person: string | null;
   contact_number: string;
+  email?: string | null;
   address: string | null;
   product_count: number;
   business_id?: number;
@@ -106,7 +128,8 @@ export interface CreateSupplierPayload {
   supplier_name: string;
   contact_person?: string;
   contact_number: string;
-  address?: string;
+  email: string;
+  address: string;
   business_id?: number;
   fda_lto_number?: string;
   fda_lto_expiry?: string;
@@ -131,7 +154,9 @@ export interface ApiProduct {
   selling_price: number;
   reorder_level: number;
   expiration_date: string | null;
-  status: 'Active' | 'Discontinued';
+  status: 'Active' | 'Discontinued' | 'Archived';
+  archived_at?: string | null;
+  archived_by?: number | null;
   stock: number;
   stock_status: 'Normal' | 'Low Stock' | 'Overstock';
   business_id?: number;

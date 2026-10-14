@@ -345,6 +345,46 @@
 }
 
 /* Glassmorphism card */
+.admin-module {
+    width: 100%;
+    min-width: 0;
+    min-height: calc(100dvh - 14rem);
+}
+
+.admin-module > div {
+    width: 100%;
+    min-width: 0;
+}
+
+.admin-module > div > div:first-child {
+    min-height: 44px;
+    gap: 12px;
+}
+
+.admin-module button {
+    min-height: 36px;
+}
+
+.admin-module button[aria-label] {
+    min-height: 32px;
+    min-width: 32px;
+}
+
+.admin-module > div > div:first-child button:not([aria-label]) {
+    min-width: 128px;
+    height: 36px;
+    font-size: 12px;
+}
+
+.admin-module button[role="switch"] {
+    min-height: 20px;
+    min-width: 36px;
+}
+
+.admin-module table tbody tr {
+    height: 64px;
+}
+
 .glass-card {
     background: rgba(255, 255, 255, 0.6);
     backdrop-filter: blur(12px);

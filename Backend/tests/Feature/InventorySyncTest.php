@@ -29,7 +29,7 @@ class InventorySyncTest extends TestCase
             'username'   => 'cashier-test',
             'password'   => Hash::make('password'),
             'email'      => 'cashier@test.com',
-            'role'       => 'Business Owner',
+            'role'       => 'Owner',
             'status'     => 'Active',
             'Created_at' => now(),
         ]);
@@ -132,6 +132,24 @@ class InventorySyncTest extends TestCase
         ]);
         $this->assertDatabaseCount('Sales_Transaction', 0);
         $this->assertDatabaseCount('Sales_Item', 0);
+    }
+
+    public function test_archived_product_cannot_be_sold_even_with_stock_available(): void
+    {
+        $this->auth();
+        $product = $this->makeProduct(['status' => 'Archived']);
+
+        $this->postJson('/api/sales', [
+            'payment_method' => 'Cash',
+            'amount_tendered' => 100,
+            'change_due' => 0,
+            'items' => [['product_id' => $product->product_id, 'quantity' => 1, 'unit_price' => 15.00]],
+        ])->assertUnprocessable();
+
+        $this->assertDatabaseHas('Inventory', ['product_id' => $product->product_id, 'current_stock' => 50]);
+        $this->assertDatabaseCount('Sales_Transaction', 0);
+        $this->assertDatabaseCount('Sales_Item', 0);
+        $this->assertDatabaseCount('Stock_Movement', 0);
     }
 
     public function test_stock_out_cannot_go_negative(): void

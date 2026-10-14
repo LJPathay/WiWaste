@@ -10,11 +10,18 @@ class User extends Authenticatable
     use HasApiTokens;
 
     protected $table = 'User';
+
     protected $primaryKey = 'User_id';
+
     public $timestamps = false;
 
     protected $fillable = [
         'Full_name',
+        'First_name',
+        'Middle_name',
+        'Surname',
+        'contact_number',
+        'address',
         'username',
         'password',
         'email',
@@ -23,15 +30,34 @@ class User extends Authenticatable
         'Created_at',
         'business_id',
         'branch_id',
+        'status_changed_by',
+        'status_changed_at',
+        'archived_at',
     ];
 
     protected $hidden = [
         'password',
+        'failed_login_attempts',
+        'locked_until',
     ];
 
     protected $casts = [
         'password' => 'hashed',
+        'failed_login_attempts' => 'integer',
+        'locked_until' => 'datetime',
+        'status_changed_at' => 'datetime',
+        'archived_at' => 'datetime',
     ];
+
+    public function canManageUsers(): bool
+    {
+        return in_array($this->role, ['Admin', 'Owner'], true);
+    }
+
+    public function statusChangedByUser()
+    {
+        return $this->belongsTo(self::class, 'status_changed_by', 'User_id');
+    }
 
     public function business()
     {

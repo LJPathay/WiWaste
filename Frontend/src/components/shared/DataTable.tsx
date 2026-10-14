@@ -60,7 +60,7 @@ function TruncatedCell({ children, className }: { children: React.ReactNode; cla
   );
 }
 
-export function DataTable<T extends Record<string, unknown>>({
+export function DataTable<T extends object>({
   columns,
   data,
   rowKey,
@@ -122,7 +122,7 @@ export function DataTable<T extends Record<string, unknown>>({
 
   return (
     <div className={cn("w-full bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden", className)}>
-      <div className={cn(horizontalScroll && "w-full overflow-x-auto")}>
+      <div className={cn("min-h-[360px]", horizontalScroll && "w-full min-w-0")}>
         <Table ref={tableRef} className={cn("w-full", pinnedCol && "min-w-[800px]")}>
           {showHeader && (
             <TableHeader className="sticky top-0 z-20 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-white/10">
@@ -145,7 +145,6 @@ export function DataTable<T extends Record<string, unknown>>({
                     className={cn(
                       col.align === 'numeric' && "text-left",
                       col.align === 'center' && "text-center",
-                      col.pinned && "sticky left-0 z-30 bg-slate-50 dark:bg-slate-900",
                       col.hideOnMobile && "hidden md:table-cell",
                     )}
                     style={{
@@ -157,7 +156,7 @@ export function DataTable<T extends Record<string, unknown>>({
                   </TableHead>
                 ))}
                 {actions && (
-                  <TableHead className="w-16 text-right">
+                  <TableHead className="w-28 min-w-28 text-right">
                     <span className="sr-only">Actions</span>
                   </TableHead>
                 )}
@@ -208,18 +207,17 @@ export function DataTable<T extends Record<string, unknown>>({
                       </TableCell>
                     )}
                     {columns.map(col => {
-                      const cellValue = row[col.key];
+                      const cellValue = (row as Record<string, unknown>)[col.key];
                       return (
                         <TableCell
                           key={col.key}
                           className={cn(
                             (col.align === 'numeric' || col.numeric) && "text-left tabular-nums",
                             col.align === 'center' && "text-center",
-                            col.pinned && "sticky left-0 z-10 bg-white dark:bg-slate-950 group-hover:bg-slate-50/50 dark:group-hover:bg-white/5",
                             col.numeric && "tabular-nums",
                             col.hideOnMobile && "hidden md:table-cell",
                           )}
-                          style={col.pinned ? { left: selectable ? '40px' : '0' } : undefined}
+                          style={{ minWidth: col.minWidth, width: col.width }}
                         >
                           {col.render
                             ? col.render(row, cellValue)
@@ -231,10 +229,10 @@ export function DataTable<T extends Record<string, unknown>>({
                       );
                     })}
                     {actions && (
-                      <TableCell className="w-16 text-right">
+                      <TableCell className="w-28 min-w-28 text-right">
                         <div className={cn(
-                          "flex items-center justify-end gap-1 transition-opacity duration-150",
-                          hoverActions && !isHovered && "opacity-0",
+                          "flex min-h-8 items-center justify-end gap-1 transition-opacity duration-150",
+                          hoverActions && "md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100",
                         )}>
                           {actions(row, isHovered)}
                         </div>
@@ -247,10 +245,6 @@ export function DataTable<T extends Record<string, unknown>>({
           </TableBody>
         </Table>
       </div>
-
-      {pinnedCol && (
-        <div className="pointer-events-none absolute top-0 bottom-0 left-[var(--pinned-width)] w-px bg-transparent z-10" />
-      )}
 
       {pagination && (
         <div className="border-t border-slate-200 dark:border-white/10">

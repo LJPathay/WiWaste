@@ -98,9 +98,14 @@ interface ModalProps {
   onClose: () => void;
   children: React.ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl';
+  maxWidth?: 'sm' | 'md' | 'lg' | 'xl';
+  className?: string;
+  contentClassName?: string;
+  titleClassName?: string;
 }
 
-export function Modal({ title, onClose, children, size = 'md' }: ModalProps) {
+export function Modal({ title, onClose, children, size = 'md', maxWidth, className = '', contentClassName = '', titleClassName = '' }: ModalProps) {
+  const titleId = React.useId();
   const modalRef = useRef<HTMLDivElement>(null);
   const previousActiveElement = useRef<HTMLElement | null>(null);
   useFocusTrap(modalRef, true);
@@ -124,23 +129,23 @@ export function Modal({ title, onClose, children, size = 'md' }: ModalProps) {
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
       role="dialog"
       aria-modal="true"
-      aria-labelledby="modal-title"
+      aria-labelledby={titleId}
       onKeyDown={handleKeyDown}
       onClick={onClose}
     >
       <div
         ref={modalRef}
         tabIndex={-1}
-        className={`bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 w-full ${sizeClasses[size]} shadow-xl relative focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2`}
+        className={`flex max-h-[calc(100dvh-2rem)] flex-col bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 w-full ${sizeClasses[maxWidth ?? size]} shadow-xl relative focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 ${className}`}
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-white/10">
-          <h2 id="modal-title" className="text-sm font-bold text-slate-900 dark:text-slate-100">{title}</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2" aria-label="Close">
+        <div className="flex shrink-0 items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-white/10">
+          <h2 id={titleId} className={`text-sm font-bold text-slate-900 dark:text-slate-100 ${titleClassName}`}>{title}</h2>
+          <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2" aria-label="Close">
             <X className="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
-        <div className="p-6">{children}</div>
+        <div className={`min-h-0 overflow-y-auto p-6 ${contentClassName}`}>{children}</div>
       </div>
     </div>
   );
@@ -215,17 +220,18 @@ interface FieldProps {
   error?: string;
   hint?: string;
   htmlFor?: string;
+  labelClassName?: string;
 }
 
-export function FormField({ label, children, error, hint, htmlFor }: FieldProps) {
+export function FormField({ label, children, error, hint, htmlFor, labelClassName = '' }: FieldProps) {
   const errorId = error ? `${htmlFor}-error` : undefined;
   const hintId = hint ? `${htmlFor}-hint` : undefined;
   const describedBy = [errorId, hintId].filter(Boolean).join(' ') || undefined;
 
   return (
     <div>
-      <label htmlFor={htmlFor} className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">{label}</label>
-      {React.isValidElement(children) ? React.cloneElement(children as React.ReactElement, {
+      <label htmlFor={htmlFor} className={`block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5 ${labelClassName}`}>{label}</label>
+      {React.isValidElement(children) ? React.cloneElement(children as React.ReactElement<React.HTMLAttributes<HTMLElement>>, {
         'aria-describedby': describedBy,
         'aria-invalid': error ? 'true' : 'false',
       }) : children}

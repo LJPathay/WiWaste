@@ -7,13 +7,16 @@ use Illuminate\Database\Eloquent\Model;
 class Supplier extends Model
 {
     protected $table = 'Supplier';
+
     protected $primaryKey = 'supplier_id';
+
     public $timestamps = false;
 
     protected $fillable = [
         'supplier_name',
         'contact_person',
         'contact_number',
+        'email',
         'address',
         'business_id',
         'fda_lto_number',
@@ -57,7 +60,7 @@ class Supplier extends Model
     {
         return $query->where(function ($q) use ($days) {
             $q->where('fda_lto_expiry', '<=', now()->addDays($days))
-              ->orWhere('fda_cpr_expiry', '<=', now()->addDays($days));
+                ->orWhere('fda_cpr_expiry', '<=', now()->addDays($days));
         });
     }
 }

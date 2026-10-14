@@ -1,8 +1,76 @@
 // Central API service — all backend calls go through here
+import type {
+  PaginatedResponse,
+  ApiUser,
+  CreateUserPayload,
+  UpdateUserPayload,
+  ApiCategory,
+  ApiSupplier,
+  ApiSupplierDetail,
+  ApiSupplierComplianceResponse,
+  ApiSupplierAlertResponse,
+  CreateSupplierPayload,
+  ApiProduct,
+  CreateProductPayload,
+  ApiInventory,
+  ApiInventoryMovements,
+  ApiStockMovement,
+  ApiWastage,
+  CreateWastagePayload,
+  ApiSalesTransaction,
+  CreateSalePayload,
+  ApiReceiptResponse,
+  ApiReturn,
+  CreateReturnPayload,
+  ApiDashboard,
+  ApiOwnerAnalytics,
+  ApiDashboardSummary,
+  ApiFefoList,
+  ApiFefoBatchDetail,
+  ApiTraceResponse,
+  ApiRecommendation,
+  ApiRecommendationDetail,
+  ApiStockReceiving,
+  CreateStockReceivingPayload,
+  ApiPurchaseOrder,
+  CreatePurchaseOrderPayload,
+  ApiAuditLog,
+  ApiReport,
+  ApiSalesVatSummary,
+  ApiDiscountSummary,
+  ApiSeniorPwdTransaction,
+  ApiProfitLossOverview,
+  ApiProfitLossCategory,
+  ApiProfitLossTrend,
+  ApiTurnoverResponse,
+  ApiOverstockResponse,
+  ApiDeadStockResponse,
+  ApiForecastOverview,
+  ApiForecastProduct,
+  RiskTier,
+  ApiLossRiskSummary,
+  ApiLossRiskItemsResponse,
+  ApiLossRiskSummaryResponse,
+  ApiExpiringResponse,
+  ApiAlertSummary,
+  ApiOptimizationPlan,
+  ApiRecall,
+  ApiRecallSummary,
+  ApiSanitationChecklist,
+  ApiSanitationSummary,
+  ApiReorderSuggestion,
+  ApiDataSubjectRequest,
+  ApiDataBreachIncident,
+  ApiBreachStatistics,
+  ApiPrivacyComplianceReport,
+  ApiRetentionPolicy,
+  ApiRetentionSummary,
+} from '../types/api';
 export type {
   PaginatedResponse,
   ApiUser,
   CreateUserPayload,
+  UpdateUserPayload,
   ApiCategory,
   ApiSupplier,
   ApiSupplierDetail,
@@ -93,6 +161,24 @@ function getToken(): string | null {
   return localStorage.getItem('wiwaste_token');
 }
 
+export class ApiError extends Error {
+  readonly status: number;
+  readonly retryAfter: number;
+  readonly lockedUntil?: string;
+  readonly errors: Record<string, string[]>;
+
+  constructor(status: number, body: Record<string, unknown>) {
+    const errors = (body.errors ?? {}) as Record<string, string[]>;
+    const firstValidationMessage = Object.values(errors).flat()[0];
+    super(firstValidationMessage ?? (typeof body.message === 'string' ? body.message : `HTTP ${status}`));
+    this.name = 'ApiError';
+    this.status = status;
+    this.retryAfter = Math.max(0, Number(body.retry_after) || 0);
+    this.lockedUntil = typeof body.locked_until === 'string' ? body.locked_until : undefined;
+    this.errors = errors;
+  }
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
   const res = await fetch(`${BASE_URL}${path}`, {
@@ -105,7 +191,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     },
   });
   if (!res.ok) {
-    if (res.status === 401) {
+    if (res.status === 401 && !['/login', '/forgot-password', '/reset-password'].includes(path)) {
       localStorage.removeItem('wiwaste_token');
       localStorage.removeItem('wiwaste_user');
       localStorage.removeItem('wiwaste-session');
@@ -113,42 +199,86 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
       throw new Error('Session expired. Please log in again.');
     }
     const err = await res.json().catch(() => ({ message: 'Unknown error' }));
-    throw new Error(err.message ?? `HTTP ${res.status}`);
+    throw new ApiError(res.status, err);
   }
   return res.json() as Promise<T>;
 }
 
 // ─── Auth ───────────────────────────────────────────────
 export const auth = {
-  login: (username: string, password: string) =>
-    request<{ token: string; user: ApiUser }>('/login', {
+  login: async (username: string, password: string) => {
+    const result = await request<{ token: string; user: unknown }>('/login', {
       method: 'POST',
       body: JSON.stringify({ username, password }),
-    }),
+    });
+    return { ...result, user: normalizeUser(result.user) };
+  },
+  forgotPassword: (email: string) => request<{ message: string }>('/forgot-password', {
+    method: 'POST', body: JSON.stringify({ email }),
+  }),
+  resetPassword: (data: { email: string; otp: string; password: string; password_confirmation: string }) =>
+    request<{ message: string }>('/reset-password', { method: 'POST', body: JSON.stringify(data) }),
   logout: () => request('/logout', { method: 'POST' }),
   me: () => request<ApiUser>('/me'),
 };
 
+export function normalizeUser(value: unknown): ApiUser {
+  if (!value || typeof value !== 'object') throw new Error('The server returned an invalid user account.');
+  const envelope = value as Record<string, unknown>;
+  const raw = (envelope.user && typeof envelope.user === 'object' ? envelope.user : envelope.data && typeof envelope.data === 'object' ? envelope.data : envelope) as Record<string, unknown>;
+  const id = Number(raw.id ?? raw.user_id);
+  if (!Number.isFinite(id) || id <= 0) throw new Error('The server returned a user account without a valid ID.');
+  const field = (key: string) => typeof raw[key] === 'string' ? raw[key] as string : '';
+  const fullName = field('name') || field('Full_name') || [field('First_name'), field('Middle_name'), field('Surname')].filter(Boolean).join(' ');
+  const parts = fullName.trim().split(/\s+/).filter(Boolean);
+  return {
+    ...raw,
+    id,
+    name: fullName || field('username'),
+    Full_name: fullName,
+    First_name: field('First_name') || parts[0] || '',
+    Middle_name: field('Middle_name') || (parts.length > 2 ? parts.slice(1, -1).join(' ') : ''),
+    Surname: field('Surname') || (parts.length > 1 ? parts.at(-1) : '') || '',
+    username: field('username'),
+    email: field('email'),
+    contact_number: field('contact_number'),
+    address: field('address'),
+    role: (field('role') === 'Business Owner' ? 'Cashier' : field('role')) as ApiUser['role'],
+    status: field('status') as ApiUser['status'],
+  };
+}
+
 // ─── Users ──────────────────────────────────────────────
 export const users = {
-  list: (page = 1) => request<ApiUser[]>(`/users?page=${page}`),
-  create: (data: CreateUserPayload) =>
-    request('/users', { method: 'POST', body: JSON.stringify(data) }),
-  update: (id: number, data: Partial<CreateUserPayload>) =>
-    request(`/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-  delete: (id: number) => request(`/users/${id}`, { method: 'DELETE' }),
-  quarantine: (id: number) => request(`/users/${id}/quarantine`, { method: 'POST' }),
-  reactivate: (id: number) => request(`/users/${id}/reactivate`, { method: 'POST' }),
+  list: async (page = 1) => {
+    const result = await request<unknown[] | { data: unknown[] }>(`/users?page=${page}`);
+    return (Array.isArray(result) ? result : result.data).map(normalizeUser);
+  },
+  create: async (data: CreateUserPayload) =>
+    normalizeUser(await request('/users', { method: 'POST', body: JSON.stringify(data) })),
+  update: async (id: number, data: UpdateUserPayload) =>
+    normalizeUser(await request(`/users/${id}`, { method: 'PUT', body: JSON.stringify(data) })),
+  archive: async (id: number) =>
+    normalizeUser(await request(`/users/${id}`, { method: 'PUT', body: JSON.stringify({ status: 'Archived', status_change_confirmed: true }) })),
+  delete: (id: number) => request(`/users/${id}`, { method: 'DELETE', body: JSON.stringify({ status_change_confirmed: true }) }),
+  quarantine: (id: number) => request(`/users/${id}/quarantine`, { method: 'POST', body: JSON.stringify({ status_change_confirmed: true }) }),
+  reactivate: (id: number) => request(`/users/${id}/reactivate`, { method: 'POST', body: JSON.stringify({ status_change_confirmed: true }) }),
 };
 
 // ─── Categories ─────────────────────────────────────────
 export const categories = {
-  list: () => request<ApiCategory[]>('/categories'),
+  list: (params?: { include_archived?: boolean; status?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.include_archived) qs.set('include_archived', 'true');
+    if (params?.status) qs.set('status', params.status);
+    return request<ApiCategory[]>(`/categories${qs.size ? '?' + qs : ''}`);
+  },
   create: (name: string) =>
     request('/categories', { method: 'POST', body: JSON.stringify({ Category_name: name }) }),
   update: (id: number, name: string) =>
     request(`/categories/${id}`, { method: 'PUT', body: JSON.stringify({ Category_name: name }) }),
   delete: (id: number) => request(`/categories/${id}`, { method: 'DELETE' }),
+  restore: (id: number) => request<ApiCategory>(`/categories/${id}/restore`, { method: 'POST' }),
 };
 
 // ─── Suppliers ──────────────────────────────────────────
@@ -166,12 +296,14 @@ export const suppliers = {
 
 // ─── Products ───────────────────────────────────────────
 export const products = {
-  list: (params?: { search?: string; category_id?: number; page?: number; per_page?: number }) => {
+  list: (params?: { search?: string; category_id?: number; page?: number; per_page?: number; include_archived?: boolean; status?: string }) => {
     const qs = new URLSearchParams();
     if (params?.search) qs.set('search', params.search);
     if (params?.category_id) qs.set('category_id', String(params.category_id));
     if (params?.page) qs.set('page', String(params.page));
     if (params?.per_page) qs.set('per_page', String(params.per_page));
+    if (params?.include_archived) qs.set('include_archived', 'true');
+    if (params?.status) qs.set('status', params.status);
     const q = qs.toString();
     return request<PaginatedResponse<ApiProduct>>(`/products${q ? '?' + q : ''}`);
   },
@@ -181,6 +313,7 @@ export const products = {
   update: (id: number, data: Partial<CreateProductPayload>) =>
     request(`/products/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: number) => request(`/products/${id}`, { method: 'DELETE' }),
+  restore: (id: number) => request<ApiProduct>(`/products/${id}/restore`, { method: 'POST' }),
 };
 
 // ─── Inventory ──────────────────────────────────────────
@@ -327,6 +460,23 @@ export const reports = {
 };
 
 // ─── Settings ───────────────────────────────────────────
+export interface EmailDeliveryConfiguration {
+  enabled: boolean;
+  host: string;
+  port: number;
+  encryption: 'tls' | 'ssl' | 'none';
+  username: string;
+  from_address: string;
+  from_name: string;
+  password_configured: boolean;
+}
+
+export const emailSettings = {
+  get: () => request<EmailDeliveryConfiguration>('/settings/email'),
+  update: (data: Omit<EmailDeliveryConfiguration, 'password_configured'> & { password?: string }) =>
+    request<EmailDeliveryConfiguration>('/settings/email', { method: 'PUT', body: JSON.stringify(data) }),
+};
+
 export const settings = {
   get: () => request<Record<string, string>>('/settings'),
   update: (data: Record<string, string>) =>

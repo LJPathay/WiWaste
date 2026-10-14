@@ -19,7 +19,7 @@ export function MainLayout() {
             <header className="sticky top-0 z-50 backdrop-blur-md bg-white/85 border-b border-[#c6c6cd] transition-colors dark:border-white/10 dark:bg-slate-950/85" id="main-navigation">
                 <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
                     <Link to="/" className="flex items-center gap-2">
-                        <img src={BRAND_WORDMARK} alt="WiWaste" className="h-12 w-auto object-contain" />
+                        <img src={BRAND_WORDMARK} alt="WiWaste" className="h-9 w-auto max-w-[120px] object-contain sm:h-12 sm:max-w-none" />
                     </Link>
 
                     <nav className="hidden md:flex items-center gap-8">
@@ -43,11 +43,11 @@ export function MainLayout() {
                         </Link>
                     </nav>
 
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 sm:gap-4">
                         <Link to="/login" className="hidden md:block text-sm font-medium text-[#45464d] hover:text-black dark:text-slate-300 dark:hover:text-white">
                             Login
                         </Link>
-                        <Link to="/pricing" className="bg-[#131b2e] hover:bg-black text-white text-sm font-semibold px-6 py-2.5 rounded shadow-sm transition-all">
+                        <Link to="/pricing" className="bg-[#131b2e] hover:bg-black text-white text-xs font-semibold whitespace-nowrap px-3 py-2.5 rounded shadow-sm transition-all sm:px-6 sm:text-sm">
                             Request Demo
                         </Link>
                         <ThemeToggle />
@@ -59,9 +59,9 @@ export function MainLayout() {
                 <Outlet />
             </main>
 
-            <footer className="border-t border-[#c6c6cd] bg-[#fcf8fa] pt-16 pb-8 transition-colors dark:border-white/10 dark:bg-slate-950" id="footer">
+            <footer className="border-t border-[#c6c6cd] bg-[#fcf8fa] pt-10 pb-6 transition-colors sm:pt-12 sm:pb-8 dark:border-white/10 dark:bg-slate-950" id="footer">
                 <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+                    <div className="mb-8 grid grid-cols-2 gap-x-6 gap-y-8 sm:mb-10 md:grid-cols-4 md:gap-10">
                         <div className="col-span-1 md:col-span-1">
                             <Link to="/" className="flex items-center gap-2 mb-4">
                                 <img src={BRAND_WORDMARK} alt="WiWaste" className="h-10 w-auto object-contain" />
@@ -98,7 +98,7 @@ export function MainLayout() {
                         </div>
                     </div>
 
-                    <div className="border-t border-[#c6c6cd] pt-8 flex flex-col md:flex-row justify-between items-center gap-4 dark:border-white/10">
+                    <div className="border-t border-[#c6c6cd] pt-6 flex flex-col md:flex-row justify-between items-center gap-4 dark:border-white/10">
                         <p className="text-sm text-[#45464d] dark:text-slate-400">
                             © 2026 WiWaste. All rights reserved.
                         </p>

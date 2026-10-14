@@ -15,13 +15,14 @@ export function ActionButton({ icon, label, onClick, variant = 'default', disabl
     <Tooltip>
       <TooltipTrigger asChild>
         <button
+          type="button"
           onClick={(e) => { e.stopPropagation(); onClick(e); }}
           disabled={disabled}
           className={cn(
-            "inline-flex items-center justify-center h-7 w-7 rounded-lg transition-colors",
+            "inline-flex shrink-0 items-center justify-center h-8 w-8 min-h-8 min-w-8 rounded-lg transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand",
             variant === 'danger'
-              ? "text-slate-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10 dark:hover:text-rose-400"
-              : "text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200",
+              ? "text-slate-400 hover:text-rose-600 dark:hover:text-rose-400"
+              : "text-slate-400 hover:text-slate-700 dark:hover:text-slate-200",
             disabled && "opacity-30 cursor-not-allowed",
           )}
           aria-label={label}
@@ -61,8 +62,9 @@ export function OverflowMenu({ items }: OverflowMenuProps) {
   return (
     <div ref={ref} className="relative inline-flex">
       <button
+        type="button"
         onClick={(e) => { e.stopPropagation(); setOpen(!open); }}
-        className="inline-flex items-center justify-center h-7 w-7 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200 transition-colors"
+        className="inline-flex shrink-0 items-center justify-center h-8 w-8 min-h-8 min-w-8 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
         aria-label="More actions"
         aria-expanded={open}
       >

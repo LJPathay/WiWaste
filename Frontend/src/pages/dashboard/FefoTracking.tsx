@@ -68,6 +68,25 @@ export function FefoTrackingPage() {
         </UITooltip>
       </div>
 
+      <section aria-labelledby="nearest-expiry-title" className="rounded-xl border border-amber-200 bg-amber-50 p-3.5 dark:border-amber-500/20 dark:bg-amber-500/5">
+        <div className="flex items-start gap-2">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-amber-100 dark:bg-amber-500/20">
+            <PackageSearch className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+          </div>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 id="nearest-expiry-title" className="text-sm font-bold text-amber-900 dark:text-amber-200">Nearest Expiry: {nearestBatch.batchId}</h2>
+              <span className="rounded-full bg-amber-200 px-2 py-0.5 text-[9px] font-bold text-amber-800 dark:bg-amber-500/30 dark:text-amber-200">{nearestBatch.daysToExpiry} DAYS LEFT</span>
+            </div>
+            <p className="mt-1 text-xs leading-5 text-amber-800/80 dark:text-amber-200/70">
+              Move it to front shelves and apply the recommended price of{' '}
+              <strong>{currencyFormatter.format(nearestBatch.recommendedPrice)}</strong>{' '}
+              (currently priced at {currencyFormatter.format(nearestBatch.currentPrice)}).
+            </p>
+          </div>
+        </div>
+      </section>
+
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {statCards.map((card) => {
           const Icon = card.icon;
@@ -119,25 +138,6 @@ export function FefoTrackingPage() {
               <Line yAxisId="drop" type="linear" dataKey="priceDrop" name="Recommended price drop %" stroke="#0ea5e9" strokeWidth={3} />
             </ComposedChart>
           </ResponsiveContainer>
-        </div>
-      </section>
-
-      <section className="rounded-xl border border-amber-200 bg-amber-50 p-3.5 dark:border-amber-500/20 dark:bg-amber-500/5">
-        <div className="flex items-start gap-2">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-amber-100 dark:bg-amber-500/20">
-            <PackageSearch className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold text-amber-900 dark:text-amber-200">Nearest Expiry: {nearestBatch.batchId}</h3>
-              <span className="rounded-full bg-amber-200 px-2 py-0.5 text-[9px] font-bold text-amber-800 dark:bg-amber-500/30 dark:text-amber-200">{nearestBatch.daysToExpiry} DAYS LEFT</span>
-            </div>
-            <p className="mt-1 text-xs leading-5 text-amber-800/80 dark:text-amber-200/70">
-              Move it to front shelves and apply the recommended price of{' '}
-              <strong>{currencyFormatter.format(nearestBatch.recommendedPrice)}</strong>{' '}
-              (currently priced at {currencyFormatter.format(nearestBatch.currentPrice)}).
-            </p>
-          </div>
         </div>
       </section>
 

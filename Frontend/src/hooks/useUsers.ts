@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { users, type CreateUserPayload } from '../services/api';
+import { users, type CreateUserPayload, type UpdateUserPayload } from '../services/api';
 
 export function useUsers(page = 1) {
   return useQuery({
@@ -19,7 +19,7 @@ export function useCreateUser() {
 export function useUpdateUser() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<CreateUserPayload> }) =>
+    mutationFn: ({ id, data }: { id: number; data: UpdateUserPayload }) =>
       users.update(id, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
   });
@@ -28,7 +28,7 @@ export function useUpdateUser() {
 export function useDeleteUser() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => users.delete(id),
+    mutationFn: (id: number) => users.archive(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
   });
 }

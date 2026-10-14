@@ -16,6 +16,7 @@ import { ActionButton } from '../../components/shared/DataTableActions';
 import { Pagination } from '../../components/ui/pagination';
 
 const ITEMS_PER_PAGE = 5;
+const fetchManagedCategories = () => categoriesApi.list({ include_archived: true });
 
 const PRESET_CATEGORIES = [
   'Beverages',
@@ -86,9 +87,11 @@ const getCategoryIcon = (categoryName: string = '') => {
 
 export function ManageCategories() {
   const { toasts, dismiss, success, error } = useToast();
-  const { data: categoryList, loading, error: fetchError, addItem, updateItem, removeItem, refetch: refetchCategories } = useOptimisticList(categoriesApi.list);
+  const { data: categoryList, loading, error: fetchError, addItem, updateItem, removeItem, refetch: refetchCategories } = useOptimisticList(fetchManagedCategories);
   
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'Active' | 'Archived'>('Active');
+  const [restoringCategory, setRestoringCategory] = useState<ApiCategory | null>(null);
   const [sortBy, setSortBy] = useState<'name-asc' | 'name-desc' | 'products-desc' | 'products-asc' | 'id-desc'>('name-asc');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -123,7 +126,7 @@ export function ManageCategories() {
     {
       id: 'category-table',
       title: 'Category List',
-      description: 'View all categories with their auto-assigned icons and product counts. Click Edit to rename or Delete to remove.',
+      description: 'View all categories with their auto-assigned icons and product counts. Click Edit to rename or Archive to retain inactive records.',
       targetSelector: 'table',
       position: 'top' as const,
     },
@@ -188,7 +191,7 @@ export function ManageCategories() {
   );
 
   const filteredCategories = [...categories]
-    .filter(c => c && c.name && typeof c.name === 'string' && c.name.toLowerCase().includes((search || '').toLowerCase()))
+    .filter(c => c && c.name && (c.status ?? 'Active') === statusFilter && typeof c.name === 'string' && c.name.toLowerCase().includes((search || '').toLowerCase()))
     .sort((a, b) => {
       if (sortBy === 'name-asc') return (a.name || '').localeCompare(b.name || '');
       if (sortBy === 'name-desc') return (b.name || '').localeCompare(a.name || '');
@@ -198,26 +201,12 @@ export function ManageCategories() {
       return 0;
     });
 
+  useEffect(() => { setCurrentPage(1); setSelectedIds([]); }, [search, statusFilter]);
+
   const totalPages = Math.max(1, Math.ceil(filteredCategories.length / ITEMS_PER_PAGE));
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, filteredCategories.length);
+  const page = Math.min(currentPage, totalPages);
+  const startIndex = (page - 1) * ITEMS_PER_PAGE;
   const paginatedCategories = filteredCategories.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-
-  const isAllSelected = paginatedCategories.length > 0 && paginatedCategories.every(c => selectedIds.includes(c.id));
-
-  const toggleSelectAll = () => {
-    if (isAllSelected) {
-      const pageIds = new Set(paginatedCategories.map(c => c.id));
-      setSelectedIds(prev => prev.filter(id => !pageIds.has(id)));
-    } else {
-      const pageIds = paginatedCategories.map(c => c.id);
-      setSelectedIds(prev => Array.from(new Set([...prev, ...pageIds])));
-    }
-  };
-
-  const toggleSelectRow = (id: number) => {
-    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
-  };
 
   const handleBulkDelete = async () => {
     if (selectedIds.length === 0) return;
@@ -225,12 +214,12 @@ export function ManageCategories() {
     try {
       await Promise.all(selectedIds.map(id => categoriesApi.delete(id)));
       selectedIds.forEach(id => removeItem(id));
-      success(`Successfully deleted ${selectedIds.length} categories.`);
+      success(`Successfully archived ${selectedIds.length} categories.`);
       setSelectedIds([]);
       setShowBulkDeleteConfirm(false);
       refetchCategories();
     } catch (err) {
-      error(err instanceof Error ? err.message : 'Failed to delete selected categories.');
+      error(err instanceof Error ? err.message : 'Failed to archive selected categories.');
     } finally {
       setIsBulkDeleting(false);
     }
@@ -358,9 +347,9 @@ export function ManageCategories() {
       await categoriesApi.delete(id);
       removeItem(id);
       await refetchCategories();
-      success('Category deleted successfully.');
+      success('Category archived successfully.');
     } catch (err) {
-      error(err instanceof Error ? err.message : 'Failed to delete category');
+      error(err instanceof Error ? err.message : 'Failed to archive category');
     }
     setDeletingId(null);
   };
@@ -467,8 +456,10 @@ export function ManageCategories() {
       <div className="bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden">
         <div className="p-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-200 dark:border-white/10">
           <div className="flex items-center gap-2">
+            <button type="button" onClick={() => setStatusFilter('Active')} aria-pressed={statusFilter === 'Active'} className="h-8 rounded-lg px-3 text-xs font-semibold text-brand">Active</button>
+            <button type="button" onClick={() => setStatusFilter('Archived')} aria-pressed={statusFilter === 'Archived'} className="h-8 rounded-lg px-3 text-xs font-semibold text-brand">Archived</button>
             <span className="px-2.5 py-1 bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-lg">
-              All Categories ({categories.length})
+              {statusFilter === 'Archived' ? 'Archived Categories' : 'Active Categories'} ({categories.filter(c => (c.status ?? 'Active') === statusFilter).length})
             </span>
           </div>
 
@@ -520,7 +511,7 @@ export function ManageCategories() {
                 className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-rose-600 text-white font-semibold hover:bg-rose-700 transition-all shadow-sm text-xs"
               >
                 <Archive className="h-3.5 w-3.5" />
-                Delete Selected ({selectedIds.length})
+                Archive Selected ({selectedIds.length})
               </button>
             </div>
           </div>
@@ -530,12 +521,14 @@ export function ManageCategories() {
           columns={columns}
           data={paginatedCategories as (ApiCategory & Record<string, unknown>)[]}
           rowKey={(row) => row.id}
-          selectable
+          selectable={statusFilter === 'Active'}
           selectedKeys={new Set(selectedIds)}
           onSelectionChange={(keys) => setSelectedIds(Array.from(keys) as number[])}
           emptyMessage="No categories found."
           hoverActions
-          actions={(row) => (
+          actions={(row) => row.status === 'Archived' ? (
+            <ActionButton icon={<Archive className="h-3.5 w-3.5" />} label="Restore" onClick={() => setRestoringCategory(row)} />
+          ) : (
             <>
               <ActionButton
                 icon={<Edit2 className="h-3.5 w-3.5" />}
@@ -544,7 +537,7 @@ export function ManageCategories() {
               />
               <ActionButton
                 icon={<Archive className="h-3.5 w-3.5" />}
-                label="Delete"
+                label="Archive"
                 variant="danger"
                 onClick={() => { setDeletingId(row.id); setDeleteName(row.name); }}
               />
@@ -552,7 +545,7 @@ export function ManageCategories() {
           )}
           pagination={
             <Pagination
-              page={currentPage}
+              page={page}
               totalPages={totalPages}
               onPageChange={setCurrentPage}
               totalItems={filteredCategories.length}
@@ -728,10 +721,26 @@ export function ManageCategories() {
         </Modal>
       )}
 
+      {restoringCategory && (
+        <ConfirmDialog
+          message={`Restore "${restoringCategory.name}" to the active category list?`}
+          confirmLabel="Restore"
+          onConfirm={async () => {
+            try {
+              await categoriesApi.restore(restoringCategory.id);
+              setRestoringCategory(null);
+              await refetchCategories();
+              success('Category restored successfully.');
+            } catch (err) { error(err instanceof Error ? err.message : 'Failed to restore category.'); }
+          }}
+          onCancel={() => setRestoringCategory(null)}
+        />
+      )}
+
       {deletingId && (
         <ConfirmDialog
-          message={`Are you sure you want to delete "${deleteName}"? This operation cannot be undone.`}
-          confirmLabel="Delete"
+          message={`Are you sure you want to archive "${deleteName}"? The record and its product associations will be preserved.`}
+          confirmLabel="Archive"
           danger
           onConfirm={() => handleDelete(deletingId)}
           onCancel={() => setDeletingId(null)}
@@ -740,8 +749,8 @@ export function ManageCategories() {
 
       {showBulkDeleteConfirm && (
         <ConfirmDialog
-          message={`Are you sure you want to delete ${selectedIds.length} selected categories? This operation cannot be undone.`}
-          confirmLabel={isBulkDeleting ? "Deleting..." : `Delete ${selectedIds.length} Categories`}
+          message={`Are you sure you want to archive ${selectedIds.length} selected categories? The record and its product associations will be preserved.`}
+          confirmLabel={isBulkDeleting ? "Archiving..." : `Archive ${selectedIds.length} Categories`}
           danger
           onConfirm={handleBulkDelete}
           onCancel={() => setShowBulkDeleteConfirm(false)}

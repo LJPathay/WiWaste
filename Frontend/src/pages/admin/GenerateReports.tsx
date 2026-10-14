@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { FileText, Download, Loader2, CheckCircle2, Cpu, Target, Wallet, AlertTriangle, ArrowRight } from 'lucide-react';
+import { FileText, Download, Loader2, CheckCircle2, Cpu, Target, Wallet, AlertTriangle, ArrowRight, Trash2, Package, Truck, Clock, BarChart3, type LucideIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Toast, useToast } from '../../components/ui/Toast';
 import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
@@ -10,7 +10,7 @@ interface ReportCard {
   id: string;
   title: string;
   description: string;
-  icon: string;
+  icon: LucideIcon;
 }
 
 interface Compilation {
@@ -23,12 +23,12 @@ interface Compilation {
 }
 
 const REPORT_CARDS: ReportCard[] = [
-  { id: 'waste', title: 'Waste Summary Report', description: 'Daily and weekly breakdown of waste items recorded across all categories.', icon: '🗂️' },
-  { id: 'inventory', title: 'Inventory Movement Report', description: 'Track stock-in, stock-out, and adjustments over a selected period.', icon: '📦' },
-  { id: 'supplier', title: 'Supplier Performance Report', description: 'Evaluate supplier delivery rates, return windows and order accuracy.', icon: '🚚' },
-  { id: 'expiry', title: 'Expiry & Near-Expiry Report', description: 'Highlight items nearing expiration to minimize waste and losses.', icon: '⏰' },
-  { id: 'category', title: 'Category Analysis Report', description: 'Breakdown of waste and inventory levels by product category.', icon: '📊' },
-  { id: 'cost', title: 'Cost Impact Report', description: 'Estimate the financial impact of waste and spoilage across departments.', icon: '💰' },
+  { id: 'waste', title: 'Waste Summary Report', description: 'Daily and weekly breakdown of waste items recorded across all categories.', icon: Trash2 },
+  { id: 'inventory', title: 'Inventory Movement Report', description: 'Track stock-in, stock-out, and adjustments over a selected period.', icon: Package },
+  { id: 'supplier', title: 'Supplier Performance Report', description: 'Evaluate supplier delivery rates, return windows and order accuracy.', icon: Truck },
+  { id: 'expiry', title: 'Expiry & Near-Expiry Report', description: 'Highlight items nearing expiration to minimize waste and losses.', icon: Clock },
+  { id: 'category', title: 'Category Analysis Report', description: 'Breakdown of waste and inventory levels by product category.', icon: BarChart3 },
+  { id: 'cost', title: 'Cost Impact Report', description: 'Estimate the financial impact of waste and spoilage across departments.', icon: Wallet },
 ];
 
 const REPORT_ENDPOINT_MAP: Record<string, () => Promise<ApiReport[]>> = {
@@ -353,13 +353,16 @@ export function GenerateReports() {
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
           {REPORT_CARDS.map(card => {
             const isGenerating = generatingIds.has(card.id);
+            const Icon = card.icon;
             return (
               <div
                 key={card.id}
                 className="bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm p-3 flex flex-col gap-2 hover:shadow-md transition-shadow"
               >
                 <div className="flex items-start gap-2">
-                  <span className="h-7 w-7 flex items-center justify-center text-base leading-none mt-0.5">{card.icon}</span>
+                  <span className="h-7 w-7 shrink-0 flex items-center justify-center rounded-lg bg-[#006a61]/10 text-[#006a61] dark:bg-[#7ef0cf]/10 dark:text-[#7ef0cf] mt-0.5">
+                    <Icon className="h-4 w-4" aria-hidden="true" />
+                  </span>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-semibold text-slate-800 dark:text-slate-100 leading-snug">{card.title}</p>
                     <p className="text-[9px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">{card.description}</p>

@@ -24,10 +24,7 @@ export function useUpdateCategory() {
   });
 }
 
-export function useDeleteCategory() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (id: number) => categories.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categories'] }),
-  });
-}
+// `useDeleteCategory` was removed. It called `categories.delete`, which the `categories`
+// API object never had -- it exposes `archive` -- so invoking the hook would have thrown
+// "categories.delete is not a function". Nothing imported it, and categories are retired
+// through `archive` rather than hard-deleted, so there was nothing to repair.

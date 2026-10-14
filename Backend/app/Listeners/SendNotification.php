@@ -2,10 +2,11 @@
 
 namespace App\Listeners;
 
+use App\Events\AnomalyDetected;
 use App\Events\StockThresholdReached;
 use App\Events\VendorCreditExpiring;
-use App\Events\AnomalyDetected;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class SendNotification
 {
@@ -67,7 +68,7 @@ class SendNotification
             ]);
         } catch (\Exception $e) {
             // If notifications table doesn't exist, log instead
-            \Illuminate\Support\Facades\Log::warning("Notification: {$title} - {$message}");
+            Log::warning("Notification: {$title} - {$message}");
         }
     }
 }

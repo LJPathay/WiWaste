@@ -11,14 +11,30 @@ return new class extends Migration
     {
         Schema::table('User', function (Blueprint $table) {
             // Keep existing accounts intact while adding the structured fields used for new accounts.
-            $table->string('First_name', 50)->nullable();
-            $table->string('Middle_name', 50)->nullable();
-            $table->string('Surname', 50)->nullable();
-            $table->string('contact_number', 11)->nullable();
-            $table->string('address', 255)->nullable();
-            $table->integer('status_changed_by')->nullable();
-            $table->dateTime('status_changed_at')->nullable();
-            $table->dateTime('archived_at')->nullable();
+            if (! Schema::hasColumn('User', 'First_name')) {
+                $table->string('First_name', 50)->nullable();
+            }
+            if (! Schema::hasColumn('User', 'Middle_name')) {
+                $table->string('Middle_name', 50)->nullable();
+            }
+            if (! Schema::hasColumn('User', 'Surname')) {
+                $table->string('Surname', 50)->nullable();
+            }
+            if (! Schema::hasColumn('User', 'contact_number')) {
+                $table->string('contact_number', 11)->nullable();
+            }
+            if (! Schema::hasColumn('User', 'address')) {
+                $table->string('address', 255)->nullable();
+            }
+            if (! Schema::hasColumn('User', 'status_changed_by')) {
+                $table->integer('status_changed_by')->nullable();
+            }
+            if (! Schema::hasColumn('User', 'status_changed_at')) {
+                $table->dateTime('status_changed_at')->nullable();
+            }
+            if (! Schema::hasColumn('User', 'archived_at')) {
+                $table->dateTime('archived_at')->nullable();
+            }
             $table->string('Full_name', 160)->change();
             $table->string('role', 32)->change();
             $table->string('status', 20)->default('Active')->change();
@@ -40,19 +56,33 @@ return new class extends Migration
             }
         }, 'User_id');
 
-        Schema::table('Supplier', fn (Blueprint $table) => $table->string('email', 100)->nullable());
+        if (! Schema::hasColumn('Supplier', 'email')) {
+            Schema::table('Supplier', fn (Blueprint $table) => $table->string('email', 100)->nullable());
+        }
 
         Schema::table('Category', function (Blueprint $table) {
-            $table->string('status', 20)->default('Active');
-            $table->dateTime('archived_at')->nullable();
-            $table->integer('archived_by')->nullable();
+            if (! Schema::hasColumn('Category', 'status')) {
+                $table->string('status', 20)->default('Active');
+            }
+            if (! Schema::hasColumn('Category', 'archived_at')) {
+                $table->dateTime('archived_at')->nullable();
+            }
+            if (! Schema::hasColumn('Category', 'archived_by')) {
+                $table->integer('archived_by')->nullable();
+            }
         });
 
         Schema::table('Product', function (Blueprint $table) {
             $table->string('status', 20)->default('Active')->change();
-            $table->dateTime('archived_at')->nullable();
-            $table->integer('archived_by')->nullable();
-            $table->string('archive_previous_status', 20)->nullable();
+            if (! Schema::hasColumn('Product', 'archived_at')) {
+                $table->dateTime('archived_at')->nullable();
+            }
+            if (! Schema::hasColumn('Product', 'archived_by')) {
+                $table->integer('archived_by')->nullable();
+            }
+            if (! Schema::hasColumn('Product', 'archive_previous_status')) {
+                $table->string('archive_previous_status', 20)->nullable();
+            }
         });
     }
 

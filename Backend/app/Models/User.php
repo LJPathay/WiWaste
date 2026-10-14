@@ -2,12 +2,16 @@
 
 namespace App\Models;
 
+use App\Enums\Role;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Support\Facades\Schema;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
     use HasApiTokens;
+    use HasFactory;
 
     protected $table = 'User';
 
@@ -17,6 +21,7 @@ class User extends Authenticatable
 
     protected $fillable = [
         'Full_name',
+        'first_name', 'middle_name', 'surname',
         'First_name',
         'Middle_name',
         'Surname',
@@ -122,7 +127,7 @@ class User extends Authenticatable
 
     public function scopeOwners($query)
     {
-        return $query->where('role', 'Owner');
+        return $query->whereIn('role', Role::ownerTier());
     }
 
     public function scopeInventory($query)
@@ -138,5 +143,54 @@ class User extends Authenticatable
     public function scopePharmacists($query)
     {
         return $query->where('role', 'Pharmacist');
+    }
+
+    public function isOwnerTier(): bool
+    {
+        return $this->canManageUsers();
+    }
+
+    public function getFirstNameAttribute($value): ?string
+    {
+        return $this->attributes['First_name'] ?? $this->attributes['first_name'] ?? null;
+    }
+
+    public function getMiddleNameAttribute($value): ?string
+    {
+        return $this->attributes['Middle_name'] ?? $this->attributes['middle_name'] ?? null;
+    }
+
+    public function getSurnameAttribute($value): ?string
+    {
+        return $this->attributes['Surname'] ?? $this->attributes['surname'] ?? null;
+    }
+
+    public function setFirstNameAttribute($value): void
+    {
+        $this->attributes['First_name'] = $value;
+    }
+
+    public function setMiddleNameAttribute($value): void
+    {
+        $this->attributes['Middle_name'] = $value;
+    }
+
+    public function setSurnameAttribute($value): void
+    {
+        $this->attributes['Surname'] = $value;
+    }
+
+    public function getFullNameAttribute($value): string
+    {
+        return $value ?? trim(implode(' ', array_filter([$this->First_name, $this->Middle_name, $this->Surname])));
+    }
+
+    protected static function booted(): void
+    {
+        static::saving(function (self $user) {
+            if (Schema::hasColumn($user->getTable(), 'Full_name') && ($user->First_name || $user->Surname)) {
+                $user->Full_name = trim(implode(' ', array_filter([$user->First_name, $user->Middle_name, $user->Surname])));
+            }
+        });
     }
 }

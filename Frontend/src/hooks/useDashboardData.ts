@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   getStoredSession,
   inferRoleFromEmail,
@@ -6,19 +6,11 @@ import {
   getPredictiveAnalytics,
 } from '../utils/mockAuthAndFeatures';
 import { ownerDashboard } from '../services/api';
-import type { ApiDashboard, ApiOwnerAnalytics } from '../services/api';
-import type { DashboardData } from '../utils/mockAuthAndFeatures';
 
-export function useDashboardData() {
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [overview, setOverview] = useState<ApiDashboard | null>(null);
-  const [ownerAnalytics, setOwnerAnalytics] = useState<ApiOwnerAnalytics | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let mounted = true;
-
-    async function load() {
+export function useDashboardData(period = '30') {
+  const { data: result, isLoading } = useQuery({
+    queryKey: ['dashboard', period],
+    queryFn: async () => {
       try {
         const [d, ov, analytics] = await Promise.all([
           (async () => {
@@ -28,45 +20,34 @@ export function useDashboardData() {
             return initializeDashboard(email, 'password', role);
           })(),
           ownerDashboard.overview().catch(() => null),
-          ownerDashboard.analytics({ period: '30' }).catch(() => null),
+          ownerDashboard.analytics({ period }).catch(() => null),
         ]);
-        if (mounted) {
-          setData(d);
-          setOverview(ov);
-          setOwnerAnalytics(analytics);
-        }
+        return { data: d, overview: ov, ownerAnalytics: analytics };
       } catch {
+        // The dashboard falls back to local demo fixtures whenever the session or mock
+        // bootstrap throws (no stored session, expired local state). The error is not
+        // surfaced: every consumer below tolerates null overview/analytics and the
+        // fallback payload keeps the page renderable.
         const analyticsData = getPredictiveAnalytics();
-        if (mounted) {
-          setData({
-            user: {
-              id: 'guest',
-              email: 'guest@example.com',
-              name: 'Guest User',
-              company: 'Demo Co',
-              role: 'inventory',
-              loginTime: new Date(),
-            },
+        return {
+          data: {
+            user: { id: 'guest', email: 'guest@example.com', name: 'Guest User', company: 'Demo Co', role: 'inventory', loginTime: new Date() },
             predictiveAnalytics: analyticsData,
             prescriptiveDecisions: [],
             profitLeakage: [],
             batchFEFO: [],
             vendorReturns: [],
             behavioralInsights: [],
-          });
-          setOverview(null);
-          setOwnerAnalytics(null);
-        }
-      } finally {
-        if (mounted) setLoading(false);
+          },
+          overview: null,
+          ownerAnalytics: null,
+        };
       }
-    }
+    },
+    staleTime: 30000,
+  });
 
-    load();
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  const loading = isLoading;
 
-  return { data, overview, ownerAnalytics, loading };
+  return { data: result?.data ?? null, overview: result?.overview ?? null, ownerAnalytics: result?.ownerAnalytics ?? null, loading };
 }

@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\InventoryRecommendation;
+use App\Http\Requests\Api\RejectRecommendationRequest;
+use App\Http\Resources\InventoryRecommendationResource;
 use App\Models\AuditLog;
+use App\Models\InventoryRecommendation;
 use Illuminate\Http\Request;
 
 class RecommendationController extends Controller
@@ -20,22 +22,7 @@ class RecommendationController extends Controller
         $perPage = min((int) $request->input('per_page', 20), 100);
 
         return response()->json(
-            $query->orderByDesc('recommendation_id')->paginate($perPage)->through(fn ($r) => [
-                'recommendation_id'  => $r->recommendation_id,
-                'product_id'         => $r->product_id,
-                'product_name'       => $r->product?->product_name,
-                'sku'                => $r->product?->barcode,
-                'category'           => $r->product?->category?->Category_name ?? '',
-                'current_stock'      => $r->current_stock,
-                'recommended_stock'  => $r->recommended_stock,
-                'recommendation_type'=> $r->recommendation_type,
-                'confidence_score'   => (float) $r->confidence_score,
-                'status'             => $r->status ?? 'pending',
-                'rejection_reason'   => $r->rejection_reason,
-                'reviewed_by'        => $r->reviewer?->Full_name ?? null,
-                'created_at'         => $r->created_at,
-                'reviewed_at'        => $r->reviewed_at,
-            ])
+            $query->orderByDesc('recommendation_id')->paginate($perPage)->through(fn ($r) => (new InventoryRecommendationResource($r))->resolve($request))
         );
     }
 
@@ -43,22 +30,7 @@ class RecommendationController extends Controller
     {
         $r = InventoryRecommendation::with('product.category', 'reviewer')->findOrFail($id);
 
-        return response()->json([
-            'recommendation_id'  => $r->recommendation_id,
-            'product_id'         => $r->product_id,
-            'product_name'       => $r->product?->product_name,
-            'sku'                => $r->product?->barcode,
-            'category'           => $r->product?->category?->Category_name ?? '',
-            'current_stock'      => $r->current_stock,
-            'recommended_stock'  => $r->recommended_stock,
-            'recommendation_type'=> $r->recommendation_type,
-            'confidence_score'   => (float) $r->confidence_score,
-            'status'             => $r->status ?? 'pending',
-            'rejection_reason'   => $r->rejection_reason,
-            'reviewed_by'        => $r->reviewer?->Full_name ?? null,
-            'created_at'         => $r->created_at,
-            'reviewed_at'        => $r->reviewed_at,
-        ]);
+        return (new InventoryRecommendationResource($r))->resolve(request());
     }
 
     public function approve($id, Request $request)
@@ -71,23 +43,21 @@ class RecommendationController extends Controller
         $recommendation->save();
 
         AuditLog::create([
-            'user_id'     => $recommendation->reviewed_by,
-            'action'      => "Approved recommendation: {$recommendation->recommendation_type} for {$recommendation->product?->product_name}",
+            'user_id' => $recommendation->reviewed_by,
+            'action' => "Approved recommendation: {$recommendation->recommendation_type} for {$recommendation->product?->product_name}",
             'entity_type' => 'Inventory_Recommendation',
-            'entity_id'   => $recommendation->recommendation_id,
-            'old_values'  => json_encode(['status' => 'pending']),
-            'new_values'  => json_encode(['status' => 'approved']),
-            'created_at'  => now(),
+            'entity_id' => $recommendation->recommendation_id,
+            'old_values' => json_encode(['status' => 'pending']),
+            'new_values' => json_encode(['status' => 'approved']),
+            'created_at' => now(),
         ]);
 
         return response()->json(['message' => 'Recommendation approved.']);
     }
 
-    public function reject($id, Request $request)
+    public function reject($id, RejectRecommendationRequest $request)
     {
-        $data = $request->validate([
-            'rejection_reason' => 'required|string|max:500',
-        ]);
+        $data = $request->validated();
 
         $recommendation = InventoryRecommendation::with('product')->findOrFail($id);
 
@@ -98,13 +68,13 @@ class RecommendationController extends Controller
         $recommendation->save();
 
         AuditLog::create([
-            'user_id'     => $recommendation->reviewed_by,
-            'action'      => "Rejected recommendation: {$recommendation->recommendation_type} for {$recommendation->product?->product_name} — {$data['rejection_reason']}",
+            'user_id' => $recommendation->reviewed_by,
+            'action' => "Rejected recommendation: {$recommendation->recommendation_type} for {$recommendation->product?->product_name} â€” {$data['rejection_reason']}",
             'entity_type' => 'Inventory_Recommendation',
-            'entity_id'   => $recommendation->recommendation_id,
-            'old_values'  => json_encode(['status' => 'pending']),
-            'new_values'  => json_encode(['status' => 'rejected', 'rejection_reason' => $data['rejection_reason']]),
-            'created_at'  => now(),
+            'entity_id' => $recommendation->recommendation_id,
+            'old_values' => json_encode(['status' => 'pending']),
+            'new_values' => json_encode(['status' => 'rejected', 'rejection_reason' => $data['rejection_reason']]),
+            'created_at' => now(),
         ]);
 
         return response()->json(['message' => 'Recommendation rejected.']);

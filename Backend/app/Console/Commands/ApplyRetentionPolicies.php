@@ -2,16 +2,9 @@
 
 namespace App\Console\Commands;
 
-use App\Models\DataSubjectRequest;
-use App\Models\DataBreachIncident;
-use App\Models\AuditLog;
-use App\Models\WastageRecord;
-use App\Models\ReturnTransaction;
-use App\Models\SalesTransaction;
-use App\Models\StockMovement;
+use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
 
 class ApplyRetentionPolicies extends Command
 {
@@ -46,8 +39,9 @@ class ApplyRetentionPolicies extends Command
         $totalPurged = 0;
 
         foreach ($entities as $entity) {
-            if (!isset($this->retentionPolicies[$entity])) {
+            if (! isset($this->retentionPolicies[$entity])) {
                 $this->error("Unknown entity: {$entity}");
+
                 continue;
             }
 
@@ -61,14 +55,14 @@ class ApplyRetentionPolicies extends Command
         }
 
         $this->info("Retention policy application completed. Total records purged: {$totalPurged}");
-        
+
         return Command::SUCCESS;
     }
 
     protected function applyRetentionPolicy(string $entity, array $policy, bool $dryRun): int
     {
         $cutoffDate = Carbon::now()->subDays($policy['days'])->toDateString();
-        
+
         $this->info("Processing {$entity} (retention: {$policy['days']} days, cutoff: {$cutoffDate})...");
 
         $query = DB::table($policy['table'])
@@ -77,26 +71,27 @@ class ApplyRetentionPolicies extends Command
         $count = $query->count();
 
         if ($count === 0) {
-            $this->info("  No records to purge.");
+            $this->info('  No records to purge.');
+
             return 0;
         }
 
         if ($dryRun) {
             $this->warn("  [DRY RUN] Would purge {$count} records from {$policy['table']}");
-            
+
             // Show sample of records to be purged
             $sample = DB::table($policy['table'])
                 ->where($policy['date_column'], '<', $cutoffDate)
                 ->limit(5)
                 ->get();
-            
+
             if ($sample->isNotEmpty()) {
                 $this->table(
                     array_keys((array) $sample->first()),
                     $sample->toArray()
                 );
             }
-            
+
             return 0;
         }
 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Mail\AccountSecurityNotice;
 use App\Mail\PasswordResetOtp;
+use App\Mail\PasswordResetOtpMail;
 use App\Models\User;
 use App\Services\EmailDeliverySettings;
 use App\Support\PasswordPolicy;
@@ -15,6 +16,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
+use Laravel\Sanctum\PersonalAccessToken;
 use Throwable;
 
 class AuthController extends Controller
@@ -49,7 +52,7 @@ class AuthController extends Controller
             }
 
             if (! $this->isActive($user)) {
-                return ['response' => response()->json(['message' => 'Your account is inactive or unavailable. Contact your administrator.'], 403)];
+                return ['response' => response()->json(['message' => 'Your account is inactive or unavailable. Contact your administrator.', 'success' => false], 403)];
             }
 
             $lockedUntil = $user->locked_until ? Carbon::parse($user->locked_until) : null;
@@ -74,17 +77,24 @@ class AuthController extends Controller
             }
 
             $user->forceFill(['failed_login_attempts' => 0, 'locked_until' => null])->save();
-            $token = $user->createToken('wiwaste-token')->plainTextToken;
+            $versioned = request()->is('api/v1/*');
+            $token = $user->createToken($versioned ? 'wiwaste-access' : 'wiwaste-token', $versioned ? ['access'] : ['*'], $versioned ? now()->addMinutes(15) : null)->plainTextToken;
+            $refresh = $versioned ? $user->createToken('wiwaste-refresh', ['refresh'], now()->addDays(7))->plainTextToken : null;
 
             return [
                 'user' => $user,
                 'event' => 'login',
-                'response' => response()->json(['token' => $token, 'user' => $this->userDetails($user)]),
+                'refresh' => $refresh,
+                'response' => response()->json(['message' => 'Login successful', 'token' => $token, 'user' => $this->userDetails($user), 'data' => ['access_token' => $token, 'user' => $this->userDetails($user)], 'success' => true], request()->is('api/v1/*') ? 201 : 200),
             ];
         });
 
         if (! empty($result['event'])) {
             $this->sendSecurityNotice($result['user'], $request, $result['event']);
+        }
+
+        if (! empty($result['refresh'])) {
+            $result['response']->withCookie(cookie('refresh_token', $result['refresh'], 10080, '/', null, $request->isSecure(), true, false, 'lax'));
         }
 
         return $result['response'];
@@ -97,17 +107,17 @@ class AuthController extends Controller
 
         // Use the same response for unknown and disabled accounts.
         if (! $user || ! $this->isActive($user)) {
-            return response()->json(['message' => self::RESET_SENT_MESSAGE]);
+            return response()->json(['message' => self::RESET_SENT_MESSAGE, 'success' => true]);
         }
 
         $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
         $result = DB::transaction(function () use ($user, $code) {
             $account = User::whereKey($user->getKey())->lockForUpdate()->firstOrFail();
             if (! $this->isActive($account)) {
-                return response()->json(['message' => self::RESET_SENT_MESSAGE]);
+                return response()->json(['message' => self::RESET_SENT_MESSAGE, 'success' => true]);
             }
 
-            $previous = DB::table('password_reset_otps')->where('user_id', $account->getKey())->first();
+            $previous = $this->otpQuery($account)->first();
             if ($previous && Carbon::parse($previous->created_at)->addSeconds(60)->isFuture()) {
                 $retryAfter = (int) ceil(now()->diffInSeconds(Carbon::parse($previous->created_at)->addSeconds(60)));
 
@@ -116,8 +126,9 @@ class AuthController extends Controller
             }
 
             $codeHash = Hash::make($code);
-            DB::table('password_reset_otps')->updateOrInsert(['user_id' => $account->getKey()], [
-                'code_hash' => $codeHash,
+            DB::table('password_reset_otps')->updateOrInsert($this->otpKey($account), [
+                $this->otpHashColumn() => $codeHash,
+                ...(! Schema::hasColumn('password_reset_otps', 'user_id') ? ['used' => false, 'updated_at' => now()] : []),
                 'expires_at' => now()->addMinutes(self::OTP_MINUTES),
                 'attempts' => 0,
                 'created_at' => now(),
@@ -132,16 +143,16 @@ class AuthController extends Controller
 
         try {
             app(EmailDeliverySettings::class)->apply();
-            Mail::to($user->email)->send(new PasswordResetOtp($user->Full_name, $code, self::OTP_MINUTES));
+            Mail::to($user->email)->send($request->is('api/v1/password/*') ? new PasswordResetOtpMail($user->Full_name, $code) : new PasswordResetOtp($user->Full_name, $code, self::OTP_MINUTES));
         } catch (Throwable $exception) {
             // Only remove this request's code; a later request may have replaced it.
-            DB::table('password_reset_otps')->where('user_id', $user->getKey())->where('code_hash', $result)->delete();
+            $this->otpQuery($user)->where($this->otpHashColumn(), $result)->delete();
             Log::error('Password reset email could not be delivered.', ['user_id' => $user->getKey(), 'exception_type' => get_class($exception)]);
 
             return response()->json(['message' => 'We could not send the reset email. Please try again later.'], 503);
         }
 
-        return response()->json(['message' => self::RESET_SENT_MESSAGE]);
+        return response()->json(['message' => self::RESET_SENT_MESSAGE, 'success' => true]);
     }
 
     public function resetPassword(Request $request): JsonResponse
@@ -150,6 +161,7 @@ class AuthController extends Controller
             'email' => 'required|email|max:100',
             'otp' => 'required|string|regex:/^\d{6}$/',
             'password' => array_merge(PasswordPolicy::rules(), ['confirmed']),
+            'password_confirmation' => 'required|string|same:password',
         ]);
 
         return DB::transaction(function () use ($data) {
@@ -158,22 +170,22 @@ class AuthController extends Controller
                 return $this->invalidOtp();
             }
 
-            $reset = DB::table('password_reset_otps')->where('user_id', $user->getKey())->lockForUpdate()->first();
-            if (! $reset || Carbon::parse($reset->expires_at)->lessThanOrEqualTo(now()) || $reset->attempts >= self::MAX_OTP_ATTEMPTS) {
+            $reset = $this->otpQuery($user)->lockForUpdate()->first();
+            if (! $reset || Carbon::parse($reset->expires_at)->lessThanOrEqualTo(now()) || $reset->attempts >= self::MAX_OTP_ATTEMPTS || ($reset->used ?? false)) {
                 return $this->invalidOtp();
             }
 
-            if (! Hash::check($data['otp'], $reset->code_hash)) {
-                DB::table('password_reset_otps')->where('user_id', $user->getKey())->increment('attempts');
+            if (! Hash::check($data['otp'], $reset->{$this->otpHashColumn()})) {
+                $this->otpQuery($user)->increment('attempts');
 
                 return $this->invalidOtp();
             }
 
             $user->forceFill(['password' => Hash::make($data['password']), 'failed_login_attempts' => 0])->save();
             $user->tokens()->delete();
-            DB::table('password_reset_otps')->where('user_id', $user->getKey())->delete();
+            $this->otpQuery($user)->delete();
 
-            return response()->json(['message' => 'Password reset successfully. Please sign in with your new password.']);
+            return response()->json(['message' => 'Password reset successfully. Please sign in with your new password.', 'success' => true]);
         });
     }
 
@@ -203,7 +215,7 @@ class AuthController extends Controller
     {
         $message = 'The reset code is invalid, expired, or has already been used. Request a new code.';
 
-        return response()->json(['message' => $message, 'errors' => ['otp' => [$message]]], 422);
+        return response()->json(['message' => $message, 'success' => false, 'errors' => ['otp' => [$message]]], 422);
     }
 
     private function lockedResponse(Carbon $lockedUntil): JsonResponse
@@ -214,7 +226,7 @@ class AuthController extends Controller
             'message' => 'Your account is temporarily locked after 5 failed login attempts. Try again in 15 minutes.',
             'locked_until' => $lockedUntil->toIso8601String(),
             'retry_after' => $retryAfter,
-        ], 423)->header('Retry-After', $retryAfter);
+        ], request()->is('api/v1/*') ? 429 : 423)->header('Retry-After', $retryAfter);
     }
 
     private function sendSecurityNotice(User $user, Request $request, string $event): void
@@ -251,5 +263,57 @@ class AuthController extends Controller
             'role' => $user->role,
             'status' => $user->status,
         ];
+    }
+
+    private function otpKey(User $user): array
+    {
+        return Schema::hasColumn('password_reset_otps', 'user_id') ? ['user_id' => $user->getKey()] : ['email' => $user->email, 'used' => false];
+    }
+
+    private function otpQuery(User $user)
+    {
+        return DB::table('password_reset_otps')->where($this->otpKey($user));
+    }
+
+    private function otpHashColumn(): string
+    {
+        return Schema::hasColumn('password_reset_otps', 'code_hash') ? 'code_hash' : 'otp_hash';
+    }
+
+    public function verifyOtp(Request $request): JsonResponse
+    {
+        $data = $request->validate(['email' => 'required|email|max:100', 'otp' => 'required|string|regex:/^\d{6}$/']);
+
+        return DB::transaction(function () use ($data) {
+            $user = User::where('email', $data['email'])->lockForUpdate()->first();
+            if (! $user || ! $this->isActive($user)) {
+                return $this->invalidOtp();
+            }
+            $reset = $this->otpQuery($user)->lockForUpdate()->first();
+            if (! $reset || Carbon::parse($reset->expires_at)->lessThanOrEqualTo(now()) || $reset->attempts >= self::MAX_OTP_ATTEMPTS || ($reset->used ?? false)) {
+                return $this->invalidOtp();
+            }
+            if (! Hash::check($data['otp'], $reset->{$this->otpHashColumn()})) {
+                $this->otpQuery($user)->increment('attempts');
+
+                return $this->invalidOtp();
+            }
+
+            return response()->json(['verified' => true, 'data' => ['verified' => true], 'success' => true]);
+        });
+    }
+
+    public function refresh(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $token = $request->cookie('refresh_token') ? PersonalAccessToken::findToken($request->cookie('refresh_token')) : null;
+        if (! $user || ! $token || $token->tokenable_id !== $user->getKey() || ! in_array('refresh', $token->abilities, true) || ($token->expires_at && $token->expires_at->isPast())) {
+            return response()->json(['message' => 'Refresh token invalid or expired.'], 401);
+        }
+        $token->delete();
+        $access = $user->createToken('wiwaste-access', ['access'], now()->addMinutes(15))->plainTextToken;
+        $refresh = $user->createToken('wiwaste-refresh', ['refresh'], now()->addDays(7))->plainTextToken;
+
+        return response()->json(['data' => ['access_token' => $access], 'success' => true])->withCookie(cookie('refresh_token', $refresh, 10080, '/', null, $request->isSecure(), true, false, 'lax'));
     }
 }

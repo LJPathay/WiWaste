@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { recommendations as recommendationApi, type ApiRecommendation } from "../../services/api";
 import { Info, Search, CheckCircle, TrendingDown, Clock, ChevronRight, X, Check } from 'lucide-react';
 import { Toast, useToast, ConfirmDialog, Modal } from '../../components/ui/Toast';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
@@ -6,30 +7,6 @@ import { DataTable, type DataTableColumn } from '../../components/shared/DataTab
 import { ActionButton } from '../../components/shared/DataTableActions';
 import { Pagination } from '../../components/ui/pagination';
 
-type MockRecommendation = {
-  recommendation_id: number;
-  product_name: string;
-  sku: string;
-  category: string;
-  current_stock: number;
-  recommended_stock: number;
-  confidence_score: number;
-  recommendation_type: string;
-  status: string;
-  rejection_reason?: string;
-  reviewed_by?: string;
-};
-
-const MOCK_RECS: MockRecommendation[] = [
-  { recommendation_id: 1, product_name: 'Lucky Me! Pancit Canton (Caldereta)', sku: 'LMPC-001', category: 'Instant Noodles', current_stock: 8, recommended_stock: 120, confidence_score: 0.94, recommendation_type: 'Restock', status: 'pending' },
-  { recommendation_id: 2, product_name: 'Nestle All Purpose Cream 250ml', sku: 'NAP-250', category: 'Dairy', current_stock: 4, recommended_stock: 80, confidence_score: 0.91, recommendation_type: 'Restock', status: 'pending' },
-  { recommendation_id: 3, product_name: 'Mega Sardines Tomato 155g', sku: 'MST-155', category: 'Canned Goods', current_stock: 200, recommended_stock: 50, confidence_score: 0.87, recommendation_type: 'Reduce Stock', status: 'pending' },
-  { recommendation_id: 4, product_name: 'Coke 1.5L', sku: 'COKE-15', category: 'Beverages', current_stock: 45, recommended_stock: 45, confidence_score: 0.82, recommendation_type: 'Maintain', status: 'approved', reviewed_by: 'Inventory Staff' },
-  { recommendation_id: 5, product_name: 'Gardenia Whole Wheat Bread', sku: 'GWW-400', category: 'Bakery', current_stock: 3, recommended_stock: 60, confidence_score: 0.93, recommendation_type: 'Restock', status: 'pending' },
-  { recommendation_id: 6, product_name: 'Del Monte Pineapple Tidbits', sku: 'DMP-432', category: 'Canned Goods', current_stock: 150, recommended_stock: 30, confidence_score: 0.78, recommendation_type: 'Reduce Stock', status: 'rejected', rejection_reason: 'Stock level is sufficient for current demand.', reviewed_by: 'Senior Inventory Staff' },
-  { recommendation_id: 7, product_name: 'Bear Brand Powdered Milk 900g', sku: 'BBP-900', category: 'Dairy', current_stock: 18, recommended_stock: 90, confidence_score: 0.88, recommendation_type: 'Restock', status: 'pending' },
-  { recommendation_id: 8, product_name: 'Palmolive Shampoo 200ml', sku: 'PLM-200', category: 'Personal Care', current_stock: 12, recommended_stock: 70, confidence_score: 0.85, recommendation_type: 'Restock', status: 'pending' },
-];
 
 function getTypeLabel(type: string): { label: string; cls: string } {
   if (type === 'Restock') return { label: 'Restock', cls: 'bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800' };
@@ -53,7 +30,7 @@ const WORKFLOW_STEPS = [
 
 const PAGE_SIZE = 5;
 
-const columns: DataTableColumn<MockRecommendation>[] = [
+const columns: DataTableColumn<ApiRecommendation>[] = [
   {
     key: 'product_name',
     header: 'Product',
@@ -63,7 +40,7 @@ const columns: DataTableColumn<MockRecommendation>[] = [
     render: (row) => (
       <div>
         <div className="font-semibold text-[#0F172A] dark:text-slate-100">{row.product_name}</div>
-        <div className="text-[10px] font-mono text-[#64748B] dark:text-slate-400">{row.sku}</div>
+        <div className="text-[10px] font-mono text-[#64748B] dark:text-muted-fg">{row.sku}</div>
       </div>
     ),
   },
@@ -126,18 +103,34 @@ const columns: DataTableColumn<MockRecommendation>[] = [
 export function Recommendations() {
   const { toasts, dismiss, success } = useToast();
 
-  const [mockRecs, setMockRecs] = useState<MockRecommendation[]>(MOCK_RECS);
+  const [recommendations, setRecommendations] = useState<ApiRecommendation[]>([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [selectedRec, setSelectedRec] = useState<MockRecommendation | null>(null);
+  const [selectedRec, setSelectedRec] = useState<ApiRecommendation | null>(null);
   const [rejectingId, setRejectingId] = useState<number | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [confirmApprove, setConfirmApprove] = useState<number | null>(null);
   const [processing, setProcessing] = useState(false);
   const [page, setPage] = useState(1);
 
+// Declared here rather than at module scope: it closes over `setRecommendations`,
+  // which only exists inside the component.
+  const loadRecommendations = async () => {
+    try {
+      const data = await recommendationApi.list();
+      setRecommendations(data.data);
+    } catch (error) {
+      console.error("Failed to load recommendations:", error);
+      // Keep empty array if API fails
+      setRecommendations([]);
+    }
+  };
+
+  useEffect(() => {
+    void loadRecommendations();
+  }, []);
   const filtered = useMemo(() => {
-    let list = mockRecs;
+    let list = recommendations;
     if (search) {
       const q = search.toLowerCase();
       list = list.filter(r =>
@@ -149,20 +142,20 @@ export function Recommendations() {
       list = list.filter(r => r.status === statusFilter);
     }
     return list;
-  }, [mockRecs, search, statusFilter]);
+  }, [recommendations, search, statusFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const pendingCount = mockRecs.filter(r => r.status === 'pending').length;
-  const approvedCount = mockRecs.filter(r => r.status === 'approved').length;
-  const rejectedCount = mockRecs.filter(r => r.status === 'rejected').length;
+  const pendingCount = recommendations.filter(r => r.status === 'pending').length;
+  const approvedCount = recommendations.filter(r => r.status === 'approved').length;
+  const rejectedCount = recommendations.filter(r => r.status === 'rejected').length;
 
   const handleApprove = async () => {
     if (confirmApprove === null) return;
     setProcessing(true);
     await new Promise(r => setTimeout(r, 600));
-    setMockRecs(prev => prev.map(r =>
+    setRecommendations(prev => prev.map(r =>
       r.recommendation_id === confirmApprove
         ? { ...r, status: 'approved', reviewed_by: 'Inventory Staff' }
         : r
@@ -177,7 +170,7 @@ export function Recommendations() {
     if (rejectingId === null || !rejectReason.trim()) return;
     setProcessing(true);
     await new Promise(r => setTimeout(r, 600));
-    setMockRecs(prev => prev.map(r =>
+    setRecommendations(prev => prev.map(r =>
       r.recommendation_id === rejectingId
         ? { ...r, status: 'rejected', rejection_reason: rejectReason.trim(), reviewed_by: 'Inventory Staff' }
         : r
@@ -203,30 +196,35 @@ export function Recommendations() {
       )}
 
       {rejectingId !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+        <dialog
+          open
+          aria-label="Reject Recommendation"
+          className="fixed inset-0 z-50 flex items-center justify-center m-0 w-screen h-screen max-w-none max-h-none border-0 bg-transparent backdrop:bg-black/40 backdrop:backdrop-blur-sm"
+        >
+          <div className="bg-bg-elevated rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
               <h3 className="text-sm font-bold text-gray-900">Reject Recommendation</h3>
               <button onClick={() => { setRejectingId(null); setRejectReason(''); }} className="p-1.5 rounded-lg hover:bg-gray-100">
-                <X className="h-4 w-4 text-gray-500" />
+                <X className="h-4 w-4 text-muted-fg" />
               </button>
             </div>
             <div className="p-5 space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Reason for Rejection</label>
+                <label htmlFor="reject-reason" className="block text-xs font-semibold text-muted-fg mb-1.5">Reason for Rejection</label>
                 <textarea
+                  id="reject-reason"
                   value={rejectReason}
                   onChange={e => setRejectReason(e.target.value)}
                   placeholder="Explain why this recommendation is being rejected..."
                   rows={4}
-                  className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 bg-white dark:bg-slate-900 text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#0F766E] resize-none"
+                  className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-bg-elevated text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#0F766E] resize-none"
                   required
                 />
               </div>
               <div className="flex gap-3">
                 <button
                   onClick={() => { setRejectingId(null); setRejectReason(''); }}
-                  className="flex-1 py-2 rounded-lg border border-gray-200 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+                  className="flex-1 py-2 rounded-lg border border-border text-xs font-semibold text-muted-fg hover:bg-bg"
                 >
                   Cancel
                 </button>
@@ -240,7 +238,7 @@ export function Recommendations() {
               </div>
             </div>
           </div>
-        </div>
+        </dialog>
       )}
 
       <div className="flex flex-col gap-1">
@@ -248,31 +246,31 @@ export function Recommendations() {
           <h1 className="text-xl font-bold text-[#0F172A] dark:text-slate-100">System Recommendations</h1>
           <UITooltip>
             <TooltipTrigger asChild>
-              <Info className="h-4 w-4 text-slate-400 dark:text-slate-500 hover:text-slate-600 cursor-help" />
+              <Info className="h-4 w-4 text-muted-fg dark:text-muted-fg hover:text-muted-fg cursor-help" />
             </TooltipTrigger>
             <TooltipContent className="bg-slate-900 text-white max-w-xs">
               Review and act on system-generated stock recommendations to optimise inventory levels.
             </TooltipContent>
           </UITooltip>
         </div>
-        <p className="text-xs text-[#64748B] dark:text-slate-400 dark:text-slate-500">
+        <p className="text-xs text-[#64748B] dark:text-muted-fg dark:text-muted-fg">
           Review and act on system-generated stock actions to optimise inventory levels and reduce waste
         </p>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-xl border border-[#E5E7EB] dark:border-white/10 shadow-sm px-4 py-3">
-        <p className="text-[10px] font-semibold text-[#64748B] dark:text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3">Approval Workflow</p>
+      <div className="bg-bg-elevated rounded-xl border border-[#E5E7EB] dark:border-white/10 shadow-sm px-4 py-3">
+        <p className="text-[10px] font-semibold text-[#64748B] dark:text-muted-fg dark:text-muted-fg uppercase tracking-wider mb-3">Approval Workflow</p>
         <div className="flex items-center flex-wrap gap-1">
           {WORKFLOW_STEPS.map((step, idx) => (
             <React.Fragment key={step.label}>
               <span className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
-                step.active ? 'bg-[#0F766E] text-white border-[#0F766E] shadow-sm' : 'bg-slate-50 dark:bg-slate-800 text-[#64748B] dark:text-slate-400 dark:text-slate-500 border-[#E5E7EB] dark:border-white/10'
+                step.active ? 'bg-[#0F766E] text-white border-[#0F766E] shadow-sm' : 'bg-bg dark:bg-slate-800 text-[#64748B] dark:text-muted-fg dark:text-muted-fg border-[#E5E7EB] dark:border-white/10'
               }`}>
-                {step.active && <span className="inline-block w-1.5 h-1.5 rounded-full bg-white dark:bg-slate-900 mr-1.5 align-middle" />}
+                {step.active && <span className="inline-block w-1.5 h-1.5 rounded-full bg-bg-elevated mr-1.5 align-middle" />}
                 {step.label}
               </span>
               {idx < WORKFLOW_STEPS.length - 1 && (
-                <ChevronRight className="h-3.5 w-3.5 text-slate-300 dark:text-slate-500 flex-shrink-0" />
+                <ChevronRight className="h-3.5 w-3.5 text-slate-300 dark:text-muted-fg flex-shrink-0" />
               )}
             </React.Fragment>
           ))}
@@ -311,19 +309,19 @@ export function Recommendations() {
 
       <div className="flex flex-col sm:flex-row gap-2">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 dark:text-slate-500 pointer-events-none" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-fg dark:text-muted-fg pointer-events-none" />
           <input
             type="text"
             placeholder="Search product or SKU..."
             value={search}
             onChange={e => { setSearch(e.target.value); setPage(1); }}
-            className="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 text-[#374151] dark:text-slate-300 dark:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all shadow-sm"
+            className="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated text-[#374151] dark:text-slate-300 dark:text-muted-fg focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] transition-all shadow-sm"
           />
         </div>
         <select
           value={statusFilter}
           onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
-          className="px-3 py-2 text-xs rounded-lg border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 text-[#374151] dark:text-slate-300 dark:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30"
+          className="px-3 py-2 text-xs rounded-lg border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated text-[#374151] dark:text-slate-300 dark:text-muted-fg focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30"
         >
           <option value="">All Status</option>
           <option value="pending">Pending</option>
@@ -333,13 +331,13 @@ export function Recommendations() {
       </div>
 
       {filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 gap-3 bg-white dark:bg-slate-900 rounded-xl border border-[#E5E7EB] dark:border-white/10 shadow-sm">
+        <div className="flex flex-col items-center justify-center py-12 gap-3 bg-bg-elevated rounded-xl border border-[#E5E7EB] dark:border-white/10 shadow-sm">
           <div className="rounded-full bg-emerald-50 dark:bg-emerald-950/30 p-3">
             <CheckCircle className="h-6 w-6 text-[#0F766E]" />
           </div>
           <div className="text-center">
             <p className="text-sm font-bold text-[#0F172A] dark:text-slate-100">No recommendations found</p>
-            <p className="text-xs text-[#64748B] dark:text-slate-400 mt-1">Try adjusting your search or filters.</p>
+            <p className="text-xs text-[#64748B] dark:text-muted-fg mt-1">Try adjusting your search or filters.</p>
           </div>
         </div>
       ) : (
@@ -366,7 +364,7 @@ export function Recommendations() {
                 />
               </>
             ) : (
-              <span className="text-xs text-[#64748B] dark:text-slate-400 pr-1 whitespace-nowrap">
+              <span className="text-xs text-[#64748B] dark:text-muted-fg pr-1 whitespace-nowrap">
                 {row.status === 'approved' ? 'Approved' : 'Rejected'}
                 {row.reviewed_by ? ` by ${row.reviewed_by}` : ''}
               </span>
@@ -402,15 +400,15 @@ export function Recommendations() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-3">
                 <div>
-                  <p className="text-xs text-[#64748B] dark:text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider">SKU</p>
+                  <p className="text-xs text-[#64748B] dark:text-muted-fg dark:text-muted-fg font-semibold uppercase tracking-wider">SKU</p>
                   <p className="text-sm font-mono font-semibold text-[#0F172A] dark:text-slate-100 mt-0.5">{selectedRec.sku}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-[#64748B] dark:text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider">Category</p>
+                  <p className="text-xs text-[#64748B] dark:text-muted-fg dark:text-muted-fg font-semibold uppercase tracking-wider">Category</p>
                   <p className="text-sm font-semibold text-[#0F172A] dark:text-slate-100 mt-0.5">{selectedRec.category}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-[#64748B] dark:text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider">Current Stock</p>
+                  <p className="text-xs text-[#64748B] dark:text-muted-fg dark:text-muted-fg font-semibold uppercase tracking-wider">Current Stock</p>
                   <p className="text-lg font-bold text-[#0F172A] dark:text-slate-100 mt-0.5">{selectedRec.current_stock}</p>
                 </div>
                 {selectedRec.rejection_reason && (
@@ -423,11 +421,11 @@ export function Recommendations() {
 
               <div className="space-y-4">
                 <div>
-                  <p className="text-xs text-[#64748B] dark:text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider">Recommended Stock</p>
+                  <p className="text-xs text-[#64748B] dark:text-muted-fg dark:text-muted-fg font-semibold uppercase tracking-wider">Recommended Stock</p>
                   <p className="text-xl font-black text-[#0F766E] mt-0.5">{selectedRec.recommended_stock}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-[#64748B] dark:text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider">Confidence Score</p>
+                  <p className="text-xs text-[#64748B] dark:text-muted-fg dark:text-muted-fg font-semibold uppercase tracking-wider">Confidence Score</p>
                   <div className="flex items-center gap-3 mt-1.5">
                     <div className="flex-1 rounded-full bg-slate-100 dark:bg-slate-700 h-2">
                       <div className="h-2 rounded-full bg-[#0F766E]" style={{ width: `${Math.round(selectedRec.confidence_score * 100)}%` }} />
@@ -436,14 +434,14 @@ export function Recommendations() {
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs text-[#64748B] dark:text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider">Status</p>
+                  <p className="text-xs text-[#64748B] dark:text-muted-fg dark:text-muted-fg font-semibold uppercase tracking-wider">Status</p>
                   <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold mt-1 ${getStatusBadge(selectedRec.status).cls}`}>
                     {getStatusBadge(selectedRec.status).label}
                   </span>
                 </div>
                 {selectedRec.reviewed_by && (
                   <div>
-                    <p className="text-xs text-[#64748B] dark:text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider">Reviewed By</p>
+                    <p className="text-xs text-[#64748B] dark:text-muted-fg dark:text-muted-fg font-semibold uppercase tracking-wider">Reviewed By</p>
                     <p className="text-sm font-semibold text-[#0F172A] dark:text-slate-100 mt-0.5">{selectedRec.reviewed_by}</p>
                   </div>
                 )}

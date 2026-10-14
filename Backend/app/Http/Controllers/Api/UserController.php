@@ -254,4 +254,21 @@ class UserController extends Controller
             'branch_id' => $request->user()->branch_id,
         ]);
     }
+
+    public function statusCounts(Request $request)
+    {
+        $this->authorizeManagement($request);
+        $counts = $this->users($request)->selectRaw('status, COUNT(*) as aggregate')->groupBy('status')->pluck('aggregate', 'status')->all();
+        $statuses = array_fill_keys(self::STATUSES, 0);
+        foreach ($counts as $status => $count) {
+            $statuses[$status] = (int) $count;
+        }
+
+        return response()->json(['by_status' => $statuses, 'total' => array_sum($statuses), 'not_archived' => array_sum($statuses) - $statuses['Archived']]);
+    }
+
+    public function archive(Request $request, $id)
+    {
+        return $this->destroy($request, $id);
+    }
 }

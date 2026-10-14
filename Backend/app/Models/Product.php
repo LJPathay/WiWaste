@@ -2,10 +2,14 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 
 class Product extends Model
 {
+    use HasFactory;
+
     protected $table = 'Product';
 
     protected $primaryKey = 'product_id';
@@ -23,9 +27,7 @@ class Product extends Model
         'reorder_level',
         'expiration_date',
         'status',
-        'archived_at',
-        'archived_by',
-        'archive_previous_status',
+        'archived_at', 'archived_by', 'archive_previous_status',
         'product_classification',
         'required_temp_min',
         'required_temp_max',
@@ -35,12 +37,12 @@ class Product extends Model
     ];
 
     protected $casts = [
+        'archived_at' => 'datetime',
         'cost_price' => 'decimal:2',
         'selling_price' => 'decimal:2',
         'required_temp_min' => 'decimal:2',
         'required_temp_max' => 'decimal:2',
         'is_rx_only' => 'boolean',
-        'archived_at' => 'datetime',
     ];
 
     /**
@@ -57,6 +59,12 @@ class Product extends Model
                 $product->barcode = static::generateUniqueSku($product->category_id);
             }
         });
+
+        // The cached category list (Phase 19) carries `products_count`, so a product
+        // coming or going has to drop it — otherwise a category picker would keep
+        // showing the count it had the first time it was read.
+        static::saved(fn () => Cache::forget(Category::CACHE_KEY));
+        static::deleted(fn () => Cache::forget(Category::CACHE_KEY));
     }
 
     /**

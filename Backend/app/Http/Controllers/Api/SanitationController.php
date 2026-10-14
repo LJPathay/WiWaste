@@ -2,24 +2,19 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Concerns\ScopesTenant;
 use App\Http\Controllers\Controller;
-use App\Models\SanitationChecklist;
+use App\Http\Requests\Api\StoreSanitationChecklistRequest;
+use App\Http\Requests\Api\UpdateSanitationChecklistRequest;
+use App\Http\Requests\Api\VerifySanitationChecklistRequest;
+use App\Http\Resources\SanitationChecklistResource;
 use App\Models\AuditLog;
+use App\Models\SanitationChecklist;
 use Illuminate\Http\Request;
 
 class SanitationController extends Controller
 {
-    protected function scopeForBusinessAndBranch($query, Request $request)
-    {
-        $user = $request->user();
-        if ($user && $user->business_id) {
-            $query->where('business_id', $user->business_id);
-        }
-        if ($user && $user->branch_id) {
-            $query->where('branch_id', $user->branch_id);
-        }
-        return $query;
-    }
+    use ScopesTenant;
 
     public function index(Request $request)
     {
@@ -43,34 +38,24 @@ class SanitationController extends Controller
         }
 
         $perPage = min((int) $request->input('per_page', 20), 100);
+
         return response()->json(
             $query->orderByDesc('checklist_date')->paginate($perPage)
+                ->through(fn ($c) => (new SanitationChecklistResource($c))->resolve($request))
         );
     }
 
-    public function store(Request $request)
+    public function store(StoreSanitationChecklistRequest $request)
     {
         $user = $request->user();
 
-        $data = $request->validate([
-            'business_id' => 'sometimes|integer|exists:businesses,id',
-            'branch_id'   => 'sometimes|integer|exists:branches,id',
-            'checklist_date' => 'required|date',
-            'frequency'   => 'required|in:daily,weekly,monthly',
-            'area'        => 'required|in:receiving,storage,preparation,dispensing,waste,general',
-            'checks'      => 'required|array|min:1',
-            'checks.*.item'       => 'required|string|max:255',
-            'checks.*.passed'     => 'required|boolean',
-            'checks.*.notes'      => 'nullable|string|max:500',
-            'checks.*.photo_url'  => 'nullable|string|max:500',
-            'notes' => 'nullable|string|max:1000',
-        ]);
+        $data = $request->validated();
 
         // Auto-assign business_id and branch_id from user if not provided
-        if (!isset($data['business_id']) && $user && $user->business_id) {
+        if (! isset($data['business_id']) && $user && $user->business_id) {
             $data['business_id'] = $user->business_id;
         }
-        if (!isset($data['branch_id']) && $user && $user->branch_id) {
+        if (! isset($data['branch_id']) && $user && $user->branch_id) {
             $data['branch_id'] = $user->branch_id;
         }
         $data['created_by'] = $user?->User_id ?? 1;
@@ -82,53 +67,38 @@ class SanitationController extends Controller
         $checklist = SanitationChecklist::create($data);
 
         AuditLog::create([
-            'user_id'       => $user?->User_id ?? 1,
-            'action'        => "Created sanitation checklist for {$data['frequency']} {$data['area']} on {$data['checklist_date']}",
-            'entity_type'   => 'Sanitation_Checklist',
-            'entity_id'     => $checklist->checklist_id,
-            'old_values'    => null,
-            'new_values'    => json_encode($data),
-            'created_at'    => now(),
-            'business_id'   => $user?->business_id,
-            'branch_id'     => $user?->branch_id,
+            'user_id' => $user?->User_id ?? 1,
+            'action' => "Created sanitation checklist for {$data['frequency']} {$data['area']} on {$data['checklist_date']}",
+            'entity_type' => 'Sanitation_Checklist',
+            'entity_id' => $checklist->checklist_id,
+            'old_values' => null,
+            'new_values' => json_encode($data),
+            'created_at' => now(),
+            'business_id' => $user?->business_id,
+            'branch_id' => $user?->branch_id,
         ]);
 
         $checklist->load(['creator', 'verifier']);
 
         return response()->json([
             'message' => 'Sanitation checklist created.',
-            'checklist' => $checklist,
+            'checklist' => (new SanitationChecklistResource($checklist))->resolve($request),
         ], 201);
     }
 
     public function show($id)
     {
-        $query = SanitationChecklist::with(['creator', 'verifier']);
-        $query = $this->scopeForBusinessAndBranch($query, request());
-        $checklist = $query->findOrFail($id);
+        $checklist = $this->findScoped(SanitationChecklist::class, $id, ['creator', 'verifier']);
 
-        return response()->json($checklist);
+        return response()->json((new SanitationChecklistResource($checklist))->resolve(request()));
     }
 
-    public function update(Request $request, $id)
+    public function update(UpdateSanitationChecklistRequest $request, $id)
     {
         $user = $request->user();
+        $checklist = $this->findScoped(SanitationChecklist::class, $id, ['creator', 'verifier']);
 
-        $query = SanitationChecklist::with(['creator', 'verifier']);
-        $query = $this->scopeForBusinessAndBranch($query, $request);
-        $checklist = $query->findOrFail($id);
-
-        $data = $request->validate([
-            'checklist_date' => 'sometimes|date',
-            'frequency'      => 'sometimes|in:daily,weekly,monthly',
-            'area'           => 'sometimes|in:receiving,storage,preparation,dispensing,waste,general',
-            'checks'         => 'sometimes|array|min:1',
-            'checks.*.item'       => 'required|string|max:255',
-            'checks.*.passed'     => 'required|boolean',
-            'checks.*.notes'      => 'nullable|string|max:500',
-            'checks.*.photo_url'  => 'nullable|string|max:500',
-            'notes'          => 'nullable|string|max:1000',
-        ]);
+        $data = $request->validated();
 
         // Recalculate overall status if checks updated
         if (isset($data['checks'])) {
@@ -139,38 +109,33 @@ class SanitationController extends Controller
         $checklist->update($data);
 
         AuditLog::create([
-            'user_id'       => $user?->User_id ?? 1,
-            'action'        => "Updated sanitation checklist #{$checklist->checklist_id}",
-            'entity_type'   => 'Sanitation_Checklist',
-            'entity_id'     => $checklist->checklist_id,
-            'old_values'    => json_encode($checklist->getOriginal()),
-            'new_values'    => json_encode($data),
-            'created_at'    => now(),
-            'business_id'   => $user?->business_id,
-            'branch_id'     => $user?->branch_id,
+            'user_id' => $user?->User_id ?? 1,
+            'action' => "Updated sanitation checklist #{$checklist->checklist_id}",
+            'entity_type' => 'Sanitation_Checklist',
+            'entity_id' => $checklist->checklist_id,
+            'old_values' => json_encode($checklist->getOriginal()),
+            'new_values' => json_encode($data),
+            'created_at' => now(),
+            'business_id' => $user?->business_id,
+            'branch_id' => $user?->branch_id,
         ]);
 
         $checklist->load(['creator', 'verifier']);
 
         return response()->json([
             'message' => 'Sanitation checklist updated.',
-            'checklist' => $checklist,
+            'checklist' => (new SanitationChecklistResource($checklist))->resolve($request),
         ]);
     }
 
-    public function verify(Request $request, $id)
+    public function verify(VerifySanitationChecklistRequest $request, $id)
     {
         $user = $request->user();
+        $checklist = $this->findScoped(SanitationChecklist::class, $id, ['creator', 'verifier']);
 
-        $query = SanitationChecklist::with(['creator', 'verifier']);
-        $query = $this->scopeForBusinessAndBranch($query, $request);
-        $checklist = $query->findOrFail($id);
+        $data = $request->validated();
 
-        $data = $request->validate([
-            'verified_by' => 'sometimes|integer|exists:User,User_id',
-        ]);
-
-        if (!isset($data['verified_by']) && $user && $user->User_id) {
+        if (! isset($data['verified_by']) && $user && $user->User_id) {
             $data['verified_by'] = $user->User_id;
         }
         $data['verified_at'] = now();
@@ -178,22 +143,22 @@ class SanitationController extends Controller
         $checklist->update($data);
 
         AuditLog::create([
-            'user_id'       => $user?->User_id ?? 1,
-            'action'        => "Verified sanitation checklist #{$checklist->checklist_id}",
-            'entity_type'   => 'Sanitation_Checklist',
-            'entity_id'     => $checklist->checklist_id,
-            'old_values'    => json_encode($checklist->getOriginal()),
-            'new_values'    => json_encode($data),
-            'created_at'    => now(),
-            'business_id'   => $user?->business_id,
-            'branch_id'     => $user?->branch_id,
+            'user_id' => $user?->User_id ?? 1,
+            'action' => "Verified sanitation checklist #{$checklist->checklist_id}",
+            'entity_type' => 'Sanitation_Checklist',
+            'entity_id' => $checklist->checklist_id,
+            'old_values' => json_encode($checklist->getOriginal()),
+            'new_values' => json_encode($data),
+            'created_at' => now(),
+            'business_id' => $user?->business_id,
+            'branch_id' => $user?->branch_id,
         ]);
 
         $checklist->load(['creator', 'verifier']);
 
         return response()->json([
             'message' => 'Sanitation checklist verified.',
-            'checklist' => $checklist,
+            'checklist' => (new SanitationChecklistResource($checklist))->resolve($request),
         ]);
     }
 
@@ -230,7 +195,7 @@ class SanitationController extends Controller
                 'general' => $checklists->where('area', 'general')->count(),
             ],
             'failed_checks' => $checklists
-                ->flatMap(fn ($c) => collect($c->checks ?? [])->filter(fn ($check) => !($check['passed'] ?? false)))
+                ->flatMap(fn ($c) => collect($c->checks ?? [])->filter(fn ($check) => ! ($check['passed'] ?? false)))
                 ->values()
                 ->all(),
         ];

@@ -2,6 +2,8 @@
 
 namespace App\Policies;
 
+use App\Enums\Role;
+use App\Models\SalesTransaction;
 use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
@@ -11,26 +13,38 @@ class SalesPolicy
 
     public function viewAny(User $user): bool
     {
-        return in_array($user->role, ['Owner']);
+        return in_array($user->role, [...Role::ownerTier(), 'Cashier']);
     }
 
-    public function view(User $user, $sale): bool
+    public function view(User $user, SalesTransaction $sale): bool
     {
-        return in_array($user->role, ['Owner']);
+        if (Role::isOwnerTier($user->role)) {
+            return true;
+        }
+        if ($user->role === 'Cashier') {
+            return $sale->user_id === $user->User_id;
+        }
+
+        return false;
     }
 
     public function create(User $user): bool
     {
-        return in_array($user->role, ['Owner']);
+        return in_array($user->role, [...Role::ownerTier(), 'Cashier']);
     }
 
     public function refund(User $user, $sale): bool
     {
-        return $user->role === 'Owner';
+        return Role::isOwnerTier($user->role);
     }
 
     public function void(User $user, $sale): bool
     {
-        return $user->role === 'Owner';
+        return Role::isOwnerTier($user->role);
+    }
+
+    public function viewOwn(User $user, SalesTransaction $sale): bool
+    {
+        return Role::isOwnerTier($user->role) || ($user->role === 'Cashier' && $sale->user_id === $user->User_id);
     }
 }

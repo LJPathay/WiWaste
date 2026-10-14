@@ -16,7 +16,7 @@ return new class extends Migration
             $table->integer('quantity');
             $table->decimal('estimated_loss', 10, 2);
             $table->dateTime('date_recorded');
-            
+
             $table->foreign('product_id')->references('product_id')->on('Product');
             $table->foreign('user_id')->references('User_id')->on('User');
         });

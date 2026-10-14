@@ -71,7 +71,7 @@ export function Login() {
       navigate(uiRole === 'cashier' ? '/cashier/pos' : '/dashboard');
     } catch (loginError) {
       const details = loginError as { status?: number; retryAfter?: number; lockedUntil?: string };
-      if (details?.status === 423) {
+      if (details?.status === 423 || (details?.status === 429 && details.lockedUntil)) {
         const serverUntil = details.lockedUntil ? new Date(details.lockedUntil).getTime() : 0;
         const until = serverUntil > Date.now() ? serverUntil : Date.now() + Math.max(1, Number(details.retryAfter) || 60) * 1000;
         setLockedUntil(until);

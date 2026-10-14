@@ -4,6 +4,8 @@ import { AlertCircle, AlertTriangle, ArrowLeft, Info, RefreshCw, ShieldAlert } f
 import { Link } from 'react-router-dom';
 import { lossRisk, type ApiLossRiskItem, type ApiLossRiskSummary, type RiskTier } from '../../services/api';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
+import { ChartGradients, ChartTooltipStyle } from '../../components/charts/ChartGradients';
+import { CHART_DEFAULTS, CHART_COLORS, useChartAnimation } from '../../components/charts/ChartConfig';
 
 const currencyFormatter = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 });
 
@@ -48,6 +50,7 @@ export function LeakageDetectionPage() {
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const { isAnimationActive, animationDuration, animationEasing } = useChartAnimation();
   const loadResults = useCallback(() => {
     setLoading(true);
     setError(null);
@@ -105,7 +108,7 @@ export function LeakageDetectionPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-[50vh] items-center justify-center text-sm text-slate-500 dark:text-slate-400">
+      <div className="flex min-h-[50vh] items-center justify-center text-sm text-muted-fg dark:text-muted-fg">
         Loading loss-risk data…
       </div>
     );
@@ -127,7 +130,7 @@ export function LeakageDetectionPage() {
           <button onClick={handleRun} className="inline-flex items-center gap-1.5 h-8 rounded-xl bg-rose-600 px-3 text-xs font-semibold text-white hover:bg-rose-700">
             <RefreshCw className="h-3.5 w-3.5" /> Run Risk Assessment
           </button>
-          <button onClick={loadResults} className="h-8 rounded-xl border border-slate-200 px-3 text-xs font-semibold text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5">
+          <button onClick={loadResults} className="h-8 rounded-xl border border-border px-3 text-xs font-semibold text-muted-fg hover:bg-bg dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5">
             Retry
           </button>
         </div>
@@ -140,14 +143,14 @@ export function LeakageDetectionPage() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <Link to="/dashboard?highlightKpi=1" className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-slate-200 dark:border-white/10 text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-white/10 dark:hover:text-slate-200 transition-colors" aria-label="Back to Dashboard"><ArrowLeft className="h-4 w-4" /></Link>
+        <Link to="/dashboard?highlightKpi=1" className="touch-target inline-flex items-center justify-center h-8 w-8 rounded-lg border border-border dark:border-white/10 text-muted-fg hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-white/10 dark:hover:text-slate-200 transition-colors" aria-label="Back to Dashboard"><ArrowLeft className="h-4 w-4" /></Link>
         <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Loss-Risk Visibility</h1>
         <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2 py-0.5 text-[9px] font-bold text-rose-700 dark:bg-rose-500/20 dark:text-rose-300">
           <ShieldAlert className="h-3 w-3" /> Model: XGBoost
         </span>
         <UITooltip>
           <TooltipTrigger asChild>
-            <Info className="h-4 w-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
+            <Info className="h-4 w-4 text-muted-fg hover:text-muted-fg dark:hover:text-slate-300 cursor-help" />
           </TooltipTrigger>
           <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
             Per-SKU probability of expiry, spoilage, damage or shrinkage loss, with expected loss in pesos.
@@ -155,7 +158,7 @@ export function LeakageDetectionPage() {
         </UITooltip>
         <div className="ml-auto flex items-center gap-2">
           {generatedAt && (
-            <span className="text-[9px] text-slate-400 dark:text-slate-500">Assessed {new Date(generatedAt).toLocaleString()}</span>
+            <span className="text-[9px] text-muted-fg dark:text-muted-fg">Assessed {new Date(generatedAt).toLocaleString()}</span>
           )}
           <button
             onClick={handleRun}
@@ -191,7 +194,7 @@ export function LeakageDetectionPage() {
         <div className="rounded-xl border border-dashed border-slate-300 bg-white p-6 text-center dark:border-white/10 dark:bg-slate-900">
           <ShieldAlert className="mx-auto h-7 w-7 text-rose-400" />
           <h2 className="mt-2 text-base font-bold text-slate-900 dark:text-slate-100">No risk scores yet</h2>
-          <p className="mx-auto mt-1 max-w-md text-xs text-slate-500 dark:text-slate-400">
+          <p className="mx-auto mt-1 max-w-md text-xs text-muted-fg dark:text-muted-fg">
             Run a risk assessment to score every active SKU against the XGBoost loss model. Results are cached for an hour.
           </p>
           <button
@@ -218,20 +221,20 @@ export function LeakageDetectionPage() {
                   {topItem ? `${(topItem.loss_probability * 100).toFixed(0)}% probability · ${currencyFormatter.format(topItem.expected_loss)}` : '—'}
                 </div>
               </div>
-              <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-white/10 dark:bg-slate-900">
-                <div className="text-[9px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">High-Risk SKUs</div>
+              <div className="rounded-xl border border-border bg-white p-3 dark:border-white/10 dark:bg-slate-900">
+                <div className="text-[9px] font-semibold uppercase tracking-widest text-muted-fg dark:text-muted-fg">High-Risk SKUs</div>
                 <div className="mt-1.5 text-xl font-bold text-[#0b1c30] dark:text-slate-100">{highRiskCount}</div>
-                <div className="mt-0.5 text-[9px] text-slate-500">{mediumRiskCount} medium-risk need review</div>
+                <div className="mt-0.5 text-[9px] text-muted-fg">{mediumRiskCount} medium-risk need review</div>
               </div>
             </div>
 
-          <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-slate-900">
+          <section className="rounded-xl border border-border bg-white p-4 shadow-sm dark:border-white/10 dark:bg-slate-900">
             <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
               <div className="flex items-center gap-1.5">
                 <h2 className="text-sm font-bold text-[#0b1c30] dark:text-slate-100">Expected Loss by Category</h2>
                 <UITooltip>
                   <TooltipTrigger asChild>
-                    <Info className="h-3.5 w-3.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 cursor-help" />
+                    <Info className="h-3.5 w-3.5 text-muted-fg hover:text-rose-600 dark:hover:text-rose-400 cursor-help" />
                   </TooltipTrigger>
                   <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
                     Sum of per-SKU expected loss (probability × unit cost × stock), largest first.
@@ -246,12 +249,22 @@ export function LeakageDetectionPage() {
             <div className="h-48 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={categoryData} layout="vertical" margin={{ left: 16, right: 80, top: 8, bottom: 8 }} barSize={24}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e8edf5" />
-                  <XAxis type="number" tick={{ fontSize: 11 }} stroke="#94a3b8" />
-                  <YAxis type="category" dataKey="name" width={150} tick={{ fontSize: 11 }} stroke="#94a3b8" />
-                  <Tooltip formatter={(value) => currencyFormatter.format(Number(value))} contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 24px rgba(0,0,0,0.08)' }} />
-                  <Bar dataKey="amount" radius={[0, 10, 10, 0]} fill="#ef4444" name="Expected loss">
-                    <LabelList dataKey="amount" position="right" formatter={(value: number) => currencyFormatter.format(value)} style={{ fill: '#64748b', fontSize: 10, fontWeight: 600 }} />
+                  <ChartGradients />
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={CHART_COLORS.grid} />
+                  <XAxis type="number" tick={{ fontSize: 11, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} />
+                  <YAxis type="category" dataKey="name" width={150} tick={{ fontSize: 11, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} />
+                  <Tooltip formatter={(value) => currencyFormatter.format(Number(value))} contentStyle={ChartTooltipStyle()} />
+                  <Bar
+                    dataKey="amount"
+                    radius={[0, 10, 10, 0]}
+                    fill={CHART_COLORS.danger}
+                    name="Expected loss"
+                    isAnimationActive={isAnimationActive}
+                    animationDuration={animationDuration}
+                    animationEasing={animationEasing}
+                    animationBegin={CHART_DEFAULTS.animationBegin}
+                  >
+                    <LabelList dataKey="amount" position="right" formatter={(value: number) => currencyFormatter.format(value)} style={{ fill: CHART_COLORS.text, fontSize: 10, fontWeight: 600 }} />
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
@@ -267,7 +280,7 @@ export function LeakageDetectionPage() {
                   className={`rounded-full px-2.5 py-0.5 text-[9px] font-semibold transition-colors ${
                     tier === filter.value
                       ? 'bg-[#0b1c30] text-white dark:bg-white dark:text-slate-900'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10'
+                      : 'bg-slate-100 text-muted-fg hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10'
                   }`}
                 >
                   {filter.label}
@@ -280,26 +293,26 @@ export function LeakageDetectionPage() {
                 const style = getSeverityStyle(item.risk_tier);
                 const driver = topDriver(item);
                 return (
-                  <div key={item.product_id} className={`rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm dark:border-white/10 dark:bg-slate-900 border-l-4 ${style.border} transition-all hover:-translate-y-0.5 hover:shadow-md`}>
+                  <div key={item.product_id} className={`rounded-xl border border-border bg-white p-3.5 shadow-sm dark:border-white/10 dark:bg-slate-900 border-l-4 ${style.border} transition-all hover:-translate-y-0.5 hover:shadow-md`}>
                     <div className="flex items-center justify-between gap-2">
                       <h3 className="text-sm font-bold text-[#0b1c30] dark:text-slate-100">{item.product_name}</h3>
                       <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-[9px] font-bold ${style.badge}`}>{item.risk_tier}</span>
                     </div>
-                    <p className="mt-0.5 text-[9px] text-slate-500 dark:text-slate-400">
+                    <p className="mt-0.5 text-[9px] text-muted-fg dark:text-muted-fg">
                       {item.sku} · {item.category} · {item.current_stock} units · {item.days_to_expiry} days to expiry
                     </p>
                     <div className="mt-3 grid grid-cols-2 gap-2">
-                      <div className="rounded-xl bg-slate-50 border border-slate-100 p-2.5 dark:bg-slate-800 dark:border-white/5">
-                        <div className="text-[9px] font-medium text-slate-400">Expected Loss</div>
+                      <div className="rounded-xl bg-bg border border-slate-100 p-2.5 dark:bg-slate-800 dark:border-white/5">
+                        <div className="text-[9px] font-medium text-muted-fg">Expected Loss</div>
                         <div className="mt-0.5 text-base font-bold text-[#0b1c30] dark:text-slate-100">{currencyFormatter.format(item.expected_loss)}</div>
                       </div>
-                      <div className="rounded-xl bg-slate-50 border border-slate-100 p-2.5 dark:bg-slate-800 dark:border-white/5">
-                        <div className="text-[9px] font-medium text-slate-400">Loss Probability</div>
+                      <div className="rounded-xl bg-bg border border-slate-100 p-2.5 dark:bg-slate-800 dark:border-white/5">
+                        <div className="text-[9px] font-medium text-muted-fg">Loss Probability</div>
                         <div className="mt-0.5 text-base font-bold text-[#0b1c30] dark:text-slate-100">{(item.loss_probability * 100).toFixed(1)}%</div>
                       </div>
                     </div>
                     <div className="mt-3">
-                      <div className="flex items-center justify-between text-[9px] text-slate-400 mb-0.5">
+                      <div className="flex items-center justify-between text-[9px] text-muted-fg mb-0.5">
                         <span>Risk exposure</span>
                         <span>{(item.loss_probability * 100).toFixed(0)}%</span>
                       </div>
@@ -307,7 +320,7 @@ export function LeakageDetectionPage() {
                         <div className={`h-1.5 rounded-full ${style.bar} transition-all`} style={{ width: `${Math.round(item.loss_probability * 100)}%` }} />
                       </div>
                     </div>
-                    <div className="mt-2 text-[9px] text-slate-500 dark:text-slate-400">
+                    <div className="mt-2 text-[9px] text-muted-fg dark:text-muted-fg">
                       <span className="font-semibold text-slate-700 dark:text-slate-300">Top driver: </span>
                       {driver.name} ({driver.value.toFixed(2)} importance)
                     </div>
@@ -315,7 +328,7 @@ export function LeakageDetectionPage() {
                 );
               })}
               {filteredItems.length === 0 && (
-                <div className="col-span-full rounded-xl border border-dashed border-slate-300 p-6 text-center text-xs text-slate-500 dark:border-white/10 dark:text-slate-400">
+                <div className="col-span-full rounded-xl border border-dashed border-slate-300 p-6 text-center text-xs text-muted-fg dark:border-white/10 dark:text-muted-fg">
                   No {tier === 'All' ? '' : `${tier.toLowerCase()}-risk `}items in the current assessment.
                 </div>
               )}

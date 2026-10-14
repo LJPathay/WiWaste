@@ -1,5 +1,14 @@
 // Central API service — all backend calls go through here
 import type {
+  ApiWastageFlag,
+  ApiStockCount,
+  CreateStockCountPayload,
+  ApiSalesWastageOverview,
+  ApiSalesWastageTimeSeries,
+  ApiFlagsSummary,
+  ApiReorderSuggestionsResponse,
+  PaginatedResponseWithMeta,
+  RetentionPoliciesResponse,
   PaginatedResponse,
   ApiUser,
   CreateUserPayload,
@@ -63,7 +72,6 @@ import type {
   ApiDataBreachIncident,
   ApiBreachStatistics,
   ApiPrivacyComplianceReport,
-  ApiRetentionPolicy,
   ApiRetentionSummary,
 } from '../types/api';
 export type {
@@ -86,7 +94,10 @@ export type {
   ApiInventoryMovements,
   ApiStockMovement,
   ApiWastage,
+  ApiWastageFlag,
+  ApiStockCount,
   CreateWastagePayload,
+  CreateStockCountPayload,
   ApiSalesTransaction,
   ApiSalesItem,
   CreateSalePayload,
@@ -134,6 +145,12 @@ export type {
   ApiLossRiskSummary,
   ApiLossRiskItemsResponse,
   ApiLossRiskSummaryResponse,
+  ApiSalesWastageOverview,
+  ApiSalesWastageCategoryBreakdown,
+  ApiTopWastedProduct,
+  ApiSlowMover,
+  ApiSalesWastageTimeSeries,
+  ApiFlagsSummary,
   ApiAlertBatch,
   ApiAlertSupplier,
   ApiExpiringResponse,
@@ -147,6 +164,7 @@ export type {
   ApiReorderSuggestionItem,
   ApiReorderSuggestion,
   ApiReorderSummary,
+  ApiReorderSuggestionsResponse,
   ApiDataSubjectRequest,
   ApiDataBreachIncident,
   ApiBreachStatistics,
@@ -155,10 +173,16 @@ export type {
   ApiRetentionSummary,
 } from '../types/api';
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api';
+const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api/v1';
 
 function getToken(): string | null {
   return localStorage.getItem('wiwaste_token');
+}
+
+let freshRequests = 0;
+export async function withFreshResponse<T>(run: () => Promise<T>): Promise<T> {
+  freshRequests++;
+  try { return await run(); } finally { freshRequests--; }
 }
 
 export class ApiError extends Error {
@@ -181,8 +205,10 @@ export class ApiError extends Error {
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
+  console.debug('[API] Request:', path, 'Token:', token?.substring(0, 20) + '...');
   const res = await fetch(`${BASE_URL}${path}`, {
     ...options,
+    cache: options.cache ?? (freshRequests > 0 ? 'reload' : 'default'),
     headers: {
       'Content-Type': 'application/json',
       Accept: 'application/json',
@@ -190,8 +216,9 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
       ...((options.headers as Record<string, string>) ?? {}),
     },
   });
+  console.debug('[API] Response:', path, 'Status:', res.status);
   if (!res.ok) {
-    if (res.status === 401 && !['/login', '/forgot-password', '/reset-password'].includes(path)) {
+    if (res.status === 401 && !['/login', '/forgot-password', '/reset-password', '/password/forgot', '/password/reset', '/password/verify-otp'].includes(path) && token && getToken() === token) {
       localStorage.removeItem('wiwaste_token');
       localStorage.removeItem('wiwaste_user');
       localStorage.removeItem('wiwaste-session');
@@ -205,21 +232,29 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 }
 
 // ─── Auth ───────────────────────────────────────────────
+export interface LoginResponse {
+  access_token: string;
+  user: ApiUser;
+}
+
+type ResetPasswordInput = { email: string; otp: string; password: string; password_confirmation: string };
 export const auth = {
   login: async (username: string, password: string) => {
-    const result = await request<{ token: string; user: unknown }>('/login', {
-      method: 'POST',
-      body: JSON.stringify({ username, password }),
+    const result = await request<{ token?: string; access_token?: string; user?: unknown; data?: LoginResponse }>('/login', {
+      method: 'POST', body: JSON.stringify({ username, password }),
     });
-    return { ...result, user: normalizeUser(result.user) };
+    const value = result.data ?? result;
+    return { token: ('token' in value ? value.token : undefined) ?? value.access_token ?? '', user: normalizeUser(value.user) };
   },
-  forgotPassword: (email: string) => request<{ message: string }>('/forgot-password', {
-    method: 'POST', body: JSON.stringify({ email }),
-  }),
-  resetPassword: (data: { email: string; otp: string; password: string; password_confirmation: string }) =>
-    request<{ message: string }>('/reset-password', { method: 'POST', body: JSON.stringify(data) }),
+  forgotPassword: (email: string) => request<{ message: string }>('/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }),
+  resetPassword: (input: ResetPasswordInput | string, otp?: string, password?: string, confirmation?: string) => {
+    const data = typeof input === 'string' ? { email: input, otp, password, password_confirmation: confirmation } : input;
+    return request<{ message: string }>('/reset-password', { method: 'POST', body: JSON.stringify(data) });
+  },
+  verifyOtp: (email: string, otp: string) => request<{ verified: boolean }>('/password/verify-otp', { method: 'POST', body: JSON.stringify({ email, otp }) }),
   logout: () => request('/logout', { method: 'POST' }),
-  me: () => request<ApiUser>('/me'),
+  me: () => request<ApiUser | { data: ApiUser }>('/me'),
+  refresh: () => request('/refresh', { method: 'POST' }),
 };
 
 export function normalizeUser(value: unknown): ApiUser {
@@ -249,6 +284,16 @@ export function normalizeUser(value: unknown): ApiUser {
 }
 
 // ─── Users ──────────────────────────────────────────────
+export interface PaginatedUsersResponse {
+  data: ApiUser[];
+  meta: {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+  };
+}
+
 export const users = {
   list: async (page = 1) => {
     const result = await request<unknown[] | { data: unknown[] }>(`/users?page=${page}`);
@@ -266,6 +311,16 @@ export const users = {
 };
 
 // ─── Categories ─────────────────────────────────────────
+export interface PaginatedCategoriesResponse {
+  data: ApiCategory[];
+  meta: {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+  };
+}
+
 export const categories = {
   list: (params?: { include_archived?: boolean; status?: string }) => {
     const qs = new URLSearchParams();
@@ -282,8 +337,24 @@ export const categories = {
 };
 
 // ─── Suppliers ──────────────────────────────────────────
+export interface PaginatedSuppliersResponse {
+  data: ApiSupplier[];
+  meta: {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+  };
+}
+
 export const suppliers = {
-  list: () => request<ApiSupplier[]>('/suppliers'),
+  list: (page = 1, perPage = 15, search = '') => {
+    const params = new URLSearchParams();
+    params.set('page', page.toString());
+    params.set('per_page', perPage.toString());
+    if (search) params.set('search', search);
+    return request<PaginatedSuppliersResponse>(`/suppliers?${params.toString()}`);
+  },
   show: (id: number) => request<ApiSupplierDetail>(`/suppliers/${id}`),
   create: (data: CreateSupplierPayload) =>
     request('/suppliers', { method: 'POST', body: JSON.stringify(data) }),
@@ -330,6 +401,9 @@ export const inventory = {
     request('/inventory/stock-in', { method: 'POST', body: JSON.stringify(data) }),
   stockOut: (data: { product_id: number; quantity: number; remarks?: string }) =>
     request('/inventory/stock-out', { method: 'POST', body: JSON.stringify(data) }),
+  receive: (data: { product_id: number; quantity: number; batch_number: string; expiry_date: string; remarks?: string }) =>
+    request('/inventory/receive', { method: 'POST', body: JSON.stringify(data) }),
+  nearExpiry: (days = 90) => request(`/inventory/near-expiry?days=${days}`),
   movements: (id: number) =>
     request<ApiInventoryMovements>(`/inventory/${id}/movements`),
   allMovements: (params?: {
@@ -361,6 +435,39 @@ export const wastage = {
     request('/wastage', { method: 'POST', body: JSON.stringify(data) }),
 };
 
+// ─── Wastage Flags ────────────────────────────────────────
+export const wastageFlags = {
+  list: (params?: { status?: string; page?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.status) qs.set('status', params.status);
+    if (params?.page) qs.set('page', String(params.page));
+    const q = qs.toString();
+    return request<PaginatedResponse<ApiWastageFlag>>(`/wastage-flags${q ? '?' + q : ''}`);
+  },
+  flag: (data: { product_id: number; batch_id?: number; quantity: number; reason: string; notes?: string }) =>
+    request('/wastage-flags', { method: 'POST', body: JSON.stringify(data) }),
+  confirm: (id: number) => request(`/wastage-flags/${id}/confirm`, { method: 'POST' }),
+  reject: (id: number, rejection_reason: string) =>
+    request(`/wastage-flags/${id}/reject`, { method: 'POST', body: JSON.stringify({ rejection_reason }) }),
+};
+
+// ─── Stock Counts ──────────────────────────────────────────
+export const stockCounts = {
+  list: (params?: { status?: string; product_id?: number; page?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.status) qs.set('status', params.status);
+    if (params?.product_id) qs.set('product_id', String(params.product_id));
+    if (params?.page) qs.set('page', String(params.page));
+    const q = qs.toString();
+    return request<PaginatedResponse<ApiStockCount>>(`/stock-counts${q ? '?' + q : ''}`);
+  },
+  create: (data: CreateStockCountPayload) =>
+    request('/stock-counts', { method: 'POST', body: JSON.stringify(data) }),
+  approve: (id: number) => request(`/stock-counts/${id}/approve`, { method: 'POST' }),
+  reject: (id: number, rejection_reason: string) =>
+    request(`/stock-counts/${id}/reject`, { method: 'POST', body: JSON.stringify({ rejection_reason }) }),
+};
+
 // ─── Stock Receiving ────────────────────────────────────
 export const stockReceiving = {
   list: (params?: { status?: string; page?: number }) => {
@@ -372,7 +479,9 @@ export const stockReceiving = {
   },
   create: (data: CreateStockReceivingPayload) =>
     request('/stock-receiving', { method: 'POST', body: JSON.stringify(data) }),
-  receive: (id: number, items: { product_id: number; quantity: number; unit_cost: number; batch_number?: string; expiration_date?: string }[]) =>
+  // Matches `StockReceivingController::receive()`, which keys each line by
+  // `receiving_item_id` and requires a `received_quantity` of at least 1.
+  receive: (id: number, items: { receiving_item_id: number; received_quantity: number; rejected_quantity?: number; notes?: string }[]) =>
     request(`/stock-receiving/${id}/receive`, { method: 'POST', body: JSON.stringify({ items }) }),
   reject: (id: number, reason: string) =>
     request(`/stock-receiving/${id}/reject`, { method: 'POST', body: JSON.stringify({ reason }) }),
@@ -457,6 +566,34 @@ export const reports = {
     const q = qs.toString();
     return request<ApiSeniorPwdTransaction[]>(`/reports/senior-pwd-log${q ? '?' + q : ''}`);
   },
+};
+
+// ─── Sales vs Wastage Dashboard ────────────────────────────
+export const salesWastage = {
+  overview: (params?: { from?: string; to?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.from) qs.set('from', params.from);
+    if (params?.to) qs.set('to', params.to);
+    const q = qs.toString();
+    return request<ApiSalesWastageOverview>(`/sales-wastage/overview${q ? '?' + q : ''}`);
+  },
+  timeSeries: (params?: { from?: string; to?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.from) qs.set('from', params.from);
+    if (params?.to) qs.set('to', params.to);
+    const q = qs.toString();
+    return request<ApiSalesWastageTimeSeries[]>(`/sales-wastage/time-series${q ? '?' + q : ''}`);
+  },
+  exportCsv: (params?: { from?: string; to?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.from) qs.set('from', params.from);
+    if (params?.to) qs.set('to', params.to);
+    const q = qs.toString();
+    return fetch(`${BASE_URL}/sales-wastage/export${q ? '?' + q : ''}`, {
+      headers: { Authorization: `Bearer ${getToken()}` },
+    }).then((res) => res.blob());
+  },
+  flagsSummary: () => request<ApiFlagsSummary>('/sales-wastage/flags-summary'),
 };
 
 // ─── Settings ───────────────────────────────────────────
@@ -627,7 +764,7 @@ export const recall = {
     if (params?.severity) qs.set('severity', params.severity);
     if (params?.page) qs.set('page', String(params.page));
     const q = qs.toString();
-    return request<ApiRecall[]>(`/recalls${q ? '?' + q : ''}`);
+    return request<PaginatedResponse<ApiRecall>>(`/recalls${q ? '?' + q : ''}`);
   },
   show: (id: number) => request<ApiRecall>(`/recalls/${id}`),
   create: (data: { product_id: number; batch_id?: number; supplier_id?: number; reason: string; severity: string; affected_batches: Array<{ batch_id: number; quantity: number }>; target_resolution_date?: string }) =>
@@ -652,7 +789,7 @@ export const sanitation = {
     if (params?.date) qs.set('date', params.date);
     if (params?.page) qs.set('page', String(params.page));
     const q = qs.toString();
-    return request<ApiSanitationChecklist[]>(`/sanitation${q ? '?' + q : ''}`);
+    return request<PaginatedResponse<ApiSanitationChecklist>>(`/sanitation${q ? '?' + q : ''}`);
   },
   show: (id: number) => request<ApiSanitationChecklist>(`/sanitation/${id}`),
   create: (data: { checklist_date: string; frequency: string; area: string; checks: Array<{ item: string; passed: boolean; notes?: string; photo_url?: string }>; notes?: string }) =>
@@ -674,7 +811,7 @@ export const reorder = {
     const qs = new URLSearchParams();
     if (params?.safety_stock_multiplier) qs.set('safety_stock_multiplier', String(params.safety_stock_multiplier));
     const q = qs.toString();
-    return request<ApiReorderSuggestion[]>(`/reorder/suggestions${q ? '?' + q : ''}`);
+    return request<ApiReorderSuggestionsResponse>(`/reorder/suggestions${q ? '?' + q : ''}`);
   },
   approve: (data: { suggestions: ApiReorderSuggestion[] }) =>
     request('/reorder/approve', { method: 'POST', body: JSON.stringify(data) }),
@@ -690,7 +827,7 @@ export const privacy = {
     if (params?.status) qs.set('status', params.status);
     if (params?.page) qs.set('page', String(params.page));
     const q = qs.toString();
-    return request<ApiDataSubjectRequest[]>(`/privacy/requests${q ? '?' + q : ''}`);
+    return request<PaginatedResponseWithMeta<ApiDataSubjectRequest>>(`/privacy/requests${q ? '?' + q : ''}`);
   },
   createRequest: (data: { request_type: string; subject_identifier: string; notes?: string }) =>
     request('/privacy/requests', { method: 'POST', body: JSON.stringify(data) }),
@@ -711,7 +848,7 @@ export const privacy = {
     if (params?.risk) qs.set('risk', params.risk);
     if (params?.page) qs.set('page', String(params.page));
     const q = qs.toString();
-    return request<ApiDataBreachIncident[]>(`/privacy/breaches${q ? '?' + q : ''}`);
+    return request<PaginatedResponseWithMeta<ApiDataBreachIncident>>(`/privacy/breaches${q ? '?' + q : ''}`);
   },
   breachStatistics: () => request<ApiBreachStatistics>('/privacy/breaches/statistics'),
   escalateBreach: (id: number) => request(`/privacy/breaches/${id}/escalate`, { method: 'POST' }),
@@ -721,7 +858,7 @@ containBreach: (id: number, data: { actions: string[] }) =>
     request(`/privacy/breaches/${id}/contain`, { method: 'POST', body: JSON.stringify(data) }),
   resolveBreach: (id: number, data: { resolution_notes: string }) =>
     request(`/privacy/breaches/${id}/resolve`, { method: 'POST', body: JSON.stringify(data) }),
-  retentionPolicies: () => request<ApiRetentionPolicy[]>(`/privacy/retention-policies`),
+  retentionPolicies: () => request<RetentionPoliciesResponse>(`/privacy/retention-policies`),
   createRetentionPolicy: (data: { entity_type: string; retention_days: number; description?: string; enabled?: boolean }) =>
     request('/privacy/retention-policies', { method: 'POST', body: JSON.stringify(data) }),
   updateRetentionPolicy: (entityType: string, data: Partial<{ retention_days: number; description: string; enabled: boolean }>) =>

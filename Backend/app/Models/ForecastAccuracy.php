@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 class ForecastAccuracy extends Model
 {
     protected $table = 'forecast_accuracy';
+
     protected $primaryKey = 'id';
+
     public $timestamps = false;
 
     protected $fillable = [

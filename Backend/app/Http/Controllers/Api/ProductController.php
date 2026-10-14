@@ -9,6 +9,8 @@ use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Picqer\Barcode\BarcodeGeneratorPNG;
+use Picqer\Barcode\BarcodeGeneratorSVG;
 
 class ProductController extends Controller
 {
@@ -67,6 +69,7 @@ class ProductController extends Controller
                 'id' => $p->product_id,
                 'name' => $p->product_name,
                 'sku' => $p->barcode,
+                'plu_code' => (string) $p->product_id,
                 'category_id' => $p->category_id,
                 'category' => $p->category?->Category_name,
                 'supplier_id' => $p->supplier_id,
@@ -88,7 +91,7 @@ class ProductController extends Controller
                 'is_rx_only' => $p->is_rx_only,
                 'ddb_schedule' => $p->ddb_schedule,
             ])
-        );
+        )->header('Cache-Control', 'public, max-age=60')->header('Vary', 'Authorization');
     }
 
     public function store(Request $request)
@@ -162,6 +165,7 @@ class ProductController extends Controller
             'id' => $product->product_id,
             'name' => $product->product_name,
             'sku' => $product->barcode,
+            'plu_code' => (string) $product->product_id,
             'category_id' => $product->category_id,
             'category' => $product->category?->Category_name,
             'supplier_id' => $product->supplier_id,
@@ -195,6 +199,7 @@ class ProductController extends Controller
             'id' => $p->product_id,
             'name' => $p->product_name,
             'sku' => $p->barcode,
+            'plu_code' => (string) $p->product_id,
             'category_id' => $p->category_id,
             'category' => $p->category?->Category_name,
             'supplier_id' => $p->supplier_id,
@@ -346,5 +351,31 @@ class ProductController extends Controller
             'is_rx_only' => $product->is_rx_only,
             'ddb_schedule' => $product->ddb_schedule,
         ]);
+    }
+
+    public function label(Request $request, $id)
+    {
+        $query = Product::where('product_id', $id);
+        $query = $this->scopeForBusinessAndBranch($query, $request);
+        $product = $query->firstOrFail();
+
+        $barcode = $product->barcode ?? (string) $product->product_id;
+        $format = $request->query('format', 'png');
+
+        if ($format === 'svg') {
+            $generator = new BarcodeGeneratorSVG;
+            $barcodeImage = $generator->getBarcode($barcode, $generator::TYPE_CODE_128, 2, 50);
+
+            return response($barcodeImage)
+                ->header('Content-Type', 'image/svg+xml')
+                ->header('Content-Disposition', 'inline; filename="label-'.$barcode.'.svg"');
+        }
+
+        $generator = new BarcodeGeneratorPNG;
+        $barcodeImage = $generator->getBarcode($barcode, $generator::TYPE_CODE_128, 2, 50);
+
+        return response($barcodeImage)
+            ->header('Content-Type', 'image/png')
+            ->header('Content-Disposition', 'inline; filename="label-'.$barcode.'.png"');
     }
 }

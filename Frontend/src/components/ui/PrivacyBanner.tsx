@@ -3,7 +3,7 @@ import { usePrivacyConsent } from '../../hooks/usePrivacyConsent';
 import { Link } from 'react-router-dom';
 
 const PrivacyBanner: React.FC = () => {
-  const { consent, updateConsent, hasConsent } = usePrivacyConsent();
+  const { updateConsent } = usePrivacyConsent();
   const [showBanner, setShowBanner] = useState(true);
 
   // Check if consent has been dismissed (we'll use localStorage for simplicity)

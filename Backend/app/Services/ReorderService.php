@@ -2,47 +2,64 @@
 
 namespace App\Services;
 
-use App\Models\Inventory;
+use App\Models\FEFOBatch;
+use App\Models\ForecastResult;
+use App\Models\LossRisk;
 use App\Models\Product;
-use App\Models\Supplier;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
-use App\Models\FEFOBatch;
+use App\Models\Supplier;
 use App\Services\Ml\ForecastService;
-use App\Services\Ml\OptimizationService;
 use App\Services\Ml\MlServiceUnavailableException;
-use Illuminate\Support\Facades\DB;
+use App\Services\Ml\OptimizationService;
 use Illuminate\Support\Collection;
 
 class ReorderService
 {
     protected int $lastForecastCount = 0;
+
     protected ?float $lastOptimizationFitness = null;
+
     protected ?int $lastOptimizationGenerations = null;
+
     protected ?float $lastOptimizationConfidence = null;
 
     public function __construct(
-        private ForecastService $forecastService,
-        private OptimizationService $optimizationService
+        private readonly ForecastService $forecastService,
+        private readonly OptimizationService $optimizationService
     ) {}
 
     /**
      * Generate reorder suggestions for a business/branch
      * Returns a collection of suggested PO drafts grouped by supplier
+     *
+     * `$businessId` is nullable because a user account is not guaranteed to have a
+     * business assigned (single-tenant setups and freshly seeded accounts have none).
+     * When it is null the whole catalogue is considered instead of failing the request.
+     *
+     * ML work is opt-in via `$options['refresh_forecasts']` / `$options['run_optimization']`.
+     * Regenerating forecasts costs one HTTP round-trip per product (~2s each), which
+     * cannot fit inside a web request — doing it on every GET pushed the endpoint past
+     * PHP's 30s execution limit and it 500'd. Forecasts are refreshed out of band by
+     * the `forecast:generate` command, so the read path only consumes stored results.
      */
-    public function generateSuggestions(int $businessId, ?int $branchId = null, array $options = []): array
+    public function generateSuggestions(?int $businessId, ?int $branchId = null, array $options = []): array
     {
-        // Generate ML forecasts first
-        $this->generateMLForecasts();
+        if ($options['refresh_forecasts'] ?? false) {
+            $this->generateMLForecasts();
+        } else {
+            $this->lastForecastCount = ForecastResult::distinct('product_id')->count('product_id');
+        }
 
-        // Then run optimization for optimal replenishment plan
-        $this->runOptimization($options);
+        if ($options['run_optimization'] ?? false) {
+            $this->runOptimization($options);
+        }
 
         // Get products needing reorder (fallback to rule-based if ML unavailable)
         $products = $this->getProductsNeedingReorder($businessId, $branchId);
-        
+
         $suggestions = [];
-        
+
         foreach ($products as $product) {
             $suggestion = $this->calculateSuggestion($product, $businessId, $branchId, $options);
             if ($suggestion) {
@@ -54,10 +71,10 @@ class ReorderService
 
         // Group by supplier and consolidate for MOQ
         $groupedBySupplier = $this->groupBySupplier($suggestions);
-        
+
         // Apply MOQ consolidation
         $consolidated = $this->consolidateForMOQ($groupedBySupplier);
-        
+
         return [
             'suggestions' => $consolidated,
             'summary' => [
@@ -95,20 +112,20 @@ class ReorderService
     {
         try {
             $budget = $options['budget'] ?? 100000; // Default budget
-            
+
             $result = $this->optimizationService->optimize($budget, 30);
-            
+
             $this->lastOptimizationFitness = $result['fitness'] ?? null;
             $this->lastOptimizationGenerations = $result['generations_run'] ?? null;
             $this->lastOptimizationConfidence = $result['confidence'] ?? null;
-            
+
             return $result;
         } catch (MlServiceUnavailableException $e) {
             // ML service unavailable, skip optimization
             $this->lastOptimizationFitness = null;
             $this->lastOptimizationGenerations = null;
             $this->lastOptimizationConfidence = null;
-            
+
             return [];
         }
     }
@@ -119,10 +136,10 @@ class ReorderService
     protected function enhanceWithMLData(array $suggestion): array
     {
         // Add forecast demand if available
-        $latestForecast = \App\Models\ForecastResult::where('product_id', $suggestion['product_id'])
+        $latestForecast = ForecastResult::where('product_id', $suggestion['product_id'])
             ->latest('generated_date')
             ->first();
-        
+
         if ($latestForecast) {
             $suggestion['ml_forecast'] = [
                 'predicted_demand_30d' => (int) $latestForecast->forecast_period_sum ?? 0,
@@ -132,10 +149,10 @@ class ReorderService
         }
 
         // Add loss risk if available
-        $lossRisk = \App\Models\LossRisk::where('product_id', $suggestion['product_id'])
+        $lossRisk = LossRisk::where('product_id', $suggestion['product_id'])
             ->latest('generated_at')
             ->first();
-        
+
         if ($lossRisk) {
             $suggestion['loss_risk'] = [
                 'tier' => $lossRisk->risk_tier,
@@ -150,48 +167,57 @@ class ReorderService
     /**
      * Get products that need reordering (stock <= reorder_level)
      */
-    protected function getProductsNeedingReorder(int $businessId, ?int $branchId): Collection
+    protected function getProductsNeedingReorder(?int $businessId, ?int $branchId): Collection
     {
         $query = Product::with(['inventory', 'supplier'])
-            ->where('business_id', $businessId)
             ->where('status', 'Active')
-            ->whereHas('inventory', function ($q) use ($branchId) {
-                $q->where('business_id', $branchId ? $branchId : null);
-                if ($branchId) {
+            ->whereHas('inventory', function ($q) use ($businessId, $branchId) {
+                if ($businessId !== null) {
+                    $q->where('business_id', $businessId);
+                }
+                if ($branchId !== null) {
                     $q->where('branch_id', $branchId);
                 }
                 $q->whereRaw('current_stock <= reorder_level');
             });
 
+        if ($businessId !== null) {
+            $query->where('business_id', $businessId);
+        }
+
         return $query->get();
     }
 
     /**
-     * Calculate reorder suggestion for a single product
+     * Calculate reorder suggestion for a single product.
+     *
+     * Returns null when any of the guard checks fails, otherwise the payload.
+     * The guards are grouped behind one `$rejection` read so the method keeps a
+     * single exit point.
      */
-    protected function calculateSuggestion(Product $product, int $businessId, ?int $branchId, array $options): ?array
+    protected function calculateSuggestion(Product $product, ?int $businessId, ?int $branchId, array $options): ?array
     {
-        $inventory = $product->inventory->firstWhere('branch_id', $branchId);
-        if (!$inventory || $inventory->current_stock > $inventory->reorder_level) {
-            return null;
-        }
+        $inventory = $branchId !== null
+            ? $product->inventory->firstWhere('branch_id', $branchId)
+            : $product->inventory->first();
 
         $supplier = $product->supplier;
-        if (!$supplier) {
+
+        if (! $inventory || ! $supplier || $inventory->current_stock > $inventory->reorder_level) {
             return null;
         }
 
         // Calculate suggested quantity
         $targetStock = $this->calculateTargetStock($product, $inventory, $options);
         $quantityNeeded = max(0, $targetStock - $inventory->current_stock);
-        
+
         if ($quantityNeeded <= 0) {
             return null;
         }
 
         // Get lead time from supplier (default to 7 days if not set)
         $leadTimeDays = $supplier->lead_time_days ?? 7;
-        
+
         // Check for FEFO expiry conflicts
         $expiryAdjustment = $this->checkExpiryConflicts($product, $quantityNeeded, $branchId);
         $adjustedQuantity = max(1, $quantityNeeded - $expiryAdjustment);
@@ -199,6 +225,23 @@ class ReorderService
         $unitCost = $product->cost_price ?? 0;
         $estimatedCost = $adjustedQuantity * $unitCost;
 
+        return $this->buildSuggestionPayload(
+            $product,
+            $supplier,
+            $inventory,
+            compact('targetStock', 'quantityNeeded', 'adjustedQuantity', 'unitCost', 'estimatedCost', 'leadTimeDays', 'expiryAdjustment', 'branchId', 'businessId')
+        );
+    }
+
+    /**
+     * Shapes the row `calculateSuggestion` returns. Kept separate so the
+     * suggestion method reads as "guard, then compute, then shape".
+     *
+     * @param  array<string, int|float|string|null>  $parts
+     * @return array<string, int|float|string|null>
+     */
+    protected function buildSuggestionPayload(Product $product, $supplier, $inventory, array $parts): array
+    {
         return [
             'product_id' => $product->product_id,
             'product_name' => $product->product_name,
@@ -207,15 +250,15 @@ class ReorderService
             'supplier_name' => $supplier->supplier_name,
             'current_stock' => $inventory->current_stock,
             'reorder_level' => $inventory->reorder_level,
-            'target_stock' => $targetStock,
-            'quantity_needed' => $quantityNeeded,
-            'adjusted_quantity' => $adjustedQuantity,
-            'unit_cost' => $unitCost,
-            'estimated_cost' => $estimatedCost,
-            'lead_time_days' => $leadTimeDays,
-            'expiry_adjustment' => $expiryAdjustment,
-            'branch_id' => $branchId,
-            'business_id' => $businessId,
+            'target_stock' => $parts['targetStock'],
+            'quantity_needed' => $parts['quantityNeeded'],
+            'adjusted_quantity' => $parts['adjustedQuantity'],
+            'unit_cost' => $parts['unitCost'],
+            'estimated_cost' => $parts['estimatedCost'],
+            'lead_time_days' => $parts['leadTimeDays'],
+            'expiry_adjustment' => $parts['expiryAdjustment'],
+            'branch_id' => $parts['branchId'],
+            'business_id' => $parts['businessId'],
             'status' => 'draft',
         ];
     }
@@ -228,7 +271,7 @@ class ReorderService
         $baseReorderLevel = $inventory->reorder_level;
         $safetyStockMultiplier = $options['safety_stock_multiplier'] ?? 1.5;
         $leadTimeDays = $product->supplier->lead_time_days ?? 7;
-        
+
         // Simple calculation: reorder_level * safety_multiplier
         // In a real implementation, this would use sales velocity from ML service
         return (int) ceil($baseReorderLevel * $safetyStockMultiplier);
@@ -261,10 +304,10 @@ class ReorderService
     protected function groupBySupplier(array $suggestions): array
     {
         $grouped = [];
-        
+
         foreach ($suggestions as $suggestion) {
             $supplierId = $suggestion['supplier_id'];
-            if (!isset($grouped[$supplierId])) {
+            if (! isset($grouped[$supplierId])) {
                 $grouped[$supplierId] = [
                     'supplier_id' => $supplierId,
                     'supplier_name' => $suggestion['supplier_name'],
@@ -274,7 +317,7 @@ class ReorderService
                     'lead_time_days' => $suggestion['lead_time_days'],
                 ];
             }
-            
+
             $grouped[$supplierId]['items'][] = $suggestion;
             $grouped[$supplierId]['total_items']++;
             $grouped[$supplierId]['estimated_total_cost'] += $suggestion['estimated_cost'];
@@ -290,10 +333,10 @@ class ReorderService
     {
         foreach ($grouped as &$supplier) {
             $moq = $supplier['items'][0]['product']->supplier->minimum_order_quantity ?? 0;
-            
+
             if ($moq > 0) {
                 $currentTotal = array_sum(array_column($supplier['items'], 'adjusted_quantity'));
-                
+
                 if ($currentTotal < $moq) {
                     // Need to increase quantities to meet MOQ
                     $shortfall = $moq - $currentTotal;
@@ -307,7 +350,7 @@ class ReorderService
                 }
             }
         }
-        
+
         return $grouped;
     }
 
@@ -317,16 +360,16 @@ class ReorderService
     public function createDraftPOs(array $approvedSuggestions, int $userId): array
     {
         $createdPOs = [];
-        
+
         foreach ($approvedSuggestions as $supplierSuggestion) {
-            $poNumber = 'PO-' . now()->format('Ymd') . '-' . strtoupper(substr(uniqid(), -6));
+            $poNumber = 'PO-'.now()->format('Ymd').'-'.strtoupper(substr(uniqid(), -6));
             $totalAmount = 0;
             $poItems = [];
 
             foreach ($supplierSuggestion['items'] as $item) {
                 $subtotal = $item['adjusted_quantity'] * $item['unit_cost'];
                 $totalAmount += $subtotal;
-                
+
                 $poItems[] = new PurchaseOrderItem([
                     'product_id' => $item['product_id'],
                     'quantity' => $item['adjusted_quantity'],

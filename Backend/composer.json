@@ -11,7 +11,8 @@
         "laravel/framework": "^13.8",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^3.0",
-        "league/commonmark": "^2.8.4"
+        "league/commonmark": "^2.8.4",
+        "picqer/php-barcode-generator": "*"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
@@ -20,6 +21,8 @@
         "laravel/pint": "^1.27",
         "mockery/mockery": "^1.6",
         "nunomaduro/collision": "^8.6",
+        "pestphp/pest": "*",
+        "pestphp/pest-plugin-laravel": "*",
         "phpunit/phpunit": "^12.5.12"
     },
     "autoload": {
@@ -50,6 +53,12 @@
         "test": [
             "@php artisan config:clear --ansi @no_additional_args",
             "@php artisan test"
+        ],
+        "deploy-cache": [
+            "Composer\\Config::disableProcessTimeout",
+            "@php artisan config:cache",
+            "@php artisan route:cache",
+            "@php artisan view:cache"
         ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",

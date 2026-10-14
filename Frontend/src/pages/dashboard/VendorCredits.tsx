@@ -3,6 +3,8 @@ import { AlertTriangle, ArrowLeft, PhilippinePeso, FileCheck, Info, TimerReset, 
 import { Link } from 'react-router-dom';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
+import { ChartGradients, ChartTooltipStyle } from '../../components/charts/ChartGradients';
+import { CHART_DEFAULTS, CHART_COLORS, useChartAnimation } from '../../components/charts/ChartConfig';
 
 const currencyFormatter = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 });
 
@@ -22,7 +24,7 @@ function getDaysUntil(date: Date) {
 function getDeadlineRisk(daysUntilDeadline: number) {
   if (daysUntilDeadline < 0) return { label: 'Missed', color: '#94a3b8', tone: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300', border: 'border-l-slate-400' };
   if (daysUntilDeadline <= 10) return { label: 'Urgent', color: '#94a3b8', tone: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300', border: 'border-l-slate-400' };
-  return { label: 'Open', color: '#94a3b8', tone: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400', border: 'border-l-slate-300' };
+  return { label: 'Open', color: '#94a3b8', tone: 'bg-slate-100 text-muted-fg dark:bg-slate-800 dark:text-muted-fg', border: 'border-l-slate-300' };
 }
 
 const columns: DataTableColumn<typeof MOCK_VENDOR_RETURNS[number]>[] = [
@@ -31,7 +33,7 @@ const columns: DataTableColumn<typeof MOCK_VENDOR_RETURNS[number]>[] = [
   { key: 'returnItems', header: 'Processed By', truncate: true, minWidth: '100px', render: (row) => row.returnItems.slice(0, 2).join(', ') + (row.returnItems.length > 2 ? ` +${row.returnItems.length - 2}` : '') },
   { key: 'returnDeadline', header: 'Date', minWidth: '100px', render: (row) => {
     const days = getDaysUntil(row.returnDeadline);
-    return <span className="font-semibold text-slate-600 dark:text-slate-400">{days < 0 ? `${Math.abs(days)}d overdue` : `${days}d left`}</span>;
+    return <span className="font-semibold text-muted-fg dark:text-muted-fg">{days < 0 ? `${Math.abs(days)}d overdue` : `${days}d left`}</span>;
   }},
   { key: 'eligibleCredit', header: 'Refund', numeric: true, minWidth: '100px', render: (row) => currencyFormatter.format(row.eligibleCredit) },
 ];
@@ -39,7 +41,7 @@ const columns: DataTableColumn<typeof MOCK_VENDOR_RETURNS[number]>[] = [
 function getActionLabel(daysUntilDeadline: number) {
   if (daysUntilDeadline < 0) return { label: 'Request Exception', color: 'text-slate-700 bg-slate-100 dark:bg-slate-800 dark:text-slate-300' };
   if (daysUntilDeadline <= 10) return { label: 'File Claim Now', color: 'text-slate-700 bg-slate-100 dark:bg-slate-800 dark:text-slate-300' };
-  return { label: 'Prepare Docs', color: 'text-slate-600 bg-slate-100 dark:bg-slate-800 dark:text-slate-400' };
+  return { label: 'Prepare Docs', color: 'text-muted-fg bg-slate-100 dark:bg-slate-800 dark:text-muted-fg' };
 }
 
 export function VendorCreditsPage() {
@@ -58,14 +60,15 @@ export function VendorCreditsPage() {
   const missedWindows = vendorChart.filter((item) => item.daysUntilDeadline < 0);
   const urgentWindows = vendorChart.filter((item) => item.daysUntilDeadline >= 0 && item.daysUntilDeadline <= 10);
 
+  const { isAnimationActive, animationDuration, animationEasing } = useChartAnimation();
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <Link to="/dashboard?highlightKpi=2" className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-slate-200 dark:border-white/10 text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-white/10 dark:hover:text-slate-200 transition-colors" aria-label="Back to Dashboard"><ArrowLeft className="h-4 w-4" /></Link>
+        <Link to="/dashboard?highlightKpi=2" className="touch-target inline-flex items-center justify-center h-8 w-8 rounded-lg border border-border dark:border-white/10 text-muted-fg hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-white/10 dark:hover:text-slate-200 transition-colors" aria-label="Back to Dashboard"><ArrowLeft className="h-4 w-4" /></Link>
         <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Vendor Credit Recovery</h1>
         <UITooltip>
           <TooltipTrigger asChild>
-            <Info className="h-4 w-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
+            <Info className="h-4 w-4 text-muted-fg hover:text-muted-fg dark:hover:text-slate-300 cursor-help" />
           </TooltipTrigger>
           <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs text-xs">
             Track supplier return opportunities and recoverable credits. Act before return windows close permanently.
@@ -114,13 +117,13 @@ export function VendorCreditsPage() {
         </div>
       </div>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-slate-900">
+      <section className="rounded-xl border border-border bg-white p-4 shadow-sm dark:border-white/10 dark:bg-slate-900">
         <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
           <div className="flex items-center gap-2">
             <h2 className="text-sm font-bold text-[#0b1c30] dark:text-slate-100">Credit by Vendor</h2>
             <UITooltip>
               <TooltipTrigger asChild>
-                <Info className="h-3.5 w-3.5 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 cursor-help" />
+                <Info className="h-3.5 w-3.5 text-muted-fg hover:text-emerald-600 dark:hover:text-emerald-400 cursor-help" />
               </TooltipTrigger>
               <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs text-xs">
                 Color-coded by deadline risk — red=missed, amber=urgent, teal=open
@@ -135,12 +138,21 @@ export function VendorCreditsPage() {
         <div className="h-80 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={vendorChart} layout="vertical" margin={{ left: 48, right: 80 }}>
-              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e8edf5" />
-              <XAxis type="number" tick={{ fontSize: 10 }} stroke="#94a3b8" />
-              <YAxis type="category" dataKey="name" width={190} tick={{ fontSize: 10 }} stroke="#94a3b8" />
-              <Tooltip formatter={(value) => currencyFormatter.format(Number(value))} contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 24px rgba(0,0,0,0.08)' }} />
-              <Bar dataKey="credit" radius={[0, 12, 12, 0]} name="Eligible credit">
-                <LabelList dataKey="credit" position="right" formatter={(value: number) => currencyFormatter.format(value)} style={{ fill: '#64748b', fontSize: 10, fontWeight: 600 }} />
+              <ChartGradients />
+              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={CHART_COLORS.grid} />
+              <XAxis type="number" tick={{ fontSize: 10, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} />
+              <YAxis type="category" dataKey="name" width={190} tick={{ fontSize: 10, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} />
+              <Tooltip formatter={(value) => currencyFormatter.format(Number(value))} contentStyle={ChartTooltipStyle()} />
+              <Bar
+                dataKey="credit"
+                radius={[0, 12, 12, 0]}
+                name="Eligible credit"
+                isAnimationActive={isAnimationActive}
+                animationDuration={animationDuration}
+                animationEasing={animationEasing}
+                animationBegin={CHART_DEFAULTS.animationBegin}
+              >
+                <LabelList dataKey="credit" position="right" formatter={(value: number) => currencyFormatter.format(value)} style={{ fill: CHART_COLORS.text, fontSize: 10, fontWeight: 600 }} />
                 {vendorChart.map((item) => (
                   <Cell key={item.name} fill={item.risk.color} />
                 ))}

@@ -16,7 +16,7 @@ export function Pagination({ page, totalPages, onPageChange, totalItems, perPage
   const to = Math.min(page * perPage, totalItems ?? page * perPage);
 
   return (
-    <div className="flex items-center justify-between px-6 py-3 text-xs text-slate-500">
+    <div className="flex items-center justify-between px-6 py-3 text-xs text-muted-fg">
       {totalItems != null && (
         <span>Showing {from}–{to} of {totalItems} {label}</span>
       )}
@@ -24,7 +24,7 @@ export function Pagination({ page, totalPages, onPageChange, totalItems, perPage
         <button
           disabled={page <= 1}
           onClick={() => onPageChange(page - 1)}
-          className="inline-flex items-center justify-center min-h-[44px] min-w-[44px] rounded-lg border border-slate-200 dark:border-white/10 disabled:opacity-30 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          className="inline-flex items-center justify-center min-h-[44px] min-w-[44px] rounded-lg border border-border dark:border-white/10 disabled:opacity-30 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
           aria-label="Previous page"
         >
           <ChevronLeft className="h-4 w-4" />
@@ -47,7 +47,7 @@ export function Pagination({ page, totalPages, onPageChange, totalItems, perPage
               className={`inline-flex items-center justify-center min-h-[44px] min-w-[44px] rounded-lg text-xs font-semibold transition-colors ${
                 pageNum === page
                   ? 'bg-[#006a61] text-white'
-                  : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  : 'text-muted-fg hover:bg-slate-100 dark:hover:bg-slate-800'
               }`}
               aria-label={`Page ${pageNum}`}
               aria-current={pageNum === page ? 'page' : undefined}
@@ -59,7 +59,7 @@ export function Pagination({ page, totalPages, onPageChange, totalItems, perPage
         <button
           disabled={page >= totalPages}
           onClick={() => onPageChange(page + 1)}
-          className="inline-flex items-center justify-center min-h-[44px] min-w-[44px] rounded-lg border border-slate-200 dark:border-white/10 disabled:opacity-30 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          className="inline-flex items-center justify-center min-h-[44px] min-w-[44px] rounded-lg border border-border dark:border-white/10 disabled:opacity-30 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
           aria-label="Next page"
         >
           <ChevronRight className="h-4 w-4" />

@@ -2,11 +2,10 @@
 
 namespace App\Services;
 
-use App\Models\DataBreachIncident;
 use App\Models\AuditLog;
+use App\Models\DataBreachIncident;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
-use Carbon\Carbon;
 
 class BreachResponseService
 {
@@ -43,7 +42,7 @@ class BreachResponseService
     public function assessRisk(DataBreachIncident $incident): string
     {
         $risk = 'low';
-        
+
         // Factors that increase risk
         $factors = [
             'sensitive_data' => 2,      // Health, financial, ID data
@@ -55,6 +54,7 @@ class BreachResponseService
         ];
 
         $score = 0;
+
         // In real implementation, these would be determined from incident data
         // For now, return the stored assessment
         return $incident->risk_assessment;
@@ -67,12 +67,12 @@ class BreachResponseService
     {
         // Notify DPO
         $this->notifyDPO($incident);
-        
+
         // Notify management
         $this->notifyManagement($incident);
-        
+
         $incident->update(['status' => 'investigating']);
-        
+
         $this->logAudit('escalated', $incident);
     }
 
@@ -101,7 +101,7 @@ class BreachResponseService
      */
     public function notifyNPC(DataBreachIncident $incident): bool
     {
-        if (!$incident->npc_notification_required) {
+        if (! $incident->npc_notification_required) {
             return false;
         }
 
@@ -138,7 +138,7 @@ class BreachResponseService
         // - Provide guidance on protective measures
 
         $incident->update(['subjects_notified_at' => now()]);
-        
+
         $this->logAudit('subjects_notified', $incident);
     }
 
@@ -149,7 +149,7 @@ class BreachResponseService
     {
         $incident->update([
             'status' => 'contained',
-            'description' => $incident->description . "\n\nContainment Actions:\n" . implode("\n", $containmentActions),
+            'description' => $incident->description."\n\nContainment Actions:\n".implode("\n", $containmentActions),
         ]);
 
         $this->logAudit('contained', $incident, ['actions' => $containmentActions]);
@@ -163,7 +163,7 @@ class BreachResponseService
         $incident->update([
             'status' => 'resolved',
             'resolved_at' => now(),
-            'description' => $incident->description . "\n\nResolution:\n" . ($resolutionData['notes'] ?? ''),
+            'description' => $incident->description."\n\nResolution:\n".($resolutionData['notes'] ?? ''),
         ]);
 
         $this->logAudit('resolved', $incident, $resolutionData);
@@ -193,12 +193,16 @@ class BreachResponseService
     /**
      * Get breach statistics for dashboard
      */
-    public function getStatistics(int $businessId, string $fromDate = null, string $toDate = null): array
+    public function getStatistics(int $businessId, ?string $fromDate = null, ?string $toDate = null): array
     {
         $query = DataBreachIncident::where('business_id', $businessId);
-        
-        if ($fromDate) $query->where('detected_at', '>=', $fromDate);
-        if ($toDate) $query->where('detected_at', '<=', $toDate);
+
+        if ($fromDate) {
+            $query->where('detected_at', '>=', $fromDate);
+        }
+        if ($toDate) {
+            $query->where('detected_at', '<=', $toDate);
+        }
 
         return [
             'total' => $query->count(),
@@ -225,7 +229,7 @@ class BreachResponseService
 
     protected function logAudit(string $action, DataBreachIncident $incident, array $additionalData = []): void
     {
-        \App\Models\AuditLog::create([
+        AuditLog::create([
             'user_id' => 1,
             'action' => "Breach {$action}: {$incident->description}",
             'entity_type' => 'DataBreachIncident',

@@ -18,7 +18,7 @@ return new class extends Migration
             $table->dateTime('movement_date');
             $table->integer('sale_item_id')->nullable();
             $table->integer('wastage_id')->nullable();
-            
+
             $table->foreign('product_id')->references('product_id')->on('Product');
             $table->foreign('user_id')->references('User_id')->on('User');
             $table->foreign('sale_item_id')->references('sales_item_id')->on('Sales_Item')->nullOnDelete();

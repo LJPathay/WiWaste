@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-  AreaChart,
-  Area,
   CartesianGrid,
   LineChart,
   Line,
@@ -9,7 +7,6 @@ import {
   Tooltip,
   XAxis,
   YAxis,
-  ComposedChart,
 } from 'recharts';
 import { AlertTriangle, ArrowLeft, Brain, Info, RefreshCw, Zap, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -17,6 +14,9 @@ import { useDashboardData } from '../../hooks/useDashboardData';
 import { forecast as forecastApi, type ApiForecastOverview } from '../../services/api';
 import { retailExamples } from '../../utils/mockAuthAndFeatures';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
+import { ChartGradients, ChartTooltipStyle } from '../../components/charts/ChartGradients';
+import { CHART_DEFAULTS, CHART_COLORS, useChartAnimation } from '../../components/charts/ChartConfig';
+import { StockMovementChart, StockMovementLegend } from '../../components/charts/StockMovementChart';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -25,13 +25,6 @@ function formatPeriod(period: string): string {
   const label = MONTHS[(month ?? 1) - 1] ?? '';
   return `${label} ${day} '${String(year).slice(-2)}`;
 }
-
-const chartTooltipStyle = {
-  borderRadius: '10px',
-  border: '1px solid #E5E7EB',
-  boxShadow: '0 4px 16px rgba(0,0,0,0.07)',
-  fontSize: '12px',
-};
 
 // Mock stock movement data for predictive view
 const mockPredictiveMovement = [
@@ -59,6 +52,7 @@ export function PredictiveAnalyticsPage() {
   const [error, setError] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
 
+  const { isAnimationActive, animationDuration, animationEasing } = useChartAnimation();
   const loadOverview = useCallback(() => {
     setLoading(true);
     setError(null);
@@ -138,14 +132,14 @@ export function PredictiveAnalyticsPage() {
     <div className="space-y-4">
       {/* Page Header */}
       <div className="flex flex-wrap items-center gap-2">
-        <Link to="/dashboard?highlightKpi=0" className="inline-flex items-center justify-center h-7 w-7 rounded-lg border border-slate-200 dark:border-white/10 text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-white/10 dark:hover:text-slate-200 transition-colors" aria-label="Back to Dashboard"><ArrowLeft className="h-3.5 w-3.5" /></Link>
+        <Link to="/dashboard?highlightKpi=0" className="touch-target inline-flex items-center justify-center h-7 w-7 rounded-lg border border-border dark:border-white/10 text-muted-fg hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-white/10 dark:hover:text-slate-200 transition-colors" aria-label="Back to Dashboard"><ArrowLeft className="h-3.5 w-3.5" /></Link>
         <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Predictive Analytics</h1>
         <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2.5 py-0.5 text-[9px] font-bold text-sky-700 dark:bg-sky-500/20 dark:text-sky-300">
           <Brain className="h-3 w-3" /> Model: ARIMA
         </span>
         <UITooltip>
           <TooltipTrigger asChild>
-            <Info className="h-5 w-5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help" />
+            <Info className="h-5 w-5 text-muted-fg hover:text-muted-fg dark:hover:text-slate-300 cursor-help" />
           </TooltipTrigger>
           <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
             AI-powered demand forecasts from the Python ARIMA/SARIMAX service, plus projected wastage trends and anomaly detection.
@@ -213,13 +207,13 @@ export function PredictiveAnalyticsPage() {
       ) : (
         <>
 {/* ── Section 1: Stock Movement Forecast ── */}
-          <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-slate-900">
+          <section className="rounded-xl border border-border bg-white p-4 shadow-sm dark:border-white/10 dark:bg-slate-900">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <h2 className="text-sm font-bold text-[#0F172A] dark:text-slate-100">Stock Movement Forecast</h2>
                 <UITooltip>
                   <TooltipTrigger asChild>
-                    <Info className="h-3.5 w-3.5 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 cursor-help" />
+                    <Info className="h-3.5 w-3.5 text-muted-fg hover:text-emerald-600 dark:hover:text-emerald-400 cursor-help" />
                   </TooltipTrigger>
                   <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
                     Predicted stock in/out and wastage for the next 7 days based on historical patterns.
@@ -235,57 +229,20 @@ export function PredictiveAnalyticsPage() {
                 {generating ? 'Generating…' : 'Regenerate Forecast'}
               </button>
             </div>
-            <div className="mb-2 flex items-center gap-3 text-[10px] text-[#64748B] dark:text-slate-400">
-              <span className="flex items-center gap-1">
-                <span className="inline-block h-2 w-2 rounded-sm bg-[#0F766E]" />
-                Stock In
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="inline-block h-2 w-2 rounded-sm bg-[#3B82F6]" />
-                Stock Out
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="inline-block h-2 w-2 rounded-sm bg-[#EF4444]" />
-                Wastage
-              </span>
-            </div>
+            <StockMovementLegend />
             <div className="h-52">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={mockPredictiveMovement}>
-                  <defs>
-                    <linearGradient id="stockInGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#0F766E" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#0F766E" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="stockOutGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="wastageGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#EF4444" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#EF4444" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
-                  <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#94a3b8' }} stroke="#E5E7EB" />
-                  <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} stroke="#E5E7EB" />
-                  <Tooltip contentStyle={chartTooltipStyle} />
-                  <Area type="monotone" dataKey="stock_in" name="Stock In" stroke="#0F766E" fill="url(#stockInGrad)" strokeWidth={2} />
-                  <Area type="monotone" dataKey="stock_out" name="Stock Out" stroke="#3B82F6" fill="url(#stockOutGrad)" strokeWidth={2} />
-                  <Area type="monotone" dataKey="wastage" name="Wastage" stroke="#EF4444" fill="url(#wastageGrad)" strokeWidth={2} />
-                </AreaChart>
-              </ResponsiveContainer>
+              <StockMovementChart data={mockPredictiveMovement} />
             </div>
           </section>
 
           {/* ── Section 2: Wastage Trend (Predicted vs Actual) ── */}
-          <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-slate-900">
+          <section className="rounded-xl border border-border bg-white p-4 shadow-sm dark:border-white/10 dark:bg-slate-900">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <h2 className="text-sm font-bold text-[#0F172A] dark:text-slate-100">Wastage Trend</h2>
                 <UITooltip>
                   <TooltipTrigger asChild>
-                    <Info className="h-3.5 w-3.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 cursor-help" />
+                    <Info className="h-3.5 w-3.5 text-muted-fg hover:text-rose-600 dark:hover:text-rose-400 cursor-help" />
                   </TooltipTrigger>
                   <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 max-w-xs">
                     Predicted vs actual wastage value. Helps identify forecast accuracy gaps.
@@ -299,19 +256,39 @@ export function PredictiveAnalyticsPage() {
             <div className="h-48">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={mockPredictiveWastage}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
-                  <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} stroke="#E5E7EB" />
-                  <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} stroke="#E5E7EB" tickFormatter={(v) => `₱${(v / 1000).toFixed(0)}k`} />
-                  <Tooltip
-                    formatter={(value) => `₱${value.toLocaleString()}`}
-                    contentStyle={chartTooltipStyle}
+                  <ChartGradients />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_COLORS.grid} />
+                  <XAxis dataKey="date" tick={{ fontSize: 10, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} />
+                  <YAxis tick={{ fontSize: 10, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} tickFormatter={(v) => `₱${(v / 1000).toFixed(0)}k`} />
+                  <Tooltip formatter={(value) => `₱${value.toLocaleString()}`} contentStyle={ChartTooltipStyle()} />
+                  <Line
+                    type="monotone"
+                    dataKey="predicted"
+                    name="Predicted"
+                    stroke={CHART_COLORS.secondary}
+                    strokeWidth={2}
+                    dot={{ r: 3 }}
+                    isAnimationActive={isAnimationActive}
+                    animationDuration={animationDuration}
+                    animationEasing={animationEasing}
+                    animationBegin={CHART_DEFAULTS.animationBegin}
                   />
-                  <Line type="monotone" dataKey="predicted" name="Predicted" stroke="#3B82F6" strokeWidth={2} dot={{ r: 3 }} />
-                  <Line type="monotone" dataKey="actual" name="Actual" stroke="#EF4444" strokeWidth={2} dot={{ r: 3 }} />
+                  <Line
+                    type="monotone"
+                    dataKey="actual"
+                    name="Actual"
+                    stroke={CHART_COLORS.danger}
+                    strokeWidth={2}
+                    dot={{ r: 3 }}
+                    isAnimationActive={isAnimationActive}
+                    animationDuration={animationDuration}
+                    animationEasing={animationEasing}
+                    animationBegin={CHART_DEFAULTS.animationBegin}
+                  />
                 </LineChart>
               </ResponsiveContainer>
             </div>
-            <div className="mt-2 flex items-center gap-3 text-[10px] text-[#64748B] dark:text-slate-400">
+            <div className="mt-2 flex items-center gap-3 text-[10px] text-[#64748B] dark:text-muted-fg">
               <span className="flex items-center gap-1">
                 <span className="inline-block h-2 w-5 rounded-sm bg-[#3B82F6]" />
                 Predicted
@@ -324,19 +301,19 @@ export function PredictiveAnalyticsPage() {
           </section>
 
           {/* ── Section 3: Forecast Summary ── */}
-          <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-slate-900">
+          <section className="rounded-xl border border-border bg-white p-4 shadow-sm dark:border-white/10 dark:bg-slate-900">
             <h2 className="mb-3 text-sm font-bold text-[#0F172A] dark:text-slate-100">ARIMA Forecast Summary</h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="rounded-lg border border-[#E5E7EB] dark:border-white/10 p-3">
-                <div className="text-xs font-medium text-[#64748B] dark:text-slate-400">Products Analyzed</div>
+                <div className="text-xs font-medium text-[#64748B] dark:text-muted-fg">Products Analyzed</div>
                 <div className="text-2xl font-bold text-[#0F172A] dark:text-slate-100">{overview?.total_products ?? 0}</div>
               </div>
               <div className="rounded-lg border border-[#E5E7EB] dark:border-white/10 p-3">
-                <div className="text-xs font-medium text-[#64748B] dark:text-slate-400">Avg Confidence</div>
+                <div className="text-xs font-medium text-[#64748B] dark:text-muted-fg">Avg Confidence</div>
                 <div className="text-2xl font-bold text-[#0F172A] dark:text-slate-100">{Math.round(overview?.avg_confidence ?? 0)}%</div>
               </div>
               <div className="rounded-lg border border-[#E5E7EB] dark:border-white/10 p-3">
-                <div className="text-xs font-medium text-[#64748B] dark:text-slate-400">Model</div>
+                <div className="text-xs font-medium text-[#64748B] dark:text-muted-fg">Model</div>
                 <div className="text-2xl font-bold text-[#0F172A] dark:text-slate-100">ARIMA/SARIMAX</div>
               </div>
             </div>
@@ -350,7 +327,7 @@ export function PredictiveAnalyticsPage() {
               return (
                 <div
                   key={detection.title}
-                  className={`rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm dark:border-white/10 dark:bg-slate-900 border-l-3 ${style.border} transition-all hover:-translate-y-0.5 hover:shadow-md`}
+                  className={`rounded-xl border border-border bg-white p-3.5 shadow-sm dark:border-white/10 dark:bg-slate-900 border-l-3 ${style.border} transition-all hover:-translate-y-0.5 hover:shadow-md`}
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-1.5">
@@ -366,7 +343,7 @@ export function PredictiveAnalyticsPage() {
                       {detection.severity}
                     </span>
                   </div>
-                  <p className="mt-2 text-xs leading-5 text-slate-600 dark:text-slate-400">{detection.detail}</p>
+                  <p className="mt-2 text-xs leading-5 text-muted-fg dark:text-muted-fg">{detection.detail}</p>
                   <div className={`mt-3 rounded-xl border border-slate-100 dark:border-white/5 ${style.bg} p-2.5 text-xs text-slate-700 dark:text-slate-300`}>
                     <span className="font-semibold text-slate-900 dark:text-slate-100">Recommended fix: </span>{detection.action}
                   </div>

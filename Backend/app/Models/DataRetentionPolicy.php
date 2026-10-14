@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 
 class DataRetentionPolicy extends Model
 {
     protected $table = 'data_retention_policies';
+
     protected $primaryKey = 'policy_id';
+
     public $timestamps = true;
 
     protected $fillable = [
@@ -62,7 +65,7 @@ class DataRetentionPolicy extends Model
     /**
      * Get the cutoff date for this policy
      */
-    public function getCutoffDate(): \Carbon\Carbon
+    public function getCutoffDate(): Carbon
     {
         $days = $this->retention_days;
         $unitMethod = match ($this->retention_unit ?? 'days') {
@@ -78,25 +81,24 @@ class DataRetentionPolicy extends Model
     /**
      * Check if a record should be purged based on this policy
      */
-    public function shouldPurge(\Illuminate\Database\Eloquent\Model $record): bool
+    public function shouldPurge(Model $record): bool
     {
-        if (!$this->is_active) {
+        if (! $this->is_active) {
             return false;
         }
 
         $cutoffDate = $this->getCutoffDate();
         $triggerField = $this->trigger_event ?? 'created_at';
 
-        if (!$record->hasAttribute($triggerField)) {
+        if (! $record->hasAttribute($triggerField)) {
             return false;
         }
 
         $recordDate = $record->{$triggerField};
-        if (!$recordDate instanceof \Carbon\Carbon) {
-            $recordDate = \Carbon\Carbon::parse($recordDate);
+        if (! $recordDate instanceof Carbon) {
+            $recordDate = Carbon::parse($recordDate);
         }
 
         return $recordDate->lte($cutoffDate);
     }
 }
-

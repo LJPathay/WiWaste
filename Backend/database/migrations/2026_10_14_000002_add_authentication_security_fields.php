@@ -9,10 +9,17 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('User', function (Blueprint $table) {
-            $table->unsignedTinyInteger('failed_login_attempts')->default(0);
-            $table->dateTime('locked_until')->nullable();
+            if (! Schema::hasColumn('User', 'failed_login_attempts')) {
+                $table->unsignedTinyInteger('failed_login_attempts')->default(0);
+            }
+            if (! Schema::hasColumn('User', 'locked_until')) {
+                $table->dateTime('locked_until')->nullable();
+            }
         });
 
+        if (Schema::hasTable('password_reset_otps')) {
+            return;
+        }
         Schema::create('password_reset_otps', function (Blueprint $table) {
             $table->integer('user_id')->primary();
             $table->string('code_hash');

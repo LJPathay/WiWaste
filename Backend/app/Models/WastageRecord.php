@@ -2,12 +2,17 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 
 class WastageRecord extends Model
 {
+    use BelongsToTenant;
+
     protected $table = 'Wastage_Record';
+
     protected $primaryKey = 'wastage_id';
+
     public $timestamps = false;
 
     protected $fillable = [
@@ -38,16 +43,6 @@ class WastageRecord extends Model
         'witness_verified' => 'boolean',
     ];
 
-    public function business()
-    {
-        return $this->belongsTo(Business::class, 'business_id', 'id');
-    }
-
-    public function branch()
-    {
-        return $this->belongsTo(Branch::class, 'branch_id', 'id');
-    }
-
     public function product()
     {
         return $this->belongsTo(Product::class, 'product_id', 'product_id');
@@ -69,16 +64,6 @@ class WastageRecord extends Model
     }
 
     // Scopes
-    public function scopeForBusiness($query, $businessId)
-    {
-        return $query->where('business_id', $businessId);
-    }
-
-    public function scopeForBranch($query, $branchId)
-    {
-        return $query->where('branch_id', $branchId);
-    }
-
     /**
      * Check if this wastage record requires a witness
      */
@@ -110,6 +95,8 @@ class WastageRecord extends Model
             'Damaged' => 'physical',
             'Spoiled' => 'quality',
             'Lost' => 'shrinkage',
+            'Recalled' => 'recall',
+            'Other' => 'other',
         ];
 
         return $typeMap[$this->wastage_type] ?? 'other';

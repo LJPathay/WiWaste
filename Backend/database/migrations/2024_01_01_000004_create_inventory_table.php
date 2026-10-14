@@ -14,7 +14,7 @@ return new class extends Migration
             $table->integer('current_stock');
             $table->enum('stock_status', ['Normal', 'Low Stock', 'Overstock']);
             $table->dateTime('last_updated');
-            
+
             $table->foreign('product_id')->references('product_id')->on('Product');
         });
     }

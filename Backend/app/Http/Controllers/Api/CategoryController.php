@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\Category;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
@@ -19,23 +20,29 @@ class CategoryController extends Controller
     public function index(Request $request)
     {
         $request->validate(['status' => ['sometimes', Rule::in(['Active', 'Archived'])]]);
-        $query = Category::withCount('products');
+        $categories = Cache::rememberForever(Category::CACHE_KEY, fn () => Category::withCount('products')->orderBy('Category_id')->get());
         if ($request->filled('status')) {
-            $query->where('status', $request->input('status'));
+            $categories = $categories->where('status', $request->input('status'));
         } elseif (! $request->boolean('include_archived')) {
-            $query->where('status', 'Active');
+            $categories = $categories->where('status', 'Active');
+        }
+        if ($request->filled('search')) {
+            $needle = mb_strtolower($request->input('search'));
+            $categories = $categories->filter(fn ($category) => str_contains(mb_strtolower($category->Category_name), $needle));
+        }
+        if ($request->filled('exclude_status')) {
+            $categories = $categories->where('status', '!=', $request->input('exclude_status'));
+        }
+        $rows = $categories->values()->map(fn ($category) => [
+            'id' => $category->Category_id, 'name' => $category->Category_name,
+            'product_count' => $category->products_count, 'status' => $category->status,
+            'archived_at' => $category->archived_at, 'archived_by' => $category->archived_by,
+        ]);
+        if ($request->is('api/v1/*')) {
+            return response()->json(['data' => $rows, 'meta' => ['total' => $rows->count()], 'success' => true]);
         }
 
-        return response()->json(
-            $query->get()->map(fn ($c) => [
-                'id' => $c->Category_id,
-                'name' => $c->Category_name,
-                'product_count' => $c->products_count,
-                'status' => $c->status,
-                'archived_at' => $c->archived_at,
-                'archived_by' => $c->archived_by,
-            ])
-        );
+        return response()->json($rows);
     }
 
     public function store(Request $request)

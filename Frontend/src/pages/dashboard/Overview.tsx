@@ -1,20 +1,20 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { ResponsiveContainer } from 'recharts';
 import {
-  Area,
-  AreaChart,
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
-} from 'recharts';
+  LazyAreaChart,
+  LazyArea,
+  LazyBarChart,
+  LazyBar,
+  LazyPieChart,
+  LazyPie,
+  LazyCell,
+  LazyTooltip,
+  LazyLegend,
+  LazyCartesianGrid,
+  LazyXAxis,
+  LazyYAxis,
+} from '../../components/charts/LazyCharts';
 import {
   ArrowUpRight,
   ChevronRight,
@@ -30,6 +30,8 @@ import {
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { useDashboardData } from '../../hooks/useDashboardData';
 import { useKpiHighlight } from '../../hooks/useKpiHighlight';
+import { ChartGradients, ChartTooltipStyle } from '../../components/charts/ChartGradients';
+import { CHART_DEFAULTS, CHART_COLORS, CHART_TOOLTIP_STYLE, useChartAnimation } from '../../components/charts/ChartConfig';
 
 const currencyFormatter = new Intl.NumberFormat('en-PH', {
   style: 'currency',
@@ -39,23 +41,21 @@ const currencyFormatter = new Intl.NumberFormat('en-PH', {
 
 const LEAKAGE_COLORS = ['#006a61', '#f97316', '#f59e0b', '#eab308', '#22c55e'];
 
-const CHART_TOOLTIP_STYLE = {
-  borderRadius: '10px',
-  border: '1px solid #E5E7EB',
-  boxShadow: '0 4px 16px rgba(0,0,0,0.07)',
-  fontSize: '12px',
-};
-
 export function DashboardOverview() {
-  const { data, overview, ownerAnalytics, loading } = useDashboardData();
-  const [clickedKpi, setClickedKpi] = useState<number | null>(null);
-  const kpiTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const highlightedKpi = useKpiHighlight(5000);
+  const [clickedKpi] = useState<number | null>(null);
+    const highlightedKpi = useKpiHighlight(5000);
   const [salesPeriod, setSalesPeriod] = useState('30');
   const [leakageViewMode, setLeakageViewMode] = useState<'value' | 'quantity' | 'percentage'>('value');
 
-  const activeKpi = clickedKpi ?? highlightedKpi;
+  // The period select used to be decorative: the hook hard-coded `period: '30'` and
+  // only ever ran once, so changing the range re-rendered nothing.
+  const { data, overview, ownerAnalytics, loading } = useDashboardData(salesPeriod);
 
+  // Debug: log what we got
+  console.debug('[DashboardOverview] loading:', loading, 'overview:', overview, 'data:', data, 'ownerAnalytics:', ownerAnalytics);
+
+  const activeKpi = clickedKpi ?? highlightedKpi;
+  const { isAnimationActive, animationDuration, animationEasing } = useChartAnimation();
   const kpiSectionRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     if (highlightedKpi !== null && kpiSectionRef.current) {
@@ -185,7 +185,7 @@ export function DashboardOverview() {
           <h1 className="text-2xl font-bold text-[#0F172A] dark:text-slate-100 tracking-tight">Dashboard</h1>
           <UITooltip>
             <TooltipTrigger asChild>
-              <Info className="h-4 w-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help shrink-0" />
+              <Info className="h-4 w-4 text-muted-fg hover:text-muted-fg dark:hover:text-slate-300 cursor-help shrink-0" />
             </TooltipTrigger>
             <TooltipContent className="bg-slate-900 text-white max-w-xs">
               Business performance overview. All metrics draw from a single data source.
@@ -204,7 +204,7 @@ export function DashboardOverview() {
               <Link
                 key={card.label}
                 to={card.route}
-                className={`group relative flex flex-col justify-between rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 p-3.5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md hover:border-[#0F766E] ${
+                className={`group relative flex flex-col justify-between rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated p-3.5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md hover:border-[#0F766E] ${
                   isActive ? 'ring-2 ring-[#0F766E] border-transparent scale-[1.01] shadow-lg' : ''
                 }`}
               >
@@ -225,7 +225,7 @@ export function DashboardOverview() {
                 <div className="mt-2.5">
                   <div className="text-xl font-bold tracking-tight text-[#0F172A] dark:text-slate-100">{card.value}</div>
                   <div className="mt-0.5 text-xs font-semibold text-[#0F172A] dark:text-slate-100">{card.label}</div>
-                  <div className="mt-0.5 text-[10px] text-[#64748B] dark:text-slate-400">{card.note}</div>
+                  <div className="mt-0.5 text-[10px] text-[#64748B] dark:text-muted-fg">{card.note}</div>
                 </div>
                 <div className="mt-2 flex justify-end">
                   <span className="text-[10px] font-medium text-[#0F766E] group-hover:underline flex items-center gap-0.5">
@@ -247,13 +247,13 @@ export function DashboardOverview() {
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
 
           {/* Leakage by Category */}
-          <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 p-4 shadow-sm">
+          <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated p-4 shadow-sm">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <h3 className="text-xs font-bold text-[#0F172A] dark:text-slate-100">Leakage by Category</h3>
                 <UITooltip>
                   <TooltipTrigger asChild>
-                    <Info className="h-3.5 w-3.5 text-slate-400 hover:text-rose-600 cursor-help" />
+                    <Info className="h-3.5 w-3.5 text-muted-fg hover:text-rose-600 cursor-help" />
                   </TooltipTrigger>
                   <TooltipContent>Financial losses broken down by product category</TooltipContent>
                 </UITooltip>
@@ -279,10 +279,10 @@ export function DashboardOverview() {
                 </span>
               </div>
             </div>
-            <div className="h-52">
+            <div className="h-52 w-full" role="img" aria-label={`Leakage by category chart: ${leakageViewMode} view`} style={{ minHeight: '208px' }}>
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
+                <LazyPieChart>
+                  <LazyPie
                     data={leakageChartData}
                     dataKey={leakageViewMode === 'value' ? 'amount' : leakageViewMode === 'quantity' ? 'quantity' : 'percentage'}
                     nameKey="name"
@@ -294,28 +294,28 @@ export function DashboardOverview() {
                     label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                     labelLine={false}
                   >
-                    {leakageChartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={LEAKAGE_COLORS[index % LEAKAGE_COLORS.length]} />
+                    {leakageChartData.map((_entry, index) => (
+                      <LazyCell key={`cell-${index}`} fill={LEAKAGE_COLORS[index % LEAKAGE_COLORS.length]} />
                     ))}
-                  </Pie>
-                  <Tooltip
+                  </LazyPie>
+                  <LazyTooltip
                     formatter={(value) => leakageViewMode === 'value' ? currencyFormatter.format(value) : value}
                     contentStyle={CHART_TOOLTIP_STYLE}
                   />
-                  <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '11px' }} />
-                </PieChart>
+                  <LazyLegend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '11px' }} />
+                </LazyPieChart>
               </ResponsiveContainer>
             </div>
           </div>
 
           {/* Inventory Health */}
-          <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 p-4 shadow-sm">
+          <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated p-4 shadow-sm">
             <div className="mb-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <h3 className="text-xs font-bold text-[#0F172A] dark:text-slate-100">Inventory Health</h3>
                 <UITooltip>
                   <TooltipTrigger asChild>
-                    <Info className="h-3.5 w-3.5 text-slate-400 hover:text-sky-600 cursor-help" />
+                    <Info className="h-3.5 w-3.5 text-muted-fg hover:text-sky-600 cursor-help" />
                   </TooltipTrigger>
                   <TooltipContent>Distribution of inventory by health status</TooltipContent>
                 </UITooltip>
@@ -347,7 +347,7 @@ export function DashboardOverview() {
             {/* Top Wasted Products */}
             <div className="mt-4 pt-3 border-t border-[#E5E7EB] dark:border-white/10">
               <div className="flex items-center justify-between mb-2">
-                <h4 className="text-[10px] font-bold text-[#64748B] dark:text-slate-400 uppercase tracking-wider">Top Wasted Products</h4>
+                <h4 className="text-[10px] font-bold text-[#64748B] dark:text-muted-fg uppercase tracking-wider">Top Wasted Products</h4>
                 <Link to="/dashboard/leakage" className="text-[9px] font-semibold text-[#0F766E] hover:underline">View All</Link>
               </div>
               <div className="space-y-2">
@@ -381,13 +381,13 @@ export function DashboardOverview() {
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
 
           {/* Sales & Revenue Trend */}
-          <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 p-4 shadow-sm">
+          <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated p-4 shadow-sm">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <h3 className="text-xs font-bold text-[#0F172A] dark:text-slate-100">Sales & Revenue Trend</h3>
                 <UITooltip>
                   <TooltipTrigger asChild>
-                    <Info className="h-3.5 w-3.5 text-slate-400 hover:text-emerald-600 cursor-help" />
+                    <Info className="h-3.5 w-3.5 text-muted-fg hover:text-emerald-600 cursor-help" />
                   </TooltipTrigger>
                   <TooltipContent>Daily revenue from completed POS transactions</TooltipContent>
                 </UITooltip>
@@ -395,6 +395,7 @@ export function DashboardOverview() {
               <select
                 value={salesPeriod}
                 onChange={(e) => setSalesPeriod(e.target.value)}
+                aria-label="Sales trend period"
                 className="px-2 py-1 text-[10px] rounded-md border border-[#E5E7EB] dark:border-white/10 bg-[#F8FAFC] dark:bg-slate-800 text-[#0F172A] dark:text-slate-100"
               >
                 <option value="7">Last 7 days</option>
@@ -402,36 +403,39 @@ export function DashboardOverview() {
                 <option value="90">3 months</option>
               </select>
             </div>
-            <div className="h-48">
+            <div className="h-48 w-full" role="img" aria-label="Sales and revenue trend chart" style={{ minHeight: '192px' }}>
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={salesTrendData}>
-                  <defs>
-                    <linearGradient id="salesFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#0F766E" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#0F766E" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
-                  <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#94a3b8' }} stroke="#E5E7EB" />
-                  <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} stroke="#E5E7EB" tickFormatter={(v) => `₱${(v / 1000).toFixed(0)}k`} />
-                  <Tooltip
-                    formatter={(value) => currencyFormatter.format(Number(value))}
-                    contentStyle={CHART_TOOLTIP_STYLE}
+                <LazyAreaChart data={salesTrendData}>
+                  <ChartGradients />
+                  <LazyCartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_COLORS.grid} />
+                  <LazyXAxis dataKey="date" tick={{ fontSize: 11, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} />
+                  <LazyYAxis tick={{ fontSize: 11, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} tickFormatter={(v) => `₱${(v / 1000).toFixed(0)}k`} />
+                  <LazyTooltip formatter={(value) => currencyFormatter.format(Number(value))} contentStyle={ChartTooltipStyle()} />
+                  <LazyArea
+                    type="monotone"
+                    dataKey="value"
+                    stroke={CHART_COLORS.primary}
+                    fill="url(#chart-primary-fill)"
+                    strokeWidth={2}
+                    name="Revenue"
+                    isAnimationActive={isAnimationActive}
+                    animationDuration={animationDuration}
+                    animationEasing={animationEasing}
+                    animationBegin={CHART_DEFAULTS.animationBegin}
                   />
-                  <Area type="monotone" dataKey="value" stroke="#0F766E" fill="url(#salesFill)" strokeWidth={2} name="Revenue" />
-                </AreaChart>
+                </LazyAreaChart>
               </ResponsiveContainer>
             </div>
           </div>
 
           {/* Wastage Trend */}
-          <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 p-4 shadow-sm">
+          <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated p-4 shadow-sm">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <h3 className="text-xs font-bold text-[#0F172A] dark:text-slate-100">Wastage Trend</h3>
                 <UITooltip>
                   <TooltipTrigger asChild>
-                    <Info className="h-3.5 w-3.5 text-slate-400 hover:text-rose-600 cursor-help" />
+                    <Info className="h-3.5 w-3.5 text-muted-fg hover:text-rose-600 cursor-help" />
                   </TooltipTrigger>
                   <TooltipContent>Monetary value of inventory waste over time</TooltipContent>
                 </UITooltip>
@@ -440,24 +444,27 @@ export function DashboardOverview() {
                 View Details <ChevronRight className="h-2.5 w-2.5" />
               </Link>
             </div>
-            <div className="h-48">
+            <div className="h-48 w-full" role="img" aria-label="Wastage trend chart" style={{ minHeight: '192px' }}>
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={wastageTrendData}>
-                  <defs>
-                    <linearGradient id="wastageFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#EF4444" stopOpacity={0.25} />
-                      <stop offset="95%" stopColor="#EF4444" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
-                  <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} stroke="#E5E7EB" />
-                  <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} stroke="#E5E7EB" tickFormatter={(v) => `₱${(v / 1000).toFixed(0)}k`} />
-                  <Tooltip
-                    formatter={(value) => currencyFormatter.format(Number(value))}
-                    contentStyle={CHART_TOOLTIP_STYLE}
+                <LazyAreaChart data={wastageTrendData}>
+                  <ChartGradients />
+                  <LazyCartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_COLORS.grid} />
+                  <LazyXAxis dataKey="date" tick={{ fontSize: 10, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} />
+                  <LazyYAxis tick={{ fontSize: 10, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} tickFormatter={(v) => `₱${(v / 1000).toFixed(0)}k`} />
+                  <LazyTooltip formatter={(value) => currencyFormatter.format(Number(value))} contentStyle={ChartTooltipStyle()} />
+                  <LazyArea
+                    type="monotone"
+                    dataKey="value"
+                    stroke={CHART_COLORS.danger}
+                    fill="url(#chart-danger-fill)"
+                    strokeWidth={2}
+                    name="Wastage"
+                    isAnimationActive={isAnimationActive}
+                    animationDuration={animationDuration}
+                    animationEasing={animationEasing}
+                    animationBegin={CHART_DEFAULTS.animationBegin}
                   />
-                  <Area type="monotone" dataKey="value" stroke="#EF4444" fill="url(#wastageFill)" strokeWidth={2} name="Wastage" />
-                </AreaChart>
+                </LazyAreaChart>
               </ResponsiveContainer>
             </div>
           </div>
@@ -473,13 +480,13 @@ export function DashboardOverview() {
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
 
           {/* Demand Forecast */}
-          <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 p-4 shadow-sm">
+          <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated p-4 shadow-sm">
             <div className="mb-3 flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <h3 className="text-xs font-bold text-[#0F172A] dark:text-slate-100">Demand Forecast</h3>
                 <UITooltip>
                   <TooltipTrigger asChild>
-                    <Info className="h-3.5 w-3.5 text-slate-400 hover:text-sky-600 cursor-help" />
+                    <Info className="h-3.5 w-3.5 text-muted-fg hover:text-sky-600 cursor-help" />
                   </TooltipTrigger>
                   <TooltipContent>ARIMA-projected demand for the next period</TooltipContent>
                 </UITooltip>
@@ -490,7 +497,7 @@ export function DashboardOverview() {
                 </span>
               )}
             </div>
-            <p className="text-[11px] text-[#64748B] dark:text-slate-400 mb-3">
+            <p className="text-[11px] text-[#64748B] dark:text-muted-fg mb-3">
               Predicted waste volume with model confidence. Used for purchase order planning and FEFO prioritization.
             </p>
             <Link to="/dashboard/predictive" className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#0F766E] hover:underline">
@@ -499,13 +506,13 @@ export function DashboardOverview() {
           </div>
 
           {/* Revenue by Payment Method */}
-          <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 p-4 shadow-sm">
+          <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated p-4 shadow-sm">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <h3 className="text-xs font-bold text-[#0F172A] dark:text-slate-100">Revenue by Payment Method</h3>
                 <UITooltip>
                   <TooltipTrigger asChild>
-                    <Info className="h-3.5 w-3.5 text-slate-400 hover:text-[#0F766E] cursor-help" />
+                    <Info className="h-3.5 w-3.5 text-muted-fg hover:text-[#0F766E] cursor-help" />
                   </TooltipTrigger>
                   <TooltipContent>Revenue share from completed POS transactions</TooltipContent>
                 </UITooltip>
@@ -515,22 +522,22 @@ export function DashboardOverview() {
               </span>
             </div>
             {paymentBreakdown.length > 0 ? (
-            <div className="h-40">
+            <div className="h-40 w-full" role="img" aria-label="Revenue by payment method chart" style={{ minHeight: '160px' }}>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={paymentBreakdown} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F1F5F9" />
-                  <XAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} stroke="#E5E7EB" tickFormatter={(v) => `₱${(v / 1000).toFixed(0)}k`} />
-                  <YAxis dataKey="method" type="category" tick={{ fontSize: 11, fill: '#94a3b8' }} stroke="#E5E7EB" width={70} />
-                    <Tooltip
+                <LazyBarChart data={paymentBreakdown} layout="vertical">
+                  <LazyCartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F1F5F9" />
+                  <LazyXAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} stroke="#E5E7EB" tickFormatter={(v) => `₱${(v / 1000).toFixed(0)}k`} />
+                  <LazyYAxis dataKey="method" type="category" tick={{ fontSize: 11, fill: '#94a3b8' }} stroke="#E5E7EB" width={70} />
+                    <LazyTooltip
                       formatter={(value) => currencyFormatter.format(Number(value))}
                       contentStyle={CHART_TOOLTIP_STYLE}
                     />
-                    <Bar dataKey="revenue" radius={[0, 10, 10, 0]} fill="#0F766E" />
-                  </BarChart>
+                    <LazyBar dataKey="revenue" radius={[0, 10, 10, 0]} fill="#0F766E" />
+                  </LazyBarChart>
                 </ResponsiveContainer>
               </div>
             ) : (
-              <div className="h-48 flex items-center justify-center text-sm text-[#64748B] dark:text-slate-400">
+              <div className="h-48 flex items-center justify-center text-sm text-[#64748B] dark:text-muted-fg">
                 No payment data available
               </div>
             )}
@@ -551,13 +558,13 @@ export function DashboardOverview() {
               <Link
                 key={stat.label}
                 to={stat.link}
-                className="group rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-white dark:bg-slate-900 p-3.5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md hover:border-[#0F766E]"
+                className="group rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated p-3.5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md hover:border-[#0F766E]"
               >
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#F8FAFC] dark:bg-slate-800 mb-2 transition-colors group-hover:bg-[#0F766E]/10">
-                  <Icon className="h-4 w-4 text-[#64748B] dark:text-slate-400 transition-colors group-hover:text-[#0F766E]" />
+                  <Icon className="h-4 w-4 text-[#64748B] dark:text-muted-fg transition-colors group-hover:text-[#0F766E]" />
                 </div>
                 <div className="text-lg font-bold text-[#0F172A] dark:text-slate-100">{stat.value}</div>
-                <div className="mt-0.5 text-[10px] font-semibold uppercase tracking-widest text-[#64748B] dark:text-slate-400">{stat.label}</div>
+                <div className="mt-0.5 text-[10px] font-semibold uppercase tracking-widest text-[#64748B] dark:text-muted-fg">{stat.label}</div>
                 <div className="mt-1.5 flex items-center gap-1 text-[10px] font-semibold text-[#0F766E] opacity-0 group-hover:opacity-100 transition-opacity">
                   Manage <ChevronRight className="h-2.5 w-2.5" />
                 </div>

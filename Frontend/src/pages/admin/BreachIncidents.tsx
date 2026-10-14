@@ -1,14 +1,20 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import {
-  Search, Filter, Calendar, AlertTriangle, ShieldCheck, Eye, Edit, Trash2, Clock,
-  Download, AlertCircle, Bell, WifiOff, Shield, X, RotateCcw, CheckCircle, Flag,
-  Trash, ShieldAlert, BellRing, User, Database, Lock, Unlock
+  Search,
+  AlertTriangle,
+  ShieldCheck,
+  Bell,
+  Shield,
+  X,
+  CheckCircle,
+  ShieldAlert,
+  User,
 } from 'lucide-react';
-import { Toast, useToast, ConfirmDialog, Modal, FormField, inputCls } from '../../components/ui/Toast';
-import { formatCurrency } from '../../utils/cashierData';
-import { privacy as privacyApi, type ApiDataBreachIncident, type ApiBreachStatistics } from '../../services/api';
-import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
+import { Toast, useToast, ConfirmDialog, inputCls } from '../../components/ui/Toast';
+import { privacy as privacyApi, type ApiDataBreachIncident } from '../../services/api';
 import { Pagination } from '../../components/ui/pagination';
+import { useDebounce } from '../../hooks/useDebounce';
+import { useApi } from '../../hooks/useApi';
 
 const STATUS_BADGES: Record<string, { label: string; cls: string; icon: React.ReactNode }> = {
   open: { label: 'Open', cls: 'bg-red-50 text-red-700 border border-red-100', icon: <AlertTriangle className="w-3 h-3" /> },
@@ -24,17 +30,21 @@ const RISK_BADGES: Record<string, { label: string; cls: string; icon: React.Reac
   critical: { label: 'Critical', cls: 'bg-red-50 text-red-700 border border-red-100', icon: <ShieldAlert className="w-3 h-3" /> },
 };
 
-function formatDate(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' });
-}
 
 function formatShortDate(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' });
 }
+
+/** The workflow transitions a breach can be put through, in the order the UI offers them. */
+type BreachAction =
+  | 'escalate'
+  | 'notify_npc'
+  | 'notify_subjects'
+  | 'contain'
+  | 'resolve'
+  | 'delete';
 
 export function BreachIncidents() {
   const { toasts, dismiss, success, error: showError } = useToast();
@@ -44,16 +54,7 @@ export function BreachIncidents() {
   const debouncedSearch = useDebounce(search, 300);
   const [page, setPage] = useState(1);
   const pageSize = 10;
-  const [loading, setLoading] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<{ id: number; action: 'escalate' | 'notify_npc' | 'notify_subjects' | 'contain' | 'resolve' | 'delete' } | null>(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [form, setForm] = useState({
-    description: '',
-    personal_data_affected: '',
-    risk_assessment: 'medium',
-    npc_notification_required: false,
-  });
+  const [confirmAction, setConfirmAction] = useState<{ id: number; action: BreachAction } | null>(null);
 
   const fetcher = useCallback(
     () => privacyApi.breaches({ status: statusFilter === 'all' ? undefined : statusFilter, risk: riskFilter === 'all' ? undefined : riskFilter }),
@@ -101,25 +102,30 @@ export function BreachIncidents() {
       } else if (action === 'contain') {
         const actions = prompt('Enter containment actions (one per line):');
         if (!actions) return;
-        await privacyApi.containBreach(id, actions.split('\n').filter(Boolean));
+        await privacyApi.containBreach(id, { actions: actions.split('\n').filter(Boolean) });
         success('Breach contained.');
       } else if (action === 'resolve') {
         const notes = prompt('Enter resolution notes:');
         if (!notes) return;
-        await privacyApi.resolveBreach(id, { notes });
+        // The controller validates and stores `resolution_notes`. Sending it as `notes`
+        // matched nothing, so the note the user typed was accepted by the page and then
+        // silently dropped by the server.
+        await privacyApi.resolveBreach(id, { resolution_notes: notes });
         success('Breach resolved.');
       } else if (action === 'delete') {
         // Not implemented in API yet
         showError('Delete not implemented yet');
         return;
       }
-      refetchBreaches();
+      void refetchBreaches();
     } catch (err) {
       showError(err instanceof Error ? err.message : 'Action failed');
     }
   };
 
-  const getAvailableActions = (status: string, risk: string) => {
+  // The return type is annotated because the array literals below would otherwise widen to
+  // `string[]`, and the resulting `action` would not be assignable to `BreachAction`.
+  const getAvailableActions = (status: string, _risk: string): BreachAction[] => {
     switch (status) {
       case 'open': return ['escalate'];
       case 'investigating': return ['notify_npc', 'notify_subjects', 'contain'];
@@ -133,12 +139,12 @@ export function BreachIncidents() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Breach Incident Log</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-sm text-muted-fg dark:text-muted-fg mt-1">
             Track data breach incidents through detection, assessment, notification, and resolution
           </p>
         </div>
         <button
-          onClick={() => { setForm({ description: '', personal_data_affected: '', risk_assessment: 'medium', npc_notification_required: false }); setShowCreateModal(true); }}
+          onClick={() => showError('Breach intake runs through the DPO channel — no API endpoint is exposed yet.')}
           className="inline-flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium rounded-lg shadow-sm transition"
         >
           <AlertTriangle className="w-4 h-4" />
@@ -149,37 +155,37 @@ export function BreachIncidents() {
       {/* Summary Cards */}
       {statsData && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-sm text-slate-500 dark:text-slate-400">Total Incidents</div>
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-border dark:border-slate-700">
+            <div className="text-sm text-muted-fg dark:text-muted-fg">Total Incidents</div>
             <div className="text-2xl font-bold text-slate-900 dark:text-white">{statsData.total}</div>
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-sm text-slate-500 dark:text-slate-400">Open / Investigating</div>
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-border dark:border-slate-700">
+            <div className="text-sm text-muted-fg dark:text-muted-fg">Open / Investigating</div>
             <div className="text-2xl font-bold text-red-600">
               {(statsData.by_status?.open ?? 0) + (statsData.by_status?.investigating ?? 0)}
             </div>
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-sm text-slate-500 dark:text-slate-400">Contained / Resolved</div>
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-border dark:border-slate-700">
+            <div className="text-sm text-muted-fg dark:text-muted-fg">Contained / Resolved</div>
             <div className="text-2xl font-bold text-green-600">
               {(statsData.by_status?.contained ?? 0) + (statsData.by_status?.resolved ?? 0)}
             </div>
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-sm text-slate-500 dark:text-slate-400">NPC Notified</div>
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-border dark:border-slate-700">
+            <div className="text-sm text-muted-fg dark:text-muted-fg">NPC Notified</div>
             <div className="text-2xl font-bold text-blue-600">{statsData.npc_notified}</div>
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-sm text-slate-500 dark:text-slate-400">Subjects Notified</div>
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-border dark:border-slate-700">
+            <div className="text-sm text-muted-fg dark:text-muted-fg">Subjects Notified</div>
             <div className="text-2xl font-bold text-purple-600">{statsData.subjects_notified}</div>
           </div>
         </div>
       )}
 
       {/* Filters */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row gap-4">
+      <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-border dark:border-slate-700 flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1 max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-fg" />
           <input
             type="text"
             placeholder="Search description, affected data..."
@@ -207,42 +213,40 @@ export function BreachIncidents() {
       </div>
 
       {/* Data Table */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-border dark:border-slate-700 overflow-hidden">
         {filtered.length === 0 ? (
           <div className="p-12 text-center">
-            <ShieldAlert className="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600 mb-4" />
-            <p className="text-slate-500 dark:text-slate-400">No breach incidents found</p>
+            <ShieldAlert className="w-12 h-12 mx-auto text-slate-300 dark:text-muted-fg mb-4" />
+            <p className="text-muted-fg dark:text-muted-fg">No breach incidents found</p>
           </div>
         ) : (
           <>
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
+                <thead className="bg-bg dark:bg-slate-800/50 border-b border-border dark:border-slate-700">
                   <tr>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Date</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Description</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Data Affected</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Risk</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Status</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">NPC Notified</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Subjects Notified</th>
-                    <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 pr-4">Actions</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg">Date</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg">Description</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg">Data Affected</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg">Risk</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg">Status</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg">NPC Notified</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg">Subjects Notified</th>
+                    <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-muted-fg dark:text-muted-fg pr-4">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                   {filtered.slice((page - 1) * pageSize, page * pageSize).map((b) => {
                     const status = STATUS_BADGES[b.status] ?? { label: b.status, cls: '', icon: null };
                     const risk = RISK_BADGES[b.risk_assessment] ?? { label: b.risk_assessment, cls: '', icon: null };
-                    const actions = getAvailableActions(b.status, b.risk_assessment);
-                    
                     return (
-                      <tr key={b.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                        <td className="px-3 py-3 text-sm text-slate-500 dark:text-slate-400">{formatShortDate(b.detected_at)}</td>
+                      <tr key={b.id} className="hover:bg-bg dark:hover:bg-slate-700/50">
+                        <td className="px-3 py-3 text-sm text-muted-fg dark:text-muted-fg">{formatShortDate(b.detected_at)}</td>
                         <td className="px-3 py-3">
                           <div className="font-medium text-slate-900 dark:text-white line-clamp-1 max-w-xs">{b.description}</div>
-                          <div className="text-xs text-slate-500 dark:text-slate-400">{b.personal_data_affected}</div>
+                          <div className="text-xs text-muted-fg dark:text-muted-fg">{b.personal_data_affected}</div>
                         </td>
-                        <td className="px-3 py-3 text-sm text-slate-500 dark:text-slate-400 max-w-xs truncate">{b.personal_data_affected}</td>
+                        <td className="px-3 py-3 text-sm text-muted-fg dark:text-muted-fg max-w-xs truncate">{b.personal_data_affected}</td>
                         <td className="px-3 py-3">
                           <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${risk.cls}`}>
                             {risk.icon}
@@ -307,7 +311,7 @@ export function BreachIncidents() {
             </div>
             {filtered.length > pageSize && (
               <Pagination
-                currentPage={page}
+                page={page}
                 totalPages={Math.ceil(filtered.length / pageSize)}
                 onPageChange={setPage}
               />
@@ -320,8 +324,13 @@ export function BreachIncidents() {
       <ConfirmDialog
         isOpen={!!confirmAction}
         onClose={() => setConfirmAction(null)}
-        onConfirm={() => { if (confirmAction) handleAction(confirmAction.id, confirmAction.action); setConfirmAction(null); }}
-        title={confirmAction?.action?.charAt(0).toUpperCase() + confirmAction?.action?.slice(1).replace('_', ' ')}
+        onConfirm={() => {
+          if (confirmAction) void handleAction(confirmAction.id, confirmAction.action);
+          setConfirmAction(null);
+        }}
+        title={confirmAction
+          ? `${confirmAction.action.charAt(0).toUpperCase()}${confirmAction.action.slice(1).replace('_', ' ')}`
+          : undefined}
         message={confirmAction?.action === 'escalate' ? 'Escalate this breach to DPO?' :
                  confirmAction?.action === 'notify_npc' ? 'Notify National Privacy Commission?' :
                  confirmAction?.action === 'notify_subjects' ? 'Notify affected data subjects?' :

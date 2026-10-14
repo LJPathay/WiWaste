@@ -60,7 +60,7 @@ export function Home() {
                   <div className="grid auto-rows-fr grid-cols-2 gap-3 sm:gap-4">
                     <div className="min-w-0 bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 sm:p-4 border border-slate-200/50 dark:border-white/5">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Recovered Value</span>
+                        <span className="text-xs font-semibold text-muted-fg dark:text-muted-fg">Recovered Value</span>
                         <Zap className="w-4 h-4 text-[#006a61]"></Zap>
                       </div>
                       <div className="text-2xl font-bold text-[#0F172A] dark:text-slate-50">₱2.4M</div>
@@ -68,7 +68,7 @@ export function Home() {
                     </div>
                     <div className="min-w-0 bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 sm:p-4 border border-slate-200/50 dark:border-white/5">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Wastage Prevented</span>
+                        <span className="text-xs font-semibold text-muted-fg dark:text-muted-fg">Wastage Prevented</span>
                         <ShieldCheck className="w-4 h-4 text-green-500"></ShieldCheck>
                       </div>
                       <div className="text-2xl font-bold text-[#0F172A] dark:text-slate-50">1,234</div>
@@ -76,15 +76,15 @@ export function Home() {
                     </div>
                     <div className="min-w-0 bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 sm:p-4 border border-slate-200/50 dark:border-white/5">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Active SKUs</span>
+                        <span className="text-xs font-semibold text-muted-fg dark:text-muted-fg">Active SKUs</span>
                         <Package className="w-4 h-4 text-[#006a61]"></Package>
                       </div>
                       <div className="text-2xl font-bold text-[#0F172A] dark:text-slate-50">8,542</div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">across 12 locations</div>
+                      <div className="text-xs text-muted-fg dark:text-muted-fg mt-1">across 12 locations</div>
                     </div>
                     <div className="min-w-0 bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 sm:p-4 border border-slate-200/50 dark:border-white/5">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Forecast Accuracy</span>
+                        <span className="text-xs font-semibold text-muted-fg dark:text-muted-fg">Forecast Accuracy</span>
                         <BarChart3 className="w-4 h-4 text-[#006a61]"></BarChart3>
                       </div>
                       <div className="text-2xl font-bold text-[#0F172A] dark:text-slate-50">94.2%</div>
@@ -228,15 +228,15 @@ export function Home() {
               <div className="space-y-5">
                 <div className="pl-4 border-l-2 border-[#006a61]">
                   <h4 className="text-lg font-semibold text-white mb-2">Vendor Reconciliation</h4>
-                  <p className="text-sm text-slate-400">Automatically flag discrepancies between ASN (Advance Shipping Notice) and actual received quantities.</p>
+                  <p className="text-sm text-muted-fg">Automatically flag discrepancies between ASN (Advance Shipping Notice) and actual received quantities.</p>
                 </div>
                 <div className="pl-4 border-l-2 border-slate-700">
                   <h4 className="text-lg font-semibold text-white mb-2">Transfer Shrink Monitoring</h4>
-                  <p className="text-sm text-slate-400">Monitor stock integrity during inter-store transfers with geo-fenced status updates.</p>
+                  <p className="text-sm text-muted-fg">Monitor stock integrity during inter-store transfers with geo-fenced status updates.</p>
                 </div>
                 <div className="pl-4 border-l-2 border-slate-700">
                   <h4 className="text-lg font-semibold text-white mb-2">Weather-Aware Forecasting</h4>
-                  <p className="text-sm text-slate-400">Typhoon and seasonal demand models trained on Philippine retail patterns.</p>
+                  <p className="text-sm text-muted-fg">Typhoon and seasonal demand models trained on Philippine retail patterns.</p>
                 </div>
               </div>
             </div>
@@ -304,7 +304,7 @@ export function Home() {
                   <stat.icon className="h-5 w-5 sm:h-6 sm:w-6" />
                 </div>
                 <div className="text-3xl lg:text-4xl font-bold text-[#0F172A] dark:text-slate-50">{stat.value}</div>
-                <div className="text-sm text-[#475569] dark:text-slate-400 mt-1">{stat.label}</div>
+                <div className="text-sm text-[#475569] dark:text-muted-fg mt-1">{stat.label}</div>
               </div>
             ))}
           </div>

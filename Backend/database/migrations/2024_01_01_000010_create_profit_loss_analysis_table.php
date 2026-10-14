@@ -16,7 +16,7 @@ return new class extends Migration
             $table->enum('risk_level', ['Low', 'Medium', 'High']);
             $table->decimal('predicted_profit_leakage', 10, 2);
             $table->dateTime('analysis_date');
-            
+
             $table->foreign('product_id')->references('product_id')->on('Product');
         });
     }

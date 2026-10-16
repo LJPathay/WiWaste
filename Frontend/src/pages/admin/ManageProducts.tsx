@@ -660,8 +660,17 @@ export function ManageProducts() {
               {isDuplicateAddName && <p className="text-red-500 text-[10px] mt-1">Product name already exists.</p>}
             </FormField>
             <FormField label="SKU / Barcode (Leave blank for automatic SKU generation)">
-              <input type="text" placeholder="Auto-generated if empty" value={addForm.barcode}
-                onChange={e => setAddForm(f => ({ ...f, barcode: e.target.value }))} className="h-8 text-xs" />
+              <input
+                type="text"
+                placeholder="Scan or type barcode"
+                value={addForm.barcode}
+                onChange={e => setAddForm(f => ({ ...f, barcode: e.target.value }))}
+                // Keyboard-emulated scanners append Enter after the scanned digits.
+                // Prevent that Enter from submitting the whole product form before
+                // the owner has finished entering the remaining details.
+                onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }}
+                className="h-8 text-xs"
+              />
               {isDuplicateAddBarcode && <p className="text-red-500 text-[10px] mt-1">SKU / Barcode already exists.</p>}
             </FormField>
             <div className="grid grid-cols-2 gap-2">
@@ -724,8 +733,17 @@ export function ManageProducts() {
               {isDuplicateEditName && <p className="text-red-500 text-[10px] mt-1">Product name already exists.</p>}
             </FormField>
             <FormField label="SKU / Barcode">
-              <input type="text" placeholder="Barcode" value={editForm.barcode}
-                onChange={e => setEditForm(f => ({ ...f, barcode: e.target.value }))} className="h-8 text-xs" />
+              <input
+                type="text"
+                placeholder="Scan or type barcode"
+                value={editForm.barcode}
+                onChange={e => setEditForm(f => ({ ...f, barcode: e.target.value }))}
+                // Keyboard-emulated scanners append Enter after the scanned digits.
+                // Prevent that Enter from submitting the whole product form before
+                // the owner has finished entering the remaining details.
+                onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }}
+                className="h-8 text-xs"
+              />
               {isDuplicateEditBarcode && <p className="text-red-500 text-[10px] mt-1">SKU / Barcode already exists.</p>}
             </FormField>
             <div className="grid grid-cols-2 gap-2">

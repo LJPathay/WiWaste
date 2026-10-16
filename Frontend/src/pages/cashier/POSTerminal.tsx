@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, useEffect, useCallback } from 'react';
 import { 
-  Barcode, Search, Trash2, CreditCard, Wallet, Banknote, Plus, Minus, 
+  Barcode, Search, Trash2, CreditCard, Wallet, Banknote,
   User, Clock, ArrowRight, CheckCircle2,
   Percent, AlertCircle, Monitor, Tablet, Smartphone, X, Package
 } from 'lucide-react';
@@ -26,6 +26,18 @@ import {
   apiProductToCashier,
 } from './POSConstants';
 import { ReceiptPreview } from './ReceiptPreview';
+
+/**
+ * Tiny keycap chip shown on footer actions so the cashier can see — without
+ * touching the mouse — which key triggers each operation.
+ */
+function Keycap({ combo }: { combo: string }) {
+  return (
+    <span className="ml-1 rounded border border-slate-300 dark:border-slate-500 bg-white/80 dark:bg-slate-800/70 px-1 py-px text-[9px] font-black leading-none tracking-tight text-muted-fg dark:text-slate-300">
+      {combo}
+    </span>
+  );
+}
 
 export function POSTerminal() {
   const { toasts, dismiss, success, error } = useToast();
@@ -191,6 +203,13 @@ export function POSTerminal() {
     setCart(prev => prev.filter(l => l.product.product_id !== productId));
   }, [setCart]);
 
+  const voidTransaction = useCallback(() => {
+    setCart([]);
+    setSelectedLineId(null);
+    setSeniorPwdInfo(null);
+    success('Transaction voided.');
+  }, [setCart, success]);
+
   // Totals are derived straight from the cart on every render.
   const totalItems = cart.reduce((sum, l) => sum + l.quantity, 0);
   const subtotal = cart.reduce((sum, l) => sum + l.product.selling_price * l.quantity, 0);
@@ -236,7 +255,15 @@ export function POSTerminal() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!hotkeysEnabled) return;
-      const isBarcodeFocused = document.activeElement === barcodeRef.current;
+      const activeEl = document.activeElement as HTMLElement | null;
+      const isBarcodeFocused = activeEl === barcodeRef.current;
+      // Never hijack keys while the cashier is typing in a field (barcode box, qty cell, ...).
+      const typingInField = !!activeEl && (
+        activeEl.tagName === 'INPUT'
+        || activeEl.tagName === 'TEXTAREA'
+        || activeEl.tagName === 'SELECT'
+        || activeEl.isContentEditable === true
+      );
       // Modals own their own inputs — never steal keystrokes for PLU entry while one is open.
       const modalOpen = showCheckout || showDiscountModal || showReturnModal || showVoidModal
         || showSeniorPwdModal || showPriceOverrideModal || showExitConfirm;
@@ -260,6 +287,10 @@ export function POSTerminal() {
       } else if (e.key === hotkeys.checkout) {
         e.preventDefault();
         if (cart.length > 0 && !showCheckout) openCheckout();
+      } else if (e.key === hotkeys.newTransaction) {
+        // F6 mirrors the "Void Txn" button — clears the cart to start over.
+        e.preventDefault();
+        if (cart.length > 0) voidTransaction();
       } else if (e.key === hotkeys.discount) {
         e.preventDefault();
         setShowDiscountModal(true);
@@ -290,7 +321,17 @@ export function POSTerminal() {
         setShowPriceOverrideModal(false);
         setBarcode('');
         setPluBuffer('');
-      } else if (!modalOpen && document.activeElement !== barcodeRef.current) {
+      } else if (!modalOpen && !isBarcodeFocused && !typingInField && selectedLineId && (e.key === '+' || e.key === '=' || e.key === 'Add')) {
+        // Keyboard-first quantity: bumping the selected line beats reaching for a mouse.
+        // Scanning the same barcode again does the same thing.
+        e.preventDefault();
+        const line = cart.find(l => l.product.product_id === selectedLineId);
+        if (line) updateQty(selectedLineId, line.quantity + 1);
+      } else if (!modalOpen && !isBarcodeFocused && !typingInField && selectedLineId && (e.key === '-' || e.key === '_' || e.key === 'Subtract')) {
+        e.preventDefault();
+        const line = cart.find(l => l.product.product_id === selectedLineId);
+        if (line) updateQty(selectedLineId, line.quantity - 1);
+      } else if (!modalOpen && !isBarcodeFocused && !typingInField) {
         // ── PLU Quick-Code digit entry ──
         if (/^[0-9]$/.test(e.key)) {
           e.preventDefault();
@@ -314,7 +355,7 @@ export function POSTerminal() {
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [cart, showCheckout, showDiscountModal, showReturnModal, showVoidModal, showSeniorPwdModal, showPriceOverrideModal, showExitConfirm, hotkeys, selectedLineId, hotkeysEnabled, addProduct, handlePluLookup, pluBuffer, updateQty, removeProduct, openCheckout]);
+  }, [cart, showCheckout, showDiscountModal, showReturnModal, showVoidModal, showSeniorPwdModal, showPriceOverrideModal, showExitConfirm, hotkeys, selectedLineId, hotkeysEnabled, addProduct, handlePluLookup, pluBuffer, updateQty, removeProduct, openCheckout, voidTransaction]);
 
   /**
    * HID barcode scanner listener.
@@ -332,7 +373,10 @@ export function POSTerminal() {
       if (showCheckout || showDiscountModal || showReturnModal || showVoidModal || showSeniorPwdModal || showPriceOverrideModal || showExitConfirm) return;
       // Ignore modifier-only and navigation keys.
       if (e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
-      if (e.key.length !== 1) return;
+      // Barcodes are numeric and the barcode fields strip anything else, so only
+      // digit keystrokes feed the HID buffer. Without this, stray typing (e.g. the
+      // +/- quantity keys) would trigger a bogus lookup.
+      if (!/^[0-9]$/.test(e.key)) return;
 
       scannerBufferRef.current = scannerBufferRef.current + e.key;
       if (scannerTimerRef.current) clearTimeout(scannerTimerRef.current);
@@ -446,13 +490,6 @@ export function POSTerminal() {
     setSelectedLineId(null);
     setShowVoidModal(false);
     success('Item voided.');
-  };
-
-  const voidTransaction = () => {
-    setCart([]);
-    setSelectedLineId(null);
-    setSeniorPwdInfo(null);
-    success('Transaction voided.');
   };
 
   const completePayment = async () => {
@@ -668,8 +705,8 @@ export function POSTerminal() {
               <span className="hidden sm:inline">Scan</span>
             </button>
           </div>
-          <p className="text-[10px] text-muted-fg dark:text-muted-fg mt-2 ml-1">
-            Scan a product barcode to add it to the transaction. Press Enter after scanning.
+          <p className="text-[10px] text-muted-fg dark:text-muted-fg mt-1.5 ml-1">
+            Scan a barcode to add it — scan the same barcode again to raise the quantity. The + and − keys also adjust the selected line.
           </p>
         </div>
 
@@ -681,18 +718,17 @@ export function POSTerminal() {
             <table className="w-full text-left border-separate border-spacing-0">
               <thead className="sticky top-0 z-10 bg-[#F8FAFC] dark:bg-slate-900 border-b border-[#E5E7EB] dark:border-slate-700">
                 <tr>
-                  <th className="px-6 py-3 text-[10px] font-bold text-muted-fg dark:text-muted-fg uppercase tracking-wider">Barcode</th>
-                  <th className="px-6 py-3 text-[10px] font-bold text-muted-fg dark:text-muted-fg uppercase tracking-wider">Product Name</th>
-                  <th className="px-6 py-3 text-right text-[10px] font-bold text-muted-fg dark:text-muted-fg uppercase tracking-wider">Qty</th>
-                  <th className="px-6 py-3 text-right text-[10px] font-bold text-muted-fg dark:text-muted-fg uppercase tracking-wider">Unit Price</th>
-                  <th className="px-6 py-3 text-right text-[10px] font-bold text-muted-fg dark:text-muted-fg uppercase tracking-wider pr-6">Line Total</th>
-                  <th className="px-3 py-3 text-right text-[10px] font-bold text-muted-fg dark:text-muted-fg uppercase tracking-wider">Remove</th>
+                  <th className="px-3 py-2 text-[10px] font-bold text-muted-fg dark:text-muted-fg uppercase tracking-wider">Barcode</th>
+                  <th className="px-3 py-2 text-[10px] font-bold text-muted-fg dark:text-muted-fg uppercase tracking-wider">Product Name</th>
+                  <th className="px-3 py-2 text-right text-[10px] font-bold text-muted-fg dark:text-muted-fg uppercase tracking-wider" title="Scan the same barcode again, or press + / - on the selected line">Qty</th>
+                  <th className="px-3 py-2 text-right text-[10px] font-bold text-muted-fg dark:text-muted-fg uppercase tracking-wider">Unit Price</th>
+                  <th className="px-3 py-2 text-right text-[10px] font-bold text-muted-fg dark:text-muted-fg uppercase tracking-wider">Line Total</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E5E7EB] dark:divide-slate-700">
                 {cart.length === 0 ? (
                   <tr data-testid="cart-empty">
-                    <td colSpan={6} className="p-0" aria-hidden="true" />
+                    <td colSpan={5} className="p-0" aria-hidden="true" />
                   </tr>
                 ) : (
                   cart.map((line, idx) => {
@@ -713,81 +749,54 @@ export function POSTerminal() {
                         } hover:bg-slate-100 dark:hover:bg-slate-700`}
                       >
                         {/* Barcode */}
-                        <td className="px-6 py-3 text-[10px] font-mono font-semibold text-muted-fg dark:text-muted-fg truncate" title={line.product.barcode || line.product.plu_code}>
+                        <td className="px-3 py-1.5 text-[10px] font-mono font-semibold text-muted-fg dark:text-muted-fg truncate" title={line.product.barcode || line.product.plu_code}>
                           {line.product.barcode || line.product.plu_code || '—'}
                         </td>
 
-                        {/* Product Name */}
-                        <td className="px-6 py-3">
-                          <div className="truncate">
-                            <p className="font-bold text-slate-800 dark:text-slate-100 text-xs">{line.product.product_name}</p>
-                            <div className="flex items-center gap-2 mt-0.5">
+                        {/* Product Name + inline flags */}
+                        <td className="px-3 py-1.5">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="truncate text-[11px] font-semibold text-slate-800 dark:text-slate-100">{line.product.product_name}</span>
                             {line.discountPct && line.discountPct > 0 ? (
-                              <span className="text-[9px] font-bold text-[#0F766E] bg-[#0F766E]/10 px-1 rounded">-{line.discountPct * 100}%</span>
+                              <span className="shrink-0 text-[9px] font-bold text-[#0F766E] bg-[#0F766E]/10 px-1 rounded">-{line.discountPct * 100}%</span>
                             ) : null}
                             {isSelected && (
-                              <span className="text-[9px] font-bold text-red-400 bg-red-50 dark:bg-red-900/20 px-1 rounded">{hotkeys.unqueue} to remove</span>
+                              <span className="shrink-0 text-[9px] font-bold text-red-400 bg-red-50 dark:bg-red-900/20 px-1 rounded">{hotkeys.unqueue} remove · +/− qty</span>
                             )}
                             {isOutOfStock && (
-                              <span className="text-[9px] font-bold text-red-600 bg-red-50 dark:bg-red-900/20 px-1.5 rounded">Out of stock</span>
+                              <span className="shrink-0 text-[9px] font-bold text-red-600 bg-red-50 dark:bg-red-900/20 px-1.5 rounded">Out of stock</span>
                             )}
                             {isLowStock && !isOutOfStock && (
-                              <span className="text-[9px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-1.5 rounded">Low: {remaining}</span>
+                              <span className="shrink-0 text-[9px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-1.5 rounded">Low: {remaining}</span>
                             )}
-                            </div>
                           </div>
                         </td>
 
-                        {/* Qty Control */}
-                        <td className="px-6 py-3 text-right">
-                          <div className="flex items-center justify-center w-[90px] bg-white dark:bg-slate-700 rounded-md border border-[#E5E7EB] dark:border-slate-600 overflow-hidden shadow-sm inline-block" onClick={e => e.stopPropagation()}>
-                            <button 
-                              onClick={() => updateQty(line.product.product_id, line.quantity - 1)}
-                              disabled={line.quantity <= 1}
-                              className="w-8 h-8 flex items-center justify-center text-muted-fg dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors shrink-0 ${line.quantity <= 1 ? 'opacity-50 cursor-not-allowed' : ''}"
-                            >
-                              <Minus className="w-3 h-3" />
-                            </button>
-                            <input 
-                              type="text"
-                              inputMode="numeric"
-                              value={line.quantity}
-                              onChange={(e) => {
-                                const val = parseInt(e.target.value, 10);
-                                if (!isNaN(val)) updateQty(line.product.product_id, val);
-                                else if (e.target.value === '') updateQty(line.product.product_id, 0);
-                              }}
-                              className="w-full text-center text-sm font-bold text-slate-800 dark:text-slate-100 bg-transparent focus:outline-none focus:bg-bg dark:focus:bg-slate-600"
-                            />
-                            <button 
-                              onClick={() => updateQty(line.product.product_id, line.quantity + 1)}
-                              disabled={isOutOfStock}
-                              className="w-8 h-8 flex items-center justify-center text-[#0F766E] bg-[#E8F7F2] hover:bg-[#d1f4e8] transition-colors shrink-0 ${isOutOfStock ? 'opacity-50 cursor-not-allowed' : ''}"
-                            >
-                              <Plus className="w-3 h-3" />
-                            </button>
-                          </div>
+                        {/* Qty — keyboard/scanner first: scan the same barcode again, or press + / − */}
+                        <td className="px-3 py-1.5 text-right">
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            aria-label={`Quantity for ${line.product.product_name}`}
+                            value={line.quantity}
+                            onClick={e => e.stopPropagation()}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value, 10);
+                              if (!isNaN(val)) updateQty(line.product.product_id, val);
+                              else if (e.target.value === '') updateQty(line.product.product_id, 0);
+                            }}
+                            className="w-12 rounded-md bg-transparent py-0.5 text-right text-xs font-bold text-slate-800 dark:text-slate-100 focus:bg-bg dark:focus:bg-slate-600 focus:outline-none focus:ring-1 focus:ring-[#0F766E]"
+                          />
                         </td>
 
                         {/* Unit Price */}
-                        <td className="px-6 py-3 text-right text-[11px] font-semibold text-muted-fg dark:text-muted-fg">
+                        <td className="px-3 py-1.5 text-right text-[11px] font-semibold text-muted-fg dark:text-muted-fg">
                           {formatCurrency(line.product.selling_price)}
                         </td>
 
                         {/* Line Total */}
-                        <td className="px-6 py-3 text-right pr-6 font-bold text-slate-800 dark:text-slate-100 text-sm">
+                        <td className="px-3 py-1.5 text-right text-xs font-bold text-slate-800 dark:text-slate-100">
                           {formatCurrency(lineTotal)}
-                        </td>
-
-                        {/* Remove */}
-                        <td className="px-3 py-3 text-right">
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); removeProduct(line.product.product_id); }}
-                            className="w-7 h-7 flex items-center justify-center text-red-500 bg-red-50 hover:bg-red-100 rounded-md transition-all"
-                            title="Remove Item"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
                         </td>
                       </tr>
                     );
@@ -824,21 +833,6 @@ export function POSTerminal() {
                 <span className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-widest">Due</span>
                 <span className="text-2xl font-black text-slate-900 dark:text-white leading-none">{formatCurrency(grandTotal)}</span>
               </div>
-
-              {/* Checkout button below the totals, contained in the right portion */}
-              <button
-                onClick={openCheckout}
-                disabled={cart.length === 0 || isProcessingCheckout}
-                className={`mt-2.5 w-full py-2.5 rounded-xl text-sm font-bold text-white shadow-md transition-all flex items-center justify-center gap-2 relative
-                  ${isProcessingCheckout
-                    ? 'bg-[#0F766E] text-white opacity-80 cursor-not-allowed'
-                    : cart.length === 0
-                      ? 'bg-slate-300 cursor-not-allowed shadow-none'
-                      : 'bg-[#16A34A] hover:bg-[#15803d]'}`}
-              >
-                {isProcessingCheckout ? 'Processing…' : 'Proceed to Checkout'}
-                <span className="absolute right-3 text-[10px] font-bold bg-white/20 px-2 py-1 rounded text-white/90">{hotkeys.checkout}</span>
-              </button>
             </div>
           </div>
         </div>
@@ -863,7 +857,7 @@ export function POSTerminal() {
             className={`flex items-center justify-center gap-2 px-3 py-2 bg-[#F8FAFC] dark:bg-slate-700 border border-[#E5E7EB] dark:border-slate-600 rounded-lg text-xs font-bold transition-all ${selectedLineId ? 'text-muted-fg dark:text-slate-300 hover:border-[#0F766E] hover:text-[#0F766E]' : 'text-muted-fg cursor-not-allowed opacity-50'}`}
             title="Apply Discount"
           >
-            <Percent className="w-3.5 h-3.5" /> Discount
+            <Percent className="w-3.5 h-3.5" /> Discount<Keycap combo={hotkeys.discount} />
           </button>
           <button 
             onClick={() => selectedLineId && setShowVoidModal(true)}
@@ -871,7 +865,7 @@ export function POSTerminal() {
             className={`flex items-center justify-center gap-2 px-3 py-2 bg-[#F8FAFC] dark:bg-slate-700 border border-[#E5E7EB] dark:border-slate-600 rounded-lg text-xs font-bold transition-all ${selectedLineId ? 'text-muted-fg dark:text-slate-300 hover:border-red-500 hover:text-red-600' : 'text-muted-fg cursor-not-allowed opacity-50'}`}
             title="Void Item"
           >
-            <Trash2 className="w-3.5 h-3.5" /> Void Item
+            <Trash2 className="w-3.5 h-3.5" /> Void Item<Keycap combo={hotkeys.voidItem} />
           </button>
           <button 
             onClick={() => {
@@ -887,7 +881,8 @@ export function POSTerminal() {
             Override Price
           </button>
 
-          {/* Shortcut buttons — primary cashier operations */}
+          {/* Shortcut buttons — primary cashier operations. Checkout itself has no
+              button: it is keyboard-only (see the badge on the Hotkeys toggle). */}
           <div className="flex items-center gap-2 bg-[#F8FAFC] dark:bg-slate-700 border border-[#E5E7EB] dark:border-slate-600 rounded-lg overflow-hidden">
             <button
               onClick={voidTransaction}
@@ -895,32 +890,49 @@ export function POSTerminal() {
               className={`flex items-center justify-center gap-1 px-3 py-2 text-xs font-bold transition-all ${cart.length === 0 ? 'text-muted-fg cursor-not-allowed opacity-50' : 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'}`}
               title="Void Transaction"
             >
-              <Trash2 className="w-3.5 h-3.5" /> Void Txn
-            </button>
-            <div className="w-px h-5 bg-slate-200 dark:bg-slate-600" />
-            <button
-              onClick={openCheckout}
-              disabled={cart.length === 0 || isProcessingCheckout}
-              className={`flex items-center justify-center gap-1 px-3 py-2 text-xs font-bold transition-all ${cart.length === 0 || isProcessingCheckout ? 'text-muted-fg cursor-not-allowed opacity-50' : 'bg-[#0F766E] text-white'}`}
-              title="Checkout"
-            >
-              <ArrowRight className="w-3.5 h-3.5" /> Checkout
+              <Trash2 className="w-3.5 h-3.5" /> Void Txn<Keycap combo={hotkeys.newTransaction} />
             </button>
             <div className="w-px h-5 bg-slate-200 dark:bg-slate-600" />
             <button
               onClick={() => { barcodeRef.current?.focus(); setBarcode(''); }}
               className="flex items-center justify-center gap-1 px-3 py-2 text-xs font-bold text-muted-fg dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600 transition-all"
-              title="Price Check / Scan (F2)"
+              title="Price Check / Scan"
             >
-              <Search className="w-3.5 h-3.5" /> Price Check
+              <Search className="w-3.5 h-3.5" /> Price Check<Keycap combo={hotkeys.focusSearch} />
             </button>
+            {/* Escape hatch: with hotkeys off the F4 shortcut is dead, so keep a
+                clickable Checkout here or the terminal would be unusable. */}
+            {!hotkeysEnabled && (
+              <>
+                <div className="w-px h-5 bg-slate-200 dark:bg-slate-600" />
+                <button
+                  onClick={openCheckout}
+                  disabled={cart.length === 0 || isProcessingCheckout}
+                  className={`flex items-center justify-center gap-1 px-3 py-2 text-xs font-bold transition-all ${cart.length === 0 || isProcessingCheckout ? 'text-muted-fg cursor-not-allowed opacity-50' : 'bg-[#0F766E] text-white'}`}
+                  title="Checkout"
+                >
+                  <ArrowRight className="w-3.5 h-3.5" /> Checkout
+                </button>
+              </>
+            )}
           </div>
         </div>
 
         <div className="flex items-center gap-1">
+          {/* Checkout shortcut — an indicator, not a button: checkout is F4. */}
+          {hotkeysEnabled && (
+            <span
+              className="flex items-center gap-1 px-2 py-1 rounded-lg border border-dashed border-[#E5E7EB] dark:border-slate-600 text-[10px] font-bold text-muted-fg dark:text-slate-300 select-none"
+              title={`Press ${hotkeys.checkout} to check out`}
+            >
+              Checkout<Keycap combo={hotkeys.checkout} />
+            </span>
+          )}
           <button
             onClick={toggleHotkeys}
-            title={hasKeyboard ? undefined : 'No keyboard detected — hotkeys may not work'}
+            title={hasKeyboard
+              ? `Keyboard shortcuts: ${hotkeys.focusSearch} scan · ${hotkeys.checkout} checkout · ${hotkeys.newTransaction} void txn · ${hotkeys.voidItem} void item · ${hotkeys.discount} discount · ${hotkeys.unqueue} remove item · arrows select · + / - quantity`
+              : 'No keyboard detected — hotkeys may not work'}
             className={`px-2 py-2 text-[10px] font-bold transition-all ${hotkeysEnabled ? 'text-[#0F766E]' : 'text-muted-fg'}`}
           >
             {hotkeysEnabled ? 'Hotkeys ON' : 'Hotkeys OFF'}

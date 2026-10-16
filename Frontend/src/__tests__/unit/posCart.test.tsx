@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { POSTerminal } from '../../pages/cashier/POSTerminal';
 import { products as productsApi, sales as salesApi } from '../../services/api';
@@ -128,19 +128,33 @@ describe('POS cart', () => {
     await waitFor(() => expect(screen.getByTestId(EMPTY_CART_TESTID)).toBeInTheDocument());
   });
 
-  it('increments quantity from the + button', async () => {
+  it('raises the quantity of the selected line with the + key', async () => {
+    localStorage.setItem('pos_hotkeys_enabled', 'true');
     renderPOS();
 
     await scan('123456');
     await waitFor(() => expect(screen.getByDisplayValue('1')).toBeInTheDocument());
 
-    const qtyRow = screen.getByDisplayValue('1').closest('div') as HTMLElement;
-    // [0] is the "−" decrement button, [1] is the "+" increment button.
-    const [, plusButton] = within(qtyRow).getAllByRole('button');
-
-    fireEvent.click(plusButton);
+    // Keyboard-only path: Tab selects the first cart line, + bumps its quantity.
+    (screen.getByPlaceholderText(/scan barcode/i) as HTMLInputElement).blur();
+    fireEvent.keyDown(document, { key: 'Tab' });
+    fireEvent.keyDown(document, { key: '+' });
 
     await waitFor(() => expect(screen.getByDisplayValue('2')).toBeInTheDocument());
+  });
+
+  it('lowers the quantity with the - key and drops the line at zero', async () => {
+    localStorage.setItem('pos_hotkeys_enabled', 'true');
+    renderPOS();
+
+    await scan('123456');
+    await waitFor(() => expect(screen.getByDisplayValue('1')).toBeInTheDocument());
+
+    (screen.getByPlaceholderText(/scan barcode/i) as HTMLInputElement).blur();
+    fireEvent.keyDown(document, { key: 'Tab' });
+    fireEvent.keyDown(document, { key: '-' });
+
+    await waitFor(() => expect(screen.getByTestId(EMPTY_CART_TESTID)).toBeInTheDocument());
   });
 
   it('never lets a cart line exceed available stock', async () => {
@@ -158,13 +172,15 @@ describe('POS cart', () => {
   });
 
   it('completes a cash checkout and persists the sale via the API', async () => {
+    // Checkout is keyboard-only now, so hotkeys must be on before mounting.
+    localStorage.setItem('pos_hotkeys_enabled', 'true');
     renderPOS();
 
     await scan('123456');
     await waitFor(() => expect(screen.getByDisplayValue('1')).toBeInTheDocument());
 
-    // Proceed to checkout.
-    fireEvent.click(screen.getByRole('button', { name: /Proceed to Checkout/ }));
+    // Proceed to checkout with the F4 shortcut.
+    fireEvent.keyDown(document, { key: 'F4' });
 
     // Amount due and tendered input should be visible.
     expect(screen.getByText('Amount Due', { exact: true })).toBeInTheDocument();
@@ -184,12 +200,13 @@ describe('POS cart', () => {
   });
 
   it('prevents duplicate checkout submissions on rapid double-click', async () => {
+    localStorage.setItem('pos_hotkeys_enabled', 'true');
     renderPOS();
 
     await scan('123456');
     await waitFor(() => expect(screen.getByDisplayValue('1')).toBeInTheDocument());
 
-    fireEvent.click(screen.getByRole('button', { name: /Proceed to Checkout/ }));
+    fireEvent.keyDown(document, { key: 'F4' });
 
     const tendered = screen.getByPlaceholderText('0.00') as HTMLInputElement;
     fireEvent.change(tendered, { target: { value: '20' } });
@@ -202,19 +219,24 @@ describe('POS cart', () => {
   });
 
   it('refuses checkout when the cart is empty', async () => {
+    localStorage.setItem('pos_hotkeys_enabled', 'true');
     renderPOS();
 
-    fireEvent.click(screen.getByRole('button', { name: /Proceed to Checkout/ }));
+    // F4 is a no-op with an empty cart: no payment step, no sale.
+    fireEvent.keyDown(document, { key: 'F4' });
+
+    expect(screen.queryByText('Amount Due', { exact: true })).not.toBeInTheDocument();
     expect(createMock).not.toHaveBeenCalled();
   });
 
   it('refuses cash checkout when tendered is below the total', async () => {
+    localStorage.setItem('pos_hotkeys_enabled', 'true');
     renderPOS();
 
     await scan('123456');
     await waitFor(() => expect(screen.getByDisplayValue('1')).toBeInTheDocument());
 
-    fireEvent.click(screen.getByRole('button', { name: /Proceed to Checkout/ }));
+    fireEvent.keyDown(document, { key: 'F4' });
 
     const tendered = screen.getByPlaceholderText('0.00') as HTMLInputElement;
     fireEvent.change(tendered, { target: { value: '1' } });

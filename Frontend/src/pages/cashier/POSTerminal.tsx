@@ -75,6 +75,17 @@ export function POSTerminal() {
   
   const [pluBuffer, setPluBuffer] = useState('');
   const pluTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // HID barcode scanner buffer. USB/Bluetooth HID scanners act as keyboards and emit
+  // keystrokes followed by Enter. We buffer rapid keystrokes (typical scanner speed)
+  // separately from manual typing so a scanner works without the search field focused.
+  const scannerBufferRef = useRef('');
+  const scannerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const SCANNER_GAP_MS = 100; // keystrokes within this window are treated as one scan
+
+  // Lookup / checkout loading states keep the UI responsive and prevent duplicate submits.
+  const [isLookingUp, setIsLookingUp] = useState(false);
+  const [isProcessingCheckout, setIsProcessingCheckout] = useState(false);
   
   // Modals & States
   const [showCheckout, setShowCheckout] = useState(false);
@@ -214,35 +225,40 @@ export function POSTerminal() {
   }, [stockAdjustments, setAction, setCart, setSearch]);
 
   const handlePluLookup = useCallback(async (code: string) => {
-    const localMatch = cashierProducts.find(
-      p => p.plu_code === code || p.barcode === code || p.product_id.replace('P-', '') === code
-    );
-
-    if (localMatch) {
-      addProduct(localMatch);
-      // Add to catalog for future search/display
-      setCatalog(prev =>
-        prev.some(p => p.product_id === localMatch.product_id) ? prev : [...prev, localMatch]
+    setIsLookingUp(true);
+    try {
+      const localMatch = cashierProducts.find(
+        p => p.plu_code === code || p.barcode === code || p.product_id.replace('P-', '') === code
       );
-    } else {
-      try {
-        const product: CashierProduct = apiProductToCashier(await productsApi.lookup(code));
-        addProduct(product);
+
+      if (localMatch) {
+        addProduct(localMatch);
         // Add to catalog for future search/display
         setCatalog(prev =>
-          prev.some(p => p.product_id === product.product_id) ? prev : [...prev, product]
+          prev.some(p => p.product_id === localMatch.product_id) ? prev : [...prev, localMatch]
         );
-      } catch {
-        error(`Product not found: ${code}`);
-        setPluBuffer('');
-        barcodeRef.current?.focus();
-        return;
+      } else {
+        try {
+          const product: CashierProduct = apiProductToCashier(await productsApi.lookup(code));
+          addProduct(product);
+          // Add to catalog for future search/display
+          setCatalog(prev =>
+            prev.some(p => p.product_id === product.product_id) ? prev : [...prev, product]
+          );
+        } catch {
+          error(`Product not found: ${code}`);
+          setPluBuffer('');
+          barcodeRef.current?.focus();
+          return;
+        }
       }
-    }
 
-    setSearch('');
-    setPluBuffer('');
-    barcodeRef.current?.focus();
+      setSearch('');
+      setPluBuffer('');
+      barcodeRef.current?.focus();
+    } finally {
+      setIsLookingUp(false);
+    }
   }, [addProduct, error, setSearch, setPluBuffer, setCatalog]);
 
   const updateQty = useCallback((productId: string, qty: number) => {
@@ -385,6 +401,57 @@ export function POSTerminal() {
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [cart, showCheckout, hotkeys, showHotkeySettings, recordingAction, selectedLineId, hotkeysEnabled, addProduct, handlePluLookup, pluBuffer, updateQty, removeProduct, filteredProducts, pinnedOrder, openCheckout]);
+
+  /**
+   * HID barcode scanner listener.
+   *
+   * USB / Bluetooth HID scanners present as keyboards and emit barcode digits as
+   * rapid keystrokes terminated by Enter (or sometimes Tab). This listener runs on
+   * `document` so a scan works without the cashier clicking the search field first.
+   *
+   * Keystrokes arriving within SCANNER_GAP_MS of each other are aggregated into one
+   * barcode. When the gap expires (or Enter is pressed) the accumulated buffer is
+   * looked up via `handlePluLookup`.
+   *
+   * The listener is intentionally permissive: if the search field is focused the
+   * input event drives the normal search flow, and this scanner buffer simply
+   * ignores keys that arrive while the field has focus (the `onChange` handler
+   owns that path).
+   */
+  useEffect(() => {
+    const handleScannerKey = (e: KeyboardEvent) => {
+      // Don't intercept when the search field is focused — its own onChange/Enter
+      // handling owns that path, and intercepting here would double-enter scans.
+      if (document.activeElement === barcodeRef.current) return;
+      // Don't intercept while a modal is open or hotkey recording is in progress.
+      if (showCheckout || showDiscountModal || showReturnModal || showVoidModal || showSeniorPwdModal || showPriceOverrideModal || showExitConfirm || showHotkeySettings || recordingAction) return;
+      // Ignore modifier-only and navigation keys.
+      if (e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
+      if (e.key.length !== 1) return;
+
+      scannerBufferRef.current = scannerBufferRef.current + e.key;
+        if (scannerTimerRef.current) clearTimeout(scannerTimerRef.current);
+        scannerTimerRef.current = setTimeout(() => {
+          const code = scannerBufferRef.current;
+          scannerBufferRef.current = '';
+          if (code.length > 0) {
+            void scannerScanRef.current(code);
+          }
+        }, SCANNER_GAP_MS);
+    };
+
+    document.addEventListener('keydown', handleScannerKey);
+    return () => document.removeEventListener('keydown', handleScannerKey);
+  }, [showCheckout, showDiscountModal, showReturnModal, showVoidModal, showSeniorPwdModal, showPriceOverrideModal, showExitConfirm, showHotkeySettings, recordingAction]);
+
+  const handleScannerScan = useCallback(async (code: string) => {
+    await handlePluLookup(code);
+  }, [handlePluLookup]);
+
+  // Keep the scanner handler ref in sync so the effect's setTimeout always
+  // invokes the latest lookup without re-attaching the listener.
+  const scannerScanRef = useRef(handleScannerScan);
+  scannerScanRef.current = handleScannerScan;
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -534,6 +601,7 @@ export function POSTerminal() {
   };
 
   const completePayment = async () => {
+    if (isProcessingCheckout) return; // prevent duplicate submissions from rapid clicks
     if (cart.length === 0) { error('Add at least one product.'); return; }
     
     const isCash = paymentMethod === 'Cash';
@@ -575,10 +643,14 @@ export function POSTerminal() {
       })),
     };
 
+    setIsProcessingCheckout(true);
     try {
       await salesApi.create(payload);
     } catch (err: unknown) {
-      error(err instanceof Error ? err.message : 'Unable to complete payment.');
+      const message = err instanceof Error ? err.message : 'Unable to complete payment.';
+      // Surface backend validation errors (e.g. insufficient stock) clearly.
+      error(message);
+      setIsProcessingCheckout(false);
       return;
     }
 
@@ -621,6 +693,7 @@ export function POSTerminal() {
     setReceipt(completedReceipt);
     setShowCheckout(false);
     setAction(`Sale Complete — ${formatCurrency(grandTotal)}`);
+    setIsProcessingCheckout(false);
 
     setTimeout(() => {
       try { window.print(); } catch { /* printing is best-effort */ }
@@ -736,10 +809,16 @@ export function POSTerminal() {
                     PLU: {pluBuffer}
                   </div>
                 )}
+                {isLookingUp && (
+                  <div className="absolute top-1/2 -translate-y-1/2 right-3 bg-[#0F766E] text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-in fade-in">
+                    Looking up…
+                  </div>
+                )}
               </div>
               <button 
                 className="w-[25%] flex items-center justify-center gap-2 bg-white dark:bg-slate-700 border border-[#E5E7EB] dark:border-slate-600 text-slate-700 dark:text-slate-200 px-4 py-3 rounded-xl text-sm font-bold hover:bg-[#F8FAFC] dark:hover:bg-slate-600 hover:border-[#0F766E] hover:text-[#0F766E] transition-all shrink-0 shadow-sm"
                 onClick={() => barcodeRef.current?.focus()}
+                disabled={isLookingUp}
               >
                 <Barcode className="w-5 h-5" />
                 <span className="hidden sm:inline">Scan</span>
@@ -878,7 +957,8 @@ export function POSTerminal() {
           </div>
 
           {/* Table Header */}
-          <div className="grid grid-cols-[25%_45%_15%_15%] gap-2 px-6 py-2 border-b border-[#E5E7EB] dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-900 text-[10px] font-bold text-muted-fg dark:text-muted-fg uppercase tracking-wider shrink-0">
+          <div className="grid grid-cols-[17%_10%_43%_15%_15%] gap-2 px-6 py-2 border-b border-[#E5E7EB] dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-900 text-[10px] font-bold text-muted-fg dark:text-muted-fg uppercase tracking-wider shrink-0">
+            <div>Barcode</div>
             <div>Qty</div>
             <div>Item</div>
             <div className="text-right">Price</div>
@@ -900,7 +980,7 @@ export function POSTerminal() {
                   <div 
                     key={line.product.product_id} 
                     onClick={() => setSelectedLineId(line.product.product_id)}
-                    className={`grid grid-cols-[25%_45%_15%_15%] gap-2 px-6 py-3 items-center group transition-colors border-b cursor-pointer ${
+                    className={`grid grid-cols-[17%_10%_43%_15%_15%] gap-2 px-6 py-3 items-center group transition-colors border-b cursor-pointer ${
                       isSelected 
                         ? 'bg-[#E8F7F2] dark:bg-[#0F766E]/20 border-l-4 border-l-[#0F766E] border-b-[#0F766E]/20' 
                         : idx % 2 === 0 
@@ -909,6 +989,11 @@ export function POSTerminal() {
                     } hover:bg-slate-100 dark:hover:bg-slate-700`}
                   >
                     
+                    {/* Barcode / SKU */}
+                    <div className="text-left text-[10px] font-mono font-semibold text-muted-fg dark:text-muted-fg truncate" title={line.product.barcode || line.product.plu_code}>
+                      {line.product.barcode || line.product.plu_code || '—'}
+                    </div>
+
                     {/* Qty Control */}
                     <div className="flex items-center justify-center w-[90px] bg-white dark:bg-slate-700 rounded-md border border-[#E5E7EB] dark:border-slate-600 overflow-hidden shadow-sm" onClick={e => e.stopPropagation()}>
                       <button 
@@ -936,14 +1021,11 @@ export function POSTerminal() {
                       </button>
                     </div>
 
-                    {/* Product Name & Barcode */}
+                    {/* Product Name */}
                     <div className="pr-2 flex items-center gap-3 overflow-hidden">
                       <div className="truncate">
                         <p className="font-bold text-slate-800 dark:text-slate-100 text-xs truncate leading-snug">{line.product.product_name}</p>
                         <div className="flex items-center gap-2 mt-0.5">
-                        <p className="text-[10px] text-muted-fg dark:text-muted-fg font-medium truncate">
-                          {line.product.barcode}
-                        </p>
                         {line.discountPct && line.discountPct > 0 ? (
                           <span className="text-[9px] font-bold text-[#0F766E] bg-[#0F766E]/10 px-1 rounded">-{line.discountPct * 100}%</span>
                         ) : null}
@@ -1067,6 +1149,38 @@ export function POSTerminal() {
           >
             Override Price
           </button>
+
+          {/* Shortcut buttons — primary cashier operations */}
+          <div className="flex items-center gap-2 bg-[#F8FAFC] dark:bg-slate-700 border border-[#E5E7EB] dark:border-slate-600 rounded-lg overflow-hidden">
+            <button
+              onClick={voidTransaction}
+              disabled={cart.length === 0}
+              aria-label="Void transaction"
+              title="Void Transaction"
+              className={`flex items-center justify-center gap-1 px-3 py-2 text-xs font-bold transition-all ${cart.length === 0 ? 'text-muted-fg cursor-not-allowed opacity-50' : 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'}`}
+            >
+              <Trash2 className="w-3.5 h-3.5" /> Void Txn
+            </button>
+            <div className="w-px h-5 bg-slate-200 dark:bg-slate-600" />
+            <button
+              onClick={openCheckout}
+              disabled={cart.length === 0 || isProcessingCheckout}
+              aria-label="Proceed to checkout"
+              title="Checkout"
+              className={`flex items-center justify-center gap-1 px-3 py-2 text-xs font-bold transition-all ${cart.length === 0 || isProcessingCheckout ? 'text-muted-fg cursor-not-allowed opacity-50' : 'bg-[#0F766E] text-white'}`}
+            >
+              <ArrowRight className="w-3.5 h-3.5" /> Checkout
+            </button>
+            <div className="w-px h-5 bg-slate-200 dark:bg-slate-600" />
+            <button
+              onClick={() => { barcodeRef.current?.focus(); setSearch(''); }}
+              aria-label="Price check / scan"
+              title="Price Check (F2)"
+              className="flex items-center justify-center gap-1 px-3 py-2 text-xs font-bold text-muted-fg dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600 transition-all"
+            >
+              <Search className="w-3.5 h-3.5" /> Price Check
+            </button>
+          </div>
 
           <div className="flex items-center gap-1 bg-[#F8FAFC] dark:bg-slate-700 border border-[#E5E7EB] dark:border-slate-600 rounded-lg overflow-hidden">
             <button
@@ -1444,7 +1558,7 @@ export function POSTerminal() {
 
               {/* Cart Items */}
               <div className="flex-1 overflow-y-auto space-y-3 mb-6 max-h-[42vh] min-h-[160px] pr-2">
-                {cart.map((line, _idx) => (
+                {cart.map((line) => (
                   <div key={line.product.product_id} className="flex items-center gap-3 p-3 bg-white rounded-xl border border-border shadow-sm">
                     <div className="w-16 h-16 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0">
                       {line.product.image_url ? (
@@ -1801,14 +1915,16 @@ export function POSTerminal() {
                 </button>
                 <button
                   onClick={completePayment}
-                  disabled={!isCompleteEnabled}
+                  disabled={!isCompleteEnabled || isProcessingCheckout}
                   className={`px-8 py-3 text-lg font-bold rounded-xl shadow-md transition-all relative ${
-                    isCompleteEnabled
-                      ? 'bg-[#0F766E] text-white hover:bg-[#0d615b]'
-                      : 'bg-slate-300 text-muted-fg cursor-not-allowed'
+                    isProcessingCheckout
+                      ? 'bg-[#0F766E] text-white opacity-80 cursor-not-allowed'
+                      : isCompleteEnabled
+                        ? 'bg-[#0F766E] text-white hover:bg-[#0d615b]'
+                        : 'bg-slate-300 text-muted-fg cursor-not-allowed'
                   }`}
                 >
-                  Complete Payment
+                  {isProcessingCheckout ? 'Processing…' : 'Complete Payment'}
                 </button>
               </div>
             </div>

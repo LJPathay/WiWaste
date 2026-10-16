@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState, useEffect, useCallback } from 'react';
 import { 
   Barcode, Search, Trash2, CreditCard, Wallet, Banknote, Plus, Minus, 
-  User, Receipt, Clock, ArrowRight, CheckCircle2,
+  User, Clock, ArrowRight, CheckCircle2,
   Percent, AlertCircle, Monitor, Tablet, Smartphone, X, Package
 } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
@@ -47,6 +47,7 @@ export function POSTerminal() {
   // E-Wallet payment fields
   const [accountDetails, setAccountDetails] = useState('');
   const [amountPaid, setAmountPaid] = useState('');
+  const [ewalletProvider, setEwalletProvider] = useState('GCash');
 
   // PLU buffer for manual keyboard entry (secondary to barcode scanning)
   const [pluBuffer, setPluBuffer] = useState('');
@@ -205,11 +206,40 @@ export function POSTerminal() {
     setShowCheckout(true);
   }, [grandTotal]);
 
+  const closeCheckout = useCallback(() => {
+    setShowCheckout(false);
+    barcodeRef.current?.focus();
+  }, []);
+
+  /** Switching method clears the previous method's fields and re-seeds the charge amount. */
+  const selectPaymentMethod = (method: PosPaymentMethod) => {
+    setPaymentMethod(method);
+    setTransactionRef('');
+    setCardNumber('');
+    setAccountDetails('');
+    setChargedAmount(grandTotal.toFixed(2));
+    setAmountPaid(grandTotal.toFixed(2));
+  };
+
+  /** Groups card digits in fours for display; the stored state stays digits-only. */
+  const formatCardNumber = (value: string) => value.replace(/(.{4})/g, '$1 ').trim();
+
+  const cardBrand = (digits: string) => {
+    if (/^4/.test(digits)) return 'Visa';
+    if (/^(5[1-5]|2[2-7])/.test(digits)) return 'Mastercard';
+    if (/^3[47]/.test(digits)) return 'Amex';
+    if (/^35/.test(digits)) return 'JCB';
+    return '';
+  };
+
   // Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!hotkeysEnabled) return;
       const isBarcodeFocused = document.activeElement === barcodeRef.current;
+      // Modals own their own inputs — never steal keystrokes for PLU entry while one is open.
+      const modalOpen = showCheckout || showDiscountModal || showReturnModal || showVoidModal
+        || showSeniorPwdModal || showPriceOverrideModal || showExitConfirm;
 
       if (e.key === hotkeys.focusSearch) {
         e.preventDefault();
@@ -260,7 +290,7 @@ export function POSTerminal() {
         setShowPriceOverrideModal(false);
         setBarcode('');
         setPluBuffer('');
-      } else if (document.activeElement !== barcodeRef.current) {
+      } else if (!modalOpen && document.activeElement !== barcodeRef.current) {
         // ── PLU Quick-Code digit entry ──
         if (/^[0-9]$/.test(e.key)) {
           e.preventDefault();
@@ -284,7 +314,7 @@ export function POSTerminal() {
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [cart, showCheckout, hotkeys, selectedLineId, hotkeysEnabled, addProduct, handlePluLookup, pluBuffer, updateQty, removeProduct, openCheckout]);
+  }, [cart, showCheckout, showDiscountModal, showReturnModal, showVoidModal, showSeniorPwdModal, showPriceOverrideModal, showExitConfirm, hotkeys, selectedLineId, hotkeysEnabled, addProduct, handlePluLookup, pluBuffer, updateQty, removeProduct, openCheckout]);
 
   /**
    * HID barcode scanner listener.
@@ -329,12 +359,15 @@ export function POSTerminal() {
     barcodeRef.current?.focus();
   }, []);
 
-  // Payment method configuration
+  // Payment method configuration — label + a short counter hint under each option.
   const paymentMethods = [
-    { id: 'Cash' as PosPaymentMethod, icon: Banknote, label: 'CASH', sublabel: '' },
-    { id: 'Card' as PosPaymentMethod, icon: CreditCard, label: 'CARD', sublabel: '' },
-    { id: 'E-Wallet' as PosPaymentMethod, icon: Wallet, label: 'E-WALLET', sublabel: '' },
+    { id: 'Cash' as PosPaymentMethod, icon: Banknote, label: 'Cash', hint: 'Peso tender' },
+    { id: 'Card' as PosPaymentMethod, icon: CreditCard, label: 'Card', hint: 'Debit / credit' },
+    { id: 'E-Wallet' as PosPaymentMethod, icon: Wallet, label: 'E-Wallet', hint: 'GCash / Maya' },
   ] as const;
+
+  // E-Wallet providers accepted at the counter.
+  const ewalletProviders = ['GCash', 'Maya', 'GrabPay', 'ShopeePay'];
 
   // Card amount match check
   const isCardAmountMatch = Math.abs(Number(chargedAmount || grandTotal.toFixed(2)) - grandTotal) < 0.01;
@@ -350,6 +383,13 @@ export function POSTerminal() {
     : paymentMethod === 'Card'
       ? transactionRef.trim() !== '' && cardNumber.length >= 4 && isCardAmountMatch
       : accountDetails.trim() !== '' && transactionRef.trim() !== '' && isEwalletAmountMatch;
+
+  // Footer guidance that follows the selected method.
+  const checkoutHint = paymentMethod === 'Cash'
+    ? 'Enter the amount received — change is computed automatically.'
+    : paymentMethod === 'Card'
+      ? 'Charge the card on the terminal, then record the approval number.'
+      : `Ask the customer to pay via ${ewalletProvider}, then record the reference number.`;
 
   const applyDiscount = (pct: number, fixedAmount?: number) => {
     if (pct > 0 && !selectedLineId && !fixedAmount) {
@@ -436,7 +476,7 @@ export function POSTerminal() {
       const last4 = cardNumber.slice(-4);
       paymentRef = `Card ending ${last4} | ${transactionRef}`;
     } else if (isEwallet) {
-      paymentRef = `${accountDetails} | ${transactionRef}`;
+      paymentRef = `${ewalletProvider} · ${accountDetails} | ${transactionRef}`;
     }
 
     const payload: CreateSalePayload = {
@@ -520,6 +560,7 @@ export function POSTerminal() {
     setChargedAmount('');
     setAccountDetails('');
     setAmountPaid('');
+    setEwalletProvider('GCash');
     setReceipt(null);
     setSelectedLineId(null);
     setCurrentTxnId(createTransactionId());
@@ -528,13 +569,8 @@ export function POSTerminal() {
     barcodeRef.current?.focus();
   };
 
-  // Accessibility options
-  const [showAccessibility, setShowAccessibility] = useState(false);
-  const [highContrast, setHighContrast] = useState(false);
-  const [largeText, setLargeText] = useState(false);
-
   return (
-    <div className={`relative h-screen w-full z-50 flex flex-col font-sans overflow-hidden ${highContrast ? 'bg-[#1A1A1A] text-[#FFFFFF]' : 'bg-[#F8FAFC] dark:bg-slate-900 text-[#475569] dark:text-slate-300'} ${largeText ? 'text-lg' : ''}`}>
+    <div className="relative h-screen w-full z-50 flex flex-col font-sans overflow-hidden bg-[#F8FAFC] dark:bg-slate-900 text-[#475569] dark:text-slate-300">
       <Toast toasts={toasts} onDismiss={dismiss} />
 
       <h1 className="sr-only">Point of Sale</h1>
@@ -592,7 +628,7 @@ export function POSTerminal() {
       </header>
 
       {/* MAIN WORKSPACE */}
-      <div className="flex-1 overflow-hidden relative">
+      <div className="flex-1 min-h-0 flex flex-col overflow-hidden relative">
         
         {/* =========================================================
             BARCODE INPUT BAR — barcode-first entry
@@ -640,8 +676,8 @@ export function POSTerminal() {
         {/* =========================================================
             TRANSACTION TABLE — large data table across the top
             ========================================================= */}
-        <div className="flex-1 overflow-hidden border border-[#E5E7EB] dark:border-slate-700">
-          <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden border border-[#E5E7EB] dark:border-slate-700">
+          <div className="flex-1 min-h-0 overflow-y-auto">
             <table className="w-full text-left border-separate border-spacing-0">
               <thead className="sticky top-0 z-10 bg-[#F8FAFC] dark:bg-slate-900 border-b border-[#E5E7EB] dark:border-slate-700">
                 <tr>
@@ -655,12 +691,8 @@ export function POSTerminal() {
               </thead>
               <tbody className="divide-y divide-[#E5E7EB] dark:divide-slate-700">
                 {cart.length === 0 ? (
-                  <tr>
-                    <td colSpan="6" className="h-[300px] flex flex-col items-center justify-center text-center text-muted-fg">
-                      <Receipt className="w-16 h-16 opacity-20 mb-3" />
-                      <p className="font-medium text-muted-fg text-sm">No items in current transaction.</p>
-                      <p className="text-xs text-muted-fg/60 mt-1">Scan a barcode to add the first item.</p>
-                    </td>
+                  <tr data-testid="cart-empty">
+                    <td colSpan={6} className="p-0" aria-hidden="true" />
                   </tr>
                 ) : (
                   cart.map((line, idx) => {
@@ -769,26 +801,13 @@ export function POSTerminal() {
         {/* =========================================================
             TRANSACTION SUMMARY — beneath the table
             ========================================================= */}
-        <div className="shrink-0 bg-white dark:bg-slate-800 border-t border-[#E5E7EB] dark:border-slate-700 p-5">
+        <div className="shrink-0 bg-white dark:bg-slate-800 border-t border-[#E5E7EB] dark:border-slate-700 px-5 py-3.5">
           <div className="grid grid-cols-12 gap-4">
-            {/* Left: transaction info */}
-            <div className="col-span-6 space-y-1.5">
-              <div className="flex justify-between text-sm text-muted-fg dark:text-muted-fg font-medium">
-                <span>Transaction</span>
-                <span className="font-mono text-slate-800 dark:text-slate-100">#{currentTxnId.slice(-6)}</span>
-              </div>
-              <div className="flex justify-between text-sm text-muted-fg dark:text-muted-fg font-medium">
-                <span>Cashier</span>
-                <span className="font-bold text-slate-800 dark:text-slate-100">{session?.name ?? 'Carlo Reyes'}</span>
-              </div>
-              <div className="flex justify-between text-sm text-muted-fg dark:text-muted-fg font-medium">
-                <span>Status</span>
-                <span className="font-bold text-slate-800 dark:text-slate-100">Active</span>
-              </div>
-            </div>
+            {/* Left half intentionally empty (per POS wireframe) */}
+            <div className="col-span-6" aria-hidden="true" />
 
             {/* Right: totals */}
-            <div className="col-span-6 space-y-1.5">
+            <div className="col-span-6 space-y-1">
               <div className="flex justify-between text-sm text-muted-fg dark:text-muted-fg font-medium">
                 <span>Units</span>
                 <span className="font-bold text-slate-800 dark:text-slate-100">{totalItems}</span>
@@ -797,44 +816,37 @@ export function POSTerminal() {
                 <span>Sales Total</span>
                 <span className="font-bold text-slate-800 dark:text-slate-100">{formatCurrency(subtotal)}</span>
               </div>
-              {discountAmount > 0 && (
-                <div className="flex justify-between text-sm text-[#0F766E] font-medium">
-                  <span>Item Discount</span>
-                  <span className="font-bold text-[#0F766E]">-{formatCurrency(discountAmount)}</span>
-                </div>
-              )}
               <div className="flex justify-between text-sm text-muted-fg dark:text-muted-fg font-medium">
-                <span>VAT (12%)</span>
-                <span className="font-bold text-slate-800 dark:text-slate-100">{formatCurrency(tax)}</span>
+                <span>Tendered</span>
+                <span className="font-bold text-slate-800 dark:text-slate-100">{formatCurrency(tendered)}</span>
               </div>
               <div className="flex justify-between items-center pt-2 border-t border-[#E5E7EB] dark:border-slate-700">
                 <span className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-widest">Due</span>
-                <span className="text-3xl font-black text-slate-900 dark:text-white leading-none">{formatCurrency(grandTotal)}</span>
+                <span className="text-2xl font-black text-slate-900 dark:text-white leading-none">{formatCurrency(grandTotal)}</span>
               </div>
-            </div>
-          </div>
 
-          <div className="mt-4">
-            <button 
-              onClick={openCheckout}
-              disabled={cart.length === 0 || isProcessingCheckout}
-              className={`w-full py-4 rounded-xl text-lg font-bold text-white shadow-md transition-all flex items-center justify-center gap-2 relative
-                ${isProcessingCheckout
-                  ? 'bg-[#0F766E] text-white opacity-80 cursor-not-allowed'
-                  : cart.length === 0
-                    ? 'bg-slate-300 cursor-not-allowed shadow-none'
-                    : 'bg-[#16A34A] hover:bg-[#15803d]'}`}
-            >
-              {isProcessingCheckout ? 'Processing…' : 'Proceed to Checkout'}
-              <span className="absolute right-4 text-[10px] font-bold bg-white/20 px-2 py-1 rounded text-white/90">{hotkeys.checkout}</span>
-            </button>
+              {/* Checkout button below the totals, contained in the right portion */}
+              <button
+                onClick={openCheckout}
+                disabled={cart.length === 0 || isProcessingCheckout}
+                className={`mt-2.5 w-full py-2.5 rounded-xl text-sm font-bold text-white shadow-md transition-all flex items-center justify-center gap-2 relative
+                  ${isProcessingCheckout
+                    ? 'bg-[#0F766E] text-white opacity-80 cursor-not-allowed'
+                    : cart.length === 0
+                      ? 'bg-slate-300 cursor-not-allowed shadow-none'
+                      : 'bg-[#16A34A] hover:bg-[#15803d]'}`}
+              >
+                {isProcessingCheckout ? 'Processing…' : 'Proceed to Checkout'}
+                <span className="absolute right-3 text-[10px] font-bold bg-white/20 px-2 py-1 rounded text-white/90">{hotkeys.checkout}</span>
+              </button>
+            </div>
           </div>
         </div>
 
       </div>
 
       {/* =========================================================
-          BOTTOM ACTION AREA — compact utilities, accessibility, status
+          BOTTOM ACTION AREA — compact utilities and status
           ========================================================= */}
       <footer className="h-16 bg-white dark:bg-slate-800 border-t border-[#E5E7EB] dark:border-slate-700 shrink-0 flex items-center justify-between px-6 z-20">
         <div className="flex items-center gap-2">
@@ -906,19 +918,6 @@ export function POSTerminal() {
         </div>
 
         <div className="flex items-center gap-1">
-          {/* Accessibility Options */}
-          <button
-            onClick={() => setShowAccessibility(!showAccessibility)}
-            aria-expanded={showAccessibility}
-            className={`flex items-center justify-center gap-2 px-3 py-2 bg-[#F8FAFC] dark:bg-slate-700 border border-[#E5E7EB] dark:border-slate-600 rounded-lg text-xs font-bold transition-all ${showAccessibility ? 'bg-[#0F766E] text-white border-[#0F766E]' : 'text-muted-fg dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600'}`}
-            title="Accessibility options"
-          >
-            <span aria-hidden="true">♿</span>
-            <span className="sr-only">Accessibility options</span>
-          </button>
-
-          <div className="w-px h-5 bg-slate-200 dark:bg-slate-600" />
-
           <button
             onClick={toggleHotkeys}
             title={hasKeyboard ? undefined : 'No keyboard detected — hotkeys may not work'}
@@ -947,44 +946,6 @@ export function POSTerminal() {
           </Tooltip>
         </div>
       </footer>
-
-      {/* Accessibility Options Panel */}
-      {showAccessibility && (
-        <div className="absolute inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-sm overflow-hidden p-6 animate-in fade-in zoom-in-95 duration-200">
-            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
-              <span aria-hidden="true">♿</span> Accessibility Options
-            </h3>
-            <p className="text-xs text-muted-fg dark:text-muted-fg mb-6">Adjust the POS for easier use.</p>
-            <div className="space-y-4">
-              <label className="flex items-center justify-between p-3 bg-[#F8FAFC] dark:bg-slate-700 border border-[#E5E7EB] dark:border-slate-600 rounded-lg cursor-pointer">
-                <span className="text-sm font-medium text-slate-800 dark:text-slate-100">High contrast</span>
-                <button
-                  onClick={() => setHighContrast(!highContrast)}
-                  aria-pressed={highContrast}
-                  className="relative w-10 h-5 bg-slate-300 dark:bg-slate-600 rounded-full transition-colors focus:outline-none"
-                >
-                  <span className={`block w-3 h-3 rounded-full bg-white shadow-md absolute ${highContrast ? 'right-1' : 'left-1'} top-0.5 transition-transform`} aria-hidden="true" />
-                </button>
-              </label>
-              <label className="flex items-center justify-between p-3 bg-[#F8FAFC] dark:bg-slate-700 border border-[#E5E7EB] dark:border-slate-600 rounded-lg cursor-pointer">
-                <span className="text-sm font-medium text-slate-800 dark:text-slate-100">Large text</span>
-                <button
-                  onClick={() => setLargeText(!largeText)}
-                  aria-pressed={largeText}
-                  className="relative w-10 h-5 bg-slate-300 dark:bg-slate-600 rounded-full transition-colors focus:outline-none"
-                >
-                  <span className={`block w-3 h-3 rounded-full bg-white shadow-md absolute ${largeText ? 'right-1' : 'left-1'} top-0.5 transition-transform`} aria-hidden="true" />
-                </button>
-              </label>
-            </div>
-            <div className="flex gap-2 mt-6">
-              <button onClick={() => setShowAccessibility(false)} className="flex-1 py-3 bg-slate-100 dark:bg-slate-700 text-muted-fg dark:text-slate-300 font-bold rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600">Close (Esc)</button>
-              <button onClick={() => setShowAccessibility(false)} className="flex-1 py-3 bg-[#0F766E] text-white font-bold rounded-lg hover:bg-[#0d615b]">Apply</button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* =========================================================
           MODALS
@@ -1190,368 +1151,409 @@ export function POSTerminal() {
         </div>
       )}
 
-      {/* Payment Checkout Modal - Landscape Split Layout */}
+      {/* =========================================================
+          CHECKOUT OVERLAY — order summary + payment (redesigned)
+          ========================================================= */}
       {showCheckout && (
-        <div className="absolute inset-0 z-[60] bg-slate-900/20 backdrop-blur-[1px] flex items-center justify-center p-5">
-          <div className="bg-white rounded-[26px] shadow-[0_28px_80px_rgba(15,23,42,0.25)] w-full max-w-4xl max-h-[88vh] overflow-hidden flex border border-border relative">
-            
-            {/* LEFT PANEL: Order Summary (45%) */}
-            <div className="w-[45%] bg-bg border-r border-border p-6 flex flex-col min-h-[500px] text-slate-800">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-slate-800">Order Summary</h2>
+        <div className="absolute inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-[0_28px_80px_rgba(15,23,42,0.35)] w-full max-w-5xl h-[88vh] max-h-[780px] overflow-hidden flex flex-col border border-border text-slate-800 dark:text-slate-100">
+
+            {/* ── Header ─────────────────────────────────────────── */}
+            <header className="shrink-0 flex items-center justify-between gap-4 px-6 py-4 border-b border-border">
+              <div className="min-w-0">
+                <h2 className="text-lg font-black leading-tight text-slate-900 dark:text-white">Checkout</h2>
+                <p className="text-[11px] font-medium text-muted-fg dark:text-muted-fg truncate">
+                  Transaction #{currentTxnId.slice(-6)} · {totalItems} {totalItems === 1 ? 'unit' : 'units'} · {formatCurrency(grandTotal)}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="hidden sm:inline-flex items-center rounded-full bg-[#0F766E]/10 text-[#0F766E] px-3 py-1 text-[10px] font-black uppercase tracking-wider">
+                  {paymentMethod === 'E-Wallet' ? 'E-Wallet' : paymentMethod}
+                </span>
                 <button
-                  onClick={() => {
-                    setShowCheckout(false);
-                    barcodeRef.current?.focus();
-                  }}
-                  className="p-2 text-muted-fg hover:text-muted-fg hover:bg-slate-200 rounded-lg transition-colors"
+                  onClick={closeCheckout}
+                  className="p-2 rounded-lg text-muted-fg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
                   aria-label="Close checkout"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
+            </header>
 
-              <div className="flex-1 overflow-y-auto space-y-3 mb-6 max-h-[42vh] min-h-[160px] pr-2">
-                {cart.map((line) => (
-                  <div key={line.product.product_id} className="flex items-center gap-3 p-3 bg-white rounded-xl border border-border shadow-sm">
-                    <div className="w-16 h-16 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                      {line.product.image_url ? (
-                        <img src={line.product.image_url} alt="" className="w-full h-full object-cover rounded-lg" />
-                      ) : (
-                        <Package className="w-8 h-8 text-muted-fg" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-slate-800 truncate">{line.product.product_name}</p>
-                      <p className="text-xs text-muted-fg">{line.product.barcode}</p>
-                      {line.discountPct && line.discountPct > 0 && (
-                        <span className="text-[10px] font-bold text-[#0F766E] bg-[#0F766E]/10 px-1.5 py-0.5 rounded">-{line.discountPct * 100}%</span>
-                      )}
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold text-slate-800">{formatCurrency(line.product.selling_price * (1 - (line.discountPct || 0)) - (line.discountAmount || 0))}</p>
-                      <p className="text-xs text-muted-fg">× {line.quantity}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+            <div className="flex-1 min-h-0 grid grid-cols-12">
 
-              <div className="border-t border-border pt-4 space-y-3">
-                <div className="flex justify-between text-sm text-muted-fg">
-                  <span>Subtotal</span>
-                  <span className="font-medium">{formatCurrency(subtotal)}</span>
+              {/* ── LEFT: order summary ─────────────────────────── */}
+              <section className="col-span-5 min-h-0 flex flex-col bg-bg dark:bg-slate-900/40 border-r border-border">
+                <div className="shrink-0 flex items-center justify-between px-5 py-3 border-b border-border">
+                  <span className="text-[10px] font-black text-muted-fg dark:text-muted-fg uppercase tracking-widest">Order Summary</span>
+                  <span className="text-[10px] font-bold text-muted-fg dark:text-muted-fg">{cart.length} line{cart.length === 1 ? '' : 's'}</span>
                 </div>
-                {discountAmount > 0 && (
-                  <div className="flex justify-between text-sm text-green-600">
-                    <span>Item Discount</span>
-                    <span className="font-medium">-{formatCurrency(discountAmount)}</span>
-                  </div>
-                )}
-                {seniorPwdInfo && (
-                  <div className="flex justify-between text-sm text-blue-600">
-                    <span>Senior/PWD 20%</span>
-                    <span className="font-medium">-{formatCurrency((subtotal - discountAmount) * 0.2)}</span>
-                  </div>
-                )}
-                {isVatRegistered && tax > 0 && (
-                  <>
-                    <div className="flex justify-between text-sm text-muted-fg">
-                      <span>VATable Amount</span>
-                      <span className="font-medium">{formatCurrency(subtotal - discountAmount - (seniorPwdInfo ? (subtotal - discountAmount) * 0.2 : 0) - tax)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm text-muted-fg">
-                      <span>VAT (12%)</span>
-                      <span className="font-medium">{formatCurrency(tax)}</span>
-                    </div>
-                  </>
-                )}
-                {!isVatRegistered && (
-                  <div className="flex justify-between text-sm text-muted-fg">
-                    <span>VAT Exempt</span>
-                    <span className="font-medium text-green-600">₱0.00</span>
-                  </div>
-                )}
-                <div className="border-t border-border pt-3"></div>
-                <div className="flex justify-between text-xl font-black text-slate-900">
-                  <span>TOTAL DUE</span>
-                  <span>{formatCurrency(grandTotal)}</span>
-                </div>
-              </div>
-            </div>
 
-            {/* RIGHT PANEL: Payment (55%) */}
-            <div className="w-[55%] p-6 bg-white flex flex-col min-h-[500px] text-slate-800">
-              <div className="mb-6">
-                <span className="text-xs font-bold text-muted-fg uppercase tracking-wider block mb-4">Payment Method</span>
-                <div className="grid grid-cols-3 gap-3">
-                  {paymentMethods.map((m) => (
-                    <button
-                      key={m.id}
-                      onClick={() => {
-                        setPaymentMethod(m.id);
-                        setTransactionRef('');
-                        setChargedAmount(String(grandTotal));
-                        setAmountPaid(String(grandTotal));
-                        setCardNumber('');
-                        setAccountDetails('');
-                      }}
-                      className={`flex flex-col items-center gap-2 p-5 rounded-xl border-2 text-center transition-all ${
-                        paymentMethod === m.id
-                          ? 'border-[#0F766E] bg-[#E8F7F2] shadow-md'
-                          : 'border-border hover:border-[#0F766E] hover:bg-bg'
-                      }`}
-                    >
-                      <m.icon className="w-10 h-10 text-[#0F766E]" />
-                      <span className="text-base font-bold text-slate-800">{m.label}</span>
-                    </button>
+                <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-2">
+                  {cart.map((line) => (
+                    <div key={line.product.product_id} className="flex items-center gap-3 p-2.5 bg-white dark:bg-slate-800 rounded-xl border border-border">
+                      <div className="w-11 h-11 bg-slate-100 dark:bg-slate-700 rounded-lg flex items-center justify-center shrink-0">
+                        {line.product.image_url ? (
+                          <img src={line.product.image_url} alt="" className="w-full h-full object-cover rounded-lg" />
+                        ) : (
+                          <Package className="w-5 h-5 text-muted-fg" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">{line.product.product_name}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[10px] font-mono text-muted-fg dark:text-muted-fg truncate">{line.product.barcode}</span>
+                          <span className="text-[10px] font-bold text-muted-fg dark:text-muted-fg bg-slate-100 dark:bg-slate-700 rounded px-1.5 py-0.5">× {line.quantity}</span>
+                          {line.discountPct && line.discountPct > 0 && (
+                            <span className="text-[10px] font-bold text-[#0F766E] bg-[#0F766E]/10 px-1.5 py-0.5 rounded">-{line.discountPct * 100}%</span>
+                          )}
+                        </div>
+                      </div>
+                      <span className="text-sm font-black text-slate-800 dark:text-slate-100 shrink-0">
+                        {formatCurrency(line.product.selling_price * line.quantity * (1 - (line.discountPct || 0)) - (line.discountAmount || 0))}
+                      </span>
+                    </div>
                   ))}
                 </div>
-              </div>
 
-              <div className="flex-1 space-y-5">
-                {/* CASH PAYMENT */}
-                {paymentMethod === 'Cash' && (
-                  <div className="space-y-4">
-                    <div className="p-4 bg-bg border border-border rounded-xl flex items-center justify-between">
-                      <span className="text-sm font-bold text-muted-fg uppercase tracking-wider">Amount Due</span>
-                      <span className="text-2xl font-black text-slate-900">{formatCurrency(grandTotal)}</span>
-                    </div>
-
-                    <div>
-                      <label htmlFor="amount-tendered" className="block text-xs font-bold text-muted-fg mb-2">Amount Received</label>
-                      <div className="relative">
-                        <span className="absolute left-5 top-1/2 -translate-y-1/2 text-muted-fg font-bold text-3xl">₱</span>
-                        <input
-                          id="amount-tendered"
-                          type="text"
-                          inputMode="numeric"
-                          value={amountTendered}
-                          onChange={(e) => setAmountTendered(e.target.value.replace(/[^0-9.]/g, ''))}
-                          placeholder="0.00"
-                          className="w-full pl-14 pr-5 py-5 bg-bg border-2 border-border rounded-xl text-4xl font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-[#0F766E] transition-all text-center"
-                          style={{ appearance: 'textfield' }}
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <span className="block text-xs font-bold text-muted-fg mb-2 uppercase tracking-wider">Quick Amounts</span>
-                      <div className="flex flex-wrap gap-2">
-                        {quickAmounts.map((amt) => (
-                          <button
-                            key={amt}
-                            type="button"
-                            onClick={() => setAmountTendered(amt.toString())}
-                            className={`px-4 py-2 rounded-lg text-sm font-bold border transition-colors ${
-                              Number(amountTendered) === amt
-                                ? 'bg-[#0F766E] text-white border-[#0F766E]'
-                                : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-border'
-                            }`}
-                          >
-                            ₱{amt.toLocaleString()}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between">
-                      <span className="text-xs font-extrabold uppercase tracking-wider text-emerald-800">Change Due</span>
-                      <span className="text-2xl font-black text-emerald-700">{formatCurrency(changeDue)}</span>
-                    </div>
-
-                    {Number(amountTendered) > 0 && Number(amountTendered) < grandTotal && (
-                      <div className="flex items-center gap-2 text-red-600 text-sm bg-red-50 px-4 py-3 rounded-lg border border-red-200">
-                        <AlertCircle className="w-4 h-4 shrink-0" />
-                        Short by {formatCurrency(grandTotal - Number(amountTendered))} — need {formatCurrency(grandTotal)} total
-                      </div>
-                    )}
+                <div className="shrink-0 border-t border-border px-5 py-4 space-y-1.5 bg-white dark:bg-slate-800">
+                  <div className="flex justify-between text-xs text-muted-fg dark:text-muted-fg">
+                    <span>Subtotal</span>
+                    <span className="font-bold">{formatCurrency(subtotal)}</span>
                   </div>
-                )}
-
-                {/* CARD PAYMENT */}
-                {paymentMethod === 'Card' && (
-                  <div className="space-y-4">
-                    <div className="p-4 bg-bg border border-border rounded-xl flex items-center justify-between">
-                      <span className="text-sm font-bold text-muted-fg uppercase tracking-wider">Amount Due</span>
-                      <span className="text-2xl font-black text-slate-900">{formatCurrency(grandTotal)}</span>
+                  {discountAmount > 0 && (
+                    <div className="flex justify-between text-xs text-green-600">
+                      <span>Item Discount</span>
+                      <span className="font-bold">-{formatCurrency(discountAmount)}</span>
                     </div>
+                  )}
+                  {seniorPwdInfo && (
+                    <div className="flex justify-between text-xs text-blue-600">
+                      <span>Senior/PWD 20%</span>
+                      <span className="font-bold">-{formatCurrency((subtotal - discountAmount) * 0.2)}</span>
+                    </div>
+                  )}
+                  {isVatRegistered && tax > 0 && (
+                    <div className="flex justify-between text-xs text-muted-fg dark:text-muted-fg">
+                      <span>VAT (12%)</span>
+                      <span className="font-bold">{formatCurrency(tax)}</span>
+                    </div>
+                  )}
+                  {!isVatRegistered && (
+                    <div className="flex justify-between text-xs text-muted-fg dark:text-muted-fg">
+                      <span>VAT Exempt</span>
+                      <span className="font-bold">₱0.00</span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between border-t border-border pt-2.5 mt-1">
+                    <span className="text-[10px] font-black text-slate-800 dark:text-slate-200 uppercase tracking-widest">Total Due</span>
+                    <span className="text-xl font-black text-slate-900 dark:text-white">{formatCurrency(grandTotal)}</span>
+                  </div>
+                </div>
+              </section>
 
+              {/* ── RIGHT: payment ──────────────────────────────── */}
+              <section className="col-span-7 min-h-0 flex flex-col">
+
+                <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5 space-y-5">
+
+                  {/* Amount due hero */}
+                  <div className="rounded-2xl bg-[#0F766E] text-white px-5 py-4 flex items-end justify-between shadow-md">
                     <div>
-                      <label htmlFor="card-number" className="block text-xs font-bold text-muted-fg mb-2 flex items-center gap-1">
-                        Card Number
-                        <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        id="card-number"
-                        type="text"
-                        inputMode="numeric"
-                        value={cardNumber}
-                        onChange={(e) => {
-                          const raw = e.target.value.replace(/\D/g, '').slice(0, 16);
-                          setCardNumber(raw);
-                        }}
-                        placeholder="****-****-****-****"
-                        className="w-full px-5 py-4 border-2 border-border rounded-xl text-lg font-mono focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-[#0F766E] transition-all"
-                      />
-                      {cardNumber.length > 0 && (
-                        <p className="mt-1.5 text-xs text-muted-fg">
-                          Display: ****-****-****-{cardNumber.slice(-4).padStart(4, 'X')}
-                        </p>
+                      <span className="block text-[10px] font-black uppercase tracking-widest text-white/70">Amount Due</span>
+                      <span className="text-[11px] font-medium text-white/70">{totalItems} unit{totalItems === 1 ? '' : 's'}</span>
+                    </div>
+                    <span className="text-4xl font-black leading-none">{formatCurrency(grandTotal)}</span>
+                  </div>
+
+                  {/* Method selector */}
+                  <div>
+                    <span className="block text-[10px] font-black text-muted-fg dark:text-muted-fg uppercase tracking-widest mb-2">Payment Method</span>
+                    <div className="grid grid-cols-3 gap-2">
+                      {paymentMethods.map((m) => (
+                        <button
+                          key={m.id}
+                          onClick={() => selectPaymentMethod(m.id)}
+                          aria-pressed={paymentMethod === m.id}
+                          className={`flex flex-col items-center gap-1 rounded-xl border-2 px-3 py-3 transition-all ${
+                            paymentMethod === m.id
+                              ? 'border-[#0F766E] bg-[#E8F7F2] dark:bg-[#0F766E]/20 shadow-sm'
+                              : 'border-border hover:border-[#0F766E] hover:bg-bg'
+                          }`}
+                        >
+                          <m.icon className={`w-5 h-5 ${paymentMethod === m.id ? 'text-[#0F766E]' : 'text-muted-fg'}`} />
+                          <span className="text-sm font-black text-slate-800 dark:text-slate-100">{m.label}</span>
+                          <span className="text-[10px] font-medium text-muted-fg dark:text-muted-fg">{m.hint}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* ── CASH ─────────────────────────────────────── */}
+                  {paymentMethod === 'Cash' && (
+                    <div className="space-y-4">
+                      <div>
+                        <label htmlFor="amount-tendered" className="block text-[10px] font-black text-muted-fg dark:text-muted-fg uppercase tracking-widest mb-2">Amount Received</label>
+                        <div className="flex items-center gap-3 bg-bg border-2 border-border rounded-xl px-4 focus-within:ring-2 focus-within:ring-[#0F766E] focus-within:border-[#0F766E] transition-all">
+                          <span className="text-muted-fg text-2xl font-black shrink-0">₱</span>
+                          <input
+                            id="amount-tendered"
+                            type="text"
+                            inputMode="decimal"
+                            value={amountTendered}
+                            onChange={(e) => setAmountTendered(e.target.value.replace(/[^0-9.]/g, ''))}
+                            placeholder="0.00"
+                            autoFocus
+                            className="flex-1 min-w-0 bg-transparent py-4 text-3xl font-black text-slate-900 dark:text-white text-center focus:outline-none"
+                          />
+                        </div>
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setAmountTendered(grandTotal.toFixed(2))}
+                            className="px-3 py-1.5 rounded-lg text-xs font-black border border-[#0F766E] text-[#0F766E] bg-[#0F766E]/5 hover:bg-[#0F766E]/10 transition-colors"
+                          >
+                            Exact
+                          </button>
+                          {quickAmounts.map((amt) => (
+                            <button
+                              key={amt}
+                              type="button"
+                              onClick={() => setAmountTendered(amt.toString())}
+                              aria-pressed={Number(amountTendered) === amt}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-black border transition-colors ${
+                                Number(amountTendered) === amt
+                                  ? 'bg-[#0F766E] text-white border-[#0F766E]'
+                                  : 'bg-bg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border-border'
+                              }`}
+                            >
+                              ₱{amt.toLocaleString()}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="rounded-xl border border-border bg-bg px-4 py-3">
+                          <span className="block text-[10px] font-black text-muted-fg dark:text-muted-fg uppercase tracking-widest">Tendered</span>
+                          <span className="text-xl font-black text-slate-900 dark:text-white">{formatCurrency(tendered)}</span>
+                        </div>
+                        <div className={`rounded-xl border px-4 py-3 ${tendered >= grandTotal ? 'border-emerald-200 bg-emerald-50 dark:bg-emerald-900/20' : 'border-border bg-bg'}`}>
+                          <span className="block text-[10px] font-black text-emerald-800 dark:text-emerald-300 uppercase tracking-widest">Change Due</span>
+                          <span className="text-xl font-black text-emerald-700 dark:text-emerald-300">{formatCurrency(changeDue)}</span>
+                        </div>
+                      </div>
+
+                      {Number(amountTendered) > 0 && Number(amountTendered) < grandTotal && (
+                        <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 dark:bg-red-900/20 px-4 py-3 rounded-lg border border-red-200">
+                          <AlertCircle className="w-4 h-4 shrink-0" />
+                          Short by {formatCurrency(grandTotal - Number(amountTendered))} — need {formatCurrency(grandTotal)} total
+                        </div>
                       )}
                     </div>
+                  )}
 
-                    <div>
-                      <label htmlFor="card-transaction-ref" className="block text-xs font-bold text-muted-fg mb-2 flex items-center gap-1">
-                        Transaction Number
-                        <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        id="card-transaction-ref"
-                        type="text"
-                        value={transactionRef}
-                        onChange={e => setTransactionRef(e.target.value)}
-                        placeholder="Enter transaction number from card receipt"
-                        className="w-full px-5 py-4 border-2 border-border rounded-xl text-lg focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-[#0F766E] transition-all"
-                      />
-                    </div>
-
-                    <div>
-                      <label htmlFor="card-amount-charged" className="block text-xs font-bold text-muted-fg mb-2">Amount Charged</label>
-                      <div className="relative">
-                        <span className="absolute left-5 top-1/2 -translate-y-1/2 text-muted-fg font-bold text-xl">₱</span>
-                        <input
-                          id="card-amount-charged"
-                          type="number"
-                          step="0.01"
-                          value={chargedAmount}
-                          onChange={e => setChargedAmount(e.target.value)}
-                          className="w-full pl-12 pr-5 py-4 bg-bg border-2 border-border rounded-xl text-xl font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-[#0F766E] transition-all"
-                        />
-                      </div>
-                    </div>
-
-                    {chargedAmount && (
-                      isCardAmountMatch ? (
-                        <div className="flex items-center gap-2 text-green-600 text-sm bg-green-50 px-4 py-3 rounded-lg border border-green-200">
-                          <CheckCircle2 className="w-4 h-4 shrink-0" />
-                          <span className="font-semibold">Amount matches</span>
+                  {/* ── CARD ─────────────────────────────────────── */}
+                  {paymentMethod === 'Card' && (
+                    <div className="space-y-4">
+                      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 to-slate-700 text-white px-5 py-4 shadow-md">
+                        <div className="flex items-start justify-between">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-white/60">Card Payment</span>
+                          <span className="text-xs font-black uppercase tracking-wider text-white/80">{cardBrand(cardNumber) || 'Card'}</span>
                         </div>
-                      ) : (
-                        <div className="flex items-start gap-2 text-amber-600 text-sm bg-amber-50 px-4 py-3 rounded-lg border border-amber-200">
-                          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                          <div>
-                            <span className="font-semibold">Payment amount does not match</span>
-                            <div className="mt-1 text-xs space-y-0.5">
-                              <div>Order Total: {formatCurrency(grandTotal)}</div>
-                              <div>Entered Amount: {formatCurrency(Number(chargedAmount))}</div>
+                        <p className="mt-2 font-mono text-lg tracking-[0.2em]">{formatCardNumber(cardNumber.padEnd(16, '•'))}</p>
+                        <div className="mt-3 flex items-end justify-between">
+                          <span className="text-[10px] font-medium text-white/60">Charge amount</span>
+                          <span className="text-2xl font-black">{formatCurrency(grandTotal)}</span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label htmlFor="card-number" className="flex items-center gap-1 text-[10px] font-black text-muted-fg dark:text-muted-fg uppercase tracking-widest mb-2">
+                            Card Number <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            id="card-number"
+                            type="text"
+                            inputMode="numeric"
+                            value={formatCardNumber(cardNumber)}
+                            onChange={(e) => setCardNumber(e.target.value.replace(/\D/g, '').slice(0, 16))}
+                            placeholder="0000 0000 0000 0000"
+                            autoFocus
+                            className="w-full px-4 py-3 font-mono text-base border-2 border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-[#0F766E] transition-all"
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="card-transaction-ref" className="flex items-center gap-1 text-[10px] font-black text-muted-fg dark:text-muted-fg uppercase tracking-widest mb-2">
+                            Approval / Transaction No. <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            id="card-transaction-ref"
+                            type="text"
+                            value={transactionRef}
+                            onChange={(e) => setTransactionRef(e.target.value)}
+                            placeholder="From card receipt"
+                            className="w-full px-4 py-3 text-base border-2 border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-[#0F766E] transition-all"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label htmlFor="card-amount-charged" className="block text-[10px] font-black text-muted-fg dark:text-muted-fg uppercase tracking-widest mb-2">Amount Charged</label>
+                        <div className="flex items-center gap-3 bg-bg border-2 border-border rounded-xl px-4 focus-within:ring-2 focus-within:ring-[#0F766E] focus-within:border-[#0F766E] transition-all">
+                          <span className="text-muted-fg text-lg font-black shrink-0">₱</span>
+                          <input
+                            id="card-amount-charged"
+                            type="number"
+                            step="0.01"
+                            value={chargedAmount}
+                            onChange={(e) => setChargedAmount(e.target.value)}
+                            className="flex-1 min-w-0 bg-transparent py-3 text-lg font-black text-slate-900 dark:text-white focus:outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      {chargedAmount && (
+                        isCardAmountMatch ? (
+                          <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 dark:bg-green-900/20 px-4 py-3 rounded-lg border border-green-200">
+                            <CheckCircle2 className="w-4 h-4 shrink-0" />
+                            <span className="font-semibold">Amount matches the order total.</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-start gap-2 text-sm text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 rounded-lg border border-amber-200">
+                            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                            <div>
+                              <span className="font-semibold">Amount charged does not match</span>
+                              <div className="mt-1 text-xs space-y-0.5">
+                                <div>Order Total: {formatCurrency(grandTotal)}</div>
+                                <div>Entered Amount: {formatCurrency(Number(chargedAmount))}</div>
+                              </div>
                             </div>
                           </div>
+                        )
+                      )}
+                    </div>
+                  )}
+
+                  {/* ── E-WALLET ─────────────────────────────────── */}
+                  {paymentMethod === 'E-Wallet' && (
+                    <div className="space-y-4">
+                      <div>
+                        <span className="block text-[10px] font-black text-muted-fg dark:text-muted-fg uppercase tracking-widest mb-2">Provider</span>
+                        <div className="grid grid-cols-4 gap-2">
+                          {ewalletProviders.map((p) => (
+                            <button
+                              key={p}
+                              type="button"
+                              onClick={() => setEwalletProvider(p)}
+                              aria-pressed={ewalletProvider === p}
+                              className={`rounded-xl border px-2 py-2.5 text-xs font-black transition-all ${
+                                ewalletProvider === p
+                                  ? 'border-[#0F766E] bg-[#E8F7F2] dark:bg-[#0F766E]/20 text-[#0F766E]'
+                                  : 'border-border bg-bg text-muted-fg hover:border-[#0F766E]'
+                              }`}
+                            >
+                              {p}
+                            </button>
+                          ))}
                         </div>
-                      )
-                    )}
-                  </div>
-                )}
-
-                {/* E-WALLET PAYMENT */}
-                {paymentMethod === 'E-Wallet' && (
-                  <div className="space-y-4">
-                    <div className="p-4 bg-bg border border-border rounded-xl flex items-center justify-between">
-                      <span className="text-sm font-bold text-muted-fg uppercase tracking-wider">Amount Due</span>
-                      <span className="text-2xl font-black text-slate-900">{formatCurrency(grandTotal)}</span>
-                    </div>
-
-                    <div>
-                      <label htmlFor="ewallet-account-details" className="block text-xs font-bold text-muted-fg mb-2 flex items-center gap-1">
-                        Account Details
-                        <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        id="ewallet-account-details"
-                        type="text"
-                        value={accountDetails}
-                        onChange={e => setAccountDetails(e.target.value)}
-                        placeholder="e.g. 09171234567 or GCash/Maya account"
-                        className="w-full px-5 py-4 border-2 border-border rounded-xl text-lg focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-[#0F766E] transition-all"
-                      />
-                    </div>
-
-                    <div>
-                      <label htmlFor="ewallet-transaction-ref" className="block text-xs font-bold text-muted-fg mb-2 flex items-center gap-1">
-                        Transaction Number
-                        <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        id="ewallet-transaction-ref"
-                        type="text"
-                        value={transactionRef}
-                        onChange={e => setTransactionRef(e.target.value)}
-                        placeholder="Enter transaction number from e-wallet receipt"
-                        className="w-full px-5 py-4 border-2 border-border rounded-xl text-lg focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-[#0F766E] transition-all"
-                      />
-                    </div>
-
-                    <div>
-                      <label htmlFor="ewallet-amount-paid" className="block text-xs font-bold text-muted-fg mb-2">Amount Paid</label>
-                      <div className="relative">
-                        <span className="absolute left-5 top-1/2 -translate-y-1/2 text-muted-fg font-bold text-xl">₱</span>
-                        <input
-                          id="ewallet-amount-paid"
-                          type="number"
-                          step="0.01"
-                          value={amountPaid}
-                          onChange={e => setAmountPaid(e.target.value)}
-                          className="w-full pl-12 pr-5 py-4 bg-bg border-2 border-border rounded-xl text-xl font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-[#0F766E] transition-all"
-                        />
                       </div>
-                    </div>
 
-                    {amountPaid && (
-                      isEwalletAmountMatch ? (
-                        <div className="flex items-center gap-2 text-green-600 text-sm bg-green-50 px-4 py-3 rounded-lg border border-green-200">
-                          <CheckCircle2 className="w-4 h-4 shrink-0" />
-                          <span className="font-semibold">Amount matches</span>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label htmlFor="ewallet-account-details" className="flex items-center gap-1 text-[10px] font-black text-muted-fg dark:text-muted-fg uppercase tracking-widest mb-2">
+                            Mobile / Account No. <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            id="ewallet-account-details"
+                            type="text"
+                            value={accountDetails}
+                            onChange={(e) => setAccountDetails(e.target.value)}
+                            placeholder="09171234567"
+                            autoFocus
+                            className="w-full px-4 py-3 text-base border-2 border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-[#0F766E] transition-all"
+                          />
                         </div>
-                      ) : (
-                        <div className="flex items-start gap-2 text-amber-600 text-sm bg-amber-50 px-4 py-3 rounded-lg border border-amber-200">
-                          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                          <div>
-                            <span className="font-semibold">Payment amount does not match</span>
-                            <div className="mt-1 text-xs space-y-0.5">
-                              <div>Order Total: {formatCurrency(grandTotal)}</div>
-                              <div>Entered Amount: {formatCurrency(Number(amountPaid))}</div>
+                        <div>
+                          <label htmlFor="ewallet-transaction-ref" className="flex items-center gap-1 text-[10px] font-black text-muted-fg dark:text-muted-fg uppercase tracking-widest mb-2">
+                            Reference No. <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            id="ewallet-transaction-ref"
+                            type="text"
+                            value={transactionRef}
+                            onChange={(e) => setTransactionRef(e.target.value)}
+                            placeholder="From e-wallet receipt"
+                            className="w-full px-4 py-3 text-base border-2 border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-[#0F766E] transition-all"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label htmlFor="ewallet-amount-paid" className="block text-[10px] font-black text-muted-fg dark:text-muted-fg uppercase tracking-widest mb-2">Amount Paid</label>
+                        <div className="flex items-center gap-3 bg-bg border-2 border-border rounded-xl px-4 focus-within:ring-2 focus-within:ring-[#0F766E] focus-within:border-[#0F766E] transition-all">
+                          <span className="text-muted-fg text-lg font-black shrink-0">₱</span>
+                          <input
+                            id="ewallet-amount-paid"
+                            type="number"
+                            step="0.01"
+                            value={amountPaid}
+                            onChange={(e) => setAmountPaid(e.target.value)}
+                            className="flex-1 min-w-0 bg-transparent py-3 text-lg font-black text-slate-900 dark:text-white focus:outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      {amountPaid && (
+                        isEwalletAmountMatch ? (
+                          <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 dark:bg-green-900/20 px-4 py-3 rounded-lg border border-green-200">
+                            <CheckCircle2 className="w-4 h-4 shrink-0" />
+                            <span className="font-semibold">{ewalletProvider} amount matches the order total.</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-start gap-2 text-sm text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 rounded-lg border border-amber-200">
+                            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                            <div>
+                              <span className="font-semibold">Amount paid does not match</span>
+                              <div className="mt-1 text-xs space-y-0.5">
+                                <div>Order Total: {formatCurrency(grandTotal)}</div>
+                                <div>Entered Amount: {formatCurrency(Number(amountPaid))}</div>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      )
-                    )}
-                  </div>
-                )}
-              </div>
+                        )
+                      )}
+                    </div>
+                  )}
+                </div>
 
-              <div className="border-t border-border pt-4 flex items-center justify-end gap-3">
-                <button
-                  onClick={() => {
-                    setShowCheckout(false);
-                    barcodeRef.current?.focus();
-                  }}
-                  className="px-6 py-3 text-sm font-bold text-muted-fg bg-white border border-slate-300 rounded-xl hover:bg-bg hover:border-slate-400 transition-colors"
-                >
-                  Cancel (Esc)
-                </button>
-                <button
-                  onClick={completePayment}
-                  disabled={!isCompleteEnabled || isProcessingCheckout}
-                  className={`px-8 py-3 text-lg font-bold rounded-xl shadow-md transition-all relative ${
-                    isProcessingCheckout
-                      ? 'bg-[#0F766E] text-white opacity-80 cursor-not-allowed'
-                      : isCompleteEnabled
-                        ? 'bg-[#0F766E] text-white hover:bg-[#0d615b]'
-                        : 'bg-slate-300 text-muted-fg cursor-not-allowed'
-                  }`}
-                >
-                  {isProcessingCheckout ? 'Processing…' : 'Complete Payment'}
-                </button>
-              </div>
+                {/* ── Action bar ─────────────────────────────────── */}
+                <div className="shrink-0 border-t border-border px-6 py-4 flex items-center justify-between gap-4 bg-white dark:bg-slate-800">
+                  <p className="hidden md:block text-[11px] font-medium text-muted-fg dark:text-muted-fg">{checkoutHint}</p>
+                  <div className="flex items-center gap-3 ml-auto">
+                    <button
+                      onClick={closeCheckout}
+                      className="px-5 py-3 text-sm font-bold text-muted-fg bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl hover:bg-bg hover:border-slate-400 transition-colors"
+                    >
+                      Cancel (Esc)
+                    </button>
+                    <button
+                      onClick={completePayment}
+                      disabled={!isCompleteEnabled || isProcessingCheckout}
+                      className={`px-8 py-3 text-base font-black rounded-xl shadow-md transition-all ${
+                        isProcessingCheckout
+                          ? 'bg-[#0F766E] text-white opacity-80 cursor-not-allowed'
+                          : isCompleteEnabled
+                            ? 'bg-[#0F766E] text-white hover:bg-[#0d615b]'
+                            : 'bg-slate-300 text-muted-fg cursor-not-allowed'
+                      }`}
+                    >
+                      {isProcessingCheckout ? 'Processing…' : 'Complete Payment'}
+                    </button>
+                  </div>
+                </div>
+              </section>
             </div>
           </div>
         </div>

@@ -31,7 +31,7 @@ const lookupMock = vi.mocked(productsApi.lookup);
 /** Seeded from src/utils/cashierData.ts — matched locally, no API round-trip. */
 const LOCAL_PRODUCT = cashierProducts[0];
 
-const EMPTY_CART = 'No items in current transaction.';
+const EMPTY_CART_TESTID = 'cart-empty';
 
 function renderPOS() {
   return render(
@@ -64,7 +64,7 @@ describe('Barcode scan handling', () => {
 
     await scanViaField(LOCAL_PRODUCT.barcode);
 
-    await waitFor(() => expect(screen.queryByText(EMPTY_CART)).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByTestId(EMPTY_CART_TESTID)).not.toBeInTheDocument());
     expect(lookupMock).not.toHaveBeenCalled();
     expect(screen.getByDisplayValue('1')).toBeInTheDocument();
   });
@@ -77,7 +77,7 @@ describe('Barcode scan handling', () => {
     await scanViaField('999999999');
 
     await waitFor(() => expect(lookupMock).toHaveBeenCalledWith('999999999'));
-    await waitFor(() => expect(screen.queryByText(EMPTY_CART)).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByTestId(EMPTY_CART_TESTID)).not.toBeInTheDocument());
   });
 
   it('surfaces a "not found" toast and leaves the cart empty', async () => {
@@ -86,7 +86,7 @@ describe('Barcode scan handling', () => {
     await scanViaField('000000');
 
     await waitFor(() => expect(screen.getByText(/Product not found: 000000/)).toBeInTheDocument());
-    expect(screen.getByText(EMPTY_CART)).toBeInTheDocument();
+    expect(screen.getByTestId(EMPTY_CART_TESTID)).toBeInTheDocument();
   });
 
   it('keeps the PLU buffer hidden until digits are typed outside the search field', async () => {
@@ -113,7 +113,7 @@ describe('Barcode scan handling', () => {
     fireEvent.keyDown(document, { key: '0' });
     fireEvent.keyDown(document, { key: '1' });
 
-    await waitFor(() => expect(screen.queryByText(EMPTY_CART)).not.toBeInTheDocument(), { timeout: 2000 });
+    await waitFor(() => expect(screen.queryByTestId(EMPTY_CART_TESTID)).not.toBeInTheDocument(), { timeout: 2000 });
     expect(lookupMock).not.toHaveBeenCalledWith('1001');
   });
 
@@ -128,7 +128,7 @@ describe('Barcode scan handling', () => {
     fireEvent.keyDown(document, { key: '1' });
     fireEvent.keyDown(document, { key: 'Enter' });
 
-    await waitFor(() => expect(screen.queryByText(EMPTY_CART)).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByTestId(EMPTY_CART_TESTID)).not.toBeInTheDocument());
     expect(screen.queryByText(/^PLU:/)).not.toBeInTheDocument();
   });
 
@@ -162,7 +162,7 @@ describe('Barcode scan handling', () => {
     }
 
     await waitFor(() => expect(lookupMock).toHaveBeenCalledWith('999999999'));
-    await waitFor(() => expect(screen.queryByText(EMPTY_CART)).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByTestId(EMPTY_CART_TESTID)).not.toBeInTheDocument());
   });
 
   it('does not intercept document digits when hotkeys are enabled (PLU owns them)', async () => {

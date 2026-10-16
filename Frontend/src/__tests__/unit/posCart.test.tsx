@@ -50,7 +50,7 @@ const ibuprofen = {
   stock: 50,
 };
 
-const EMPTY_CART = 'No items in current transaction.';
+const EMPTY_CART_TESTID = 'cart-empty';
 
 function renderPOS() {
   return render(
@@ -78,7 +78,7 @@ beforeEach(() => {
 describe('POS cart', () => {
   it('starts with an empty cart', () => {
     renderPOS();
-    expect(screen.getByText(EMPTY_CART)).toBeInTheDocument();
+    expect(screen.getByTestId(EMPTY_CART_TESTID)).toBeInTheDocument();
   });
 
   it('adds a scanned product to the cart', async () => {
@@ -87,7 +87,7 @@ describe('POS cart', () => {
     await scan('123456');
 
     await waitFor(() => expect(lookupMock).toHaveBeenCalledWith('123456'));
-    await waitFor(() => expect(screen.queryByText(EMPTY_CART)).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByTestId(EMPTY_CART_TESTID)).not.toBeInTheDocument());
     expect(screen.getByDisplayValue('1')).toBeInTheDocument();
   });
 
@@ -95,7 +95,7 @@ describe('POS cart', () => {
     renderPOS();
 
     await scan('123456');
-    await waitFor(() => expect(screen.queryByText(EMPTY_CART)).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByTestId(EMPTY_CART_TESTID)).not.toBeInTheDocument());
 
     await scan('123456');
 
@@ -110,7 +110,7 @@ describe('POS cart', () => {
     renderPOS();
 
     await scan('123456');
-    await waitFor(() => expect(screen.queryByText(EMPTY_CART)).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByTestId(EMPTY_CART_TESTID)).not.toBeInTheDocument());
 
     await scan('789012');
 
@@ -125,7 +125,7 @@ describe('POS cart', () => {
 
     fireEvent.change(screen.getByDisplayValue('1'), { target: { value: '0' } });
 
-    await waitFor(() => expect(screen.getByText(EMPTY_CART)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId(EMPTY_CART_TESTID)).toBeInTheDocument());
   });
 
   it('increments quantity from the + button', async () => {

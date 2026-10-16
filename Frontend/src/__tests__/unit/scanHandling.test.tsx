@@ -148,4 +148,34 @@ describe('Barcode scan handling', () => {
 
     await waitFor(() => expect(scanField()).toHaveValue(''));
   });
+
+  it('looks up a barcode scanned via document keydown when search field is blurred and hotkeys are off', async () => {
+    localStorage.setItem('pos_hotkeys_enabled', 'false');
+    const remote = { id: 9, sku: '999999999', name: 'Remote Vitamin C', category: 'pharma', supplier: 'acme', cost_price: 5, selling_price: 12, reorder_level: 10, stock: 30 };
+    lookupMock.mockResolvedValue(remote as never);
+    renderPOS();
+
+    // Scan field must NOT be focused so the HID scanner listener owns the input.
+    scanField().blur();
+    for (const ch of '999999999') {
+      fireEvent.keyDown(document, { key: ch });
+    }
+
+    await waitFor(() => expect(lookupMock).toHaveBeenCalledWith('999999999'));
+    await waitFor(() => expect(screen.queryByText(EMPTY_CART)).not.toBeInTheDocument());
+  });
+
+  it('does not intercept document digits when hotkeys are enabled (PLU owns them)', async () => {
+    localStorage.setItem('pos_hotkeys_enabled', 'true');
+    renderPOS();
+
+    scanField().blur();
+    fireEvent.keyDown(document, { key: '1' });
+    fireEvent.keyDown(document, { key: '0' });
+    fireEvent.keyDown(document, { key: '0' });
+
+    // PLU buffer appears, but the scanner listener must not trigger a lookup.
+    expect(screen.getByText('PLU: 100')).toBeInTheDocument();
+    expect(lookupMock).not.toHaveBeenCalled();
+  });
 });

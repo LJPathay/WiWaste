@@ -156,4 +156,71 @@ describe('POS cart', () => {
     await waitFor(() => expect(screen.getByDisplayValue('2')).toBeInTheDocument());
     expect(screen.queryByDisplayValue('3')).not.toBeInTheDocument();
   });
+
+  it('completes a cash checkout and persists the sale via the API', async () => {
+    renderPOS();
+
+    await scan('123456');
+    await waitFor(() => expect(screen.getByDisplayValue('1')).toBeInTheDocument());
+
+    // Proceed to checkout.
+    fireEvent.click(screen.getByRole('button', { name: /Proceed to Checkout/ }));
+
+    // Amount due and tendered input should be visible.
+    expect(screen.getByText('Amount Due', { exact: true })).toBeInTheDocument();
+    const tendered = screen.getByPlaceholderText('0.00') as HTMLInputElement;
+    fireEvent.change(tendered, { target: { value: '20' } });
+
+    // Complete payment should call the API once.
+    fireEvent.click(screen.getByRole('button', { name: 'Complete Payment' }));
+    await waitFor(() => expect(createMock).toHaveBeenCalledTimes(1));
+
+    const payload = createMock.mock.calls[0][0];
+    expect(payload.payment_method).toBe('Cash');
+    expect(payload.amount_tendered).toBe(20);
+    expect(payload.items).toHaveLength(1);
+    expect(payload.items[0].product_id).toBe(1);
+    expect(payload.items[0].quantity).toBe(1);
+  });
+
+  it('prevents duplicate checkout submissions on rapid double-click', async () => {
+    renderPOS();
+
+    await scan('123456');
+    await waitFor(() => expect(screen.getByDisplayValue('1')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: /Proceed to Checkout/ }));
+
+    const tendered = screen.getByPlaceholderText('0.00') as HTMLInputElement;
+    fireEvent.change(tendered, { target: { value: '20' } });
+
+    const complete = screen.getByRole('button', { name: 'Complete Payment' });
+    fireEvent.click(complete);
+    fireEvent.click(complete); // rapid second click — must be ignored
+
+    await waitFor(() => expect(createMock).toHaveBeenCalledTimes(1));
+  });
+
+  it('refuses checkout when the cart is empty', async () => {
+    renderPOS();
+
+    fireEvent.click(screen.getByRole('button', { name: /Proceed to Checkout/ }));
+    expect(createMock).not.toHaveBeenCalled();
+  });
+
+  it('refuses cash checkout when tendered is below the total', async () => {
+    renderPOS();
+
+    await scan('123456');
+    await waitFor(() => expect(screen.getByDisplayValue('1')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: /Proceed to Checkout/ }));
+
+    const tendered = screen.getByPlaceholderText('0.00') as HTMLInputElement;
+    fireEvent.change(tendered, { target: { value: '1' } });
+
+    const complete = screen.getByRole('button', { name: 'Complete Payment' });
+    expect(complete).toBeDisabled();
+    expect(createMock).not.toHaveBeenCalled();
+  });
 });

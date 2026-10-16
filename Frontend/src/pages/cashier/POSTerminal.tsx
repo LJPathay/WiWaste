@@ -423,6 +423,10 @@ export function POSTerminal() {
       // Don't intercept when the search field is focused — its own onChange/Enter
       // handling owns that path, and intercepting here would double-enter scans.
       if (document.activeElement === barcodeRef.current) return;
+      // When hotkeys are enabled, the PLU quick-code feature owns document-level
+      // digit entry while the search field is blurred. Standing down here avoids
+      // two listeners buffering the same keystrokes and double-looking-up codes.
+      if (hotkeysEnabled) return;
       // Don't intercept while a modal is open or hotkey recording is in progress.
       if (showCheckout || showDiscountModal || showReturnModal || showVoidModal || showSeniorPwdModal || showPriceOverrideModal || showExitConfirm || showHotkeySettings || recordingAction) return;
       // Ignore modifier-only and navigation keys.
@@ -430,19 +434,19 @@ export function POSTerminal() {
       if (e.key.length !== 1) return;
 
       scannerBufferRef.current = scannerBufferRef.current + e.key;
-        if (scannerTimerRef.current) clearTimeout(scannerTimerRef.current);
-        scannerTimerRef.current = setTimeout(() => {
-          const code = scannerBufferRef.current;
-          scannerBufferRef.current = '';
-          if (code.length > 0) {
-            void scannerScanRef.current(code);
-          }
-        }, SCANNER_GAP_MS);
+      if (scannerTimerRef.current) clearTimeout(scannerTimerRef.current);
+      scannerTimerRef.current = setTimeout(() => {
+        const code = scannerBufferRef.current;
+        scannerBufferRef.current = '';
+        if (code.length > 0) {
+          void scannerScanRef.current(code);
+        }
+      }, SCANNER_GAP_MS);
     };
 
     document.addEventListener('keydown', handleScannerKey);
     return () => document.removeEventListener('keydown', handleScannerKey);
-  }, [showCheckout, showDiscountModal, showReturnModal, showVoidModal, showSeniorPwdModal, showPriceOverrideModal, showExitConfirm, showHotkeySettings, recordingAction]);
+  }, [showCheckout, showDiscountModal, showReturnModal, showVoidModal, showSeniorPwdModal, showPriceOverrideModal, showExitConfirm, showHotkeySettings, recordingAction, hotkeysEnabled]);
 
   const handleScannerScan = useCallback(async (code: string) => {
     await handlePluLookup(code);
@@ -1032,6 +1036,17 @@ export function POSTerminal() {
                         {isSelected && (
                           <span className="text-[9px] font-bold text-red-400 bg-red-50 dark:bg-red-900/20 px-1 rounded">{hotkeys.unqueue} to remove</span>
                         )}
+                        {/* Low stock warning: cart qty has consumed most available stock */}
+                        {(() => {
+                          const remaining = Math.max(0, line.product.current_stock - line.quantity);
+                          if (remaining <= line.product.reorder_level && remaining > 0) {
+                            return <span className="text-[9px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-1.5 rounded">Low stock: {remaining} left</span>;
+                          }
+                          if (remaining <= 0) {
+                            return <span className="text-[9px] font-bold text-red-600 bg-red-50 dark:bg-red-900/20 px-1.5 rounded">Out of stock</span>;
+                          }
+                          return null;
+                        })()}
                       </div>
                     </div>
                     </div>

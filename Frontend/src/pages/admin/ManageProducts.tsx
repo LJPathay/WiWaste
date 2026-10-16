@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Info, Loader2, Package, AlertCircle } from 'lucide-react';
+import { Search, Plus, Info, Loader2, Package, AlertCircle, Scan, Edit2 } from 'lucide-react';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { Tutorial } from '../../components/ui/Tutorial';
 import { Modal, FormField, useToast, Toast, ConfirmDialog } from '../../components/ui/Toast';
@@ -48,6 +48,13 @@ export function ManageProducts() {
   const [showEmptyNotification, setShowEmptyNotification] = useState(false);
   const [notificationCountdown, setNotificationCountdown] = useState(20);
   const [showTutorial, setShowTutorial] = useState(false);
+
+  // Barcode scanning state for hybrid registration workflow
+  const [scanBarcode, setScanBarcode] = useState('');
+  const [scanError, setScanError] = useState('');
+  const [scannedProduct, setScannedProduct] = useState<ApiProduct | null>(null);
+  const [showScanResult, setShowScanResult] = useState(false);
+  const [scanning, setScanning] = useState(false);
 
   const tutorialSteps = [
     {
@@ -247,6 +254,33 @@ export function ManageProducts() {
       setAddError(err instanceof Error ? err.message : 'Failed to create product.');
     } finally {
       setProcessing(false);
+    }
+  };
+
+  const handleScanBarcode = async (code: string) => {
+    if (!code || !code.trim()) return;
+    setScanning(true);
+    setScanError('');
+    setShowScanResult(false);
+    setScannedProduct(null);
+    try {
+      const product = await productsApi.lookup(code.trim());
+      setScannedProduct(product as ApiProduct);
+      setShowScanResult(true);
+    } catch (err: unknown) {
+      // 404 means unknown barcode — prefill the Add Product form
+      const apiErr = err as { status?: number; message?: string };
+      if (apiErr.status === 404) {
+        setScanBarcode(code.trim());
+        setShowAddModal(true);
+        // Prepopulate the barcode field so the owner only fills remaining details
+        setAddForm(prev => ({ ...prev, barcode: code.trim() }));
+        setScanError(`No product found for barcode "${code.trim()}". Fill in the details below to register it.`);
+      } else {
+        setScanError(apiErr.message || 'Unable to look up barcode. Please try again.');
+      }
+    } finally {
+      setScanning(false);
     }
   };
 
@@ -489,6 +523,61 @@ export function ManageProducts() {
           Add Product
         </button>
       </div>
+
+        {/* Barcode scan input — hybrid registration workflow */}
+        <div className="bg-[#F8FAFC] dark:bg-slate-900/50 rounded-xl border border-[#E5E7EB] dark:border-white/10 shadow-sm p-3.5 space-y-3">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+            <div className="relative flex items-center gap-4 w-full lg:w-auto">
+              <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 px-2 uppercase tracking-wider">Scan Barcode:</span>
+              <input
+                type="text"
+                placeholder="Scan or type barcode..."
+                value={scanBarcode}
+                onChange={e => setScanBarcode(e.target.value.replace(/[^0-9]/g, ''))}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && scanBarcode.trim()) {
+                    e.preventDefault();
+                    void handleScanBarcode(scanBarcode.trim());
+                  } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                  }
+                }}
+                className="flex-1 h-8 bg-[#F8FAFC] dark:bg-slate-700 border border-[#E5E7EB] dark:border-slate-600 pl-8 pr-3 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#006a61] text-slate-700 dark:text-slate-200"
+              />
+              <Scan className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+              {scanning && (
+                <span className="text-xs text-[#006a61] dark:text-[#7ef0cf] animate-pulse">Looking up…</span>
+              )}
+              {scanError && (
+                <span className="text-xs text-red-600 dark:text-red-400">{scanError}</span>
+              )}
+            </div>
+            {showScanResult && scannedProduct && (
+              <div className="flex flex-col lg:flex-row lg:items-center gap-3 w-full lg:w-auto">
+                <div className="flex items-center gap-2 bg-[#E8F7F2] dark:bg-[#0F766E]/20 rounded-lg p-2">
+                  <Package className="h-4 w-4 text-[#006a61] dark:text-[#7ef0cf]" />
+                  <div>
+                    <p className="text-xs font-bold text-slate-900 dark:text-slate-100">{scannedProduct.name}</p>
+                    <p className="text-[10px] text-muted-fg dark:text-muted-fg">Barcode: {scannedProduct.sku}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => { openEdit(scannedProduct); setShowScanResult(false); }}
+                  className="h-8 inline-flex items-center gap-2 rounded-lg bg-[#006a61] text-white px-3 text-xs font-semibold hover:bg-[#00574f] transition-all disabled:opacity-50"
+                  disabled={scannedProduct.status === 'Archived'}
+                >
+                  <Edit2 className="h-3.5 w-3.5" /> View / Edit
+                </button>
+                <button
+                  onClick={() => { setShowScanResult(false); setShowAddModal(true); setAddForm(prev => ({ ...prev, barcode: scannedProduct.sku ?? '', product_name: scannedProduct.name })); }}
+                  className="h-8 inline-flex items-center gap-2 rounded-lg bg-[#0F766E] text-white px-3 text-xs font-semibold hover:bg-[#0d615b] transition-all"
+                >
+                  <Plus className="h-3.5 w-3.5" /> Register New
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
 
       <div className="space-y-2">
         <div className="bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm p-3.5 space-y-3">

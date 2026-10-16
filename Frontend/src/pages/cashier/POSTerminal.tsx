@@ -1,5 +1,4 @@
 import { useMemo, useRef, useState, useEffect, useCallback, useDeferredValue } from 'react';
-import { useVirtualizer } from '@tanstack/react-virtual';
 import { 
   Barcode, Search, Trash2, CreditCard, Wallet, Banknote, Plus, Minus, 
   User, Receipt, Clock, ArrowRight, Printer, CheckCircle2,
@@ -105,11 +104,9 @@ export function POSTerminal() {
   const [receipt, setReceipt] = useState<SalesTransaction | null>(null);
   const isVatRegistered = false; // Non-VAT registered micro-enterprise by default
   
-  const [draggedProduct, setDraggedProduct] = useState<CashierProduct | null>(null);
-  const [dragOverId, setDragOverId] = useState<string | null>(null);
   // Tracks units sold this session so the grid/cart show live stock without a page refresh
   const [stockAdjustments, setStockAdjustments] = useState<Record<string, number>>({});
-  const [pinnedOrder, setPinnedOrder] = useState<string[]>(() => {
+  const [pinnedOrder] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('pos_pinned_order');
       return saved ? JSON.parse(saved) : [];
@@ -185,7 +182,7 @@ export function POSTerminal() {
     });
   }, [deferredSearch, activeCategory, catalog]);
 
-  // Ordered products (pinned first) for virtualized grid
+  // Ordered products (pinned first) for catalog grid
   const orderedProducts = useMemo(() => {
     const pinnedProducts = pinnedOrder
       .map(id => filteredProducts.find(p => p.product_id === id))
@@ -193,15 +190,6 @@ export function POSTerminal() {
     const unpinned = filteredProducts.filter(p => !pinnedOrder.includes(p.product_id));
     return [...pinnedProducts, ...unpinned];
   }, [filteredProducts, pinnedOrder]);
-
-  // Virtualizer for product grid
-  const parentRef = useRef<HTMLDivElement>(null);
-  const virtualizer = useVirtualizer({
-    count: orderedProducts.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 180,
-    overscan: 5,
-  });
 
   const addProduct = useCallback((product: CashierProduct, qtyOverride?: number) => {
     const desiredQty = qtyOverride ?? 1;
@@ -439,23 +427,14 @@ export function POSTerminal() {
         const code = scannerBufferRef.current;
         scannerBufferRef.current = '';
         if (code.length > 0) {
-          void scannerScanRef.current(code);
+          void handlePluLookup(code);
         }
       }, SCANNER_GAP_MS);
     };
 
     document.addEventListener('keydown', handleScannerKey);
     return () => document.removeEventListener('keydown', handleScannerKey);
-  }, [showCheckout, showDiscountModal, showReturnModal, showVoidModal, showSeniorPwdModal, showPriceOverrideModal, showExitConfirm, showHotkeySettings, recordingAction, hotkeysEnabled]);
-
-  const handleScannerScan = useCallback(async (code: string) => {
-    await handlePluLookup(code);
-  }, [handlePluLookup]);
-
-  // Keep the scanner handler ref in sync so the effect's setTimeout always
-  // invokes the latest lookup without re-attaching the listener.
-  const scannerScanRef = useRef(handleScannerScan);
-  scannerScanRef.current = handleScannerScan;
+  }, [showCheckout, showDiscountModal, showReturnModal, showVoidModal, showSeniorPwdModal, showPriceOverrideModal, showExitConfirm, showHotkeySettings, recordingAction, hotkeysEnabled, handlePluLookup]);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -787,9 +766,9 @@ export function POSTerminal() {
       <div className="flex flex-1 overflow-hidden">
         
         {/* =========================================================
-            LEFT PANEL: PRODUCTS (~60%)
+            LEFT PANEL: PRODUCTS (~70%)
             ========================================================= */}
-        <section className="flex-[1.5] min-w-[500px] flex flex-col bg-[#F8FAFC] dark:bg-slate-900 border-r border-[#E5E7EB] dark:border-slate-700">
+        <section className="flex-[2.33] min-w-[600px] flex flex-col bg-[#F8FAFC] dark:bg-slate-900 border-r border-[#E5E7EB] dark:border-slate-700">
           {/* Search & Categories */}
           <div className="p-4 bg-white dark:bg-slate-800 border-b border-[#E5E7EB] dark:border-slate-700 shrink-0 relative z-10 shadow-sm">
             <div className="flex gap-2 mb-3">
@@ -859,100 +838,75 @@ export function POSTerminal() {
 
           </div>
 
-          {/* Product Grid - Virtualized for 4K+ products */}
-          <div className="flex-1 p-4 hide-scrollbar dark:bg-slate-900">
-            <div className="relative" style={{ height: '100%' }}>
-              <div ref={parentRef} className="h-full overflow-auto">
-                <div style={{ height: virtualizer.getTotalSize() }}>
-                  {virtualizer.getVirtualItems().map((virtualRow) => {
-                    const product = orderedProducts[virtualRow.index];
-                    const slotIndex = pinnedOrder.indexOf(product.product_id);
-                    const slotKey = slotIndex !== -1 && slotIndex < 10 ? hotkeys[`product_${slotIndex}` as ProductSlotKey] : null;
-                    const isDragging = draggedProduct?.product_id === product.product_id;
-                    const isDragOver = dragOverId === product.product_id;
-                    return (
-                      <button
-                        type="button"
-                        key={product.product_id}
-                        draggable
-                        onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; setDraggedProduct(product); }}
-                        onDragEnd={() => { setDraggedProduct(null); setDragOverId(null); }}
-                        onDragOver={(e) => { e.preventDefault(); setDragOverId(product.product_id); }}
-                        onDragLeave={() => setDragOverId(null)}
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          if (!draggedProduct || draggedProduct.product_id === product.product_id) return;
-                          setPinnedOrder(prev => {
-                            const pinnedProds = prev
-                              .map(id => filteredProducts.find(p => p.product_id === id))
-                              .filter((p): p is CashierProduct => !!p);
-                            const unpinnedProds = filteredProducts.filter(p => !prev.includes(p.product_id));
-                            const current = [...pinnedProds, ...unpinnedProds].map(p => p.product_id);
-                            const from = current.indexOf(draggedProduct.product_id);
-                            const to = current.indexOf(product.product_id);
-                            const next = [...current];
-                            next.splice(from, 1);
-                            next.splice(to, 0, draggedProduct.product_id);
-                            const newPinned = next.slice(0, 10);
-                            localStorage.setItem('pos_pinned_order', JSON.stringify(newPinned));
-                            return newPinned;
-                          });
-                          setDragOverId(null);
-                        }}
-                        onClick={() => addProduct(product)}
-                        // The card *is* the control: naming it makes the grid reachable
-                        // by keyboard and screen reader. It was a click-only <div>, so
-                        // nothing on this screen could be tabbed to or announced.
-                        aria-label={`Add ${product.product_name} to cart, ${formatCurrency(product.selling_price)}`}
-                        style={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: '100%',
-                          height: `${virtualRow.size}px`,
-                          transform: `translateY(${virtualRow.start}px)`,
-                        }}
-                        className={`flex flex-col text-left font-sans bg-white dark:bg-slate-800 rounded-lg border p-2 shadow-sm hover:shadow-md hover:border-[#0F766E] cursor-pointer transition-all active:scale-[0.97] min-h-[70px] relative ${
-                          isDragging ? 'opacity-40 scale-95' : ''
-                        } ${
-                          isDragOver ? 'border-[#0F766E] ring-2 ring-[#0F766E]/30 scale-[1.02]' : 'border-[#E5E7EB] dark:border-slate-700'
-                        }`}
-                      >
-                        {slotKey && (
-                          <span className="absolute top-1 right-1 text-[9px] font-black uppercase bg-slate-100 dark:bg-slate-700 text-muted-fg dark:text-muted-fg px-1 rounded leading-tight">{slotKey}</span>
-                        )}
-                        <div className="flex-1 flex flex-col justify-between pt-1">
-                          <p className="text-[11px] font-bold text-slate-800 dark:text-slate-100 leading-tight line-clamp-2 mb-1">{product.product_name}</p>
-                          <div className="flex items-center justify-between mt-auto">
-                            <p className="text-xs font-black text-slate-900 dark:text-slate-100">{formatCurrency(product.selling_price)}</p>
-                            {/* Decorative only — a <button> nested in a <button> is
-                                invalid, and this one had no handler at all. */}
-                            <span aria-hidden="true" className="flex items-center justify-center w-5 h-5 rounded bg-[#16A34A] text-white">
-                              <Plus className="w-3 h-3" />
-                            </span>
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                  {orderedProducts.length === 0 && (
-                    <div style={{ position: 'relative', height: '200px' }} className="flex items-center justify-center text-center text-muted-fg">
-                      <SearchIcon className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                      <p className="text-sm font-medium">
-                        {catalogError && catalog.length === 0 ? 'Unable to load products — check that the backend is running' : 'No products match your search'}
-                      </p>
-                    </div>
-                  )}
-                </div>
+          {/* Product Catalog - Compact multi-column grid */}
+          <div className="flex-1 p-3 hide-scrollbar dark:bg-slate-900 overflow-y-auto">
+            {orderedProducts.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-center text-muted-fg py-10">
+                <SearchIcon className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                <p className="text-sm font-medium">
+                  {catalogError && catalog.length === 0 ? 'Unable to load products — check that the backend is running' : 'No products match your search'}
+                </p>
               </div>
-            </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
+                {orderedProducts.map((product) => {
+                  const slotIndex = pinnedOrder.indexOf(product.product_id);
+                  const slotKey = slotIndex !== -1 && slotIndex < 10 ? hotkeys[`product_${slotIndex}` as ProductSlotKey] : null;
+                  const available = Math.max(0, product.current_stock - (stockAdjustments[product.product_id] ?? 0));
+                  const isLowStock = available > 0 && available <= product.reorder_level;
+                  const isOutOfStock = available <= 0;
+                  return (
+                    <div
+                      key={product.product_id}
+                      onClick={() => addProduct(product)}
+                      aria-label={`Add ${product.product_name} to cart, ${formatCurrency(product.selling_price)}`}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); addProduct(product); } }}
+                      className="flex flex-col items-start gap-1 bg-white dark:bg-slate-800 rounded-lg border border-[#E5E7EB] dark:border-slate-700 p-2 shadow-sm hover:shadow-md hover:border-[#0F766E] cursor-pointer transition-all active:scale-[0.97]"
+                    >
+                      {slotKey && (
+                        <span className="absolute top-1 right-1 text-[9px] font-black uppercase bg-slate-100 dark:bg-slate-700 text-muted-fg dark:text-muted-fg px-1 rounded leading-tight">{slotKey}</span>
+                      )}
+                      <div className="relative w-full h-16 bg-[#F8FAFC] dark:bg-slate-700 rounded-md flex items-center justify-center mb-1 overflow-hidden">
+                        {product.image_url ? (
+                          <img src={product.image_url} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <Package className="w-6 h-6 text-muted-fg" />
+                        )}
+                        {isOutOfStock && (
+                          <span className="absolute inset-0 bg-black/40 flex items-center justify-center text-xs font-bold text-white">Out</span>
+                        )}
+                      </div>
+                      <p className="text-[10px] font-bold text-slate-800 dark:text-slate-100 leading-tight line-clamp-1 truncate">{product.product_name}</p>
+                      <div className="mt-auto w-full flex items-center justify-between">
+                        <p className="text-xs font-bold text-[#0F766E]">{formatCurrency(product.selling_price)}</p>
+                        {isOutOfStock ? (
+                          <span className="text-[9px] font-bold text-red-600 bg-red-50 dark:bg-red-900/20 px-1.5 rounded">Out</span>
+                        ) : isLowStock ? (
+                          <span className="text-[9px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-1.5 rounded">Low: {available}</span>
+                        ) : null}
+                      </div>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); addProduct(product); }}
+                        disabled={isOutOfStock}
+                        className="mt-1 w-full py-1.5 bg-[#0F766E] text-white text-[10px] font-bold rounded-md hover:bg-[#0d615b] transition-colors flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                        aria-label={`Add ${product.product_name} to cart`}
+                      >
+                        <Plus className="w-3 h-3" /> Add
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </section>
 
         {/* =========================================================
-            RIGHT PANEL: CURRENT TRANSACTION (~40%)
+            RIGHT PANEL: CURRENT TRANSACTION (~30%)
             ========================================================= */}
-        <section className="flex-1 min-w-[420px] max-w-[550px] flex flex-col bg-white dark:bg-slate-800 z-10">
+        <section className="flex-1 min-w-[380px] max-w-[700px] flex flex-col bg-white dark:bg-slate-800 z-10">
           
           {/* Transaction Header */}
           <div className="px-6 py-3 border-b border-[#E5E7EB] dark:border-slate-700 bg-white dark:bg-slate-800 flex justify-between items-center shrink-0">

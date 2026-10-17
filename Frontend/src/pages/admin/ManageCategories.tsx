@@ -407,15 +407,18 @@ export function ManageCategories() {
 
 
   if (fetchError) {
-    const errorCode = fetchError.match(/\((\d+)\)/)?.[1] || 'Unknown';
-    const errorMessage = errorCode === '2002' ? "There's no connection (2002)" : `Connection error (${errorCode})`;
+    // Keep the legacy "2002" wording, otherwise show the message the API client
+    // produced. `Connection error (Unknown)` swallowed both a stopped backend and a
+    // browser-blocked (CORS) response, so the operator could not tell them apart.
+    const errorCode = fetchError.match(/\((\d+)\)/)?.[1] ?? null;
+    const errorMessage = errorCode === '2002' ? "There's no connection (2002)" : fetchError;
     return (
       <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800/40 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Tag className="h-5 w-5 text-red-600 dark:text-red-400 shrink-0" />
           <div>
             <p className="font-semibold text-red-700 dark:text-red-300 text-sm">Failed to load categories</p>
-            <p className="text-xs text-red-600 dark:text-red-400">{errorMessage}</p>
+            <p className="text-xs text-red-600 dark:text-red-400 break-words">{errorMessage}</p>
           </div>
         </div>
         <button

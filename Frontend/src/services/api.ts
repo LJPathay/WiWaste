@@ -173,7 +173,13 @@ export type {
   ApiRetentionSummary,
 } from '../types/api';
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api/v1';
+// The SPA and Laravel run on different ports in development (5173 -> 8000), so calling
+// the API by absolute URL is cross-origin: every response is subject to CORS, and since
+// requests carry credentials the browser rejects the whole batch when the server does not
+// echo the exact origin. A relative base goes through the Vite dev proxy instead, which
+// makes development same-origin — no preflight, no credentialed-cookie rules. Set
+// VITE_API_URL to an absolute URL to talk to a backend on another host.
+const BASE_URL = (import.meta.env.VITE_API_URL ?? '/api/v1').replace(/\/+$/, '');
 
 function getToken(): string | null {
   return localStorage.getItem('wiwaste_token');
@@ -194,7 +200,12 @@ export class ApiError extends Error {
   constructor(status: number, body: Record<string, unknown>) {
     const errors = (body.errors ?? {}) as Record<string, string[]>;
     const firstValidationMessage = Object.values(errors).flat()[0];
-    super(firstValidationMessage ?? (typeof body.message === 'string' ? body.message : `HTTP ${status}`));
+    // A 5xx usually means the request completed but the server could not answer — often a
+    // stopped backend behind a proxy. "HTTP 500" alone gave the operator nothing to act on.
+    const fallback = status >= 500
+      ? `The API answered HTTP ${status} without a message. The request did not complete, so the backend may be down or failing.`
+      : `HTTP ${status}`;
+    super(firstValidationMessage ?? (typeof body.message === 'string' ? body.message : fallback));
     this.name = 'ApiError';
     this.status = status;
     this.retryAfter = Math.max(0, Number(body.retry_after) || 0);
@@ -246,17 +257,27 @@ async function request<T>(path: string, options: RequestInit = {}, allowRefresh 
   const token = getToken();
   console.debug('[API] Request:', path, 'Token:', token?.substring(0, 20) + '...');
 
-  const send = (bearer: string | null) => fetch(`${BASE_URL}${path}`, {
-    ...options,
-    credentials: 'include',
-    cache: options.cache ?? (freshRequests > 0 ? 'reload' : 'default'),
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-      ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}),
-      ...((options.headers as Record<string, string>) ?? {}),
-    },
-  });
+  // A rejected `fetch` means the request never produced a response: the backend is not
+  // running, the URL is wrong, or the browser blocked it. Rethrowing the raw TypeError
+  // surfaced as "Connection error (Unknown)" in the UI, which hid all three causes.
+  const send = async (bearer: string | null): Promise<Response> => {
+    try {
+      return await fetch(`${BASE_URL}${path}`, {
+        ...options,
+        credentials: 'include',
+        cache: options.cache ?? (freshRequests > 0 ? 'reload' : 'default'),
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}),
+          ...((options.headers as Record<string, string>) ?? {}),
+        },
+      });
+    } catch (cause) {
+      const detail = cause instanceof Error ? cause.message : 'no response was returned';
+      throw new Error(`Cannot reach the API at ${BASE_URL}${path} (${detail}).`);
+    }
+  };
 
   let res = await send(token);
 
@@ -276,7 +297,9 @@ async function request<T>(path: string, options: RequestInit = {}, allowRefresh 
       window.location.href = '/login';
       throw new Error('Session expired. Please log in again.');
     }
-    const err = await res.json().catch(() => ({ message: 'Unknown error' }));
+    // A non-JSON body (an HTML proxy error page, for example) must still produce a
+    // useful message rather than "Unknown error".
+    const err = await res.json().catch(() => ({}));
     throw new ApiError(res.status, err);
   }
   return res.json() as Promise<T>;

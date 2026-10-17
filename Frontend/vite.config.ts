@@ -34,6 +34,20 @@ export default defineConfig({
     },
   },
 
+  // Same-origin API calls in development. The client talks to `/api/v1` relative to the
+  // page, and this forwards those requests to Laravel on 8000. Going through the dev
+  // server removes cross-origin from the loop entirely: no CORS preflight, and the
+  // HttpOnly refresh cookie is first-party, so it is stored and sent on any origin the
+  // app is opened from — localhost, a LAN IP, or a tunnel.
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      },
+    },
+  },
+
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv'],
 

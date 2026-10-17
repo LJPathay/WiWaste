@@ -56,11 +56,29 @@ describe('api request()', () => {
     await expect(dashboard.overview()).rejects.toThrow('HTTP 500');
   });
 
-  it('calls the correct endpoint for the requested resource', async () => {
+  it('calls the requested resource relative to the API base', async () => {
     const fetchMock = mockFetch({ ok: true });
 
     await dashboard.overview();
 
-    expect(fetchMock.mock.calls[0][0]).toBe('http://localhost:8000/api/v1/dashboard/overview');
+    // Relative by default: the dev server proxies /api to Laravel, so requests stay
+    // same-origin instead of becoming a cross-origin batch the browser can reject.
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/dashboard/overview');
+  });
+
+  it('sends credentials so the HttpOnly refresh cookie travels with the request', async () => {
+    const fetchMock = mockFetch({ ok: true });
+
+    await dashboard.overview();
+
+    expect((fetchMock.mock.calls[0][1] as RequestInit).credentials).toBe('include');
+  });
+
+  it('names the endpoint and the cause when the request never reaches the API', async () => {
+    globalThis.fetch = vi.fn().mockRejectedValue(new TypeError('Failed to fetch')) as unknown as typeof fetch;
+
+    await expect(dashboard.overview()).rejects.toThrow(
+      'Cannot reach the API at /api/v1/dashboard/overview (Failed to fetch).'
+    );
   });
 });

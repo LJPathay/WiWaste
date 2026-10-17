@@ -110,7 +110,7 @@ export async function login(
   const { username, password } = CREDENTIALS[role];
 
   await page.goto('/login');
-  await page.fill('#email', username);
+  await page.fill('#username', username);
   await page.fill('#password', password);
   await page.click('button[type="submit"]');
 

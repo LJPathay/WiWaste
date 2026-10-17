@@ -1,5 +1,4 @@
-import { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react';
-import { HeaderLabelProvider } from './HeaderLabelProvider';
+import { useState, useEffect, useRef, useMemo, memo } from 'react';
 import { Navigate, Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { SkipLink } from './SkipLink';
 import {
@@ -282,49 +281,6 @@ export function DashboardLayout() {
 
   const sidebarWidth = collapsed ? 'w-[76px]' : 'w-[248px]';
 
-  const [visitedPages, setVisitedPages] = useState<SidebarItem[]>([]);
-  const [headerStyle, setHeaderStyle] = useState<'quick-access' | 'action-text' | 'welcome-text'>('quick-access');
-
-  // Header style persistence - extracted to avoid re-running
-  useEffect(() => {
-    const readHeaderStyle = () => {
-      const saved = localStorage.getItem('wiwaste_header_style') as 'quick-access' | 'action-text' | 'welcome-text' | null;
-      if (saved === 'quick-access' || saved === 'action-text' || saved === 'welcome-text') {
-        setHeaderStyle(saved);
-      }
-    };
-    readHeaderStyle();
-    const handler = (e: StorageEvent) => { if (e.key === 'wiwaste_header_style') readHeaderStyle(); };
-    window.addEventListener('storage', handler);
-    window.addEventListener('wiwaste_header_style_change', readHeaderStyle);
-    return () => {
-      window.removeEventListener('storage', handler);
-      window.removeEventListener('wiwaste_header_style_change', readHeaderStyle);
-    };
-  }, []);
-
-  // Page visit tracking - memoized to avoid recalculation on every render
-  const updateVisitedPages = useCallback((pathname: string) => {
-    try {
-      const raw = localStorage.getItem('wiwaste_page_visits_v1') || '{}';
-      const visits: Record<string, number> = JSON.parse(raw);
-      visits[pathname] = (visits[pathname] || 0) + 1;
-      localStorage.setItem('wiwaste_page_visits_v1', JSON.stringify(visits));
-
-      const allItems = sidebarGroups.flatMap(g => g.items);
-      const sorted = [...allItems]
-        .map(item => ({ ...item, count: visits[item.to] || 0 }))
-        .sort((a, b) => b.count - a.count);
-
-      setVisitedPages(sorted.slice(0, 4));
-    } catch { /* fallback */ }
-  }, [sidebarGroups]);
-
-  useEffect(() => {
-    if (!location.pathname) return;
-    updateVisitedPages(location.pathname);
-  }, [location.pathname, updateVisitedPages]);
-
   // Mobile sidebar focus trap
   const sidebarRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -419,105 +375,32 @@ export function DashboardLayout() {
             <ThemeToggle />
           </header>
 
-          {/* Top bar for desktop — animated label */}
-          <HeaderLabelProvider
-            welcomeName={session.name}
-          >
-            {(state) => (
-              <>
-                <header className="hidden md:flex sticky top-0 z-30 h-14 items-center justify-between bg-white dark:bg-slate-950 px-6 gap-3 overflow-hidden transition-colors duration-200 flex-shrink-0">
-                  {/* ── Mode 1: Quick Access Bar ── */}
-                  {headerStyle === 'quick-access' && (
-                    <>
-                      <div className="flex items-center gap-2 overflow-x-auto py-1 scrollbar-none min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-brand/10 dark:bg-brand/20 text-brand dark:text-[#7ef0cf] text-xs font-bold shrink-0 border border-brand/20">
-                          <TrendingUp className="h-3.5 w-3.5" />
-                          <span>Most Visited:</span>
-                        </div>
+          {/* Top bar for desktop — slim, no duplicated navigation */}
+          <header id="header" className="hidden md:flex sticky top-0 z-30 h-12 items-center justify-between bg-white dark:bg-slate-950 px-6 gap-3 border-b border-border dark:border-white/5 transition-colors duration-200 flex-shrink-0">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
+                {sidebarGroups.flatMap((g) => g.items).find((i) => i.to === location.pathname)?.label ?? 'Dashboard'}
+              </span>
+            </div>
+            <div className="flex items-center gap-3 shrink-0">
+              <span className="text-xs text-muted-fg dark:text-muted-fg truncate max-w-[160px]">{session.name}</span>
+              <ThemeToggle />
+            </div>
+          </header>
 
-                        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
-                          {visitedPages.map(page => {
-                            const PageIcon = page.icon;
-                            const isActive = location.pathname === page.to;
-                            return (
-                              <Link
-                                key={page.to}
-                                to={page.to}
-                                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all shrink-0 border ${
-                                  isActive
-                                    ? 'bg-brand text-white border-brand shadow-xs font-semibold'
-                                    : 'bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border-border dark:border-white/10 hover:bg-slate-200 dark:hover:bg-slate-700'
-                                }`}
-                              >
-                                <PageIcon className="h-3.5 w-3.5" />
-                                <span>{page.label}</span>
-                              </Link>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      {state.textVisible && (
-                        <span
-                          className="text-xs font-semibold text-muted-fg dark:text-muted-fg whitespace-nowrap shrink-0"
-                          style={{
-                            opacity: state.textVisible ? 1 : 0,
-                            transform: state.textVisible ? 'translateX(0)' : 'translateX(14px)',
-                            transition: 'opacity 350ms ease, transform 350ms ease',
-                          }}
-                        >
-                          {state.text}
-                        </span>
-                      )}
-                    </>
-                  )}
-
-                  {/* ── Mode 2: Backup Text / Actions Notification Log ── */}
-                  {headerStyle === 'action-text' && (
-                    <div className="flex items-center justify-between w-full">
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-xs font-bold border border-indigo-500/20">
-                          <Activity className="h-3.5 w-3.5 animate-pulse" />
-                          <span>Action Log:</span>
-                        </div>
-                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate">
-                          {state.text || `Active Module: ${sidebarGroups.flatMap(g=>g.items).find(i=>i.to===location.pathname)?.label ?? 'System Management'} — Changes saved & sync active.`}
-                        </span>
-                      </div>
-                      <span className="text-[11px] font-medium text-muted-fg">Real-time audit log</span>
-                    </div>
-                  )}
-
-                  {/* ── Mode 3: Welcome Text ── */}
-                  {headerStyle === 'welcome-text' && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                        Welcome back, {session.name}
-                      </span>
-                      <span className="h-4 w-px bg-slate-300 dark:bg-white/20" />
-                      <span className="text-xs font-semibold text-brand dark:text-[#7ef0cf]">
-                        Enterprise Retail Solution
-                      </span>
-                    </div>
-                  )}
-                </header>
-
-                {/* Page content */}
-                <div className="theme-content min-w-0 flex-1 relative p-6 bg-white dark:bg-slate-950 border-0 outline-none shadow-none transition-colors duration-200 overflow-y-auto" id="main-content">
-                  <Breadcrumb />
-                  <div className={location.pathname.startsWith('/owner') || location.pathname.startsWith('/admin') ? 'admin-module' : undefined}>
-                    <Outlet />
-                  </div>
-                </div>
-                {/* Footer */}
-                <footer className="bg-white/50 dark:bg-slate-950/50 py-4 px-6 flex-shrink-0" id="footer" role="contentinfo">
-                  <p className="text-xs text-center text-muted-fg dark:text-muted-fg">
-                    © 2026 WiWaste. All rights reserved.
-                  </p>
-                </footer>
-              </>
-            )}
-          </HeaderLabelProvider>
+          {/* Page content */}
+          <div className="theme-content min-w-0 flex-1 relative p-6 bg-white dark:bg-slate-950 border-0 outline-none shadow-none transition-colors duration-200 overflow-y-auto" id="main-content">
+            <Breadcrumb />
+            <div className={location.pathname.startsWith('/owner') || location.pathname.startsWith('/admin') ? 'admin-module' : undefined}>
+              <Outlet />
+            </div>
+          </div>
+          {/* Footer */}
+          <footer className="bg-white/50 dark:bg-slate-950/50 py-4 px-6 flex-shrink-0" id="footer" role="contentinfo">
+            <p className="text-xs text-center text-muted-fg dark:text-muted-fg">
+              © 2026 WiWaste. All rights reserved.
+            </p>
+          </footer>
         </div>
       </div>
     </div></ErrorBoundary>

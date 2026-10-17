@@ -4,15 +4,21 @@ import { login, waitForPage, MAIN, collectPageErrors } from '../helpers/auth';
 /**
  * `/dashboard` — `Frontend/src/pages/dashboard/Overview.tsx`.
  *
- * The owner dashboard is read-only: KPI cards, a sales trend, the leakage breakdown,
- * and inventory health. The only stateful controls are the sales-period select (which
- * re-queries `/owner/analytics`) and the leakage chart's value/quantity/percentage
- * legend.
+ * The owner dashboard is a loss-visibility interface: a primary confirmed-wastage KPI,
+ * supporting risk KPIs, a priority action queue, a wastage loss breakdown, inventory
+ * health, and a forecasted-risk section. Stateful controls are the sales-period select
+ * (which re-queries `/owner/analytics`) and the leakage chart's value/quantity/percentage
+ * toggle.
  */
 
 const period = (page: Page) => page.getByLabel('Sales trend period');
 
 test.describe('Owner · Dashboard', () => {
+  // The dashboard fans out to six API calls on mount (overview, owner-analytics,
+  // dashboard-summary, overstock, forecast, loss-risk). `php artisan serve` is
+  // single-threaded, so they serialize and first paint can take 30s+.
+  test.setTimeout(120000);
+
   test.beforeEach(async ({ page }) => {
     await login(page, 'owner');
     await page.goto('/dashboard');
@@ -22,13 +28,15 @@ test.describe('Owner · Dashboard', () => {
   test('renders every section with live analytics', async ({ page }) => {
     const errors = collectPageErrors(page);
 
-    await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Leakage & Risks' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Wastage & Loss Visibility', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Priority Action Queue' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Wastage Loss Breakdown' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Leakage by Category' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Inventory Health' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Forecasted Inventory Risk' })).toBeVisible();
 
-    // The dashboard is charts, not a table, so it must not render a data grid.
-    await expect(page.locator(`${MAIN} thead`)).toHaveCount(0);
+    // The priority action queue is the only table on the page.
+    await expect(page.locator(`${MAIN} thead`)).toHaveCount(1);
 
     expect(errors()).toEqual([]);
   });
@@ -58,7 +66,7 @@ test.describe('Owner · Dashboard', () => {
 
       // The control keeps the selection the user made, and the page stays intact.
       await expect(period(page)).toHaveValue(value);
-      await expect(page.getByRole('heading', { name: 'Leakage & Risks' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Wastage Loss Breakdown' })).toBeVisible();
     }
 
     expect(errors()).toEqual([]);

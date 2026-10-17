@@ -33,7 +33,7 @@ import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../comp
 import { useDashboardData } from '../../hooks/useDashboardData';
 import { ChartGradients, ChartTooltipStyle } from '../../components/charts/ChartGradients';
 import { CHART_DEFAULTS, CHART_COLORS, CHART_TOOLTIP_STYLE, useChartAnimation } from '../../components/charts/ChartConfig';
-import { inventoryAnalytics, forecast, lossRisk, type ApiLossRiskItem, type ApiLossRiskSummary } from '../../services/api';
+import { inventoryAnalytics, forecast, lossRisk, type ApiLossRiskSummary } from '../../services/api';
 
 const currencyFormatter = new Intl.NumberFormat('en-PH', {
   style: 'currency',
@@ -66,45 +66,47 @@ export function DashboardOverview() {
 
   const { data, overview, ownerAnalytics, loading: baseLoading } = useDashboardData(salesPeriod);
 
-  const dashboardLoaded = !baseLoading && (!!overview || !!ownerAnalytics);
-
-  // Secondary queries are deferred until the primary dashboard data has loaded so
-  // the initial request burst does not serialize on the single-threaded dev server.
+  // These datasets are independent of each other, so they are requested as one
+  // parallel burst. Chaining them behind `enabled` cost two extra round trips
+  // before the page could finish loading.
   const { data: dashboardSummary, isError: summaryFailed } = useQuery({
     queryKey: ['dashboardSummary'],
     queryFn: () => inventoryAnalytics.dashboardSummary(),
-    enabled: dashboardLoaded,
     staleTime: 30000,
   });
 
   const { data: overstock, isError: overstockFailed } = useQuery({
     queryKey: ['overstock'],
     queryFn: () => inventoryAnalytics.overstock(),
-    enabled: dashboardLoaded,
     staleTime: 30000,
   });
 
   const { data: forecastOverview } = useQuery({
     queryKey: ['forecastOverview'],
     queryFn: () => forecast.overview(),
-    enabled: dashboardLoaded,
     staleTime: 60000,
   });
 
-  const secondaryLoaded = dashboardLoaded && !!(dashboardSummary || overstock || forecastOverview);
-  const { data: lossRiskPredict, isError: lossRiskFailed } = useQuery({
-    queryKey: ['lossRiskPredict'],
-    queryFn: () => lossRisk.predict(),
-    enabled: secondaryLoaded,
+  // Read the last stored XGBoost scoring run. POST /loss-risk/predict re-runs live
+  // inference against the FastAPI service on every page visit, which dominated the
+  // dashboard's load time; the cached item list carries the same data.
+  const { data: lossRiskItemsResponse, isError: lossRiskFailed } = useQuery({
+    queryKey: ['lossRiskItems'],
+    queryFn: () => lossRisk.items(),
     staleTime: 120000,
     retry: 1,
   });
 
-  const lossRiskResult = lossRiskPredict as unknown as {
-    results?: ApiLossRiskItem[];
-    summary?: ApiLossRiskSummary;
-    generated_at?: string | null;
-  } | undefined;
+  const lossRiskItems = lossRiskItemsResponse?.items ?? [];
+  const lossRiskSummary: ApiLossRiskSummary | undefined = lossRiskItemsResponse
+    ? {
+        total_products: lossRiskItems.length,
+        high_risk: lossRiskItems.filter((item) => item.risk_tier === 'High').length,
+        medium_risk: lossRiskItems.filter((item) => item.risk_tier === 'Medium').length,
+        low_risk: lossRiskItems.filter((item) => item.risk_tier === 'Low').length,
+        total_expected_loss: lossRiskItems.reduce((sum, item) => sum + Number(item.expected_loss ?? 0), 0),
+      }
+    : undefined;
 
   const { isAnimationActive, animationDuration, animationEasing } = useChartAnimation();
 
@@ -147,7 +149,6 @@ export function DashboardOverview() {
   const expiringItems = dashboardSummary?.expiring_soon_items ?? [];
   const lowStockItems = dashboardSummary?.low_stock_items ?? [];
   const overstockItems = overstock?.items ?? [];
-  const lossRiskItems = lossRiskResult?.results ?? [];
 
   const productsAtRiskIds = new Set<number>();
   expiringItems.forEach((item) => productsAtRiskIds.add(item.product_id));
@@ -221,7 +222,7 @@ export function DashboardOverview() {
 
   const actionQueueFailed = summaryFailed || overstockFailed;
   const currentInventoryAtRisk = overstock?.total_exposure ?? 0;
-  const forecastedPotentialLoss = lossRiskResult?.summary?.total_expected_loss ?? 0;
+  const forecastedPotentialLoss = lossRiskSummary?.total_expected_loss ?? 0;
 
   const adminStats = [
     { label: 'Active SKUs', value: overview?.active_skus ?? 0, icon: Package, link: '/owner/products' },
@@ -655,18 +656,18 @@ export function DashboardOverview() {
 
           <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated p-4 shadow-sm">
             <h3 className="text-xs font-bold text-[#0F172A] dark:text-slate-100 mb-2">Risk distribution (model)</h3>
-            {lossRiskResult?.summary ? (
+            {lossRiskSummary ? (
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div>
-                  <div className="text-lg font-bold text-rose-600 dark:text-rose-400">{lossRiskResult.summary.high_risk}</div>
+                  <div className="text-lg font-bold text-rose-600 dark:text-rose-400">{lossRiskSummary.high_risk}</div>
                   <div className="text-[9px] font-semibold uppercase text-[#64748B] dark:text-muted-fg">High</div>
                 </div>
                 <div>
-                  <div className="text-lg font-bold text-amber-600 dark:text-amber-400">{lossRiskResult.summary.medium_risk}</div>
+                  <div className="text-lg font-bold text-amber-600 dark:text-amber-400">{lossRiskSummary.medium_risk}</div>
                   <div className="text-[9px] font-semibold uppercase text-[#64748B] dark:text-muted-fg">Medium</div>
                 </div>
                 <div>
-                  <div className="text-lg font-bold text-sky-600 dark:text-sky-400">{lossRiskResult.summary.low_risk}</div>
+                  <div className="text-lg font-bold text-sky-600 dark:text-sky-400">{lossRiskSummary.low_risk}</div>
                   <div className="text-[9px] font-semibold uppercase text-[#64748B] dark:text-muted-fg">Low</div>
                 </div>
               </div>
@@ -676,7 +677,7 @@ export function DashboardOverview() {
               </div>
             )}
             <div className="mt-3 text-[10px] text-[#64748B] dark:text-muted-fg">
-              {lossRiskResult?.generated_at ? `Generated ${new Date(lossRiskResult.generated_at).toLocaleString()}` : ''}
+              {lossRiskItemsResponse?.generated_at ? `Scored ${new Date(lossRiskItemsResponse.generated_at).toLocaleString()}` : ''}
             </div>
           </div>
         </div>

@@ -187,7 +187,8 @@ export async function mockLogin(email: string, password: string, role?: UserRole
   console.log(`Password received: ${'*'.repeat(Math.max(3, password.length))}`);
   const resolvedRole = normalizeRole(role ?? inferRoleFromEmail(email));
 
-  await new Promise((resolve) => setTimeout(resolve, 1500));
+  // No artificial latency: this builds the local demo profile that seeds the
+  // dashboard shell. Real authentication goes through the API in services/api.ts.
 
   const profileByRole: Record<UserRole, Pick<User, 'name' | 'company'>> = {
     owner: {

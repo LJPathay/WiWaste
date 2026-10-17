@@ -15,3 +15,8 @@ Schedule::command('forecast:generate')->dailyAt('02:00');
 // Keep the analytics aggregates warm on the queue rather than inside the request
 // that happens to be first to open a dashboard after a quiet hour.
 Schedule::job(new WarmAnalyticsCache)->hourly()->withoutOverlapping();
+
+// Refresh the cached XGBoost loss-risk scores hourly. The dashboard reads these
+// stored scores, so they must be regenerated on a schedule instead of on demand
+// from a page load.
+Schedule::command('loss-risk:score')->hourly()->withoutOverlapping();

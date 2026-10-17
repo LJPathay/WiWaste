@@ -59,10 +59,15 @@ function getStoredUser(): AuthUser | null {
 // single navigation used to fire a dozen identical GET /me requests. Share one
 // in-flight call and treat a recent success as fresh.
 const ME_TTL_MS = 2 * 60 * 1000;
-let meInFlight: Promise<unknown> | null = null;
+let meInFlight: ReturnType<typeof auth.me> | null = null;
 let meVerifiedAt = 0;
 
-function fetchMeOnce(): Promise<unknown> {
+/**
+ * `/me` is typed as `ApiUser | { data: ApiUser }` by the client, and this signature used to
+ * widen it to `unknown`. That made the `'data' in apiUser` guard below narrow the value to
+ * `{}`, so every field read (`role`, `id`, `email`, ...) failed to typecheck.
+ */
+function fetchMeOnce(): ReturnType<typeof auth.me> {
   if (!meInFlight) {
     meInFlight = auth.me().finally(() => { meInFlight = null; });
   }

@@ -2,20 +2,9 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ResponsiveContainer } from 'recharts';
-import {
-  LazyAreaChart,
-  LazyArea,
-  LazyBarChart,
-  LazyBar,
-  LazyPieChart,
-  LazyPie,
-  LazyCell,
-  LazyTooltip,
-  LazyLegend,
-  LazyCartesianGrid,
-  LazyXAxis,
-  LazyYAxis,
-} from '../../components/charts/LazyCharts';
+import { LazyPieChart, LazyPie, LazyCell, LazyTooltip } from '../../components/charts/LazyCharts';
+import { TrendChart } from '../../components/charts/TrendChart';
+import { RankedBars } from '../../components/charts/RankedBars';
 import {
   ArrowUpRight,
   ChevronRight,
@@ -31,8 +20,7 @@ import {
 } from 'lucide-react';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { useDashboardData } from '../../hooks/useDashboardData';
-import { ChartGradients, ChartTooltipStyle } from '../../components/charts/ChartGradients';
-import { CHART_DEFAULTS, CHART_COLORS, CHART_TOOLTIP_STYLE, formatPesoAxis, useChartAnimation } from '../../components/charts/ChartConfig';
+import { CHART_SERIES, CHART_TOOLTIP_STYLE, formatShortDate } from '../../components/charts/ChartConfig';
 import { inventoryAnalytics, forecast, lossRisk, type ApiLossRiskSummary } from '../../services/api';
 
 const currencyFormatter = new Intl.NumberFormat('en-PH', {
@@ -41,7 +29,31 @@ const currencyFormatter = new Intl.NumberFormat('en-PH', {
   maximumFractionDigits: 0,
 });
 
-const LEAKAGE_COLORS = ['#006a61', '#f97316', '#f59e0b', '#eab308', '#22c55e'];
+const LEAKAGE_COLORS = CHART_SERIES;
+
+/**
+ * Payment methods arrive as either POS labels (`E-wallet`, `Credit Card`) or slugs
+ * (`cash`, `e_wallet`). Rendering the raw value put `e_wallet` on the chart, so known
+ * methods are mapped to the label a cashier would recognise and anything else is
+ * humanised rather than dropped.
+ */
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  cash: 'Cash',
+  card: 'Card',
+  'credit-card': 'Credit card',
+  'e-wallet': 'E-Wallet',
+  gcash: 'GCash',
+  maya: 'Maya',
+  'bank-transfer': 'Bank transfer',
+};
+
+function formatPaymentMethod(method: string): string {
+  const key = method.trim().toLowerCase().replace(/[_\s]+/g, '-');
+  const known = PAYMENT_METHOD_LABELS[key];
+  if (known) return known;
+  const cleaned = key.replace(/-+/g, ' ').trim();
+  return cleaned ? cleaned.charAt(0).toUpperCase() + cleaned.slice(1) : 'Unspecified';
+}
 
 
 
@@ -110,8 +122,6 @@ export function DashboardOverview() {
       }
     : undefined;
 
-  const { isAnimationActive, animationDuration, animationEasing } = useChartAnimation();
-
   const loading = baseLoading;
 
   const salesThisMonth = overview?.sales_this_month ?? 0;
@@ -141,6 +151,44 @@ export function DashboardOverview() {
     quantity: Number(item.quantity),
     percentage: Number(item.percentage),
   }));
+
+  // The donut keeps its slices legible by folding the long tail into one bucket, so a
+  // category list with a dozen entries still renders four or five labelled rows.
+  const sortedCategories = [...leakageChartData].sort((a, b) => b.amount - a.amount);
+  const categorySlices = (() => {
+    if (sortedCategories.length <= 5) return sortedCategories;
+    const head = sortedCategories.slice(0, 4);
+    const tail = sortedCategories.slice(4);
+    const merged = tail.reduce(
+      (acc, slice) => ({
+        name: 'Other categories',
+        amount: acc.amount + slice.amount,
+        quantity: acc.quantity + slice.quantity,
+        percentage: acc.percentage + slice.percentage,
+      }),
+      { name: 'Other categories', amount: 0, quantity: 0, percentage: 0 }
+    );
+    return [...head, merged];
+  })();
+
+  const leakageMetricValue = (slice: { amount: number; quantity: number; percentage: number }) =>
+    leakageViewMode === 'value' ? slice.amount : leakageViewMode === 'quantity' ? slice.quantity : slice.percentage;
+
+  const leakageMetricTotal = categorySlices.reduce((sum, slice) => sum + leakageMetricValue(slice), 0);
+
+  const formatLeakageMetric = (slice: { amount: number; quantity: number; percentage: number }) => {
+    if (leakageViewMode === 'quantity') return `${slice.quantity} units`;
+    if (leakageViewMode === 'percentage') return `${slice.percentage.toFixed(1)}%`;
+    return currencyFormatter.format(slice.amount);
+  };
+
+  const wastageTrendTotal = wastageTrendData.reduce((sum, point) => sum + Number(point.value), 0);
+  const peakWastageDay = wastageTrendData.reduce<{ date: string; value: number } | null>(
+    (peak, point) =>
+      peak === null || Number(point.value) > peak.value ? { date: point.date, value: Number(point.value) } : peak,
+    null
+  );
+  const salesTrendTotal = salesTrendData.reduce((sum, point) => sum + Number(point.value), 0);
 
   const paymentBreakdown = (ownerAnalytics?.payment_breakdown ?? []).map((item) => ({
     method: item.payment_method,
@@ -232,6 +280,15 @@ export function DashboardOverview() {
     { label: 'Active Suppliers', value: overview?.active_suppliers ?? 0, icon: Truck, link: '/owner/suppliers' },
     { label: 'System Settings', value: '—', icon: Settings, link: '/owner/settings' },
   ];
+
+  const riskSegments = [
+    { label: 'Healthy', count: inventoryHealth.healthy, color: 'bg-emerald-500', textColor: 'text-emerald-700 dark:text-emerald-400', route: '/owner/performance' },
+    { label: 'Low Stock', count: inventoryHealth.low_stock, color: 'bg-amber-500', textColor: 'text-amber-700 dark:text-amber-400', route: '/inventory/manage' },
+    { label: 'Overstock', count: inventoryHealth.overstock, color: 'bg-blue-500', textColor: 'text-blue-700 dark:text-blue-400', route: '/owner/overstock' },
+    { label: 'Expiring', count: inventoryHealth.expiring_soon, color: 'bg-orange-500', textColor: 'text-orange-700 dark:text-orange-400', route: '/dashboard/fefo' },
+    { label: 'Expired', count: inventoryHealth.expired, color: 'bg-rose-500', textColor: 'text-rose-700 dark:text-rose-400', route: '/dashboard/fefo' },
+  ];
+  const riskTotal = riskSegments.reduce((sum, segment) => sum + segment.count, 0);
 
   if (loading) {
     return (
@@ -325,43 +382,36 @@ export function DashboardOverview() {
                 <TooltipContent>Confirmed wastage value recorded per day over the selected period. Predicted risk is not included.</TooltipContent>
               </UITooltip>
             </div>
-            <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[9px] font-semibold text-rose-700 dark:bg-rose-950/30 dark:text-rose-400">
-              Period total: {currencyFormatter.format(totalLeakage)}
-            </span>
+            <div className="flex items-baseline gap-2">
+              <span className="text-[9px] font-semibold uppercase tracking-wider text-[#64748B] dark:text-muted-fg">Period total</span>
+              <span className="text-base font-bold tabular-nums text-rose-600 dark:text-rose-400">
+                {currencyFormatter.format(totalLeakage)}
+              </span>
+            </div>
           </div>
           {wastageTrendData.length === 0 ? (
-            <div className="h-56 flex items-center justify-center text-sm text-[#64748B] dark:text-muted-fg text-center px-4">
+            <div className="flex h-56 items-center justify-center px-4 text-center text-xs text-[#64748B] dark:text-muted-fg">
               No recorded wastage in the selected period, so loss over time cannot be charted.
             </div>
           ) : (
-            <div className="h-56 w-full" role="img" aria-label="Wastage loss over time chart" style={{ minHeight: '224px' }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <LazyAreaChart data={wastageTrendData}>
-                  <ChartGradients />
-                  <LazyCartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_COLORS.grid} />
-                  <LazyXAxis dataKey="date" tick={{ fontSize: 10, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} />
-                  <LazyYAxis tick={{ fontSize: 10, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} tickFormatter={(v) => formatPesoAxis(Number(v))} />
-                  <LazyTooltip formatter={(value) => currencyFormatter.format(Number(value))} contentStyle={ChartTooltipStyle()} />
-                  <LazyArea
-                    type="monotone"
-                    dataKey="value"
-                    stroke={CHART_COLORS.danger}
-                    fill="url(#chart-danger-fill)"
-                    strokeWidth={2}
-                    dot={{ r: 2.5, strokeWidth: 0, fill: CHART_COLORS.danger }}
-                    activeDot={{ r: 4 }}
-                    name="Confirmed wastage"
-                    isAnimationActive={isAnimationActive}
-                    animationDuration={animationDuration}
-                    animationEasing={animationEasing}
-                    animationBegin={CHART_DEFAULTS.animationBegin}
-                  />
-                </LazyAreaChart>
-              </ResponsiveContainer>
-            </div>
+            <TrendChart
+              data={wastageTrendData}
+              name="Confirmed wastage"
+              variant="danger"
+              height={224}
+              ariaLabel="Wastage loss over time chart"
+            />
           )}
-          <div className="mt-2 text-[10px] text-[#64748B] dark:text-muted-fg">
-            Historical, confirmed wastage only — aggregated over the last {salesPeriod} days.
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-[#E5E7EB] pt-2 text-[10px] text-[#64748B] dark:border-white/10 dark:text-muted-fg">
+            <span>Confirmed wastage only · predicted risk excluded</span>
+            {peakWastageDay && wastageTrendData.length > 1 && (
+              <span>
+                Peak <span className="font-semibold text-[#0F172A] dark:text-slate-100">{formatShortDate(peakWastageDay.date)}</span> ·{' '}
+                {currencyFormatter.format(peakWastageDay.value)}
+                <span className="mx-1.5 opacity-40">|</span>
+                Avg {currencyFormatter.format(wastageTrendTotal / wastageTrendData.length)}/day
+              </span>
+            )}
           </div>
         </div>
       </section>
@@ -496,101 +546,82 @@ export function DashboardOverview() {
                 </span>
               </div>
             </div>
-            {leakageChartData.length === 0 ? (
-              <div className="h-52 flex items-center justify-center text-sm text-[#64748B] dark:text-muted-fg text-center px-4">
+            {categorySlices.length === 0 ? (
+              <div className="flex h-52 items-center justify-center px-4 text-center text-xs text-[#64748B] dark:text-muted-fg">
                 No wastage records in the selected period, so the loss breakdown cannot be populated.
               </div>
-            ) : leakageChartData.length === 1 ? (
-              <div className="flex h-52 flex-col justify-center gap-4 px-1">
-                <div>
-                  <div className="flex items-baseline justify-between gap-3">
-                    <span className="text-sm font-semibold text-[#0F172A] dark:text-slate-100">{leakageChartData[0].name}</span>
-                    <span className="text-sm font-bold tabular-nums text-rose-600 dark:text-rose-400">{currencyFormatter.format(leakageChartData[0].amount)}</span>
-                  </div>
-                  <div className="mt-2 h-2.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                    <div className="h-full w-full rounded-full bg-[#0F766E]" />
-                  </div>
-                  <div className="mt-2 flex justify-between text-[10px] text-[#64748B] dark:text-muted-fg">
-                    <span>100% of recorded wastage in this period</span>
-                    <span>{leakageChartData[0].quantity} units</span>
-                  </div>
-                </div>
-                <p className="text-[10px] leading-4 text-[#64748B] dark:text-muted-fg">
-                  Only one category recorded wastage, so a pie would repeat the same 100%.
-                </p>
-              </div>
             ) : (
-              <div className="relative h-52 w-full" role="img" aria-label={`Wastage loss by category chart: ${leakageViewMode} view`}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <LazyPieChart>
-                    <LazyPie
-                      data={leakageChartData}
-                      dataKey={leakageViewMode === 'value' ? 'amount' : leakageViewMode === 'quantity' ? 'quantity' : 'percentage'}
-                      nameKey="name"
-                      cx="50%"
-                      cy="44%"
-                      innerRadius={54}
-                      outerRadius={82}
-                      paddingAngle={2}
-                      stroke="none"
-                      label={false}
-                      labelLine={false}
-                    >
-                      {leakageChartData.map((_entry, index) => (
-                        <LazyCell key={`cell-${index}`} fill={LEAKAGE_COLORS[index % LEAKAGE_COLORS.length]} />
-                      ))}
-                    </LazyPie>
-                    <LazyTooltip
-                      formatter={(value) => leakageViewMode === 'value' ? currencyFormatter.format(Number(value)) : value}
-                      contentStyle={CHART_TOOLTIP_STYLE}
-                    />
-                    <LazyLegend
-                      verticalAlign="bottom"
-                      height={34}
-                      iconType="circle"
-                      iconSize={7}
-                      wrapperStyle={{ fontSize: '10px', lineHeight: '16px' }}
-                    />
-                  </LazyPieChart>
-                </ResponsiveContainer>
-                <div className="pointer-events-none absolute inset-x-0 top-[44%] -translate-y-1/2 text-center">
-                  <div className="text-sm font-bold tabular-nums text-[#0F172A] dark:text-slate-100">
-                    {leakageViewMode === 'value' ? currencyFormatter.format(totalLeakage) : leakageViewMode === 'quantity' ? `${leakageChartData.reduce((sum, item) => sum + Number(item.quantity), 0)} units` : '100%'}
-                  </div>
-                  <div className="text-[9px] uppercase tracking-widest text-[#64748B] dark:text-muted-fg">
-                    {leakageViewMode === 'value' ? 'Total loss' : leakageViewMode === 'quantity' ? 'Total units' : 'Share'}
+              <div className="flex flex-col items-center gap-5 sm:flex-row">
+                <div className="relative h-40 w-40 shrink-0" role="img" aria-label={`Wastage loss by category chart: ${leakageViewMode} view`}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LazyPieChart>
+                      <LazyPie
+                        data={categorySlices}
+                        dataKey={leakageViewMode === 'value' ? 'amount' : leakageViewMode === 'quantity' ? 'quantity' : 'percentage'}
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={48}
+                        outerRadius={64}
+                        paddingAngle={categorySlices.length > 1 ? 2 : 0}
+                        startAngle={90}
+                        endAngle={-270}
+                        stroke="none"
+                        label={false}
+                        labelLine={false}
+                      >
+                        {categorySlices.map((_entry, index) => (
+                          <LazyCell key={`cell-${index}`} fill={LEAKAGE_COLORS[index % LEAKAGE_COLORS.length]} />
+                        ))}
+                      </LazyPie>
+                      <LazyTooltip
+                        formatter={(value) => leakageViewMode === 'value' ? currencyFormatter.format(Number(value)) : value}
+                        contentStyle={CHART_TOOLTIP_STYLE}
+                      />
+                    </LazyPieChart>
+                  </ResponsiveContainer>
+                  <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-sm font-bold tabular-nums text-[#0F172A] dark:text-slate-100">
+                      {leakageViewMode === 'value'
+                        ? currencyFormatter.format(totalLeakage)
+                        : leakageViewMode === 'quantity'
+                          ? categorySlices.reduce((sum, item) => sum + item.quantity, 0)
+                          : `${leakageMetricTotal.toFixed(0)}%`}
+                    </span>
+                    <span className="text-[8px] font-semibold uppercase tracking-widest text-[#64748B] dark:text-muted-fg">
+                      {leakageViewMode === 'value' ? 'Total loss' : leakageViewMode === 'quantity' ? 'Units' : 'Share'}
+                    </span>
                   </div>
                 </div>
+                <ul className="w-full min-w-0 flex-1 space-y-2.5">
+                  {categorySlices.map((slice, index) => {
+                    const share = leakageMetricTotal > 0 ? (leakageMetricValue(slice) / leakageMetricTotal) * 100 : 0;
+                    return (
+                      <li key={slice.name} className="flex items-center gap-2">
+                        <span
+                          className="h-2 w-2 shrink-0 rounded-full"
+                          style={{ backgroundColor: LEAKAGE_COLORS[index % LEAKAGE_COLORS.length] }}
+                        />
+                        <span className="min-w-0 flex-1 truncate text-[11px] font-semibold text-[#0F172A] dark:text-slate-100" title={slice.name}>
+                          {slice.name}
+                        </span>
+                        <span className="shrink-0 text-[11px] font-bold tabular-nums text-[#0F172A] dark:text-slate-100">
+                          {formatLeakageMetric(slice)}
+                        </span>
+                        <span className="w-9 shrink-0 text-right text-[9px] font-semibold tabular-nums text-[#64748B] dark:text-muted-fg">
+                          {share.toFixed(share >= 10 ? 0 : 1)}%
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
               </div>
             )}
-
-            {/* Top Wasted Products */}
-            <div className="mt-4 pt-3 border-t border-[#E5E7EB] dark:border-white/10">
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="text-[10px] font-bold text-[#64748B] dark:text-muted-fg uppercase tracking-wider">Top Wasted Products</h4>
-                <Link to="/dashboard/leakage" className="text-[9px] font-semibold text-[#0F766E] hover:underline">View All</Link>
-              </div>
-              <div className="space-y-2">
-                {(ownerAnalytics?.top_wasted_products ?? []).slice(0, 5).map((product) => {
-                  const maxLoss = ownerAnalytics?.top_wasted_products?.[0]?.loss ?? 1;
-                  const pct = maxLoss > 0 ? (Number(product.loss) / Number(maxLoss)) * 100 : 0;
-                  return (
-                    <div key={product.product_id}>
-                      <div className="flex items-center justify-between mb-0.5">
-                        <span className="text-[11px] font-semibold text-[#0F172A] dark:text-slate-100 truncate">{product.name}</span>
-                        <span className="text-[11px] font-bold text-rose-600 dark:text-rose-400">{currencyFormatter.format(Number(product.loss))}</span>
-                      </div>
-                      <div className="h-1 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                        <div className="h-full bg-rose-400 rounded-full" style={{ width: `${pct}%` }} />
-                      </div>
-                    </div>
-                  );
-                })}
-                {(ownerAnalytics?.top_wasted_products ?? []).length === 0 && (
-                  <div className="text-[11px] text-[#64748B] dark:text-muted-fg">No wasted products in this period.</div>
-                )}
-              </div>
-            </div>
+            <p className="mt-4 text-[10px] leading-4 text-[#64748B] dark:text-muted-fg">
+              {categorySlices.length === 1
+                ? 'Only one category recorded wastage in this period, so it accounts for all of the loss.'
+                : `Share of confirmed wastage across ${categorySlices.length} categories in the last ${salesPeriod} days.`}
+            </p>
           </div>
 
           {/* Inventory Health */}
@@ -609,14 +640,20 @@ export function DashboardOverview() {
                 Full view <ChevronRight className="h-2.5 w-2.5" />
               </Link>
             </div>
+            <div className="mb-3 flex h-2.5 w-full gap-0.5 overflow-hidden rounded-full bg-slate-100 dark:bg-white/10" aria-hidden="true">
+              {riskSegments
+                .filter((segment) => segment.count > 0 && riskTotal > 0)
+                .map((segment) => (
+                  <div
+                    key={segment.label}
+                    className={`h-full ${segment.color}`}
+                    style={{ width: `${(segment.count / riskTotal) * 100}%` }}
+                    title={`${segment.label}: ${segment.count}`}
+                  />
+                ))}
+            </div>
             <div className="grid grid-cols-5 gap-1.5">
-              {[
-                { label: 'Healthy', count: inventoryHealth.healthy, color: 'bg-emerald-500', textColor: 'text-emerald-700 dark:text-emerald-400', route: '/owner/performance' },
-                { label: 'Low Stock', count: inventoryHealth.low_stock, color: 'bg-amber-500', textColor: 'text-amber-700 dark:text-amber-400', route: '/inventory/manage' },
-                { label: 'Overstock', count: inventoryHealth.overstock, color: 'bg-blue-500', textColor: 'text-blue-700 dark:text-blue-400', route: '/owner/overstock' },
-                { label: 'Expiring', count: inventoryHealth.expiring_soon, color: 'bg-orange-500', textColor: 'text-orange-700 dark:text-orange-400', route: '/dashboard/fefo' },
-                { label: 'Expired', count: inventoryHealth.expired, color: 'bg-rose-500', textColor: 'text-rose-700 dark:text-rose-400', route: '/dashboard/fefo' },
-              ].map((item) => (
+              {riskSegments.map((item) => (
                 <Link
                   key={item.label}
                   to={item.route}
@@ -739,30 +776,26 @@ export function DashboardOverview() {
                   <TooltipContent>Daily revenue from completed POS transactions</TooltipContent>
                 </UITooltip>
               </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-[9px] font-semibold uppercase tracking-wider text-[#64748B] dark:text-muted-fg">Period total</span>
+                <span className="text-sm font-bold tabular-nums text-[#0F766E] dark:text-emerald-400">
+                  {currencyFormatter.format(salesTrendTotal)}
+                </span>
+              </div>
             </div>
-            <div className="h-48 w-full" role="img" aria-label="Sales and revenue trend chart" style={{ minHeight: '192px' }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <LazyAreaChart data={salesTrendData}>
-                  <ChartGradients />
-                  <LazyCartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_COLORS.grid} />
-                  <LazyXAxis dataKey="date" tick={{ fontSize: 11, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} />
-                  <LazyYAxis tick={{ fontSize: 11, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} tickFormatter={(v) => formatPesoAxis(Number(v))} />
-                  <LazyTooltip formatter={(value) => currencyFormatter.format(Number(value))} contentStyle={ChartTooltipStyle()} />
-                  <LazyArea
-                    type="monotone"
-                    dataKey="value"
-                    stroke={CHART_COLORS.primary}
-                    fill="url(#chart-primary-fill)"
-                    strokeWidth={2}
-                    name="Revenue"
-                    isAnimationActive={isAnimationActive}
-                    animationDuration={animationDuration}
-                    animationEasing={animationEasing}
-                    animationBegin={CHART_DEFAULTS.animationBegin}
-                  />
-                </LazyAreaChart>
-              </ResponsiveContainer>
-            </div>
+            {salesTrendData.length === 0 ? (
+              <div className="flex h-56 items-center justify-center px-4 text-center text-xs text-[#64748B] dark:text-muted-fg">
+                No completed sales in the selected period.
+              </div>
+            ) : (
+              <TrendChart
+                data={salesTrendData}
+                name="Revenue"
+                variant="primary"
+                height={224}
+                ariaLabel="Sales and revenue trend chart"
+              />
+            )}
           </div>
 
           {/* Loss by product — confirmed wastage ranked by financial impact */}
@@ -781,38 +814,22 @@ export function DashboardOverview() {
                 Details <ChevronRight className="h-2.5 w-2.5" />
               </Link>
             </div>
-            {(ownerAnalytics?.top_wasted_products ?? []).length === 0 ? (
-              <div className="h-48 flex items-center justify-center text-sm text-[#64748B] dark:text-muted-fg text-center px-4">
-                No confirmed wastage recorded for any product in this period.
-              </div>
-            ) : (
-              <div className="h-48 w-full" role="img" aria-label="Loss by product chart" style={{ minHeight: '192px' }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <LazyBarChart
-                    data={(ownerAnalytics?.top_wasted_products ?? []).slice(0, 6).map((item) => ({
-                      name: item.name,
-                      loss: Number(item.loss),
-                    }))}
-                    layout="vertical"
-                    margin={{ top: 4, right: 16, bottom: 4, left: 4 }}
-                    barSize={24}
-                    barCategoryGap="28%"
-                  >
-                    <LazyCartesianGrid strokeDasharray="3 3" horizontal={false} stroke={CHART_COLORS.grid} />
-                    <LazyXAxis type="number" tick={{ fontSize: 10, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} tickFormatter={(v) => formatPesoAxis(Number(v))} />
-                    <LazyYAxis
-                      dataKey="name"
-                      type="category"
-                      width={124}
-                      tick={{ fontSize: 10, fill: CHART_COLORS.text }}
-                      stroke={CHART_COLORS.axis}
-                      tickFormatter={(value: string) => (value.length > 18 ? `${value.slice(0, 17)}…` : value)}
-                    />
-                    <LazyTooltip formatter={(value) => currencyFormatter.format(Number(value))} contentStyle={ChartTooltipStyle()} />
-                    <LazyBar dataKey="loss" name="Confirmed loss" radius={[0, 6, 6, 0]} fill={CHART_COLORS.danger} />
-                  </LazyBarChart>
-                </ResponsiveContainer>
-              </div>
+            <RankedBars
+              items={(ownerAnalytics?.top_wasted_products ?? []).slice(0, 6).map((product) => ({
+                id: product.product_id,
+                label: product.name,
+                value: Number(product.loss),
+                meta: `${Number(product.quantity)} units written off`,
+              }))}
+              formatValue={(value) => currencyFormatter.format(value)}
+              total={totalLeakage}
+              showRank
+              emptyMessage="No confirmed wastage recorded for any product in this period."
+            />
+            {(ownerAnalytics?.top_wasted_products ?? []).length > 0 && (
+              <p className="mt-3 border-t border-[#E5E7EB] pt-2 text-[10px] text-[#64748B] dark:border-white/10 dark:text-muted-fg">
+                Bars are scaled to the largest product; the share column is of all confirmed wastage in the period.
+              </p>
             )}
           </div>
         </div>
@@ -836,25 +853,24 @@ export function DashboardOverview() {
                   <TooltipContent>Revenue share from completed POS transactions</TooltipContent>
                 </UITooltip>
               </div>
-              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-semibold text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
-                {currencyFormatter.format(paymentRevenue)} total
-              </span>
+              <div className="flex items-baseline gap-2">
+                <span className="text-[9px] font-semibold uppercase tracking-wider text-[#64748B] dark:text-muted-fg">Total</span>
+                <span className="text-sm font-bold tabular-nums text-[#0F766E] dark:text-emerald-400">
+                  {currencyFormatter.format(paymentRevenue)}
+                </span>
+              </div>
             </div>
             {paymentBreakdown.length > 0 ? (
-              <div className="h-40 w-full" role="img" aria-label="Revenue by payment method chart" style={{ minHeight: '160px' }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <LazyBarChart data={paymentBreakdown} layout="vertical">
-                    <LazyCartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F1F5F9" />
-                    <LazyXAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} stroke="#E5E7EB" tickFormatter={(v) => formatPesoAxis(Number(v))} />
-                    <LazyYAxis dataKey="method" type="category" tick={{ fontSize: 11, fill: '#94a3b8' }} stroke="#E5E7EB" width={84} />
-                    <LazyTooltip
-                      formatter={(value) => currencyFormatter.format(Number(value))}
-                      contentStyle={CHART_TOOLTIP_STYLE}
-                    />
-                    <LazyBar dataKey="revenue" barSize={18} radius={[0, 6, 6, 0]} fill="#0F766E" />
-                  </LazyBarChart>
-                </ResponsiveContainer>
-              </div>
+              <RankedBars
+                items={paymentBreakdown.map((method) => ({
+                  id: method.method,
+                  label: formatPaymentMethod(method.method),
+                  value: Number(method.revenue),
+                }))}
+                formatValue={(value) => currencyFormatter.format(value)}
+                total={paymentRevenue}
+                barClassName="bg-gradient-to-r from-teal-500 to-[#0F766E]"
+              />
             ) : (
               <div className="h-48 flex items-center justify-center text-sm text-[#64748B] dark:text-muted-fg">
                 No payment data available

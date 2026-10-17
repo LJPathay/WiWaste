@@ -87,9 +87,46 @@ export const CHART_COLORS = {
   danger: '#EF4444',
   warning: '#F59E0B',
   info: '#06B6D4',
-  grid: '#F1F5F9',
+  grid: '#EEF2F6',
   text: '#94A3B8',
   axis: '#E5E7EB',
+} as const;
+
+/**
+ * Categorical palette for part-to-whole charts. Neighbouring slices alternate between
+ * warm and cool hues so adjacent wedges stay distinguishable; the previous list ran teal,
+ * orange, amber, yellow, green — three warm earth tones in a row that read as one slice.
+ */
+export const CHART_SERIES = ['#0F766E', '#F97316', '#2563EB', '#9333EA', '#EAB308', '#EC4899', '#0EA5E9', '#84CC16'] as const;
+
+const shortDateFormatter = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+  // Pinned to UTC: the API sends plain `YYYY-MM-DD` strings, which `new Date()` parses as
+  // UTC midnight. Formatting that in a negative-offset timezone would print the day before.
+  timeZone: 'UTC',
+});
+
+/** `2026-10-14` → `Oct 14`. Falls back to the raw label for anything unparseable. */
+export function formatShortDate(value: string | number): string {
+  const raw = String(value);
+  if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
+    const parsed = new Date(`${raw.slice(0, 10)}T00:00:00Z`);
+    if (!Number.isNaN(parsed.getTime())) return shortDateFormatter.format(parsed);
+  }
+  return raw;
+}
+
+/**
+ * Shared styling for numeric axes: no axis line, no tick marks, muted labels. Recharts
+ * defaults draw a full box around the plot area, which is what made the sparse charts
+ * look like empty graph paper.
+ */
+export const CHART_AXIS_PROPS = {
+  tick: { fontSize: 10, fill: CHART_COLORS.text },
+  tickLine: false,
+  axisLine: false,
+  tickMargin: 8,
 } as const;
 
 export const CHART_GRADIENTS = {
@@ -104,6 +141,8 @@ export const CHART_GRADIENTS = {
   stockIn: 'chart-stock-in-fill',
   stockOut: 'chart-stock-out-fill',
   wastage: 'chart-wastage-fill',
+  barPrimary: 'chart-bar-primary',
+  barDanger: 'chart-bar-danger',
 } as const;
 
 export const CHART_TOOLTIP_STYLE = {

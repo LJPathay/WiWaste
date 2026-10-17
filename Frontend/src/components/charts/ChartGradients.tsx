@@ -60,6 +60,17 @@ export function ChartGradients() {
         <stop offset="5%" stopColor={CHART_COLORS.danger} stopOpacity={0.3} />
         <stop offset="95%" stopColor={CHART_COLORS.danger} stopOpacity={0} />
       </linearGradient>
+
+      {/* Solid-ish fills for bars: a bar must stay legible all the way down, so these
+          fade only slightly instead of vanishing at the baseline like the area fills. */}
+      <linearGradient id={CHART_GRADIENTS.barPrimary} x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor="#14B8A6" />
+        <stop offset="100%" stopColor={CHART_COLORS.primary} />
+      </linearGradient>
+      <linearGradient id={CHART_GRADIENTS.barDanger} x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor="#FB7185" />
+        <stop offset="100%" stopColor="#E11D48" />
+      </linearGradient>
     </defs>
   );
 }

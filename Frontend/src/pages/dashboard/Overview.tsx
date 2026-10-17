@@ -311,6 +311,58 @@ export function DashboardOverview() {
         </div>
       </section>
 
+      {/* Primary analytics: recorded wastage loss over the selected period */}
+      <section aria-label="Wastage loss over time">
+        <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated p-4 shadow-sm">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <h2 className="text-xs font-bold uppercase tracking-widest text-[#64748B] dark:text-muted-fg">Wastage Loss Over Time</h2>
+              <UITooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-3.5 w-3.5 text-muted-fg hover:text-rose-600 cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent>Confirmed wastage value recorded per day over the selected period. Predicted risk is not included.</TooltipContent>
+              </UITooltip>
+            </div>
+            <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[9px] font-semibold text-rose-700 dark:bg-rose-950/30 dark:text-rose-400">
+              Period total: {currencyFormatter.format(totalLeakage)}
+            </span>
+          </div>
+          {wastageTrendData.length === 0 ? (
+            <div className="h-56 flex items-center justify-center text-sm text-[#64748B] dark:text-muted-fg text-center px-4">
+              No recorded wastage in the selected period, so loss over time cannot be charted.
+            </div>
+          ) : (
+            <div className="h-56 w-full" role="img" aria-label="Wastage loss over time chart" style={{ minHeight: '224px' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LazyAreaChart data={wastageTrendData}>
+                  <ChartGradients />
+                  <LazyCartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_COLORS.grid} />
+                  <LazyXAxis dataKey="date" tick={{ fontSize: 10, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} />
+                  <LazyYAxis tick={{ fontSize: 10, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} tickFormatter={(v) => `₱${(Number(v) / 1000).toFixed(0)}k`} />
+                  <LazyTooltip formatter={(value) => currencyFormatter.format(Number(value))} contentStyle={ChartTooltipStyle()} />
+                  <LazyArea
+                    type="monotone"
+                    dataKey="value"
+                    stroke={CHART_COLORS.danger}
+                    fill="url(#chart-danger-fill)"
+                    strokeWidth={2}
+                    name="Confirmed wastage"
+                    isAnimationActive={isAnimationActive}
+                    animationDuration={animationDuration}
+                    animationEasing={animationEasing}
+                    animationBegin={CHART_DEFAULTS.animationBegin}
+                  />
+                </LazyAreaChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+          <div className="mt-2 text-[10px] text-[#64748B] dark:text-muted-fg">
+            Historical, confirmed wastage only — aggregated over the last {salesPeriod} days.
+          </div>
+        </div>
+      </section>
+
       {/* Supporting metrics — compact row, secondary to the risk KPIs above */}
       <section aria-label="Supporting business metrics">
         <div className="flex items-center gap-3 mb-2">
@@ -406,12 +458,12 @@ export function DashboardOverview() {
           <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated p-4 shadow-sm">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <h3 className="text-xs font-bold text-[#0F172A] dark:text-slate-100">Leakage by Category</h3>
+                <h3 className="text-xs font-bold text-[#0F172A] dark:text-slate-100">Wastage Loss by Category</h3>
                 <UITooltip>
                   <TooltipTrigger asChild>
                     <Info className="h-3.5 w-3.5 text-muted-fg hover:text-rose-600 cursor-help" />
                   </TooltipTrigger>
-                  <TooltipContent>Financial losses broken down by product category</TooltipContent>
+                  <TooltipContent>Confirmed wastage value grouped by product category. Cause-level (expiry, damage, spoilage) breakdown is not stored in the current data model.</TooltipContent>
                 </UITooltip>
               </div>
               <div className="flex items-center gap-1.5">
@@ -502,12 +554,12 @@ export function DashboardOverview() {
           <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated p-4 shadow-sm">
             <div className="mb-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <h3 className="text-xs font-bold text-[#0F172A] dark:text-slate-100">Inventory Health</h3>
+                <h3 className="text-xs font-bold text-[#0F172A] dark:text-slate-100">Inventory Risk Breakdown</h3>
                 <UITooltip>
                   <TooltipTrigger asChild>
                     <Info className="h-3.5 w-3.5 text-muted-fg hover:text-sky-600 cursor-help" />
                   </TooltipTrigger>
-                  <TooltipContent>Distribution of inventory by health status</TooltipContent>
+                  <TooltipContent>Distinct products per inventory condition. Categories can overlap — a product may be both expiring and overstocked.</TooltipContent>
                 </UITooltip>
               </div>
               <Link to="/owner/performance" className="flex items-center gap-1 text-[10px] font-semibold text-[#0F766E] hover:underline">
@@ -533,6 +585,9 @@ export function DashboardOverview() {
                 </Link>
               ))}
             </div>
+            <p className="mt-2 text-[10px] text-[#64748B] dark:text-muted-fg">
+              Categories are not mutually exclusive; a product can count in more than one risk bucket.
+            </p>
           </div>
         </div>
       </section>
@@ -623,10 +678,10 @@ export function DashboardOverview() {
         </div>
       </section>
 
-      {/* Trends */}
+      {/* Product-level and revenue analysis */}
       <section>
         <div className="flex items-center gap-3 mb-3">
-          <h2 className="text-sm font-bold text-[#0F172A] dark:text-slate-100 whitespace-nowrap">Trends</h2>
+          <h2 className="text-sm font-bold text-[#0F172A] dark:text-slate-100 whitespace-nowrap">Product & Revenue Analysis</h2>
           <div className="flex-1 h-px bg-[#E5E7EB] dark:bg-white/10" />
         </div>
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
@@ -667,44 +722,46 @@ export function DashboardOverview() {
             </div>
           </div>
 
+          {/* Loss by product — confirmed wastage ranked by financial impact */}
           <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated p-4 shadow-sm">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <h3 className="text-xs font-bold text-[#0F172A] dark:text-slate-100">Wastage Trend</h3>
+                <h3 className="text-xs font-bold text-[#0F172A] dark:text-slate-100">Loss by Product</h3>
                 <UITooltip>
                   <TooltipTrigger asChild>
                     <Info className="h-3.5 w-3.5 text-muted-fg hover:text-rose-600 cursor-help" />
                   </TooltipTrigger>
-                  <TooltipContent>Monetary value of inventory waste over time</TooltipContent>
+                  <TooltipContent>Products with the largest confirmed wastage loss in the selected period</TooltipContent>
                 </UITooltip>
               </div>
               <Link to="/dashboard/leakage" className="flex items-center gap-1 text-[10px] font-semibold text-[#0F766E] hover:underline">
-                View Details <ChevronRight className="h-2.5 w-2.5" />
+                Details <ChevronRight className="h-2.5 w-2.5" />
               </Link>
             </div>
-            <div className="h-48 w-full" role="img" aria-label="Wastage trend chart" style={{ minHeight: '192px' }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <LazyAreaChart data={wastageTrendData}>
-                  <ChartGradients />
-                  <LazyCartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_COLORS.grid} />
-                  <LazyXAxis dataKey="date" tick={{ fontSize: 10, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} />
-                  <LazyYAxis tick={{ fontSize: 10, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} tickFormatter={(v) => `₱${(Number(v) / 1000).toFixed(0)}k`} />
-                  <LazyTooltip formatter={(value) => currencyFormatter.format(Number(value))} contentStyle={ChartTooltipStyle()} />
-                  <LazyArea
-                    type="monotone"
-                    dataKey="value"
-                    stroke={CHART_COLORS.danger}
-                    fill="url(#chart-danger-fill)"
-                    strokeWidth={2}
-                    name="Wastage"
-                    isAnimationActive={isAnimationActive}
-                    animationDuration={animationDuration}
-                    animationEasing={animationEasing}
-                    animationBegin={CHART_DEFAULTS.animationBegin}
-                  />
-                </LazyAreaChart>
-              </ResponsiveContainer>
-            </div>
+            {(ownerAnalytics?.top_wasted_products ?? []).length === 0 ? (
+              <div className="h-48 flex items-center justify-center text-sm text-[#64748B] dark:text-muted-fg text-center px-4">
+                No confirmed wastage recorded for any product in this period.
+              </div>
+            ) : (
+              <div className="h-48 w-full" role="img" aria-label="Loss by product chart" style={{ minHeight: '192px' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LazyBarChart
+                    data={(ownerAnalytics?.top_wasted_products ?? []).slice(0, 6).map((item) => ({
+                      name: item.name,
+                      loss: Number(item.loss),
+                    }))}
+                    layout="vertical"
+                    margin={{ top: 0, right: 8, bottom: 0, left: 8 }}
+                  >
+                    <LazyCartesianGrid strokeDasharray="3 3" horizontal={false} stroke={CHART_COLORS.grid} />
+                    <LazyXAxis type="number" tick={{ fontSize: 10, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} tickFormatter={(v) => `₱${(Number(v) / 1000).toFixed(0)}k`} />
+                    <LazyYAxis dataKey="name" type="category" width={96} tick={{ fontSize: 10, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} />
+                    <LazyTooltip formatter={(value) => currencyFormatter.format(Number(value))} contentStyle={ChartTooltipStyle()} />
+                    <LazyBar dataKey="loss" name="Confirmed loss" radius={[0, 4, 4, 0]} fill={CHART_COLORS.danger} />
+                  </LazyBarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
           </div>
         </div>
       </section>

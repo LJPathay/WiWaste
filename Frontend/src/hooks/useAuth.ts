@@ -55,17 +55,39 @@ function getStoredUser(): AuthUser | null {
   }
 }
 
+// Every layout, route guard and page that calls useAuth verifies the token, so a
+// single navigation used to fire a dozen identical GET /me requests. Share one
+// in-flight call and treat a recent success as fresh.
+const ME_TTL_MS = 2 * 60 * 1000;
+let meInFlight: Promise<unknown> | null = null;
+let meVerifiedAt = 0;
+
+function fetchMeOnce(): Promise<unknown> {
+  if (!meInFlight) {
+    meInFlight = auth.me().finally(() => { meInFlight = null; });
+  }
+  return meInFlight;
+}
+
 export function useAuth() {
   const [user, setUser] = useState<AuthUser | null>(getStoredUser);
   const [loading, setLoading] = useState(true);
   const mountedRef = useRef(true);
 
   // Verify token with /me on mount and when refetch is called
-  const verifyToken = useCallback(async () => {
+  const verifyToken = useCallback(async (force = false) => {
     if (!mountedRef.current) return;
+
+    const cached = getStoredUser();
+    if (!force && cached?.role && Date.now() - meVerifiedAt < ME_TTL_MS) {
+      setUser(cached);
+      setLoading(false);
+      return;
+    }
+
     try {
       console.debug('[Auth] verifyToken: checking token...', localStorage.getItem('wiwaste_token')?.substring(0, 20) + '...');
-      const apiUser = await auth.me();
+      const apiUser = await fetchMeOnce();
       console.debug('[Auth] verifyToken /me response:', apiUser);
       // `/me` also answers through `success()`, so the user object sits under `data`.
       const userData = apiUser && 'data' in apiUser ? apiUser.data : apiUser;
@@ -81,11 +103,13 @@ export function useAuth() {
         apiRole: userData.role,
       };
       console.debug('[Auth] verifyToken success, mapped role:', mapped.role, 'from apiRole:', mapped.apiRole);
+      meVerifiedAt = Date.now();
       if (mountedRef.current) {
         setUser(mapped);
         localStorage.setItem('wiwaste_user', JSON.stringify(mapped));
       }
     } catch (err) {
+      meVerifiedAt = 0;
       console.error('[Auth] verifyToken failed:', err);
       // Don't clear user if we have a valid session from login (persisted in localStorage)
       const storedUser = getStoredUser();
@@ -142,6 +166,7 @@ export function useAuth() {
       apiRole: userData.role,
     };
     console.debug('[Auth] Login successful, mapped role:', mapped.role, 'from apiRole:', mapped.apiRole);
+    meVerifiedAt = Date.now();
     setUser(mapped);
     localStorage.setItem('wiwaste_user', JSON.stringify(mapped));
     setLoading(false);
@@ -161,12 +186,14 @@ export function useAuth() {
     localStorage.removeItem('wiwaste_token');
     clearStoredSession();
 
+    meVerifiedAt = 0;
+    meInFlight = null;
     setUser(null);
   }, []);
 
   const refetch = useCallback(() => {
     setLoading(true);
-    verifyToken();
+    verifyToken(true);
   }, [verifyToken]);
 
   return { user, loading, login, logout, refetch };

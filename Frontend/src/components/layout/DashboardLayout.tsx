@@ -380,10 +380,6 @@ export function DashboardLayout() {
                 {sidebarGroups.flatMap((g) => g.items).find((i) => i.to === location.pathname)?.label ?? 'Dashboard'}
               </span>
             </div>
-            <div className="flex items-center gap-3 shrink-0">
-              <span className="text-xs text-muted-fg dark:text-muted-fg truncate max-w-[160px]">{session.name}</span>
-              <ThemeToggle />
-            </div>
           </header>
 
           {/* Page content */}

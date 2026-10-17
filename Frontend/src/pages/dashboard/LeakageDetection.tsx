@@ -34,6 +34,8 @@ function getSeverityStyle(tier: RiskTier) {
   };
 }
 
+const formatDays = (days: number) => `${Math.round(Number(days))} days`;
+
 function topDriver(item: ApiLossRiskItem): { name: string; value: number } {
   const entries = Object.entries(item.feature_importance ?? {});
   if (entries.length === 0) return { name: 'unknown factor', value: 0 };
@@ -183,7 +185,7 @@ export function LeakageDetectionPage() {
                 <span className="shrink-0 rounded-full bg-rose-100 px-1.5 py-0.5 text-[9px] font-bold text-rose-700 dark:bg-rose-500/20 dark:text-rose-300">PRIORITY</span>
               </div>
               <p className="mt-0.5 text-xs leading-5 text-rose-800/80 dark:text-rose-200/70">
-                This SKU alone could lose <strong>{currencyFormatter.format(topItem.expected_loss)}</strong> ({topItem.days_to_expiry} days to expiry, {topItem.current_stock} on hand). Treat it as the first investigation target.
+                This SKU alone could lose <strong>{currencyFormatter.format(topItem.expected_loss)}</strong> ({formatDays(topItem.days_to_expiry)} to expiry, {topItem.current_stock} on hand). Treat it as the first investigation target.
               </p>
             </div>
           </div>
@@ -288,50 +290,56 @@ export function LeakageDetectionPage() {
               ))}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-              {filteredItems.map((item) => {
-                const style = getSeverityStyle(item.risk_tier);
-                const driver = topDriver(item);
-                return (
-                  <div key={item.product_id} className={`rounded-xl border border-border bg-white p-3.5 shadow-sm dark:border-white/10 dark:bg-slate-900 border-l-4 ${style.border} transition-all hover:-translate-y-0.5 hover:shadow-md`}>
-                    <div className="flex items-center justify-between gap-2">
-                      <h3 className="text-sm font-bold text-[#0b1c30] dark:text-slate-100">{item.product_name}</h3>
-                      <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-[9px] font-bold ${style.badge}`}>{item.risk_tier}</span>
-                    </div>
-                    <p className="mt-0.5 text-[9px] text-muted-fg dark:text-muted-fg">
-                      {item.sku} · {item.category} · {item.current_stock} units · {item.days_to_expiry} days to expiry
-                    </p>
-                    <div className="mt-3 grid grid-cols-2 gap-2">
-                      <div className="rounded-xl bg-bg border border-slate-100 p-2.5 dark:bg-slate-800 dark:border-white/5">
-                        <div className="text-[9px] font-medium text-muted-fg">Expected Loss</div>
-                        <div className="mt-0.5 text-base font-bold text-[#0b1c30] dark:text-slate-100">{currencyFormatter.format(item.expected_loss)}</div>
-                      </div>
-                      <div className="rounded-xl bg-bg border border-slate-100 p-2.5 dark:bg-slate-800 dark:border-white/5">
-                        <div className="text-[9px] font-medium text-muted-fg">Loss Probability</div>
-                        <div className="mt-0.5 text-base font-bold text-[#0b1c30] dark:text-slate-100">{(item.loss_probability * 100).toFixed(1)}%</div>
-                      </div>
-                    </div>
-                    <div className="mt-3">
-                      <div className="flex items-center justify-between text-[9px] text-muted-fg mb-0.5">
-                        <span>Risk exposure</span>
-                        <span>{(item.loss_probability * 100).toFixed(0)}%</span>
-                      </div>
-                      <div className="h-1.5 w-full rounded-full bg-slate-100 dark:bg-slate-700">
-                        <div className={`h-1.5 rounded-full ${style.bar} transition-all`} style={{ width: `${Math.round(item.loss_probability * 100)}%` }} />
-                      </div>
-                    </div>
-                    <div className="mt-2 text-[9px] text-muted-fg dark:text-muted-fg">
-                      <span className="font-semibold text-slate-700 dark:text-slate-300">Top driver: </span>
-                      {driver.name} ({driver.value.toFixed(2)} importance)
-                    </div>
-                  </div>
-                );
-              })}
-              {filteredItems.length === 0 && (
-                <div className="col-span-full rounded-xl border border-dashed border-slate-300 p-6 text-center text-xs text-muted-fg dark:border-white/10 dark:text-muted-fg">
-                  No {tier === 'All' ? '' : `${tier.toLowerCase()}-risk `}items in the current assessment.
-                </div>
-              )}
+            <div className="overflow-x-auto rounded-xl border border-border bg-white shadow-sm dark:border-white/10 dark:bg-slate-900">
+              <table className="w-full min-w-[760px] text-left text-xs">
+                <thead className="bg-slate-50 text-[9px] uppercase tracking-wider text-muted-fg dark:bg-white/5">
+                  <tr>
+                    <th className="px-3 py-2 font-semibold">Product</th>
+                    <th className="px-3 py-2 font-semibold">Category</th>
+                    <th className="px-3 py-2 text-right font-semibold">Stock</th>
+                    <th className="px-3 py-2 text-right font-semibold">Days to expiry</th>
+                    <th className="px-3 py-2 text-right font-semibold">Expected loss</th>
+                    <th className="px-3 py-2 text-right font-semibold">Loss probability</th>
+                    <th className="px-3 py-2 font-semibold">Risk</th>
+                    <th className="px-3 py-2 font-semibold">Top driver</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredItems.map((item) => {
+                    const style = getSeverityStyle(item.risk_tier);
+                    const driver = topDriver(item);
+                    return (
+                      <tr
+                        key={item.product_id}
+                        className="border-t border-slate-100 transition-colors hover:bg-slate-50 dark:border-white/5 dark:hover:bg-white/5"
+                      >
+                        <td className="px-3 py-2">
+                          <div className="font-semibold text-[#0b1c30] dark:text-slate-100">{item.product_name}</div>
+                          <div className="text-[9px] text-muted-fg">{item.sku}</div>
+                        </td>
+                        <td className="px-3 py-2 text-muted-fg">{item.category}</td>
+                        <td className="px-3 py-2 text-right tabular-nums text-slate-700 dark:text-slate-300">{item.current_stock}</td>
+                        <td className="px-3 py-2 text-right tabular-nums text-slate-700 dark:text-slate-300">{formatDays(item.days_to_expiry)}</td>
+                        <td className="px-3 py-2 text-right font-semibold tabular-nums text-[#0b1c30] dark:text-slate-100">{currencyFormatter.format(item.expected_loss)}</td>
+                        <td className="px-3 py-2 text-right tabular-nums text-slate-700 dark:text-slate-300">{(item.loss_probability * 100).toFixed(1)}%</td>
+                        <td className="px-3 py-2">
+                          <span className={`inline-flex rounded-full px-2 py-0.5 text-[9px] font-bold ${style.badge}`}>{item.risk_tier}</span>
+                        </td>
+                        <td className="px-3 py-2 text-muted-fg">
+                          {driver.name} <span className="text-[9px] opacity-70">({driver.value.toFixed(2)})</span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {filteredItems.length === 0 && (
+                    <tr>
+                      <td colSpan={8} className="px-3 py-8 text-center text-xs text-muted-fg">
+                        No {tier === 'All' ? '' : `${tier.toLowerCase()}-risk `}items in the current assessment.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </section>
         </>

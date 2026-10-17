@@ -458,7 +458,7 @@ export function DashboardOverview() {
           <h2 className="text-sm font-bold text-[#0F172A] dark:text-slate-100 whitespace-nowrap">Wastage Loss Breakdown</h2>
           <div className="flex-1 h-px bg-[#E5E7EB] dark:bg-white/10" />
         </div>
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-2">
           {/* Leakage by Category */}
           <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated p-4 shadow-sm">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">

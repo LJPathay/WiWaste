@@ -70,14 +70,14 @@ export function DashboardOverview() {
 
   // Secondary queries are deferred until the primary dashboard data has loaded so
   // the initial request burst does not serialize on the single-threaded dev server.
-  const { data: dashboardSummary } = useQuery({
+  const { data: dashboardSummary, isError: summaryFailed } = useQuery({
     queryKey: ['dashboardSummary'],
     queryFn: () => inventoryAnalytics.dashboardSummary(),
     enabled: dashboardLoaded,
     staleTime: 30000,
   });
 
-  const { data: overstock } = useQuery({
+  const { data: overstock, isError: overstockFailed } = useQuery({
     queryKey: ['overstock'],
     queryFn: () => inventoryAnalytics.overstock(),
     enabled: dashboardLoaded,
@@ -121,9 +121,6 @@ export function DashboardOverview() {
   const profitUp = grossProfit >= grossProfitLast;
 
   const wastageThisMonth = overview?.wastage_this_month ?? 0;
-  const wastageLastMonth = overview?.wastage_last_month ?? 0;
-  const wastageChange = wastageLastMonth > 0 ? ((wastageThisMonth - wastageLastMonth) / wastageLastMonth * 100) : null;
-  const wastageUp = wastageThisMonth <= wastageLastMonth;
 
   const inventoryValue = overview?.inventory_value ?? 0;
 
@@ -222,6 +219,7 @@ export function DashboardOverview() {
     return (b.potentialLoss ?? 0) - (a.potentialLoss ?? 0);
   });
 
+  const actionQueueFailed = summaryFailed || overstockFailed;
   const currentInventoryAtRisk = overstock?.total_exposure ?? 0;
   const forecastedPotentialLoss = lossRiskResult?.summary?.total_expected_loss ?? 0;
 
@@ -282,7 +280,7 @@ export function DashboardOverview() {
       <section>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {[
-            { label: 'Confirmed Wastage Loss', value: currencyFormatter.format(wastageThisMonth), note: wastageChange !== null ? `${wastageUp ? '↓' : '↑'} ${Math.abs(wastageChange).toFixed(1)}% vs last month` : 'Recorded wastage this month', icon: AlertTriangle, color: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-50 dark:bg-rose-950/30', route: '/dashboard/leakage', accent: true },
+            { label: 'Confirmed Wastage Loss', value: currencyFormatter.format(totalLeakage), note: `Recorded in the last ${salesPeriod} days`, icon: AlertTriangle, color: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-50 dark:bg-rose-950/30', route: '/dashboard/leakage', accent: true },
             { label: 'Products at Risk', value: String(productsAtRisk), note: 'Expiring or overstocked', icon: Package, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-950/30', route: '/owner/overstock', accent: false },
             { label: 'Expiring Soon', value: String(dashboardSummary?.expiring_soon_count ?? inventoryHealth.expiring_soon), note: 'Within 30 days', icon: Clock, color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-50 dark:bg-orange-950/30', route: '/dashboard/fefo', accent: false },
             { label: 'Overstock Risk', value: String(overstock?.total_items ?? inventoryHealth.overstock), note: 'Above policy threshold', icon: Package, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-950/30', route: '/owner/overstock', accent: false },
@@ -403,9 +401,15 @@ export function DashboardOverview() {
         </div>
         <div className="rounded-xl border border-[#E5E7EB] dark:border-white/10 bg-bg-elevated p-4 shadow-sm">
           {actionItems.length === 0 ? (
-            <div className="py-6 text-center text-sm text-[#64748B] dark:text-muted-fg">
-              No priority actions right now. Inventory looks healthy.
-            </div>
+            actionQueueFailed ? (
+              <div className="py-6 text-center text-sm text-rose-600 dark:text-rose-400">
+                Priority actions could not be loaded because inventory data is unavailable. Nothing is confirmed healthy.
+              </div>
+            ) : (
+              <div className="py-6 text-center text-sm text-[#64748B] dark:text-muted-fg">
+                No priority actions right now. Inventory looks healthy.
+              </div>
+            )
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">

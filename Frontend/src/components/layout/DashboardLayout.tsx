@@ -49,39 +49,37 @@ const sidebarGroupsByRole: Record<UserRole, SidebarGroup[]> = {
       ],
     },
     {
-      group: 'MANAGEMENT',
+      group: 'INVENTORY MANAGEMENT',
       items: [
-        { to: '/owner/users', label: 'Manage Users', icon: Users },
         { to: '/owner/products', label: 'Manage Products', icon: Package },
         { to: '/owner/categories', label: 'Manage Categories', icon: Layers },
         { to: '/owner/suppliers', label: 'Manage Suppliers', icon: Truck },
         { to: '/owner/purchase-orders', label: 'Purchase Orders', icon: Package },
-        { to: '/owner/settings', label: 'System Settings', icon: Settings },
-        { to: '/owner/audit-logs', label: 'Audit Logs', icon: Activity },
-      ],
-    },
-    {
-      group: 'INVENTORY INTELLIGENCE',
-      items: [
-        { to: '/owner/performance', label: 'Inventory Performance', icon: TrendingUp },
-        { to: '/dashboard/fefo', label: 'FEFO Tracking', icon: PackageCheck },
-        { to: '/owner/overstock', label: 'Overstock Risks', icon: AlertTriangle },
-        { to: '/owner/replenishment', label: 'Replenishment', icon: CheckCircle },
-      ],
-    },
-    {
-      group: 'BUSINESS ANALYTICS',
-      items: [
-        { to: '/dashboard/predictive', label: 'Predictive Analytics', icon: Brain },
-        { to: '/dashboard/leakage', label: 'Leakage Detection', icon: ShieldAlert },
+        // Supplier-facing analysis and credits stay reachable without
+        // competing with the wastage workflow for prominence.
         { to: '/owner/supplier-performance', label: 'Supplier Performance', icon: Users },
         { to: '/dashboard/vendors', label: 'Vendor Credits', icon: PhilippinePeso },
       ],
     },
     {
-      group: 'REPORTS',
+      group: 'WASTAGE PREVENTION',
+      items: [
+        { to: '/dashboard/fefo', label: 'FEFO & Expiry Tracking', icon: PackageCheck },
+        { to: '/owner/overstock', label: 'Overstock & Stock Risk', icon: AlertTriangle },
+        { to: '/dashboard/predictive', label: 'Predictive Wastage Analytics', icon: Brain },
+        // Leakage Detection is the existing confirmed-wastage / loss-record page.
+        { to: '/dashboard/leakage', label: 'Wastage Records & Loss Reports', icon: ShieldAlert },
+        { to: '/owner/replenishment', label: 'Replenishment Recommendations', icon: CheckCircle },
+        { to: '/owner/performance', label: 'Inventory Performance', icon: TrendingUp },
+      ],
+    },
+    {
+      group: 'REPORTS & ADMINISTRATION',
       items: [
         { to: '/owner/reports', label: 'Generate Reports', icon: FileText },
+        { to: '/owner/users', label: 'Manage Users', icon: Users },
+        { to: '/owner/audit-logs', label: 'Audit Logs', icon: Activity },
+        { to: '/owner/settings', label: 'System Settings', icon: Settings },
       ],
     },
   ],

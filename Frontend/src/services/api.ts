@@ -203,22 +203,73 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+// Endpoints that must never trigger the "session expired" redirect: either they
+// are the credential exchange itself or they return 401 for bad input, not for an
+// expired session.
+const AUTH_FREE_PATHS = [
+  '/login',
+  '/refresh',
+  '/forgot-password',
+  '/reset-password',
+  '/password/forgot',
+  '/password/reset',
+  '/password/verify-otp',
+];
+
+// Single-flight refresh: a dashboard burst can produce several simultaneous 401s,
+// and each must not delete the rotated refresh cookie by racing the others.
+let refreshInFlight: Promise<string | null> | null = null;
+
+async function refreshAccessToken(): Promise<string | null> {
+  if (!refreshInFlight) {
+    refreshInFlight = fetch(`${BASE_URL}/refresh`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    })
+      .then(async (res) => {
+        if (!res.ok) return null;
+        const body = (await res.json().catch(() => null)) as
+          | { data?: { access_token?: string }; access_token?: string; token?: string }
+          | null;
+        const renewed = body?.data?.access_token ?? body?.access_token ?? body?.token ?? null;
+        if (renewed) localStorage.setItem('wiwaste_token', renewed);
+        return renewed;
+      })
+      .catch(() => null)
+      .finally(() => { refreshInFlight = null; });
+  }
+  return refreshInFlight;
+}
+
+async function request<T>(path: string, options: RequestInit = {}, allowRefresh = true): Promise<T> {
   const token = getToken();
   console.debug('[API] Request:', path, 'Token:', token?.substring(0, 20) + '...');
-  const res = await fetch(`${BASE_URL}${path}`, {
+
+  const send = (bearer: string | null) => fetch(`${BASE_URL}${path}`, {
     ...options,
+    credentials: 'include',
     cache: options.cache ?? (freshRequests > 0 ? 'reload' : 'default'),
     headers: {
       'Content-Type': 'application/json',
       Accept: 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}),
       ...((options.headers as Record<string, string>) ?? {}),
     },
   });
+
+  let res = await send(token);
+
+  // Access tokens live for 15 minutes. Renew once with the HttpOnly refresh
+  // cookie and replay the request instead of bouncing the user to /login.
+  if (res.status === 401 && allowRefresh && !AUTH_FREE_PATHS.includes(path)) {
+    const renewed = await refreshAccessToken();
+    if (renewed) res = await send(renewed);
+  }
+
   console.debug('[API] Response:', path, 'Status:', res.status);
   if (!res.ok) {
-    if (res.status === 401 && !['/login', '/forgot-password', '/reset-password', '/password/forgot', '/password/reset', '/password/verify-otp'].includes(path) && token && getToken() === token) {
+    if (res.status === 401 && !AUTH_FREE_PATHS.includes(path) && token && getToken() === token) {
       localStorage.removeItem('wiwaste_token');
       localStorage.removeItem('wiwaste_user');
       localStorage.removeItem('wiwaste-session');

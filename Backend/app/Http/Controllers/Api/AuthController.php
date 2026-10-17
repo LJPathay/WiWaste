@@ -305,11 +305,23 @@ class AuthController extends Controller
 
     public function refresh(Request $request): JsonResponse
     {
-        $user = $request->user();
-        $token = $request->cookie('refresh_token') ? PersonalAccessToken::findToken($request->cookie('refresh_token')) : null;
-        if (! $user || ! $token || $token->tokenable_id !== $user->getKey() || ! in_array('refresh', $token->abilities, true) || ($token->expires_at && $token->expires_at->isPast())) {
+        // This endpoint is deliberately reachable without a bearer token: it exists
+        // precisely for the moment the 15-minute access token has expired. The
+        // refresh token in the HttpOnly cookie is the credential, so the user is
+        // resolved from it rather than from `$request->user()`.
+        $token = $request->cookie('refresh_token')
+            ? PersonalAccessToken::findToken($request->cookie('refresh_token'))
+            : null;
+
+        if (! $token || ! in_array('refresh', $token->abilities, true) || ($token->expires_at && $token->expires_at->isPast())) {
             return response()->json(['message' => 'Refresh token invalid or expired.'], 401);
         }
+
+        $user = $token->tokenable;
+        if (! $user || $user->status !== 'Active' || $user->getAttribute('archived_at') !== null) {
+            return response()->json(['message' => 'Your account is inactive or unavailable. Contact your administrator.'], 403);
+        }
+
         $token->delete();
         $access = $user->createToken('wiwaste-access', ['access'], now()->addMinutes(15))->plainTextToken;
         $refresh = $user->createToken('wiwaste-refresh', ['refresh'], now()->addDays(7))->plainTextToken;

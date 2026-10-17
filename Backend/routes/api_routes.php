@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AlertController;
+use App\Http\Middleware\EnsureActiveUser;
 use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CategoryController;
@@ -64,7 +65,10 @@ if (! function_exists('registerCoreRoutes')) {
         Route::post('/login', [AuthController::class, 'login'])->withoutMiddleware('auth:sanctum');
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::get('/me', [AuthController::class, 'me']);
-        Route::post('/refresh', [AuthController::class, 'refresh']);
+        // Refresh authenticates with the HttpOnly refresh cookie, so it must stay
+        // reachable once the short-lived access token has expired.
+        Route::post('/refresh', [AuthController::class, 'refresh'])
+            ->withoutMiddleware(['auth:sanctum', EnsureActiveUser::class]);
 
         Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->withoutMiddleware('auth:sanctum');
         Route::post('/reset-password', [AuthController::class, 'resetPassword'])->withoutMiddleware('auth:sanctum');

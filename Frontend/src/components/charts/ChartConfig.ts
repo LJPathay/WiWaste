@@ -28,6 +28,21 @@ export const CHART_DEFAULTS = {
   layout: 'horizontal' as const,
 } as const;
 
+/**
+ * Currency axis tick. Wastage and monthly totals on this app are frequently below
+ * ₱1,000, so a "divide by 1000 and round" formatter printed "₱0k" on every gridline.
+ * Keep the exact amount below a thousand and compact only above it.
+ */
+export function formatPesoAxis(value: number): string {
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return '₱0';
+  if (Math.abs(amount) >= 1000) {
+    const thousands = amount / 1000;
+    return `₱${Number.isInteger(thousands) ? thousands.toFixed(0) : thousands.toFixed(1)}k`;
+  }
+  return `₱${Math.round(amount)}`;
+}
+
 export const RESPONSIVE_DEFAULTS = {
   width: '100%',
   height: '100%',

@@ -32,7 +32,7 @@ import {
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { useDashboardData } from '../../hooks/useDashboardData';
 import { ChartGradients, ChartTooltipStyle } from '../../components/charts/ChartGradients';
-import { CHART_DEFAULTS, CHART_COLORS, CHART_TOOLTIP_STYLE, useChartAnimation } from '../../components/charts/ChartConfig';
+import { CHART_DEFAULTS, CHART_COLORS, CHART_TOOLTIP_STYLE, formatPesoAxis, useChartAnimation } from '../../components/charts/ChartConfig';
 import { inventoryAnalytics, forecast, lossRisk, type ApiLossRiskSummary } from '../../services/api';
 
 const currencyFormatter = new Intl.NumberFormat('en-PH', {
@@ -42,6 +42,8 @@ const currencyFormatter = new Intl.NumberFormat('en-PH', {
 });
 
 const LEAKAGE_COLORS = ['#006a61', '#f97316', '#f59e0b', '#eab308', '#22c55e'];
+
+
 
 type ActionItem = {
   id: string;
@@ -338,7 +340,7 @@ export function DashboardOverview() {
                   <ChartGradients />
                   <LazyCartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_COLORS.grid} />
                   <LazyXAxis dataKey="date" tick={{ fontSize: 10, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} />
-                  <LazyYAxis tick={{ fontSize: 10, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} tickFormatter={(v) => `₱${(Number(v) / 1000).toFixed(0)}k`} />
+                  <LazyYAxis tick={{ fontSize: 10, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} tickFormatter={(v) => formatPesoAxis(Number(v))} />
                   <LazyTooltip formatter={(value) => currencyFormatter.format(Number(value))} contentStyle={ChartTooltipStyle()} />
                   <LazyArea
                     type="monotone"
@@ -346,6 +348,8 @@ export function DashboardOverview() {
                     stroke={CHART_COLORS.danger}
                     fill="url(#chart-danger-fill)"
                     strokeWidth={2}
+                    dot={{ r: 2.5, strokeWidth: 0, fill: CHART_COLORS.danger }}
+                    activeDot={{ r: 4 }}
                     name="Confirmed wastage"
                     isAnimationActive={isAnimationActive}
                     animationDuration={animationDuration}
@@ -496,8 +500,27 @@ export function DashboardOverview() {
               <div className="h-52 flex items-center justify-center text-sm text-[#64748B] dark:text-muted-fg text-center px-4">
                 No wastage records in the selected period, so the loss breakdown cannot be populated.
               </div>
+            ) : leakageChartData.length === 1 ? (
+              <div className="flex h-52 flex-col justify-center gap-4 px-1">
+                <div>
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="text-sm font-semibold text-[#0F172A] dark:text-slate-100">{leakageChartData[0].name}</span>
+                    <span className="text-sm font-bold tabular-nums text-rose-600 dark:text-rose-400">{currencyFormatter.format(leakageChartData[0].amount)}</span>
+                  </div>
+                  <div className="mt-2 h-2.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                    <div className="h-full w-full rounded-full bg-[#0F766E]" />
+                  </div>
+                  <div className="mt-2 flex justify-between text-[10px] text-[#64748B] dark:text-muted-fg">
+                    <span>100% of recorded wastage in this period</span>
+                    <span>{leakageChartData[0].quantity} units</span>
+                  </div>
+                </div>
+                <p className="text-[10px] leading-4 text-[#64748B] dark:text-muted-fg">
+                  Only one category recorded wastage, so a pie would repeat the same 100%.
+                </p>
+              </div>
             ) : (
-              <div className="h-52 w-full" role="img" aria-label={`Leakage by category chart: ${leakageViewMode} view`} style={{ minHeight: '208px' }}>
+              <div className="relative h-52 w-full" role="img" aria-label={`Wastage loss by category chart: ${leakageViewMode} view`}>
                 <ResponsiveContainer width="100%" height="100%">
                   <LazyPieChart>
                     <LazyPie
@@ -505,11 +528,12 @@ export function DashboardOverview() {
                       dataKey={leakageViewMode === 'value' ? 'amount' : leakageViewMode === 'quantity' ? 'quantity' : 'percentage'}
                       nameKey="name"
                       cx="50%"
-                      cy="50%"
-                      innerRadius={55}
-                      outerRadius={90}
-                      paddingAngle={3}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      cy="44%"
+                      innerRadius={54}
+                      outerRadius={82}
+                      paddingAngle={2}
+                      stroke="none"
+                      label={false}
                       labelLine={false}
                     >
                       {leakageChartData.map((_entry, index) => (
@@ -517,12 +541,26 @@ export function DashboardOverview() {
                       ))}
                     </LazyPie>
                     <LazyTooltip
-                      formatter={(value) => leakageViewMode === 'value' ? currencyFormatter.format(value) : value}
+                      formatter={(value) => leakageViewMode === 'value' ? currencyFormatter.format(Number(value)) : value}
                       contentStyle={CHART_TOOLTIP_STYLE}
                     />
-                    <LazyLegend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '11px' }} />
+                    <LazyLegend
+                      verticalAlign="bottom"
+                      height={34}
+                      iconType="circle"
+                      iconSize={7}
+                      wrapperStyle={{ fontSize: '10px', lineHeight: '16px' }}
+                    />
                   </LazyPieChart>
                 </ResponsiveContainer>
+                <div className="pointer-events-none absolute inset-x-0 top-[44%] -translate-y-1/2 text-center">
+                  <div className="text-sm font-bold tabular-nums text-[#0F172A] dark:text-slate-100">
+                    {leakageViewMode === 'value' ? currencyFormatter.format(totalLeakage) : leakageViewMode === 'quantity' ? `${leakageChartData.reduce((sum, item) => sum + Number(item.quantity), 0)} units` : '100%'}
+                  </div>
+                  <div className="text-[9px] uppercase tracking-widest text-[#64748B] dark:text-muted-fg">
+                    {leakageViewMode === 'value' ? 'Total loss' : leakageViewMode === 'quantity' ? 'Total units' : 'Share'}
+                  </div>
+                </div>
               </div>
             )}
 
@@ -708,7 +746,7 @@ export function DashboardOverview() {
                   <ChartGradients />
                   <LazyCartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_COLORS.grid} />
                   <LazyXAxis dataKey="date" tick={{ fontSize: 11, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} />
-                  <LazyYAxis tick={{ fontSize: 11, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} tickFormatter={(v) => `₱${(Number(v) / 1000).toFixed(0)}k`} />
+                  <LazyYAxis tick={{ fontSize: 11, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} tickFormatter={(v) => formatPesoAxis(Number(v))} />
                   <LazyTooltip formatter={(value) => currencyFormatter.format(Number(value))} contentStyle={ChartTooltipStyle()} />
                   <LazyArea
                     type="monotone"
@@ -756,13 +794,22 @@ export function DashboardOverview() {
                       loss: Number(item.loss),
                     }))}
                     layout="vertical"
-                    margin={{ top: 0, right: 8, bottom: 0, left: 8 }}
+                    margin={{ top: 4, right: 16, bottom: 4, left: 4 }}
+                    barSize={24}
+                    barCategoryGap="28%"
                   >
                     <LazyCartesianGrid strokeDasharray="3 3" horizontal={false} stroke={CHART_COLORS.grid} />
-                    <LazyXAxis type="number" tick={{ fontSize: 10, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} tickFormatter={(v) => `₱${(Number(v) / 1000).toFixed(0)}k`} />
-                    <LazyYAxis dataKey="name" type="category" width={96} tick={{ fontSize: 10, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} />
+                    <LazyXAxis type="number" tick={{ fontSize: 10, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} tickFormatter={(v) => formatPesoAxis(Number(v))} />
+                    <LazyYAxis
+                      dataKey="name"
+                      type="category"
+                      width={124}
+                      tick={{ fontSize: 10, fill: CHART_COLORS.text }}
+                      stroke={CHART_COLORS.axis}
+                      tickFormatter={(value: string) => (value.length > 18 ? `${value.slice(0, 17)}…` : value)}
+                    />
                     <LazyTooltip formatter={(value) => currencyFormatter.format(Number(value))} contentStyle={ChartTooltipStyle()} />
-                    <LazyBar dataKey="loss" name="Confirmed loss" radius={[0, 4, 4, 0]} fill={CHART_COLORS.danger} />
+                    <LazyBar dataKey="loss" name="Confirmed loss" radius={[0, 6, 6, 0]} fill={CHART_COLORS.danger} />
                   </LazyBarChart>
                 </ResponsiveContainer>
               </div>
@@ -798,13 +845,13 @@ export function DashboardOverview() {
                 <ResponsiveContainer width="100%" height="100%">
                   <LazyBarChart data={paymentBreakdown} layout="vertical">
                     <LazyCartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F1F5F9" />
-                    <LazyXAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} stroke="#E5E7EB" tickFormatter={(v) => `₱${(Number(v) / 1000).toFixed(0)}k`} />
-                    <LazyYAxis dataKey="method" type="category" tick={{ fontSize: 11, fill: '#94a3b8' }} stroke="#E5E7EB" width={70} />
+                    <LazyXAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} stroke="#E5E7EB" tickFormatter={(v) => formatPesoAxis(Number(v))} />
+                    <LazyYAxis dataKey="method" type="category" tick={{ fontSize: 11, fill: '#94a3b8' }} stroke="#E5E7EB" width={84} />
                     <LazyTooltip
                       formatter={(value) => currencyFormatter.format(Number(value))}
                       contentStyle={CHART_TOOLTIP_STYLE}
                     />
-                    <LazyBar dataKey="revenue" radius={[0, 10, 10, 0]} fill="#0F766E" />
+                    <LazyBar dataKey="revenue" barSize={18} radius={[0, 6, 6, 0]} fill="#0F766E" />
                   </LazyBarChart>
                 </ResponsiveContainer>
               </div>

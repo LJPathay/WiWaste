@@ -15,7 +15,7 @@ import { forecast as forecastApi, type ApiForecastOverview } from '../../service
 import { retailExamples } from '../../utils/mockAuthAndFeatures';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { ChartGradients, ChartTooltipStyle } from '../../components/charts/ChartGradients';
-import { CHART_DEFAULTS, CHART_COLORS, useChartAnimation } from '../../components/charts/ChartConfig';
+import { CHART_DEFAULTS, CHART_COLORS, formatPesoAxis, useChartAnimation } from '../../components/charts/ChartConfig';
 import { StockMovementChart, StockMovementLegend } from '../../components/charts/StockMovementChart';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -259,7 +259,7 @@ export function PredictiveAnalyticsPage() {
                   <ChartGradients />
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_COLORS.grid} />
                   <XAxis dataKey="date" tick={{ fontSize: 10, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} />
-                  <YAxis tick={{ fontSize: 10, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} tickFormatter={(v) => `₱${(v / 1000).toFixed(0)}k`} />
+                  <YAxis tick={{ fontSize: 10, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} tickFormatter={(v) => formatPesoAxis(Number(v))} />
                   <Tooltip formatter={(value) => `₱${value.toLocaleString()}`} contentStyle={ChartTooltipStyle()} />
                   <Line
                     type="monotone"

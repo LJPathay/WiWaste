@@ -5,7 +5,7 @@ import { Toast, useToast, ConfirmDialog } from '../../components/ui/Toast';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 import { DataTable, type DataTableColumn } from '../../components/shared/DataTable';
 import { ChartGradients, ChartTooltipStyle } from '../../components/charts/ChartGradients';
-import { CHART_DEFAULTS, CHART_COLORS, useChartAnimation } from '../../components/charts/ChartConfig';
+import { CHART_DEFAULTS, CHART_COLORS, formatPesoAxis, useChartAnimation } from '../../components/charts/ChartConfig';
 
 const OVERSTOCK_TREND_DATA = [
   { month: 'Jan', exposure: 125000 },
@@ -194,7 +194,7 @@ export function OverstockRisks() {
                 <ChartGradients />
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_COLORS.grid} />
                 <XAxis dataKey="month" tick={{ fontSize: 11, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} />
-                <YAxis tick={{ fontSize: 11, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} tickFormatter={v => `₱${(v / 1000).toFixed(0)}k`} />
+                <YAxis tick={{ fontSize: 11, fill: CHART_COLORS.text }} stroke={CHART_COLORS.axis} tickFormatter={(v) => formatPesoAxis(Number(v))} />
                 <Tooltip formatter={(v: number) => currencyFormatter.format(v)} contentStyle={ChartTooltipStyle()} />
                 <Line
                   type="linear"
